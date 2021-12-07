@@ -28,13 +28,13 @@
 // These are only used in LocalShader.h
 #include "src/shaders/SkShaderBase.h"
 #include "src/gpu/GrFragmentProcessor.h"
-#include "src/gpu/effects/GrMatrixEffect.h"
-#include "src/core/SkMatrixProvider.h"
-#include "src/core/SkTLazy.h"
 #include "src/core/SkVM.h"
 #include "src/core/SkReadBuffer.h"
 #include "src/core/SkWriteBuffer.h"
-#include "src/shaders/SkShaderBase.h"
+// #include "src/gpu/effects/GrMatrixEffect.h"
+// #include "src/core/SkMatrixProvider.h"
+// #include "src/core/SkTLazy.h"
+// #include "src/shaders/SkShaderBase.h"
 
 // For font rendering.
 #include "src/ports/SkFontHost_FreeType_common.h"
