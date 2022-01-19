@@ -188,7 +188,7 @@ define+=UNICODE
 #Compile asm files on X86
 ext+=asm
 noIncludes+=*.asm
-compile+=*.asm:ml /c /nologo /Fo<output> /safeseh /W3 /Zi <file>
+compile+=*.asm:1!ml /c /nologo /Fo<output> /safeseh /W3 /Zi <file>
 
 [unix]
 flags+=-Wno-unknown-pragmas
@@ -247,7 +247,7 @@ docName=<titleNoExt|output>_doc
 
 [sharedlib,!unix]
 postBuild+=if not exist "<path|packagePath>" mkdir <path|packagePath>
-postBuild+=copy <output> <path|packagePath><libPrefix><title|output>
+postBuild+=1!copy <output> <path|packagePath><libPrefix><title|output>
 
 [sharedlib,unix]
 flags+=-fPIC
