@@ -1,10 +1,12 @@
+#include <stdio.h>
+
 struct data {
 	int a;
 	int b;
 	int c;
 };
 
-int main() {
+int main(void) {
 	struct data d;
 	d.a = 5;
 

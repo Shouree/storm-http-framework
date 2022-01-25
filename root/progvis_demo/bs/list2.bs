@@ -1,0 +1,26 @@
+class Base {
+	Int t;
+}
+
+class N extends Base {
+	Int val;
+	N? next;
+
+	init(Int val) {
+		init { val = val; }
+	}
+}
+
+N? makeList(Int depth) {
+	if (depth > 0) {
+		N n(depth);
+		n.next = makeList(depth - 1);
+		return n;
+	} else {
+		return null;
+	}
+}
+
+void main() {
+	var x = makeList(5);
+}

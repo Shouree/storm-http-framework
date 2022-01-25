@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 void print(const char *s) {
 	for (const char *i = s; *i; i++) {
 		putchar(*i);
@@ -5,11 +7,11 @@ void print(const char *s) {
 	putchar('\n');
 }
 
-int main() {
-	const char *s = "Hej";
+int main(void) {
+	const char *s = "Hello!";
 	print(s);
 
-	char a[] = "hi";
+	char a[] = "Hi!";
 	print(a);
 
 	return 0;

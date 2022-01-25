@@ -470,34 +470,7 @@ void debug() on Compiler {
 		MainWin win;
 		// win.open(url / "assert.c");
 		// win.open(url / "atomics.c");
-		win.open(url / "atomic_stack.c");
-		// win.open(url / "demo1.bs");
-		// win.open(url / "demo2.bs");
-		// win.open(url / "array.bs");
-		// win.open(url / "cpp.cpp");
-		// win.open(url / "cpp2.cpp");
-		// win.open(url / "cpp3.cpp");
-		// win.open(url / "members.cpp");
-		// win.open(url / "special_functions.cpp");
-		// win.open(url / "return_complex.cpp");
-		// win.open(url / "arrays.cpp");
-		// win.open(url / "cpp_error.cpp");
-		// win.open(url / "str.cpp");
-		// win.open(url / "const_example.cpp");
-		// win.open(url / "pintos_debug.cpp");
-		// win.open(url / "pintos_live.c");
-		// win.open(url / "thread_example.c");
-		// win.open(url / "printf.c");
-		// win.open(url / "globals.cpp");
-		// win.open(url / "restore_globals.c");
-		// win.open(url / "data_race.c");
-		// win.open(url / "bank" / "bank.c");
-		// win.open(url / "bank" / "bank_good.c");
-		// win.open(url / "buffer" / "buffer.c");
-		// win.open(url / "buffer" / "buffer_sema_lock.c");
-		// win.open(url / "free_ptr.c");
-		// win.open(url / "simple_buffer.c");
-		// win.open(url / "cond.c");
+		win.open(url / "test" / "atomic_stack.c");
 		win.waitForClose();
 	}
 }

@@ -1,0 +1,22 @@
+class Node {
+	Int val;
+	Node? next;
+
+	init(Int val) {
+		init { val = val; }
+	}
+}
+
+void main() {
+	Int i = 0;
+	Node? list;
+
+	while (i < 10) {
+		Node n(i);
+		n.next = list;
+		list = n;
+		i++;
+	}
+
+	print(i.toS);
+}

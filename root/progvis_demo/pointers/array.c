@@ -1,4 +1,6 @@
-int main() {
+#include <stdio.h>
+
+int main(void) {
 	int data[5] = { 1, 2, 3, 4, 5 };
 	data[2] = 8;
 

@@ -1,11 +1,13 @@
+#include <stdio.h>
+
 struct data {
 	int a;
 	int b;
 };
 
-int main() {
+int main(void) {
 	struct data *array = malloc(sizeof(struct data) * 3);
-
+	void *x = array;
 	array[0].a = 2;
 	array[1].a = 3;
 	(array + 2)->a = 4;
