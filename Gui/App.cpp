@@ -6,6 +6,7 @@
 #include "Defaults.h"
 #include "Core/Exception.h"
 #include "Win32Dpi.h"
+#include <limits>
 
 #if defined(POSIX)
 

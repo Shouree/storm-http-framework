@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "IOCondition.h"
+#include <limits>
 
 #ifdef POSIX
 // NOTE: This does not exist on all POSIX systems (eg. MacOS)

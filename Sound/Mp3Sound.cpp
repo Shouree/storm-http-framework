@@ -3,6 +3,7 @@
 #include "Exception.h"
 #include "Core/Convert.h"
 #include "Utils/Memory.h"
+#include <limits>
 
 namespace sound {
 
