@@ -8,6 +8,19 @@ use progvis:program;
 use lang:bs:macro;
 
 /**
+ * Examples directory.
+ */
+Url? examplesDir() on Ui {
+	if (x = named{progvis}.url()) {
+		x = x / ".." / "progvis_demo";
+		if (x.exists())
+			return x;
+	}
+
+	null;
+}
+
+/**
  * Main window.
  */
 class MainWin extends Frame {
@@ -50,7 +63,14 @@ class MainWin extends Frame {
 		fileMenu
 			<< Menu:Text(mnemonic("_Open file..."), ctrlChord(Key:o), &this.onOpen())
 			<< Menu:Text(mnemonic("_Reload program"), KeyChord(Key:r, Modifiers:ctrl + Modifiers:shift), &this.onReload())
-			<< Menu:Text(mnemonic("Open in _editor"), ctrlChord(Key:e), &this.onOpenEditor())
+			<< Menu:Text(mnemonic("Open in _editor"), ctrlChord(Key:e), &this.onOpenEditor());
+
+		if (examplesDir())
+			fileMenu
+				<< Menu:Separator()
+				<< Menu:Text("Open example...", &this.onOpenExample());
+
+		fileMenu
 			<< Menu:Separator()
 			<< Menu:Text(mnemonic("_Settings..."), &this.onSettings());
 
@@ -225,15 +245,31 @@ class MainWin extends Frame {
 	}
 
 	private void onOpen() {
-		FileTypes ft("Source code");
-		for (k in Program:supportedFiles)
-			ft.add("${k}-source", [k]);
-
-		FilePicker picker = FilePicker:open(ft).okLabel("Open").multiselect();
+		FilePicker picker = createPicker();
 		if (!picker.show(this))
 			return;
 
 		open(picker.results);
+	}
+
+	private void onOpenExample() {
+		unless (folder = examplesDir())
+			return;
+
+		FilePicker picker = createPicker().defaultFolder(folder);
+		if (!picker.show(this))
+			return;
+
+		open(picker.results);
+	}
+
+	// Create a file picker.
+	private FilePicker createPicker() {
+		FileTypes ft("Source code");
+		for (k in Program:supportedFiles)
+			ft.add("${k}-source", [k]);
+
+		return FilePicker:open(ft).okLabel("Open").multiselect();
 	}
 
 	public void onReload() {
