@@ -104,7 +104,7 @@ namespace gui {
 		size_t users;
 
 		// Destroy.
-		~SkPangoTypeface() { PLN(L"Destroying typeface"); }
+		~SkPangoTypeface() {}
 
 	protected:
 		// Various functions needed.
