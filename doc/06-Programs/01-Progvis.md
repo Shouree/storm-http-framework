@@ -20,9 +20,10 @@ the data structure in order to highlight basic race conditions in addition to de
 Starting progvis
 ----------------
 
-To start the tool, [download Storm](md://Introduction/Downloads), start it and type `progvis:main`
-at the interactive prompt. The main window of Progvis will appear shortly. If you desire to start
-Progvis automatically, one can execute `Storm -f progvis.main` to launch it directly.
+To start the tool, [download Storm](md://Introduction/Downloads), and click the `Progvis` file
+(either `Progvis.bat` or `Progvis.sh` depending on your system). The main window of Progvis should
+appear shortly. You can also start Progvis from the interactive Storm prompt by typing
+`progvis:main`, or from the command line by typing `Storm -f progvis.main`.
 
 
 Supported languages
