@@ -122,7 +122,7 @@ Path bigStepDecoration() on Render {
 	p.line(Point(20, 15));
 	p.line(Point(11, 15));
 	p.line(Point(14, 13));
-	p.bezier(Point(10, 4), Point(8, 4), Point(4, 13));
+	p.bezier(Point(9, 6), Point(9, 6), Point(4, 13));
 	p.close();
 	p;
 }
