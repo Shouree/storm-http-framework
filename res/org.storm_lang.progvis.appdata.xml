@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (C) 2022 Filip Strömbäck -->
+<component type="desktop-application">
+  <id>org.storm_lang.progvis</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LGPL-2.1</project_license>
+  <name>Progvis</name>
+  <summary>Program visualization tool for concurrent C/C++ programs</summary>
+  <description>
+    <p>
+      Progvis is a program visualization tool for concurrent programs written in a subset of C (and
+      parts of C++). The detailed visualization of many details of C programs makes it useful to
+      visualize sequential programs as well.
+    </p>
+    <p>Features of Progvis include:</p>
+    <ul>
+      <li>Visualization of C and C++ programs</li>
+      <li>Exploring different interleavings to find errors</li>
+      <li>Automatic detection of many common errors in small programs</li>
+    </ul>
+  </description>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Progvis visualizing a concurrent program with three threads</caption>
+      <image type="source" width="1138" height="736">https://storm-lang.org/progvis/screenshot-1.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Progvis visualizing pointer arithmetics in a single threaded program</caption>
+      <image type="source" width="1138" height="736">https://storm-lang.org/progvis/screenshot-2.png</image>
+    </screenshot>
+  </screenshots>
+  <icon type="remote" width="64" height="64">https://storm-lang.org/progvis/progvis-64x64.png</icon>
+  <launchable type="desktop-id">org.storm_lang.progvis.desktop</launchable>
+  <url type="homepage">https://storm-lang.org/progvis.php</url>
+  <provides>
+    <binary>/usr/bin/progvis</binary>
+  </provides>
+</component>

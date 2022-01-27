@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Name=Progvis
+Comment=Program visualization tool for concurrent C/C++ programs
+Type=Application
+Terminal=false
+Categories=Education
+Exec=/usr/bin/progvis
+Icon=progvis
