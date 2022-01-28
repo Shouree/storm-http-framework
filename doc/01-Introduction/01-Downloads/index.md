@@ -12,8 +12,28 @@ annotated release tags in the Git repository.
 Binary releases
 -----------------
 
-Binary releases for Windows (32-bit) and Linux (64-bit) are provided below. For each platform, two
-variants are available depending on which garbage collector is desired.
+- [Windows (32-bit)](storm_mps.zip)
+- [Linux (64-bit)](storm_mps.tar.gz) (should work for recent Debian-based distributions)
+
+
+To run the compiler, simply unpack the archive file and run `Storm` (`Storm.exe` on Windows), and
+the top loop for Basic Storm should start. For more detaled instructions, see
+[Introduction](md://Introduction/).
+
+For Windows, no external libraries are required (except for `dbghelp.dll`, which is included with
+Windows). The Ui library requires Windows 7 or later.
+
+For Linux, the C standard library for GCC 8.3.0 or later is required. For the Ui library, Gtk+ 3.10
+or later is required. `libpng` and `libjpeg` are also required for proper image decoding, but they
+are included in the download since there are many incompatible versions of these libraries.
+
+
+Alternative versions
+--------------------
+
+Storm is available with two different garbage collectors. The default garbage collector (used above)
+is MPS, which is performant and stable. The other alternative is SMM (Storm Memory Manager) which is
+currently in the experimental stage.
 
 - MPS releases
 
@@ -30,22 +50,12 @@ variants are available depending on which garbage collector is desired.
   (approximately 2-3x runtimes when using the MPS, and occationally longer pause times), and it is
   not as mature as the MPS.
 
-  This option is currently experimental, but seems to work well in many cases.
+  This option is currently experimental, but seems to work well in many cases. It is slower than the
+  MPS garbage collector.
 
   - [Windows (32-bit), SMM](storm_smm.zip)
   - [Linux (64-bit), SMM](storm_smm.tar.gz)
 
-
-To run the compiler, simply unpack the archive file and run `Storm` (`Storm.exe` on Windows), and
-the top loop for Basic Storm should start. For more detaled instructions, see
-[Introduction](md://Introduction/).
-
-For Windows, no external libraries are required (except for `dbghelp.dll`, which is included with
-Windows). The Ui library requires Windows 7 or later.
-
-For Linux, the C standard library for GCC 6.2.0 or later is required. For the Ui library, Gtk+ 3.10
-or later is required. `libpng` and `libjpeg` are also required for proper image decoding, but they
-are included in the download since there are many incompatible versions of these libraries.
 
 
 Source releases
@@ -68,10 +78,10 @@ test data for the language server which is not required.
 To build Storm, you need `mymake`, available at [GitHub](http://github.com/fstromback/mymake) or
 `git://storm-lang.org/mymake.git`. When you have installed mymake, compiling Storm is just `mm release`
 to make a release build. During development, use `mm Main` or `mm Test` to build the
-development version of the main entry point and the test suite respectively.
+development version of the main entry point and the test suite respectively. Mymake is available as
+a package in Debian (testing) as well.
 
-To specify which garbage collector to use, either edit `Gc/Config.h`, or compile storm with `mm mps
-Main` or `mm smm Main`.
+To specify which garbage collector to use, either edit `Gc/Config.h`, or compile storm with `mm mps Main` or `mm smm Main`.
 
 On Linux (Debian), the following packages need to be installed to successfully compile Storm, in addition
 to Mymake and GCC:
@@ -91,7 +101,7 @@ License
 
 Storm is licensed under the LGPL version 2.1. Note, however, that the MPS release uses the
 [Memory Pool System](http://www.ravenbrook.com/project/mps/) from Ravenbrook Ltd. which has a
-separate license. The SMM is licensed under the LGPL version 2.1, just like Storm.
+separate license (BSD 2-clause license). The SMM is licensed under the LGPL version 2.1, just like Storm.
 
 Parts of the libraries, such as the Ui library, may rely on other third party libraries. To check
 which libraries are used and which licenses apply, type `licenses` in the Basic Storm top loop, or

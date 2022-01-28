@@ -29,6 +29,9 @@ class Behavior on Ui {
 	// Allow submitting this program?
 	Str? allowSubmit() { null; }
 
+	// Allow starting the model checker.
+	Str? allowModelCheck() { null; }
+
 	// Allow the user to step at their own pace.
 	Bool allowStep() { true; }
 
@@ -80,6 +83,7 @@ class RevisitBehavior extends DefaultBehavior {
 
 	Str? allowReload() : override { "Can not reload the current problem. Use Run -> Restart instead, or open a new problem."; }
 	Str? allowSubmit() : override { "You can not re-submit this problem as your own. Open a new file and submit that instead."; }
+	Str? allowModelCheck() : override { "The model checker is disabled while looking at other solutions."; }
 	Bool allowTrackMemory() : override { false; }
 
 	ProblemPanel? panel() : override {
@@ -137,6 +141,7 @@ class RecordBehavior extends Behavior {
 
 	Str? allowReload() : override { "Can not reload the current problem. Use Run -> Restart instead, or open a new problem."; }
 	Str? allowSubmit() : override { "You can not re-submit this problem as your own. Open a new file and submit that instead."; }
+	Str? allowModelCheck() : override { "The model checker is disabled for online problems."; }
 	Bool allowTrackMemory() : override { false; }
 
 	ProblemPanel? panel() : override {
@@ -363,6 +368,9 @@ class ImproveBehavior extends DefaultBehavior {
 
 	// But don't allow submitting through regular means.
 	Str? allowSubmit() : override { "To submit your improved version, click the button in the green bar!"; }
+
+	// Don't allow model checking, that would be too easy.
+	Str? allowModelCheck() : override { "The model checker is disabled for online problems."; }
 
 	// Don't change 'track memory'.
 	Bool allowTrackMemory() : override { false; }

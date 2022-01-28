@@ -408,6 +408,11 @@ class MainWin extends Frame {
 	}
 
 	private void onFindErrors() {
+		if (msg = behavior.allowModelCheck) {
+			showMessage(this, "Can not check for errors", msg);
+			return;
+		}
+
 		if (currentFiles.empty) {
 			showMessage(this, "No files open", "You have no files open currently.");
 		} else if (result = check:findErrorsUi(this, currentFiles)) {
