@@ -27,5 +27,5 @@ mm release $compat smm -ne || { echo "Compilation (smm) failed!"; exit 1; }
 
 echo "Done! Running test suite..."
 release/Test_mps --all || { echo "Tests failed (mps)!"; exit 1; }
-release/Test_smm --all || { echo "Tests failed (smm)!"; exit 1; }
+#release/Test_smm --all || { echo "Tests failed (smm)!"; exit 1; }
 echo "Success!"
