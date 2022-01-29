@@ -239,6 +239,14 @@ class Program on Render {
 		true;
 	}
 
+	// Check if all threads are waiting for user interaction.
+	Bool threadsWaiting() {
+		for (t in threads)
+			if (!t.waiting)
+				return false;
+		true;
+	}
+
 	// Terminate any threads running in the program, and wait for them to exit properly.
 	void terminate() {
 		// Inhibit change notifications - we want to make it look like all threads terminated at the same time.

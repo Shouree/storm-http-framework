@@ -67,5 +67,5 @@ void wait(Program program) on Render {
 	// is the case though.
 	do {
 		yield();
-	} while (!program.threadsPaused());
+	} while (!program.threadsWaiting());
 }

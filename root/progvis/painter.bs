@@ -119,7 +119,7 @@ class MainPainter extends Painter {
 		unless (world)
 			return false;
 
-		unless (world.program.threadsPaused)
+		unless (world.program.threadsWaiting)
 			return false;
 
 		Bool barrier = false;
@@ -137,7 +137,7 @@ class MainPainter extends Painter {
 			for (v in world.program.threads) {
 				if (v.threadId == thread) {
 					if (barrier & v.barriersAvailable)
-						v.resumeBarrier();
+						v.resumeBarrier(100 ms);
 					else
 						v.resume();
 				}

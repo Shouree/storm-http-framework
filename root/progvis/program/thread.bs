@@ -74,6 +74,9 @@ class ProgThread on Render {
 	// Step to the next barrier instead of the next statement.
 	private Bool barrierStep;
 
+	// Speed when stepping through a barrier step. If zero, no animation is done.
+	private Duration barrierSpeed;
+
 	// Current call depth. There may be additional entries in 'frames', as we might have exited a
 	// function but not yet received any new information. In this case, we will still show the old
 	// state since it might contain references to values that are still known by the code, but not
@@ -105,6 +108,9 @@ class ProgThread on Render {
 	// the program (i.e. do we have control of the thread currently). This means that 'paused' is
 	// true even if the thread is waiting for its turn to make a new step.
 	Bool paused;
+
+	// Is the thread currently waiting for user interaction.
+	Bool waiting() { !running; }
 
 	// Is the thread alive?
 	Bool alive() { callDepth > 0; }
@@ -184,6 +190,14 @@ class ProgThread on Render {
 				wait();
 				// Only clear if we waited, to highlight properly.
 				memory.clearNew();
+			} else if (barrierSpeed != Duration()) {
+				if (pos != last.lastStop) {
+					// Pause for a while.
+					paused = true;
+					owner.notifyChange();
+					sleep(barrierSpeed);
+					paused = false;
+				}
 			}
 		}
 
@@ -330,7 +344,18 @@ class ProgThread on Render {
 		if (running | sleeping)
 			return;
 
+		barrierSpeed = autoStep = Duration();
+		barrierStep = true;
+		wake();
+	}
+
+	// Resume execution, but step at 'speed' intervals until the next barrier is reached.
+	void resumeBarrier(Duration speed) {
+		if (running | sleeping)
+			return;
+
 		autoStep = Duration();
+		barrierSpeed = speed;
 		barrierStep = true;
 		wake();
 	}
