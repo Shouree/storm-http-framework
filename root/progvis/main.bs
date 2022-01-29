@@ -441,7 +441,7 @@ class MainWin extends Frame {
 
 	// Apply an action as if the user clicked something. The "step" received here is the same format
 	// that the Behavior class receives in its "onUserAction".
-	public void applyAction(Str step) {
+	public Bool applyAction(Str step) {
 		painter.applyAction(step);
 	}
 

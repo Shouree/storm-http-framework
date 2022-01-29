@@ -83,7 +83,26 @@ class ThreadView extends DataView {
 		removeMe;
 	}
 
+	// Mark this thread as being the next step in some way.
+	void markNext(Bool barrier) {
+		clearNext();
+		if (barrier)
+			bigStep.marked = true;
+		else
+			step.marked = true;
+	}
+
+	// Clear markings for the next step.
+	void clearNext() {
+		bigStep.marked = false;
+		step.marked = false;
+	}
+
+	// Get the source data.
 	Data? srcData() : override { thread; }
+
+	// Get the thread ID.
+	Nat threadId() { thread.id; }
 
 	void update(Workspace:Update ws) : override {
 		for (id, f in thread.frames) {

@@ -41,6 +41,9 @@ class MainPainter extends Painter {
 	// Behavior to use in the painter.
 	private Behavior? behavior;
 
+	// Mark from the behavior, if any.
+	private BehaviorMark? mark;
+
 	init() {
 		init() { scale = 1.0; }
 		bgColor = Color(0.8, 0.8, 0.8);
@@ -72,8 +75,15 @@ class MainPainter extends Painter {
 	// Update the behavior without re-loading a program.
 	void updateBehavior(Behavior b) {
 		behavior = b;
+		mark = b.mark;
 		panel = b.panel;
 		workspace.enableStep = b.allowStep;
+
+		if (mark) {
+			workspace.clearNext();
+			if (m = mark.mark)
+				markAction(m);
+		}
 	}
 
 	// Open a program.
@@ -104,9 +114,13 @@ class MainPainter extends Painter {
 	}
 
 	// Apply an action. These are the same that we produce to the Behavior.
-	void applyAction(Str action) {
+	// Will only apply the action if all threads are paused, returns false if this is not the case.
+	Bool applyAction(Str action) {
 		unless (world)
-			return;
+			return false;
+
+		unless (world.program.threadsPaused)
+			return false;
 
 		Bool barrier = false;
 		if (action.endsWith("*")) {
@@ -129,6 +143,8 @@ class MainPainter extends Painter {
 				}
 			}
 		}
+
+		true;
 	}
 
 	private void onProgramError(ThreadError error) {
@@ -154,6 +170,7 @@ class MainPainter extends Painter {
 	void cleanup() {
 		// Don't call any behavior during termination.
 		behavior = null;
+		mark = null;
 		panel = null;
 
 		if (world) {
@@ -172,13 +189,16 @@ class MainPainter extends Painter {
 			// Don't call behavior during restart.
 			var tmp = behavior;
 			behavior = null;
+			mark = null;
 
 			world.clear();
 			workspace.clear();
 
 			behavior = tmp;
-			if (behavior)
+			if (behavior) {
+				mark = behavior.mark;
 				behavior.onRestart();
+			}
 			world.program.spawn(world.program.main);
 		}
 	}
@@ -245,6 +265,12 @@ class MainPainter extends Painter {
 				workspace.outputText(o);
 
 			workspace.update(world);
+
+			if (mark) {
+				workspace.clearNext();
+				if (m = mark.mark)
+					markAction(m);
+			}
 		}
 
 		repaint();
@@ -256,6 +282,19 @@ class MainPainter extends Painter {
 			}
 		}
 	}
+
+	// Mark a particular action as being the next action.
+	private void markAction(Str action) {
+		Bool barrier = false;
+		if (action.endsWith("*")) {
+			barrier = true;
+			action = action.cut(action.begin, action.findLast("*".begin.v));
+		}
+
+		if (action.isNat())
+			workspace.markNext(action.toNat, barrier);
+	}
+
 
 	// Called when the mouse is moved.
 	void mouseMoved(Point pt) {

@@ -24,6 +24,21 @@ class Workspace on Render {
 				x.enableStep = v;
 	}
 
+	// Clear all marks.
+	void clearNext() {
+		for (e in elements)
+			if (x = e.visual.contained as ThreadView)
+				x.clearNext();
+	}
+
+	// Mark a particular thread as being the next step.
+	void markNext(Nat thread, Bool barrier) {
+		for (e in elements)
+			if (x = e.visual.contained as ThreadView)
+				if (x.threadId == thread)
+					x.markNext(barrier);
+	}
+
 	// Draw the workspace. Assumes we can clip anything not inside 'viewport'.
 	void render(Rect viewport, Graphics g) {
 		// Find new docked elements.

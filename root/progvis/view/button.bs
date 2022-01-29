@@ -10,6 +10,7 @@ class SmallButton extends Drawable {
 	private Path path;
 	private Brush fill;
 	private Bool pressed;
+	public Bool marked;
 	private Maybe<fn()->void> click;
 
 	init(Path path, Brush fill, Size size) {
@@ -27,7 +28,12 @@ class SmallButton extends Drawable {
 
 	void draw(Graphics g, Bool active) : override {
 		Rect r = rect;
-		g.fill(r, if (pressed) { buttonMarked; } else { buttonBg; });
+		var color = buttonBg;
+		if (pressed)
+			color = buttonPressed;
+		if (marked)
+			color = buttonMarked;
+		g.fill(r, color);
 		g.draw(r, dataFg);
 
 		Rect decoration = path.bound;

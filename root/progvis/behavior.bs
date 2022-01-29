@@ -40,6 +40,25 @@ class Behavior on Ui {
 
 	// Get the panel to show during rendering.
 	ProblemPanel? panel() { null; }
+
+	// Data to mark.
+	BehaviorMark mark;
+}
+
+
+/**
+ * Behavior mark. Communicates with the painter efficiently.
+ */
+class BehaviorMark on Render {
+	// Return an action to mark.
+	Str? mark() { data; }
+
+	// Set the mark.
+	assign mark(Str m) { data = m; }
+	assign mark(Str? m) { data = m; }
+
+	// The data.
+	private Str? data;
 }
 
 
@@ -206,6 +225,8 @@ class ReplayBehavior extends DefaultBehavior {
 		} while (next != solution.end) {
 			last = next + 1;
 		}
+
+		updateMark();
 	}
 
 	init(MainWin window, check:Action[] steps) {
@@ -215,6 +236,8 @@ class ReplayBehavior extends DefaultBehavior {
 
 		for (x in steps)
 			this.steps << x.toS;
+
+		updateMark();
 	}
 
 	void onProgramError(ProgramError error) : override {
@@ -225,6 +248,7 @@ class ReplayBehavior extends DefaultBehavior {
 	void onRestart() : override {
 		stop();
 		pos = 0;
+		updateMark();
 	}
 
 	void onDispose() : override {
@@ -261,13 +285,28 @@ class ReplayBehavior extends DefaultBehavior {
 			return;
 		}
 
-		window.applyAction(steps[pos++]);
+		// Must update the mark first, otherwise we might show the wrong thing.
+		pos++;
+		updateMark();
+		if (!window.applyAction(steps[pos - 1])) {
+			// Something was running, restore.
+			pos--;
+			updateMark();
+		}
 	}
 
 	private void stop() {
 		stopAuto = true;
 		while (autoStep)
 			yield();
+	}
+
+	// Update the mark.
+	private void updateMark() {
+		if (pos < steps.count)
+			mark.mark = steps[pos];
+		else
+			mark.mark = null;
 	}
 
 	// Function running in another UThread.

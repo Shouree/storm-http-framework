@@ -73,7 +73,8 @@ Size buttonSize on Render = Size(30, 30);
 
 // Marked color of a button.
 Brush buttonBg on Render = SolidBrush(white);
-Brush buttonMarked on Render = SolidBrush(white * 0.8 + blue);
+Brush buttonPressed on Render = SolidBrush(white * 0.8 + blue);
+Brush buttonMarked on Render = SolidBrush(yellow);
 
 // Layout edge spacing.
 Float layoutEdgeSpace on Render = 10;
