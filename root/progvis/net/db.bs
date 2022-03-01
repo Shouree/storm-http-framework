@@ -20,46 +20,41 @@ DATABASE ProgvisDB {
 		user INTEGER
 	);
 
-	// Problems in the system (all in the form of a concurrent program that might contain a bug).
+	// Problems in the system. There are two types of problems: one that only consists of a piece of
+	// code, and one that has an interface + an implementation.
 	TABLE problems(
-		// ID if this problem.
+		// ID of this problem.
 		id INTEGER PRIMARY KEY,
 		// Problem author (foreign key to users)
 		author INTEGER,
 		// Title of the problem.
 		title TEXT,
-		// Program source code.
-		source TEXT,
-		// Language (= file extension) of the problem.
-		language TEXT,
-		// Created (time string in UTC)
-		created TEXT
-	);
-	INDEX ON problems(author);
-
-	// Solutions to problems. A solution is either:
-	// 1. I think this code does not contain any concurrency issues.
-	// 2. I have found a concurrency issue.
-	// 3. I have found a concurrency issue, and I propose a solution.
-	TABLE solutions(
-		// ID of this solution.
-		id INTEGER PRIMARY KEY,
-		// Solution to what problem?
-		to INTEGER,
-		// Author of this solution.
-		author INTEGER,
-		// Type of solution (e.g. asserttion, crash, ...).
-		type TEXT,
-		// Solution found (or null, if in case 1 above).
-		solution TEXT ALLOW NULL,
-		// Proposed improvement (another problem, if any)
+		// What is the current state of this problem? I.e. what is the next thing to modify.
+		// 0 = modify the implementation, 1 = modify the main program.
+		next INTEGER,
+		// Source code of the main program (to code table).
+		main INTEGER,
+		// Source code of the implementation (to code table).
+		impl INTEGER,
+		// Source code of the reference implementation (to code table).
+		refimpl INTEGER,
+		// Improved version of a previous problem, if any.
 		improved INTEGER ALLOW NULL,
 		// Created (time string in UTC)
 		created TEXT
-	);
-	INDEX ON solutions(author);
-	INDEX ON solutions(to);
-	INDEX ON solutions(improved);
+		);
+	INDEX ON problems(author);
+
+	// A piece of code for some problem.
+	TABLE code(
+		// ID of this piece of code.
+		id INTEGER PRIMARY KEY,
+		// Program source code.
+		src TEXT,
+		// Language (= file extension) of the problem.
+		language TEXT
+		);
+
 }
 
 class Database {
