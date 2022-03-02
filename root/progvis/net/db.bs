@@ -44,6 +44,7 @@ DATABASE ProgvisDB {
 		created TEXT
 		);
 	INDEX ON problems(author);
+	INDEX ON problems(improved);
 
 	// A piece of code for some problem.
 	TABLE code(
@@ -95,33 +96,22 @@ class Database {
 		WITH db: UPDATE users SET displayName = newName WHERE id == userId;
 	}
 
-	// Get a list of solved or unsolved problems. Note: these are ones that might be interesting to
-	// solve, so we don't include problems from yourself.
-	// Note: We don't care about 'wantImproved' if 'wantSolved' is true.
-	Problem[] userChallenges(Int forUser, Bool wantSolved, Bool wantImproved) {
-		Problem[] result;
+	// Get a list of problems in the system. Excludes problems that the user has already solved
+	// based on 'wantSolved'. 'wantMain' indicates if we want problems where the next step is to
+	// modify the main function.
+	ProblemInfo[] problems(Int forUser, Bool wantSolved, Bool wantMain) {
+		ProblemInfo[] result;
+		Int main = if (wantMain) { 1; } else { 0; };
 		var x = WITH db: SELECT problems.id AS id, displayName, title FROM problems
 			JOIN users ON problems.author == users.id
-			WHERE author != forUser;
+			WHERE author != forUser AND next == main;
 		for (row in x) {
 			var problemId = row.id;
 
-			Bool add = if (WITH db: SELECT ONE id FROM solutions WHERE to == problemId AND author == forUser) {
-				wantSolved;
-			} else {
-				!wantSolved;
-			};
-
-			if (add & !wantSolved) {
-				add &= if (WITH db: SELECT ONE id FROM solutions WHERE improved == problemId) {
-					wantImproved;
-				} else {
-					!wantImproved;
-				};
+			Bool solved = (WITH db: SELECT ONE id FROM problems WHERE improved == problemId AND author == forUser).any;
+			if (solved == wantSolved) {
+				result << ProblemInfo(problemId, row.title, row.displayName);
 			}
-
-			if (add)
-				result << Problem(problemId, row.title, row.displayName, countSolved(problemId));
 		}
 
 		result;
@@ -139,136 +129,49 @@ class Database {
 		result;
 	}
 
-	// Get the parent problem for a problem.
-	Problem? parentTo(Int problemId) {
-		var parent = WITH db: SELECT ONE problems.id AS id, users.displayName AS author, problems.title AS title FROM solutions
-			JOIN problems ON problems.id == solutions.to
-			JOIN users ON problems.author == users.id
-			WHERE solutions.improved == problemId;
-
-		if (parent)
-			return Problem(parent.id, parent.title, parent.author, countSolved(parent.id));
-		else
-			return null;
-	}
-
-	// Get the author to a problem.
-	Int? authorTo(Int problemId) {
-		if (x = WITH db: SELECT ONE author FROM problems WHERE id == problemId) {
-			return x.author;
-		} else {
-			return null;
-		}
-	}
-
-	// Get solutions to a problem.
-	Solution[] solutionsTo(Int problemId) {
-		var x = WITH db: SELECT
-				solutions.id AS id,
-				solutions.to AS to,
-				users.displayName AS author,
-				solutions.type AS type,
-				solutions.solution AS solution,
-				solutions.improved AS improved
-			FROM solutions
-			JOIN users ON solutions.author == users.id
-			WHERE solutions.to == problemId;
-		Solution[] result;
-		for (row in x) {
-			result << Solution(row.id, row.to, row.author, row.type, row.solution, row.improved);
-		}
-		result;
-	}
-
-	// Get details about a problem (problem info + source). We don't fill "solutions".
-	DetailsResponse problemDetails(Int problemId, Int currentUserId) {
-		var x = WITH db: SELECT ONE title, author, source, language FROM problems WHERE id == problemId;
-		if (x) {
-			DetailsResponse(problemId, x.title, x.source, x.language, x.author != currentUserId);
-		} else {
-			throw ServerError("Problem number ${problemId} not found!");
-		}
-	}
-
-	// Store a new solution. If a solution of the same type is already present, overwrites the existing one.
-	Int newSolution(Int problemId, Int authorId, Str sType, Str? sSolution) {
-		// Find other solutions and examine if they have a solution attached to them.
-		for (row in WITH db: SELECT improved FROM solutions WHERE to == problemId AND author == authorId AND type == sType) {
-			if (row.improved) {
-				throw ServerError("You have already found and solved this issue. Find another type of issue or solve another problem.");
-			}
-		}
-
-		// Now we can remove all rows.
-		WITH db: DELETE FROM solutions WHERE to == problemId AND author == authorId AND type == sType;
-
-		// Add a new one.
-		WITH db: INSERT INTO solutions(to, author, type, solution, created) VALUES (problemId, authorId, sType, sSolution, CURRENT DATETIME);
-	}
-
 	private Nat countSolved(Int problemId) {
-		WITH db: COUNT FROM solutions WHERE to == problemId;
-	}
-
-	// Create a new problem.
-	Int createProblem(Int user, Str title, Str code, Str language) {
-		WITH db: INSERT INTO problems(author, title, source, language, created) VALUES (user, title, code, language, CURRENT DATETIME);
-	}
-
-	// Create an improvement.
-	Int createImprovement(Int user, Str title, Str code, Str language, Int solutionId) {
-		// Check so that the solution exists, and is owned by the right user.
-		if (row = WITH db: SELECT ONE author FROM solutions WHERE id == solutionId) {
-			if (row.author != user)
-				throw ServerError("The solution you are trying to improve is not yours.");
-		} else {
-			throw ServerError("No such solution!");
-		}
-
-		Int problemId = createProblem(user, title, code, language);
-		WITH db: UPDATE solutions SET improved = problemId WHERE id == solutionId;
-		return problemId;
+		0; // WITH db: COUNT FROM solutions WHERE to == problemId;
 	}
 
 	// Compute the points of all users in the database.
 	Int->Int allScores() {
 		Int->Int result;
 
-		// Points given to a solution that finds some error.
-		Int errorSolution = 5;
-		// Points given to a solution that don't find some error.
-		Int correctSolution = 1;
-		// Extra points if the solution was improved.
-		Int improved = 2;
-		// Points given to a problem that got an incorrect solution.
-		Int errorProblem = 1;
-		// Points given to a problem that got a correct solution.
-		Int correctProblem = 2;
+		// // Points given to a solution that finds some error.
+		// Int errorSolution = 5;
+		// // Points given to a solution that don't find some error.
+		// Int correctSolution = 1;
+		// // Extra points if the solution was improved.
+		// Int improved = 2;
+		// // Points given to a problem that got an incorrect solution.
+		// Int errorProblem = 1;
+		// // Points given to a problem that got a correct solution.
+		// Int correctProblem = 2;
 
-		var q = WITH db: SELECT
-			solutions.author AS author,
-			solutions.solution AS solution,
-			solutions.improved AS improved,
-			problems.author AS toAuthor
-			FROM solutions
-			JOIN problems ON solutions.to == problems.id;
-		for (row in q) {
-			Int pScore = 0;
-			Int sScore = 0;
-			if (row.solution) {
-				sScore += errorSolution;
-				pScore += errorProblem;
-			} else {
-				sScore += correctSolution;
-				pScore += correctProblem;
-			}
+		// var q = WITH db: SELECT
+		// 	solutions.author AS author,
+		// 	solutions.solution AS solution,
+		// 	solutions.improved AS improved,
+		// 	problems.author AS toAuthor
+		// 	FROM solutions
+		// 	JOIN problems ON solutions.to == problems.id;
+		// for (row in q) {
+		// 	Int pScore = 0;
+		// 	Int sScore = 0;
+		// 	if (row.solution) {
+		// 		sScore += errorSolution;
+		// 		pScore += errorProblem;
+		// 	} else {
+		// 		sScore += correctSolution;
+		// 		pScore += correctProblem;
+		// 	}
 
-			if (row.improved)
-				sScore += improved;
+		// 	if (row.improved)
+		// 		sScore += improved;
 
-			result[row.author] += sScore;
-			result[row.toAuthor] += pScore;
-		}
+		// 	result[row.author] += sScore;
+		// 	result[row.toAuthor] += pScore;
+		// }
 
 		result;
 	}

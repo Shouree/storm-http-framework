@@ -8,11 +8,14 @@ use util:serialize;
 /**
  * Representation of a single problem (no source code, intended for lists of problems).
  */
-class Problem : serializable {
+class ProblemInfo : serializable {
 	Int id;
 
 	Str title;
 	Str author;
+
+	// Is the next step to modify the main program.
+	Bool nextIsMain;
 
 	// Number of solutions.
 	Nat solutions;
@@ -33,52 +36,44 @@ class Problem : serializable {
 }
 
 /**
- * Representation of a single solution to a problem.
- *
- * Note: This *may* link to another problem, but may also simply say: this looks good to me.
+ * Representation of a problem, including code.
  */
-class Solution : serializable {
-	// ID of this row in the DB.
-	Int id;
+class Problem : extends ProblemInfo, serializable {
+	// Main program.
+	Code main;
 
-	// ID if the problem we're a solution to.
-	Int to;
+	// Implementation of the data structure.
+	Code implementation;
 
-	// Author of the solution.
-	Str author;
+	// Reference implementation of the data structure.
+	Code reference;
 
-	// Type of solution (a tag that can be used to describe if it was an exception, a race condition, etc.)
-	Str type;
-
-	// Solution, in string representation (if any).
-	Str? solution;
-
-	// Improved version, if any.
-	Int? improved;
-
-	init(Int id, Int to, Str author, Str type) {
-		init {
-			id = id;
-			to = to;
-			author = author;
-			type = type;
+	// Create.
+	init(Int id, Str title, Str author, Nat solutions, Code main, Code impl, Code ref) {
+		init(id, title, author, solutions) {
+			main = main;
+			implementation = impl;
+			reference = ref;
 		}
 	}
+}
 
-	init(Int id, Int to, Str author, Str type, Str? solution, Int? improved) {
+/**
+ * A piece of code, indicating a language as well.
+ */
+class Code : serializable {
+	// Source code.
+	Str src;
+
+	// Language (= file extension).
+	Str language;
+
+	// Create.
+	init(Str src, Str language) {
 		init {
-			id = id;
-			to = to;
-			author = author;
-			type = type;
-			solution = solution;
-			improved = improved;
+			src = src;
+			language = language;
 		}
-	}
-
-	// For sorting.
-	Bool <(Solution o) {
-		id < o.id;
 	}
 }
 
