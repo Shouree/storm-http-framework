@@ -2,6 +2,7 @@
 #include "Core/Object.h"
 #include "Core/Array.h"
 #include "Core/Exception.h"
+#include "Buffer.h"
 
 namespace storm {
 	STORM_PKG(core.io);
@@ -207,6 +208,55 @@ namespace storm {
 	private:
 		// Is this https?
 		Bool secure;
+	};
+
+
+	/**
+	 * Protocol for memory-backed files.
+	 *
+	 * A single protocol may contain multiple "files" that are accessible from the protocol. The
+	 * hierarchy in the memory protocol currently needs to be flat (i.e. no support for
+	 * directories). Currently, writing data back to the files is not supported.
+	 */
+	class MemoryProtocol : public Protocol {
+		STORM_CLASS;
+	public:
+		// Create.
+		STORM_CTOR MemoryProtocol();
+
+		// Compare parts.
+		virtual Bool STORM_FN partEq(Str *a, Str *b);
+
+		// Hash parts.
+		virtual Nat STORM_FN partHash(Str *a);
+
+		// Get child items. Only makes sense on the "root" Url.
+		virtual Array<Url *> *STORM_FN children(Url *url);
+
+		// Read a file.
+		virtual IStream *STORM_FN read(Url *url);
+
+		// Write a file.
+		virtual OStream *STORM_FN write(Url *url);
+
+		// Exists?
+		virtual StatType STORM_FN stat(Url *url);
+
+		// To string.
+		virtual void STORM_FN toS(StrBuf *to) const;
+
+		// Set file contents.
+		Url *STORM_FN put(Str *name, Buffer content);
+
+		// Serialization.
+		static SerializedType *STORM_FN serializedType(EnginePtr e);
+		static MemoryProtocol *STORM_FN read(ObjIStream *from);
+		virtual void STORM_FN write(ObjOStream *to);
+		STORM_CTOR MemoryProtocol(ObjIStream *from);
+
+	private:
+		// All "files" in this protocol.
+		Map<Str *, Buffer> *files;
 	};
 
 }

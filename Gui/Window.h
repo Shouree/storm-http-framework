@@ -112,6 +112,10 @@ namespace gui {
 		Bool STORM_FN visible();
 		void STORM_ASSIGN visible(Bool show);
 
+		// Enable/disable. Generally only useful to do for leaf windows.
+		Bool STORM_FN enabled();
+		void STORM_ASSIGN enabled(Bool enable);
+
 		// Window text.
 		virtual Str *STORM_FN text();
 		virtual void STORM_ASSIGN text(Str *str);
@@ -222,6 +226,9 @@ namespace gui {
 
 		// Visible?
 		Bool myVisible;
+
+		// Enabled.
+		Bool myEnabled;
 
 		// Currently drawing anything to this window?
 		Bool drawing;

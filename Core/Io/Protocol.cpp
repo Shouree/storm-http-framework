@@ -5,6 +5,7 @@
 #include "Str.h"
 #include "StrBuf.h"
 #include "FileStream.h"
+#include "MemStream.h"
 #include "Serialization.h"
 #include "SerializationUtils.h"
 
@@ -386,6 +387,88 @@ namespace storm {
 
 	HttpProtocol::HttpProtocol(ObjIStream *from) : Protocol(from) {
 		secure = Serialize<Bool>::read(from);
+		from->end();
+	}
+
+
+	MemoryProtocol::MemoryProtocol() {
+		files = new (this) Map<Str *, Buffer>();
+	}
+
+	Bool MemoryProtocol::partEq(Str *a, Str *b) {
+		return *a == *b;
+	}
+
+	Nat MemoryProtocol::partHash(Str *a) {
+		return a->hash();
+	}
+
+	Array<Url *> *MemoryProtocol::children(Url *url) {
+		Array<Url *> *result = new (this) Array<Url *>();
+
+		if (url->empty()) {
+			for (Map<Str *, Buffer>::Iter i = files->begin(), e = files->end(); i != e; ++i)
+				*result << url->push(i.k());
+		}
+
+		return result;
+	}
+
+	IStream *MemoryProtocol::read(Url *url) {
+		Buffer buffer;
+
+		if (url->count() == 1) {
+			Str *name = url->at(0);
+			if (files->has(name))
+				buffer = files->get(name);
+		}
+
+		return new (this) MemIStream(buffer);
+	}
+
+	OStream *MemoryProtocol::write(Url *url) {
+		// We could support it, but then we need a more custom OStream implementation.
+		throw new (this) ProtocolNotSupported(S("write"), toS());
+	}
+
+	StatType MemoryProtocol::stat(Url *url) {
+		if (url->count() != 1)
+			return sNotFound;
+
+		if (files->has(url->at(0)))
+			return sFile;
+
+		return sNotFound;
+	}
+
+	void MemoryProtocol::toS(StrBuf *to) const {
+		*to << S("<memory>:");
+	}
+
+	Url *MemoryProtocol::put(Str *name, Buffer content) {
+		files->put(name, content);
+		return new (this) Url(this, new (this) Array<Str *>(1, name));
+	}
+
+	SerializedType *MemoryProtocol::serializedType(EnginePtr e) {
+		SerializedStdType *type = serializedStdType<MemoryProtocol, Protocol>(e.v);
+		return type;
+	}
+
+	MemoryProtocol *MemoryProtocol::read(ObjIStream *from) {
+		return (MemoryProtocol *)from->readClass(StormInfo<MemoryProtocol>::type(from->engine()));
+	}
+
+	void MemoryProtocol::write(ObjOStream *to) {
+		if (to->startClass(StormInfo<MemoryProtocol>::type(engine()), this)) {
+			Protocol::write(to);
+			to->end();
+		}
+	}
+
+	MemoryProtocol::MemoryProtocol(ObjIStream *from) {
+		// Note: Serialization does not save files in the memory protocol, just like paths are not
+		// transferred between different systems.
 		from->end();
 	}
 

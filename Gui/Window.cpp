@@ -19,7 +19,7 @@ namespace gui {
 
 	Window::Window() :
 		myHandle(invalid), myParent(null), myRoot(null),
-		myVisible(true), drawing(false), mouseInside(false),
+		myVisible(true), myEnabled(true), drawing(false), mouseInside(false),
 		gdkWindow(null), gTimer(null),
 		myPos(0, 0, 40, 40) /* large enought to not generate warnings in Gtk+ */ {
 
@@ -144,6 +144,10 @@ namespace gui {
 
 	Bool Window::visible() {
 		return myVisible;
+	}
+
+	Bool Window::enabled() {
+		return myEnabled;
 	}
 
 	Font *Window::font() {
@@ -302,6 +306,12 @@ namespace gui {
 		myVisible = show;
 		if (created())
 			ShowWindow(handle().hwnd(), show ? TRUE : FALSE);
+	}
+
+	void Window::enabled(Bool enable) {
+		myEnabled = enable;
+		if (created())
+			EnableWindow(handle().hwnd(), enable ? TRUE : FALSE);
 	}
 
 	Str *Window::text() {
@@ -1107,6 +1117,13 @@ namespace gui {
 				gtk_widget_show(handle().widget());
 			else
 				gtk_widget_hide(handle().widget());
+		}
+	}
+
+	void Window::enabled(Bool v) {
+		myEnabled = v;
+		if (created()) {
+			gtk_widget_set_sensitive(handle().widget(), v ? TRUE : FALSE);
 		}
 	}
 
