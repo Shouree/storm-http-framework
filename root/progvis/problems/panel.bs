@@ -125,75 +125,75 @@ class StatsPanel extends Panel {
 /**
  * Panel containing "replay" and "show solution" as appropriate. Used as "details" for a solution.
  */
-class SolutionPanel extends Panel {
-	private Callback callback;
-	private Solution solution;
-	private Text[] buttons;
-	private Brush[] colors;
-	private Fn<void>[] actions;
-	private Float buttonHeight;
+// class SolutionPanel extends Panel {
+// 	private Callback callback;
+// 	private Solution solution;
+// 	private Text[] buttons;
+// 	private Brush[] colors;
+// 	private Fn<void>[] actions;
+// 	private Float buttonHeight;
 
-	init(Solution solution, Callback callback) {
-		init {
-			solution = solution;
-			callback = callback;
-		}
+// 	init(Solution solution, Callback callback) {
+// 		init {
+// 			solution = solution;
+// 			callback = callback;
+// 		}
 
-		// TODO: How to know what we clicked?
-		if (solution.solution.any) {
-			buttons << Text("Show the issue", defaultFont);
-			colors << SolidBrush(red + white * 0.2);
-			actions << &this.showSolution();
-		}
-		if (id = solution.improved) {
-			buttons << Text("Show fix (ID ${id})", defaultFont);
-			colors << SolidBrush(green + white * 0.2);
-			actions << &this.showImproved();
-		}
+// 		// TODO: How to know what we clicked?
+// 		if (solution.solution.any) {
+// 			buttons << Text("Show the issue", defaultFont);
+// 			colors << SolidBrush(red + white * 0.2);
+// 			actions << &this.showSolution();
+// 		}
+// 		if (id = solution.improved) {
+// 			buttons << Text("Show fix (ID ${id})", defaultFont);
+// 			colors << SolidBrush(green + white * 0.2);
+// 			actions << &this.showImproved();
+// 		}
 
-		if (buttons.empty) {
-			buttons << Text("No more information available", defaultFont);
-			colors << SolidBrush(white);
-		}
+// 		if (buttons.empty) {
+// 			buttons << Text("No more information available", defaultFont);
+// 			colors << SolidBrush(white);
+// 		}
 
-		for (b in buttons) {
-			buttonHeight = buttonHeight.max(b.size.h);
-		}
-	}
+// 		for (b in buttons) {
+// 			buttonHeight = buttonHeight.max(b.size.h);
+// 		}
+// 	}
 
-	Bool render(Point offset, Float width, Graphics g) : override {
-		Float w = width / buttons.count.int.float;
-		for (i, button in buttons) {
-			Rect r(offset + Point(i.int.float * w, 0), Size(w, height));
-			g.fill(r, colors[i]);
-			g.draw(button, tableText, r.center - button.size / 2);
-			g.draw(r, tableFg);
-		}
+// 	Bool render(Point offset, Float width, Graphics g) : override {
+// 		Float w = width / buttons.count.int.float;
+// 		for (i, button in buttons) {
+// 			Rect r(offset + Point(i.int.float * w, 0), Size(w, height));
+// 			g.fill(r, colors[i]);
+// 			g.draw(button, tableText, r.center - button.size / 2);
+// 			g.draw(r, tableFg);
+// 		}
 
-		false;
-	}
+// 		false;
+// 	}
 
-	Float height() : override {
-		buttonHeight + tableVSpace;
-	}
+// 	Float height() : override {
+// 		buttonHeight + tableVSpace;
+// 	}
 
-	void onClick(Point pt, Float width, Painter p) : override {
-		Float w = width / buttons.count.int.float;
-		Nat id = (pt.x / w).int.nat;
-		if (id < actions.count)
-			actions[id].call();
-	}
+// 	void onClick(Point pt, Float width, Painter p) : override {
+// 		Float w = width / buttons.count.int.float;
+// 		Nat id = (pt.x / w).int.nat;
+// 		if (id < actions.count)
+// 			actions[id].call();
+// 	}
 
-	private void showSolution() {
-		if (s = solution.solution)
-			(spawn callback.showSolution(solution.to, s)).detach();
-	}
+// 	private void showSolution() {
+// 		if (s = solution.solution)
+// 			(spawn callback.showSolution(solution.to, s)).detach();
+// 	}
 
-	private void showImproved() {
-		if (p = solution.improved)
-			(spawn callback.solveProblem(p)).detach();
-	}
-}
+// 	private void showImproved() {
+// 		if (p = solution.improved)
+// 			(spawn callback.solveProblem(p)).detach();
+// 	}
+// }
 
 /**
  * Panel containing a table.

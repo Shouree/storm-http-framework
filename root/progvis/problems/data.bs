@@ -92,16 +92,18 @@ class UnsolvedView extends View {
 	}
 
 	Row[] rows() : override {
-		getProblems(ChallengesRequest(false, improved));
+		// getProblems(ChallengesRequest(false, improved));
+		[];
 	}
 
 	Panel details(Int id) : override {
-		Problem? parent;
-		if (response = client.query(StatsRequest(id, false)) as StatsResponse) {
-			parent = response.parent;
-		}
+		// Problem? parent;
+		// if (response = client.query(StatsRequest(id, false)) as StatsResponse) {
+		// 	parent = response.parent;
+		// }
 
-		StatsPanel(id, parent, true, cb);
+		// StatsPanel(id, parent, true, cb);
+		StatsPanel(id, null, true, cb);
 	}
 }
 
@@ -122,18 +124,20 @@ class SolvedView extends View {
 	}
 
 	Row[] rows() : override {
-		getProblems(ChallengesRequest(true, false));
+		//getProblems(ChallengesRequest(true, false));
+		[];
 	}
 
 	Panel details(Int id) : override {
-		if (response = client.query(StatsRequest(id, true)) as StatsResponse) {
-			MultiPanel root;
-			root.add(StatsPanel(id, response.parent, false, cb));
-			root.add(TablePanel(SolutionView(client, response.solutions, cb)));
-			root;
-		} else {
-			StatsPanel(-1, null, false, cb);
-		}
+		// if (response = client.query(StatsRequest(id, true)) as StatsResponse) {
+		// 	MultiPanel root;
+		// 	root.add(StatsPanel(id, response.parent, false, cb));
+		// 	root.add(TablePanel(SolutionView(client, response.solutions, cb)));
+		// 	root;
+		// } else {
+		// 	StatsPanel(-1, null, false, cb);
+		// }
+		StatsPanel(-1, null, false, cb);
 	}
 }
 
@@ -146,50 +150,51 @@ class OwnView extends SolvedView {
 	}
 
 	Row[] rows() : override {
-		getProblems(OwnProblemsRequest());
+		// getProblems(OwnProblemsRequest());
+		[];
 	}
 }
 
 /**
  * View for solutions.
  */
-class SolutionView extends View {
-	private Solution[] solutions;
-	private Callback cb;
+// class SolutionView extends View {
+// 	private Solution[] solutions;
+// 	private Callback cb;
 
-	init(Client client, Solution[] solutions, Callback cb) {
-		init(client) { solutions = solutions; cb = cb; }
-		solutions.sort();
-	}
+// 	init(Client client, Solution[] solutions, Callback cb) {
+// 		init(client) { solutions = solutions; cb = cb; }
+// 		solutions.sort();
+// 	}
 
-	Str[] labels() : override {
-		["Author", "Solution"];
-	}
+// 	Str[] labels() : override {
+// 		["Author", "Solution"];
+// 	}
 
-	Row[] rows() : override {
-		Row[] result;
-		for (r in solutions) {
-			Str type = if (r.solution.empty) {
-				"Looks correct to me!";
-			} else if (r.improved.empty) {
-				"I found \"${r.type}\"...";
-			} else {
-				"I found \"${r.type}\" and tried to fix it";
-			};
-			result << Row(r.id, [r.author, type]);
-		}
-		result;
-	}
+// 	Row[] rows() : override {
+// 		Row[] result;
+// 		for (r in solutions) {
+// 			Str type = if (r.solution.empty) {
+// 				"Looks correct to me!";
+// 			} else if (r.improved.empty) {
+// 				"I found \"${r.type}\"...";
+// 			} else {
+// 				"I found \"${r.type}\" and tried to fix it";
+// 			};
+// 			result << Row(r.id, [r.author, type]);
+// 		}
+// 		result;
+// 	}
 
-	Panel details(Int id) : override {
-		// TODO: What to show here?
-		// We should have "show problem" (if available), "show improvement" (if available).
-		for (s in solutions) {
-			if (s.id == id)
-				return SolutionPanel(s, cb);
-		}
+// 	Panel details(Int id) : override {
+// 		// TODO: What to show here?
+// 		// We should have "show problem" (if available), "show improvement" (if available).
+// 		// for (s in solutions) {
+// 		// 	if (s.id == id)
+// 		// 		return SolutionPanel(s, cb);
+// 		// }
 
-		// Good for "zero height".
-		return MultiPanel();
-	}
-}
+// 		// Good for "zero height".
+// 		return MultiPanel();
+// 	}
+// }

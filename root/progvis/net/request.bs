@@ -110,148 +110,148 @@ private value ScorePair {
 /**
  * Ask for challenges.
  */
-class ChallengesRequest : extends Request, serializable {
-	// Only solved problems?
-	Bool solved;
+// class ChallengesRequest : extends Request, serializable {
+// 	// Only solved problems?
+// 	Bool solved;
 
-	// Only improved problems? Ignored if "solved" is true.
-	Bool improved;
+// 	// Only improved problems? Ignored if "solved" is true.
+// 	Bool improved;
 
-	init(Bool wantSolved, Bool wantImproved) {
-		init { solved = wantSolved; improved = wantImproved; }
-	}
+// 	init(Bool wantSolved, Bool wantImproved) {
+// 		init { solved = wantSolved; improved = wantImproved; }
+// 	}
 
-	Response? execute(ServerConn server, Database db) : override {
-		ProblemResponse(db.userChallenges(server.userId, solved, improved));
-	}
-}
+// 	Response? execute(ServerConn server, Database db) : override {
+// 		ProblemResponse(db.userChallenges(server.userId, solved, improved));
+// 	}
+// }
 
 /**
  * Ask for a user's own problems.
  */
-class OwnProblemsRequest : extends Request, serializable {
-	Response? execute(ServerConn server, Database db) : override {
-		ProblemResponse(db.ownProblems(server.userId));
-	}
-}
+// class OwnProblemsRequest : extends Request, serializable {
+// 	Response? execute(ServerConn server, Database db) : override {
+// 		ProblemResponse(db.ownProblems(server.userId));
+// 	}
+// }
 
 /**
  * Ask for more detailed stats of a problem.
  */
-class StatsRequest : extends Request, serializable {
-	// Problem we are interested in.
-	Int problem;
+// class StatsRequest : extends Request, serializable {
+// 	// Problem we are interested in.
+// 	Int problem;
 
-	// Shall solutions be included in the response?
-	Bool solutions;
+// 	// Shall solutions be included in the response?
+// 	Bool solutions;
 
-	init(Int problem, Bool solutions) {
-		init {
-			problem = problem;
-			solutions = solutions;
-		}
-	}
+// 	init(Int problem, Bool solutions) {
+// 		init {
+// 			problem = problem;
+// 			solutions = solutions;
+// 		}
+// 	}
 
-	init(Problem problem, Bool solutions) {
-		init {
-			problem = problem.id;
-			solutions = solutions;
-		}
-	}
+// 	init(Problem problem, Bool solutions) {
+// 		init {
+// 			problem = problem.id;
+// 			solutions = solutions;
+// 		}
+// 	}
 
-	Response? execute(ServerConn server, Database db) : override {
-		Solution[] sol;
-		if (solutions)
-			sol = db.solutionsTo(problem);
-		Problem? parent = db.parentTo(problem);
-		StatsResponse(parent, sol);
-	}
-}
+// 	Response? execute(ServerConn server, Database db) : override {
+// 		Solution[] sol;
+// 		if (solutions)
+// 			sol = db.solutionsTo(problem);
+// 		Problem? parent = db.parentTo(problem);
+// 		StatsResponse(parent, sol);
+// 	}
+// }
 
 /**
  * Ask for details about a problem (including source).
  */
-class DetailsRequest : extends Request, serializable {
-	Int problemId;
+// class DetailsRequest : extends Request, serializable {
+// 	Int problemId;
 
-	init(Int id) {
-		init { problemId = id; }
-	}
+// 	init(Int id) {
+// 		init { problemId = id; }
+// 	}
 
-	Response? execute(ServerConn server, Database db) : override {
-		db.problemDetails(problemId, server.userId);
-	}
-}
+// 	Response? execute(ServerConn server, Database db) : override {
+// 		db.problemDetails(problemId, server.userId);
+// 	}
+// }
 
 /**
  * Submit a solution to a problem.
  */
-class PostSolutionRequest : extends Request, serializable {
-	// Solution to this problem.
-	Int problemId;
+// class PostSolutionRequest : extends Request, serializable {
+// 	// Solution to this problem.
+// 	Int problemId;
 
-	// Type of solution.
-	Str type;
+// 	// Type of solution.
+// 	Str type;
 
-	// Solution data (if any).
-	Str? solution;
+// 	// Solution data (if any).
+// 	Str? solution;
 
-	init(Int problemId, Str type, Str? solution) {
-		init {
-			problemId = problemId;
-			type = type;
-			solution = solution;
-		}
-	}
+// 	init(Int problemId, Str type, Str? solution) {
+// 		init {
+// 			problemId = problemId;
+// 			type = type;
+// 			solution = solution;
+// 		}
+// 	}
 
-	Response? execute(ServerConn server, Database db) : override {
-		unless (problemAuthor = db.authorTo(problemId))
-			throw ServerError("No problem with the id ${problemId}!");
+// 	Response? execute(ServerConn server, Database db) : override {
+// 		unless (problemAuthor = db.authorTo(problemId))
+// 			throw ServerError("No problem with the id ${problemId}!");
 
-		if (problemAuthor == server.userId)
-			throw ServerError("Can not solve your own problem!");
+// 		if (problemAuthor == server.userId)
+// 			throw ServerError("Can not solve your own problem!");
 
-		var id = db.newSolution(problemId, server.userId, type, solution);
-		PostSolutionResponse(id);
-	}
-}
+// 		var id = db.newSolution(problemId, server.userId, type, solution);
+// 		PostSolutionResponse(id);
+// 	}
+// }
 
 /**
  * Publish a new problem.
  */
-class NewProblemRequest : extends Request, serializable {
-	Str title;
-	Str code;
-	Str language;
+// class NewProblemRequest : extends Request, serializable {
+// 	Str title;
+// 	Str code;
+// 	Str language;
 
-	init(Str title, Str code, Str language) {
-		init {
-			title = title;
-			code = code;
-			language = language;
-		}
-	}
+// 	init(Str title, Str code, Str language) {
+// 		init {
+// 			title = title;
+// 			code = code;
+// 			language = language;
+// 		}
+// 	}
 
-	Response? execute(ServerConn server, Database db) : override {
-		var id = db.createProblem(server.userId, title, code, language);
-		NewProblemResponse(id);
-	}
-}
+// 	Response? execute(ServerConn server, Database db) : override {
+// 		var id = db.createProblem(server.userId, title, code, language);
+// 		NewProblemResponse(id);
+// 	}
+// }
 
 /**
  * Publish an improvement to an existing solution..
  */
-class NewImprovementRequest : extends NewProblemRequest, serializable {
-	Int solutionId;
+// class NewImprovementRequest : extends NewProblemRequest, serializable {
+// 	Int solutionId;
 
-	init(Str title, Str code, Str language, Int solutionId) {
-		init(title, code, language) {
-			solutionId = solutionId;
-		}
-	}
+// 	init(Str title, Str code, Str language, Int solutionId) {
+// 		init(title, code, language) {
+// 			solutionId = solutionId;
+// 		}
+// 	}
 
-	Response? execute(ServerConn server, Database db) : override {
-		var id = db.createImprovement(server.userId, title, code, language, solutionId);
-		NewProblemResponse(id);
-	}
-}
+// 	Response? execute(ServerConn server, Database db) : override {
+// 		var id = db.createImprovement(server.userId, title, code, language, solutionId);
+// 		NewProblemResponse(id);
+// 	}
+// }

@@ -324,26 +324,11 @@ class MainWin extends Frame {
 	}
 
 	private void onOnlineSubmit() {
-		if (msg = behavior.allowSubmit) {
-			showMessage(this, "Unable to submit", msg);
+		// TODO: Ask the behavior? Or remove "allowSubmit" from it.
+		unless (c = client)
 			return;
-		}
 
-		if (c = client) {
-			if (currentFiles.count != 1 | !painter.hasProgram) {
-				showMessage(this, "Open a source file first", "To create a new problem, start by opening the file you want to upload.");
-				return;
-			}
-
-			Url file = currentFiles[0];
-
-			// Grab the source from the program, in case it changed on disk.
-			if (text = painter.sourceFor(file)) {
-				UploadDlg(c, text, file.ext).show(this);
-			} else {
-				showMessage(this, "Error", "Failed to find the source for this file.");
-			}
-		}
+		UploadDlg(c).show(this);
 	}
 
 	// Get source for the current file.

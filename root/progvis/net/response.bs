@@ -84,62 +84,62 @@ class ProblemResponse : extends Response, serializable {
 /**
  * Stats for a problem. Solutions may be empty.
  */
-class StatsResponse : extends Response, serializable {
-	// Problem is a solution to this problem (if any).
-	Problem? parent;
+// class StatsResponse : extends Response, serializable {
+// 	// Problem is a solution to this problem (if any).
+// 	Problem? parent;
 
-	// Solutions to this problem, if requested.
-	Solution[] solutions;
+// 	// Solutions to this problem, if requested.
+// 	Solution[] solutions;
 
-	init(Problem? parent, Solution[] solutions) {
-		init {
-			parent = parent;
-			solutions = solutions;
-		}
-	}
-}
+// 	init(Problem? parent, Solution[] solutions) {
+// 		init {
+// 			parent = parent;
+// 			solutions = solutions;
+// 		}
+// 	}
+// }
 
 /**
  * Details of a problem. All information (including source) that we need to solve it.
  */
-class DetailsResponse : extends Response, serializable {
-	// Problem ID.
-	Int id;
+// class DetailsResponse : extends Response, serializable {
+// 	// Problem ID.
+// 	Int id;
 
-	// Problem title.
-	Str title;
+// 	// Problem title.
+// 	Str title;
 
-	// Source code.
-	Str source;
+// 	// Source code.
+// 	Str source;
 
-	// Language.
-	Str language;
+// 	// Language.
+// 	Str language;
 
-	// Allow submitting a solution (i.e. is this my problem?)
-	Bool allowSolution;
+// 	// Allow submitting a solution (i.e. is this my problem?)
+// 	Bool allowSolution;
 
-	init(Int id, Str title, Str source, Str language, Bool allowSolution) {
-		init {
-			id = id;
-			title = title;
-			source = source;
-			language = language;
-			allowSolution = allowSolution;
-		}
-	}
-}
+// 	init(Int id, Str title, Str source, Str language, Bool allowSolution) {
+// 		init {
+// 			id = id;
+// 			title = title;
+// 			source = source;
+// 			language = language;
+// 			allowSolution = allowSolution;
+// 		}
+// 	}
+// }
 
 /**
  * Response to a new solution. Contains the new solution's ID so that it can be amended with a new problem later.
  */
-class PostSolutionResponse : extends Response, serializable {
-	// Solution ID.
-	Int id;
+// class PostSolutionResponse : extends Response, serializable {
+// 	// Solution ID.
+// 	Int id;
 
-	init(Int id) {
-		init { id = id; }
-	}
-}
+// 	init(Int id) {
+// 		init { id = id; }
+// 	}
+// }
 
 /**
  * Reply to creating an new exercise.

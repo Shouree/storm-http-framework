@@ -180,17 +180,18 @@ class RecordBehavior extends Behavior {
 	}
 
 	private Int postSolution(ProgramError e) {
-		var req = if (e as NoError) {
-			PostSolutionRequest(problem.problemId, e.type, null);
-		} else {
-			PostSolutionRequest(problem.problemId, e.type, operations.toS);
-		};
+		// var req = if (e as NoError) {
+		// 	PostSolutionRequest(problem.problemId, e.type, null);
+		// } else {
+		// 	PostSolutionRequest(problem.problemId, e.type, operations.toS);
+		// };
 
-		if (res = client.query(req) as PostSolutionResponse) {
-			return res.id;
-		} else {
-			throw ProgvisError("Incorrect message received.");
-		}
+		// if (res = client.query(req) as PostSolutionResponse) {
+		// 	return res.id;
+		// } else {
+		// 	throw ProgvisError("Incorrect message received.");
+		// }
+		throw ProgvisError("Not implemented yet!");
 	}
 }
 
@@ -434,10 +435,10 @@ class ImproveBehavior extends DefaultBehavior {
 
 	private void onSubmitHelp() {
 		Str source = window.currentSource();
-		UploadDlg dlg(client, source, problem.source.ext, "Solution to " + problem.title, solutionId);
-		if (dlg.show(window) >= 0) {
-			window.updateBehavior(DefaultBehavior(window));
-		}
+		// UploadDlg dlg(client, source, problem.source.ext, "Solution to " + problem.title, solutionId);
+		// if (dlg.show(window) >= 0) {
+		// window.updateBehavior(DefaultBehavior(window));
+		// }
 	}
 
 	private void onReload() {

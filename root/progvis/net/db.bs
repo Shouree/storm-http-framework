@@ -110,7 +110,7 @@ class Database {
 
 			Bool solved = (WITH db: SELECT ONE id FROM problems WHERE improved == problemId AND author == forUser).any;
 			if (solved == wantSolved) {
-				result << ProblemInfo(problemId, row.title, row.displayName);
+				result << ProblemInfo(problemId, row.title, row.displayName, countSolved(problemId));
 			}
 		}
 
@@ -118,13 +118,13 @@ class Database {
 	}
 
 	// Get a list of the user's own problems.
-	Problem[] ownProblems(Int forUser) {
-		Problem[] result;
+	ProblemInfo[] ownProblems(Int forUser) {
+		ProblemInfo[] result;
 		var x = WITH db: SELECT problems.id AS id, displayName, title FROM problems
 			JOIN users ON problems.author == users.id
 			WHERE author == forUser;
 		for (row in x) {
-			result << Problem(row.id, row.title, row.displayName, countSolved(row.id));
+			result << ProblemInfo(row.id, row.title, row.displayName, countSolved(row.id));
 		}
 		result;
 	}

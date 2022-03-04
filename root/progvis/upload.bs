@@ -10,55 +10,95 @@ use core:io;
 dialog UploadDlg {
 	layout Grid {
 		expandCol: 1;
-		Label nameLbl("Name:", VAlign:center) { row: 0; }
-		Edit name("Name your problem") { row: 0; col: 1; colspan: 2; }
-		Button upload("Upload") { row: 1; col: 2; }
+		Label nameLbl("Name:", HAlign:right, VAlign:center) {}
+		Edit name("Name your problem") { colspan: 2; }
+		nextLine;
+		Label mainLbl("Main program:", HAlign:right, VAlign:center) {}
+		Edit mainName("") {}
+		Button mainButton("Select...") {}
+		nextLine;
+		Label implLbl("Implementation:", HAlign:right, VAlign:center) {}
+		Edit implName("") {}
+		Button implButton("Select...") {}
+		nextLine;
+		Label refLbl("Reference implementation:", HAlign:right, VAlign:center) {}
+		Edit refName("") {}
+		Button refButton("Select...") {}
+		nextLine;
+		Button upload("Upload") { col: 2; }
 	}
 
 	Client client;
-	Str source;
-	Str ext;
-
-	// If set, we're submitting a new problem based on this solution.
-	Int? solutionId;
 
 	// Upload a new problem.
-	init(Client client, Str source, Str ext) {
+	init(Client client) {
 		init("Submit a problem", Size(300, 10)) {
 			client = client;
-			source = source;
-			ext = ext;
 		}
 
 		defaultChoice(upload);
 		upload.onClick = &this.done();
+
+		mainButton.onClick = &this.pickMain();
+		implButton.onClick = &this.pickImpl();
+		refButton.onClick = &this.pickRef();
 	}
 
-	// Upload a solution to another problem.
-	init(Client client, Str source, Str ext, Str title, Int solutionId) {
-		init("Submit your solution", Size(300, 10)) {
-			client = client;
-			source = source;
-			ext = ext;
-			solutionId = solutionId;
-		}
+	void pickMain() {
+		unless (f = pickFile())
+			return;
 
-		name.text = title;
-		defaultChoice(upload);
-		upload.onClick = &this.done();
+		mainName.text = f.format;
+
+		Str title = f.title;
+		Str ext = f.ext;
+
+		Url impl = f.parent / (title + "_impl." + ext);
+		Url ref = f.parent / (title + "_ref." + ext);
+		if (impl.exists())
+			implName.text = impl.format;
+		if (ref.exists())
+			refName.text = ref.format;
+	}
+
+	void pickImpl() {
+		unless (f = pickFile())
+			return;
+
+		implName.text = f.format;
+	}
+
+	void pickRef() {
+		unless (f = pickFile())
+			return;
+
+		refName.text = f.format;
+	}
+
+	private Url? pickFile() {
+		FileTypes ft("Source code");
+		for (k in progvis:program:Program:supportedFiles)
+			ft.add("${k}-source", [k]);
+
+		var picker = FilePicker:open(ft);
+		if (!picker.show(this))
+			return null;
+
+		picker.result;
 	}
 
 	void done() {
-		try {
-			var req = if (solutionId) {
-				NewImprovementRequest(name.text, source, ext, solutionId);
-			} else {
-				NewProblemRequest(name.text, source, ext);
-			};
-			client.query(req);
-			close(1);
-		} catch (Exception e) {
-			showMessage(this, "Error", "Failed to upload the problem: ${e.message}");
-		}
+		// try {
+		// 	var req = if (solutionId) {
+		// 		NewImprovementRequest(name.text, source, ext, solutionId);
+		// 	} else {
+		// 		NewProblemRequest(name.text, source, ext);
+		// 	};
+		// 	client.query(req);
+		// 	close(1);
+		// } catch (Exception e) {
+		// 	showMessage(this, "Error", "Failed to upload the problem: ${e.message}");
+		// }
+		showMessage(this, "Error", "Not implemented!");
 	}
 }

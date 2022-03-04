@@ -23,8 +23,8 @@
 #Main -a -f presentation.tests.test
 #Main -a -f presentation.tests.simple
 #Main -a -f progvis.main
-Main -a -f progvis.debug
-#Main -a -f progvis.debugServer
+#Main -a -f progvis.debug
+Main -a -f progvis.debugServer
 #Main -a -f trees.main
 
 #Main -a -t parser.tests
