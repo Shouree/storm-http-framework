@@ -1,4 +1,5 @@
 use util:serialize;
+use core:io;
 
 /**
  * Misc. data types.
@@ -74,6 +75,15 @@ class Code : serializable {
 			src = src;
 			language = language;
 		}
+	}
+
+	// Add to a MemoryProtocol.
+	Url put(Str base, MemoryProtocol to) {
+		MemOStream out;
+		Utf8Output text(out);
+		text.write(src);
+		text.flush();
+		to.put(base + "." + language, out.buffer);
 	}
 }
 

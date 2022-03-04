@@ -316,6 +316,9 @@ Result? check(Url[] files, Progress callback) on Render {
 	checker.check();
 	checker.result();
 }
+Result? check(Url[] files) on Render {
+	check(files, Progress());
+}
 
 /**
  * Progress callbacks called by the checker.
@@ -325,7 +328,11 @@ class Progress on Render {
 	// 'states' is the current number of states.
 	// 'edges' is the current number of edges.
 	// 'unexplored' is the current number of edges that need to be explored.
-	void progress(Nat depth, Nat states, Nat edges, Nat unexplored) {
+	void progress(Nat depth, Nat states, Nat edges, Nat unexplored) {}
+}
+
+class PrintProgress extends Progress {
+	void progress(Nat depth, Nat states, Nat edges, Nat unexplored) : override {
 		print("Progress: ${depth} ${states} ${edges} ${unexplored}");
 	}
 }

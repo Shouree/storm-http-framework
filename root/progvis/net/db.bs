@@ -133,6 +133,19 @@ class Database {
 		0; // WITH db: COUNT FROM solutions WHERE to == problemId;
 	}
 
+	Int createProblem(Int userId, Str title, Code main, Code impl, Code refImpl, Bool currentError) {
+		Int mainId = createCode(main);
+		Int implId = createCode(impl);
+		Int refId = createCode(refImpl);
+		Int next = if (currentError) { 0; } else { 1; };
+		WITH db: INSERT INTO problems(author, title, next, main, impl, refimpl, created)
+			VALUES (userId, title, next, mainId, implId, refId, CURRENT DATETIME);
+	}
+
+	private Int createCode(Code code) {
+		WITH db: INSERT INTO code(src, language) VALUES (${code.src}, ${code.language});
+	}
+
 	// Compute the points of all users in the database.
 	Int->Int allScores() {
 		Int->Int result;

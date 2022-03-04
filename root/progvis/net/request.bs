@@ -219,24 +219,29 @@ private value ScorePair {
 /**
  * Publish a new problem.
  */
-// class NewProblemRequest : extends Request, serializable {
-// 	Str title;
-// 	Str code;
-// 	Str language;
+class NewProblemRequest : extends Request, serializable {
+	Str title;
+	Code main;
+	Code impl;
+	Code refImpl;
 
-// 	init(Str title, Str code, Str language) {
-// 		init {
-// 			title = title;
-// 			code = code;
-// 			language = language;
-// 		}
-// 	}
+	// Is there a concurrency error in the combination main + impl currently?
+	Bool currentError;
 
-// 	Response? execute(ServerConn server, Database db) : override {
-// 		var id = db.createProblem(server.userId, title, code, language);
-// 		NewProblemResponse(id);
-// 	}
-// }
+	init(Str title, Code main, Code impl, Code refImpl, Bool currentError) {
+		init {
+			title = title;
+			main = main;
+			impl = impl;
+			refImpl = refImpl;
+		}
+	}
+
+	Response? execute(ServerConn server, Database db) : override {
+		Int id = db.createProblem(server.userId, title, main, impl, refImpl, currentError);
+		NewProblemResponse(id);
+	}
+}
 
 /**
  * Publish an improvement to an existing solution..

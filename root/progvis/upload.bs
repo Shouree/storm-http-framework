@@ -25,7 +25,8 @@ dialog UploadDlg {
 		Edit refName("") {}
 		Button refButton("Select...") {}
 		nextLine;
-		Button upload("Upload") { col: 2; }
+		Progress progress { col: 0; colspan: 2; }
+		Button uploadButton("Upload") { col: 2; }
 	}
 
 	Client client;
@@ -36,8 +37,9 @@ dialog UploadDlg {
 			client = client;
 		}
 
-		defaultChoice(upload);
-		upload.onClick = &this.done();
+		progress.visible = false;
+		defaultChoice(uploadButton);
+		uploadButton.onClick = &this.upload();
 
 		mainButton.onClick = &this.pickMain();
 		implButton.onClick = &this.pickImpl();
@@ -87,18 +89,100 @@ dialog UploadDlg {
 		picker.result;
 	}
 
-	void done() {
-		// try {
-		// 	var req = if (solutionId) {
-		// 		NewImprovementRequest(name.text, source, ext, solutionId);
-		// 	} else {
-		// 		NewProblemRequest(name.text, source, ext);
-		// 	};
-		// 	client.query(req);
-		// 	close(1);
-		// } catch (Exception e) {
-		// 	showMessage(this, "Error", "Failed to upload the problem: ${e.message}");
-		// }
-		showMessage(this, "Error", "Not implemented!");
+	void upload() {
+		unless (name.text != "") {
+			showMessage(this, "No name", "You need to specify a name for the problem.");
+			return;
+		}
+
+		unless (main = loadCode(mainName.text)) {
+			showMessage(this, "File not found", "The file for the main program does not exist!");
+			return;
+		}
+
+		unless (impl = loadCode(implName.text)) {
+			showMessage(this, "File not found", "The file for the implementation does not exist!");
+			return;
+		}
+
+		unless (ref = loadCode(refName.text)) {
+			showMessage(this, "File not found", "The file for the reference implementation does not exist!");
+			return;
+		}
+
+		progress.visible = true;
+		progress.wait();
+		for (x in children)
+			x.enabled = false;
+
+		(spawn checkCode(name.text, main, impl, ref)).detach();
 	}
+
+	private net:Code? loadCode(Str path) {
+		Url url = parsePath(path);
+		if (!url.exists)
+			return null;
+
+		Str contents = url.readAllText;
+		if (contents.empty)
+			return null;
+
+		return net:Code(contents, url.ext);
+	}
+
+	void checkCode(Str name, net:Code main, net:Code impl, net:Code ref) {
+		MemoryProtocol memory;
+		Url m = main.put("main", memory);
+		Url i = impl.put("impl", memory);
+		Url r = ref.put("ref", memory);
+
+		try {
+			if (error = check:check([m, r])) {
+				error("The main program does not follow the specification from the reference solution.");
+				return;
+			}
+		} catch (core:lang:CodeError e) {
+			error("Error while compiling the reference solution:\n" + e.message, e.pos);
+			return;
+		}
+
+		Bool currentError = false;
+		try {
+			if (error = check:check([m, i])) {
+				currentError = true;
+			} else {
+				currentError = false;
+			}
+		} catch (core:lang:CodeError e) {
+			error("Error while compiling the implementation:\n" + e.message, e.pos);
+			return;
+		}
+
+		try {
+			client.query(NewProblemRequest(name, main, impl, ref, currentError));
+		} catch (Exception e) {
+			error(e.message);
+			return;
+		}
+
+		done();
+		close(1);
+	}
+
+	void error(Str message, core:lang:SrcPos pos) {
+		done();
+		CompileErrorDialog(message, pos).show(this);
+	}
+
+	void error(Str message) {
+		done();
+		showMessage(this, "Error", message);
+	}
+
+	void done() {
+		progress.visible = false;
+		for (x in children)
+			x.enabled = true;
+	}
+
 }
