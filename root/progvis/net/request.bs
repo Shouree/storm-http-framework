@@ -108,65 +108,73 @@ private value ScorePair {
 }
 
 /**
- * Ask for challenges.
+ * Ask for problems..
  */
-// class ChallengesRequest : extends Request, serializable {
-// 	// Only solved problems?
-// 	Bool solved;
+class UnsolvedRequest : extends Request, serializable {
+	// Only problems with an error currently.
+	Bool currentError;
 
-// 	// Only improved problems? Ignored if "solved" is true.
-// 	Bool improved;
+	init(Bool currentError) {
+		init {
+			currentError = currentError;
+		}
+	}
 
-// 	init(Bool wantSolved, Bool wantImproved) {
-// 		init { solved = wantSolved; improved = wantImproved; }
-// 	}
+	Response? execute(ServerConn server, Database db) : override {
+		ProblemResponse(db.unsolvedProblems(server.userId, currentError));
+	}
+}
 
-// 	Response? execute(ServerConn server, Database db) : override {
-// 		ProblemResponse(db.userChallenges(server.userId, solved, improved));
-// 	}
-// }
+/**
+ * Ask for solved problems.
+ */
+class SolvedProblemsRequest : extends Request, serializable {
+	Response? execute(ServerConn server, Database db) : override {
+		ProblemResponse(db.solvedProblems(server.userId));
+	}
+}
 
 /**
  * Ask for a user's own problems.
  */
-// class OwnProblemsRequest : extends Request, serializable {
-// 	Response? execute(ServerConn server, Database db) : override {
-// 		ProblemResponse(db.ownProblems(server.userId));
-// 	}
-// }
+class OwnProblemsRequest : extends Request, serializable {
+	Response? execute(ServerConn server, Database db) : override {
+		ProblemResponse(db.ownProblems(server.userId));
+	}
+}
 
 /**
  * Ask for more detailed stats of a problem.
  */
-// class StatsRequest : extends Request, serializable {
-// 	// Problem we are interested in.
-// 	Int problem;
+class StatsRequest : extends Request, serializable {
+	// Problem we are interested in.
+	Int problem;
 
-// 	// Shall solutions be included in the response?
-// 	Bool solutions;
+	// Include improvments?
+	Bool improvements;
 
-// 	init(Int problem, Bool solutions) {
-// 		init {
-// 			problem = problem;
-// 			solutions = solutions;
-// 		}
-// 	}
+	init(Int problem, Bool improvements) {
+		init {
+			problem = problem;
+			improvements = improvements;
+		}
+	}
 
-// 	init(Problem problem, Bool solutions) {
-// 		init {
-// 			problem = problem.id;
-// 			solutions = solutions;
-// 		}
-// 	}
+	init(Problem problem, Bool improvements) {
+		init {
+			problem = problem.id;
+			improvements = improvements;
+		}
+	}
 
-// 	Response? execute(ServerConn server, Database db) : override {
-// 		Solution[] sol;
-// 		if (solutions)
-// 			sol = db.solutionsTo(problem);
-// 		Problem? parent = db.parentTo(problem);
-// 		StatsResponse(parent, sol);
-// 	}
-// }
+	Response? execute(ServerConn server, Database db) : override {
+		ProblemInfo[] improved;
+		if (improvements)
+			improved = db.improvementsTo(problem);
+		ProblemInfo? parent = db.parentTo(problem);
+		StatsResponse(parent, improved);
+	}
+}
 
 /**
  * Ask for details about a problem (including source).

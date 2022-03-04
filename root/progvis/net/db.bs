@@ -96,21 +96,53 @@ class Database {
 		WITH db: UPDATE users SET displayName = newName WHERE id == userId;
 	}
 
-	// Get a list of problems in the system. Excludes problems that the user has already solved
-	// based on 'wantSolved'. 'wantMain' indicates if we want problems where the next step is to
-	// modify the main function.
-	ProblemInfo[] problems(Int forUser, Bool wantSolved, Bool wantMain) {
+	// Convert from 'currentError' to the DB representation.
+	private Int toNext(Bool currentError) {
+		if (currentError) {
+			1;
+		} else {
+			0;
+		}
+	}
+
+	// Convert from 'next' to CurrentError.
+	private Bool fromNext(Int value) {
+		value != 0;
+	}
+
+	// Get a list of problems in the system. Excludes problems that the user has already
+	// solved. 'currentError' indicates whether to return problems where the implementation is
+	// broken, or where the main is too weak.
+	ProblemInfo[] unsolvedProblems(Int forUser, Bool currentError) {
 		ProblemInfo[] result;
-		Int main = if (wantMain) { 1; } else { 0; };
+		Int nextV = toNext(currentError);
 		var x = WITH db: SELECT problems.id AS id, displayName, title FROM problems
 			JOIN users ON problems.author == users.id
-			WHERE author != forUser AND next == main;
+			WHERE author != forUser AND next == nextV;
 		for (row in x) {
 			var problemId = row.id;
 
-			Bool solved = (WITH db: SELECT ONE id FROM problems WHERE improved == problemId AND author == forUser).any;
-			if (solved == wantSolved) {
-				result << ProblemInfo(problemId, row.title, row.displayName, countSolved(problemId));
+			var solved = (WITH db: SELECT ONE id FROM problems WHERE improved == problemId AND author == forUser);
+			if (solved.empty) {
+				result << ProblemInfo(problemId, row.title, row.displayName, currentError, countSolved(problemId));
+			}
+		}
+
+		result;
+	}
+
+	// Get users' solved problems.
+	ProblemInfo[] solvedProblems(Int forUser) {
+		ProblemInfo[] result;
+		var x = WITH db: SELECT problems.id AS id, displayName, title, next FROM problems
+			JOIN users ON problems.author == users.id
+			WHERE author != forUser;
+		for (row in x) {
+			var problemId = row.id;
+
+			var solved = (WITH db: SELECT ONE id FROM problems WHERE improved == problemId AND author == forUser);
+			if (solved.any) {
+				result << ProblemInfo(problemId, row.title, row.displayName, fromNext(row.next), countSolved(problemId));
 			}
 		}
 
@@ -120,24 +152,44 @@ class Database {
 	// Get a list of the user's own problems.
 	ProblemInfo[] ownProblems(Int forUser) {
 		ProblemInfo[] result;
-		var x = WITH db: SELECT problems.id AS id, displayName, title FROM problems
+		var x = WITH db: SELECT problems.id AS id, displayName, title, next FROM problems
 			JOIN users ON problems.author == users.id
 			WHERE author == forUser;
 		for (row in x) {
-			result << ProblemInfo(row.id, row.title, row.displayName, countSolved(row.id));
+			result << ProblemInfo(row.id, row.title, row.displayName, fromNext(row.next), countSolved(row.id));
 		}
 		result;
 	}
 
 	private Nat countSolved(Int problemId) {
-		0; // WITH db: COUNT FROM solutions WHERE to == problemId;
+		WITH db: COUNT FROM problems WHERE improved == problemId;
+	}
+
+	ProblemInfo? parentTo(Int problemId) {
+		if (x = WITH db: SELECT ONE problems.id AS id, displayName, title, next FROM problems
+			JOIN users ON problems.author == users.id
+			WHERE improved == problemId) {
+			return ProblemInfo(x.id, x.title, x.displayName, fromNext(x.next), countSolved(x.id));
+		}
+		null;
+	}
+
+	ProblemInfo[] improvementsTo(Int problemId) {
+		ProblemInfo[] result;
+		var x = WITH db: SELECT problems.id AS id, displayName, title, next FROM problems
+			JOIN users ON problems.author == users.id
+			WHERE improved == problemId;
+		for (row in x) {
+			result << ProblemInfo(row.id, row.title, row.displayName, fromNext(row.next), countSolved(row.id));
+		}
+		result;
 	}
 
 	Int createProblem(Int userId, Str title, Code main, Code impl, Code refImpl, Bool currentError) {
 		Int mainId = createCode(main);
 		Int implId = createCode(impl);
 		Int refId = createCode(refImpl);
-		Int next = if (currentError) { 0; } else { 1; };
+		Int next = toNext(currentError);
 		WITH db: INSERT INTO problems(author, title, next, main, impl, refimpl, created)
 			VALUES (userId, title, next, mainId, implId, refId, CURRENT DATETIME);
 	}

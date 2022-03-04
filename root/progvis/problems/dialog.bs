@@ -14,8 +14,8 @@ dialog ProblemsDlg {
 		Callback cb(client, settings);
 
 		ProblemData data;
-		data.add("New problems", UnsolvedView(client, cb, false));
-		data.add("Improved", UnsolvedView(client, cb, true));
+		data.add("To debug", UnsolvedView(client, cb, true));
+		data.add("To test", UnsolvedView(client, cb, false));
 		data.add("Solved", SolvedView(client, cb));
 		data.add("My problems", OwnView(client, cb));
 

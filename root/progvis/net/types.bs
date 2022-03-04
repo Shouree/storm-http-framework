@@ -15,24 +15,32 @@ class ProblemInfo : serializable {
 	Str title;
 	Str author;
 
-	// Is the next step to modify the main program.
-	Bool nextIsMain;
+	// Is the next step to modify the implementation?
+	Bool currentError;
 
 	// Number of solutions.
 	Nat solutions;
 
-	init(Int id, Str title, Str author, Nat solutions) {
+	init(Int id, Str title, Str author, Bool currentError, Nat solutions) {
 		init {
 			id = id;
 			title = title;
 			author = author;
+			currentError = currentError;
 			solutions = solutions;
 		}
 	}
 
 	// For sorting.
-	Bool <(Problem o) {
+	Bool <(ProblemInfo o) {
 		id < o.id;
+	}
+
+	Str typeStr() {
+		if (currentError)
+			"Debug";
+		else
+			"Test";
 	}
 }
 
@@ -50,8 +58,8 @@ class Problem : extends ProblemInfo, serializable {
 	Code reference;
 
 	// Create.
-	init(Int id, Str title, Str author, Nat solutions, Code main, Code impl, Code ref) {
-		init(id, title, author, solutions) {
+	init(Int id, Str title, Str author, Bool currentError, Nat solutions, Code main, Code impl, Code ref) {
+		init(id, title, author, currentError, solutions) {
 			main = main;
 			implementation = impl;
 			reference = ref;

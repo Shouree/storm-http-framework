@@ -70,9 +70,9 @@ class StatsPanel extends Panel {
 	private Float textHeight;
 	private Callback callback;
 
-	init(Int problemId, Problem? parent, Bool solvable, Callback callback) {
+	init(Int problemId, ProblemInfo? parent, Bool solvable, Callback callback) {
 		Str text = if (parent) {
-			"Solution to: ${parent.title}";
+			"Improvement of: ${parent.title}";
 		} else {
 			"New problem";
 		};

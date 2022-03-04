@@ -53,7 +53,7 @@ class View {
 	Row[] rows() : abstract;
 
 	protected Str[] problemLabels() {
-		["ID", "Problem name", "Author", "Solved"];
+		["ID", "Problem name", "Author", "Type", "Solved"];
 	}
 
 	protected Row[] getProblems(Request req) {
@@ -61,7 +61,7 @@ class View {
 			ans.problems.sort();
 			Row[] data;
 			for (r in ans.problems) {
-				data << Row(r.id, [r.id.toS, r.title, r.author, r.solutions.toS]);
+				data << Row(r.id, [r.id.toS, r.title, r.author, r.typeStr, r.solutions.toS]);
 			}
 			return data;
 		} else {
@@ -78,12 +78,12 @@ class View {
  */
 class UnsolvedView extends View {
 	private Callback cb;
-	private Bool improved;
+	private Bool currentError;
 
-	init(Client client, Callback cb, Bool improved) {
+	init(Client client, Callback cb, Bool currentError) {
 		init(client) {
 			cb = cb;
-			improved = improved;
+			currentError = currentError;
 		}
 	}
 
@@ -92,8 +92,7 @@ class UnsolvedView extends View {
 	}
 
 	Row[] rows() : override {
-		// getProblems(ChallengesRequest(false, improved));
-		[];
+		getProblems(UnsolvedRequest(currentError));
 	}
 
 	Panel details(Int id) : override {
@@ -124,8 +123,7 @@ class SolvedView extends View {
 	}
 
 	Row[] rows() : override {
-		//getProblems(ChallengesRequest(true, false));
-		[];
+		getProblems(SolvedProblemsRequest());
 	}
 
 	Panel details(Int id) : override {
@@ -150,8 +148,7 @@ class OwnView extends SolvedView {
 	}
 
 	Row[] rows() : override {
-		// getProblems(OwnProblemsRequest());
-		[];
+		getProblems(OwnProblemsRequest());
 	}
 }
 
