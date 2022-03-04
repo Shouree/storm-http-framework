@@ -179,17 +179,17 @@ class StatsRequest : extends Request, serializable {
 /**
  * Ask for details about a problem (including source).
  */
-// class DetailsRequest : extends Request, serializable {
-// 	Int problemId;
+class DetailsRequest : extends Request, serializable {
+	Int problemId;
 
-// 	init(Int id) {
-// 		init { problemId = id; }
-// 	}
+	init(Int id) {
+		init { problemId = id; }
+	}
 
-// 	Response? execute(ServerConn server, Database db) : override {
-// 		db.problemDetails(problemId, server.userId);
-// 	}
-// }
+	Response? execute(ServerConn server, Database db) : override {
+		DetailsResponse(db.problemDetails(problemId));
+	}
+}
 
 /**
  * Submit a solution to a problem.

@@ -52,17 +52,17 @@ class Problem : extends ProblemInfo, serializable {
 	Code main;
 
 	// Implementation of the data structure.
-	Code implementation;
+	Code impl;
 
 	// Reference implementation of the data structure.
-	Code reference;
+	Code ref;
 
 	// Create.
 	init(Int id, Str title, Str author, Bool currentError, Nat solutions, Code main, Code impl, Code ref) {
 		init(id, title, author, currentError, solutions) {
 			main = main;
-			implementation = impl;
-			reference = ref;
+			impl = impl;
+			ref = ref;
 		}
 	}
 }

@@ -102,32 +102,15 @@ class StatsResponse : extends Response, serializable {
 /**
  * Details of a problem. All information (including source) that we need to solve it.
  */
-// class DetailsResponse : extends Response, serializable {
-// 	// Problem ID.
-// 	Int id;
+class DetailsResponse : extends Response, serializable {
+	Problem problem;
 
-// 	// Problem title.
-// 	Str title;
-
-// 	// Source code.
-// 	Str source;
-
-// 	// Language.
-// 	Str language;
-
-// 	// Allow submitting a solution (i.e. is this my problem?)
-// 	Bool allowSolution;
-
-// 	init(Int id, Str title, Str source, Str language, Bool allowSolution) {
-// 		init {
-// 			id = id;
-// 			title = title;
-// 			source = source;
-// 			language = language;
-// 			allowSolution = allowSolution;
-// 		}
-// 	}
-// }
+	init(Problem problem) {
+		init {
+			problem = problem;
+		}
+	}
+}
 
 /**
  * Response to a new solution. Contains the new solution's ID so that it can be amended with a new problem later.

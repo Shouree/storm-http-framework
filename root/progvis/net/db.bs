@@ -198,6 +198,25 @@ class Database {
 		WITH db: INSERT INTO code(src, language) VALUES (${code.src}, ${code.language});
 	}
 
+	Problem problemDetails(Int problemId) {
+		var x = WITH db: SELECT ONE problems.id AS id, displayName, title, next, main, impl, refimpl FROM problems
+			JOIN users ON problems.author == users.id
+			WHERE problems.id == problemId;
+		unless (x)
+			throw ServerError("Problem ${problemId} does not exist.");
+
+		Problem(x.id, x.title, x.displayName, fromNext(x.next), countSolved(x.id),
+				getCode(x.main), getCode(x.impl), getCode(x.refimpl));
+	}
+
+	private Code getCode(Int codeId) {
+		var code = WITH db: SELECT ONE src, language FROM code WHERE id == codeId;
+		unless (code)
+			throw ServerError("Code ${codeId} does not exist.");
+
+		Code(code.src, code.language);
+	}
+
 	// Compute the points of all users in the database.
 	Int->Int allScores() {
 		Int->Int result;

@@ -64,16 +64,14 @@ class Callback on Ui {
 
 	// Open a particular problem.
 	void solveProblem(Int problemId) {
-		// unless (target)
-		// 	return;
+		unless (target)
+			return;
 
-		// var d = details(problemId);
-		// var file = saveSource(d);
-		// if (d.allowSolution) {
-		// 	target.done(SolveProblem(d.id, d.title, file));
-		// } else {
-		// 	target.done(ShowProblem(d.id, d.title, file));
-		// }
+		var d = details(problemId);
+		var main = saveCode(d.id, "", d.main);
+		var impl = saveCode(d.id, "_impl", d.impl);
+
+		// target.done();
 	}
 
 	// Show a solution to a problem.
@@ -87,23 +85,24 @@ class Callback on Ui {
 	}
 
 	// Get the problem we are to show from the server.
-	// private DetailsResponse details(Int id) {
-	// 	if (x = client.query(DetailsRequest(id)) as DetailsResponse)
-	// 		x;
-	// 	else
-	// 		throw InternalError("Incorrect response received.");
-	// }
+	private Problem details(Int id) {
+		if (x = client.query(DetailsRequest(id)) as DetailsResponse)
+			x.problem;
+		else
+			throw InternalError("Incorrect response received.");
+	}
 
-	// Spill the source code to disk and receive a suitable Url for it.
-	// private Url saveSource(DetailsResponse response) {
-	// 	Url file = settings.downloadFile("${response.id.toS,f08}.${response.language}");
-	// 	Utf8Output out(file.write());
-	// 	out.autoFlush = false;
-	// 	out.write(response.source);
-	// 	out.flush();
-	// 	out.close();
-	// 	return file;
-	// }
+	// Save source code to disk, and retrieve an URL for it.
+	private Url saveCode(Int problemId, Str suffix, Code code) {
+		Url file = settings.downloadFile("${problemId,f08}${suffix}.${code.language}");
+		Utf8Output out(file.write());
+		out.autoFlush = false;
+		out.write(code.src);
+		out.flush();
+		out.close();
+		return file;
+	}
+
 }
 
 
