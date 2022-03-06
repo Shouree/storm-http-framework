@@ -30,7 +30,7 @@ DATABASE ProgvisDB {
 		// Title of the problem.
 		title TEXT,
 		// What is the current state of this problem? I.e. what is the next thing to modify.
-		// 0 = modify the implementation, 1 = modify the main program.
+		// 0 = modify the main program, 1 = modify the implementation.
 		next INTEGER,
 		// Source code of the main program (to code table).
 		main INTEGER,

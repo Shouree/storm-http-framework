@@ -1,6 +1,5 @@
 use ui;
 use layout;
-use progvis:net;
 use progvis:program;
 use core:geometry;
 
@@ -26,11 +25,11 @@ class Behavior on Ui {
 	// Allow reloading this program?
 	Str? allowReload() { null; }
 
-	// Allow submitting this program?
-	Str? allowSubmit() { null; }
-
 	// Allow starting the model checker.
 	Str? allowModelCheck() { null; }
+
+	// Allow spawning another thread?
+	Str? allowSpawnThread() { null; }
 
 	// Allow the user to step at their own pace.
 	Bool allowStep() { true; }
@@ -88,111 +87,6 @@ class DefaultBehavior extends Behavior {
 		}
 	}
 
-}
-
-/**
- * Behavior for revisiting an already solved problem.
- */
-class RevisitBehavior extends DefaultBehavior {
-	private Str title;
-
-	init(MainWin window, Str title) {
-		init(window) { title = title; }
-	}
-
-	Str? allowReload() : override { "Can not reload the current problem. Use Run -> Restart instead, or open a new problem."; }
-	Str? allowSubmit() : override { "You can not re-submit this problem as your own. Open a new file and submit that instead."; }
-	Str? allowModelCheck() : override { "The model checker is disabled while looking at other solutions."; }
-	Bool allowTrackMemory() : override { false; }
-
-	ProblemPanel? panel() : override {
-		ProblemPanel("Find an error in \"${title}\" (can not submit a solution)");
-	}
-}
-
-
-/**
- * Behavior for recording progress and saving when an error is found.
- */
-class RecordBehavior extends Behavior {
-	private MainWin window;
-	private Client client;
-	private problems:SolveProblem problem;
-	private StrBuf operations;
-
-	init(MainWin window, Client client, problems:SolveProblem problem) {
-		init() {
-			window = window;
-			client = client;
-			problem = problem;
-		}
-	}
-
-	void onProgramError(ProgramError error) : override {
-		SubmitErrorDlg dlg(error);
-		if (dlg.show(window) < 0) {
-			// Don't submit.
-			window.updateBehavior(RevisitBehavior(window, problem.title));
-			return;
-		}
-
-		try {
-			Int solutionId = postSolution(error);
-
-			if (error as NoError) {
-				window.updateBehavior(RevisitBehavior(window, problem.title));
-			} else {
-				window.updateBehavior(ImproveBehavior(window, client, problem, solutionId));
-			}
-
-		} catch (Exception e) {
-			showMessage(window, "Error", "Failed to submit your solution: ${e.message}");
-		}
-	}
-
-	void onUserAction(Str action) : override {
-		operations << action << ";";
-	}
-
-	void onRestart() : override {
-		operations = StrBuf();
-	}
-
-	Str? allowReload() : override { "Can not reload the current problem. Use Run -> Restart instead, or open a new problem."; }
-	Str? allowSubmit() : override { "You can not re-submit this problem as your own. Open a new file and submit that instead."; }
-	Str? allowModelCheck() : override { "The model checker is disabled for online problems."; }
-	Bool allowTrackMemory() : override { false; }
-
-	ProblemPanel? panel() : override {
-		ProblemPanel p("Find an error in \"${problem.title}\"!");
-		p.button("Open in editor", &this.onOpenEditor());
-		p.button("I think there are no errors", &this.onDone);
-		p;
-	}
-
-	private void onOpenEditor() {
-		(spawn window.onOpenEditor()).detach();
-	}
-
-	private void onDone() {
-		// Note: this is needed due to a bug in the Gui library on Windows.
-		(spawn onProgramError(NoError())).detach();
-	}
-
-	private Int postSolution(ProgramError e) {
-		// var req = if (e as NoError) {
-		// 	PostSolutionRequest(problem.problemId, e.type, null);
-		// } else {
-		// 	PostSolutionRequest(problem.problemId, e.type, operations.toS);
-		// };
-
-		// if (res = client.query(req) as PostSolutionResponse) {
-		// 	return res.id;
-		// } else {
-		// 	throw ProgvisError("Incorrect message received.");
-		// }
-		throw ProgvisError("Not implemented yet!");
-	}
 }
 
 
@@ -337,117 +231,6 @@ class ReplayBehavior extends DefaultBehavior {
 
 	Bool allowStep() : override { false; }
 	Bool allowTrackMemory() : override { false; }
-	Str? allowReload() : override { "You can not reload problems while showing a solution. Open another problem instead."; }
-	Str? allowSubmit() : override { "You can not submit this problem. Please open a new problem that you made first."; }
-}
-
-/**
- * Dialog presented when the user has found a solution.
- */
-dialog SubmitErrorDlg {
-	layout Grid {
-		Label type("") {}
-		nextLine;
-		Label details("") {}
-		nextLine;
-		Label("Do you wish to submit this solution? It will replace any previous solution of the same type.") {}
-		nextLine;
-		Grid {
-			expandCol: 0, 1;
-			expandCol: 3, 1;
-			Button no("No") { col: 1; }
-			Button yes("Yes") { col: 2; }
-		}
-	}
-
-	init(ProgramError error) {
-		init("You found a problem!", Size(50, 50)) {}
-
-		if (error as NoError) {
-			this.text = "Submit";
-			type.text = "You arrived at the conclusion:";
-		} else {
-			type.text = "You found a problem of type: ${error.type}";
-		}
-		details.text = error.message;
-
-		defaultChoice = yes;
-		no.onClick = &this.close();
-	}
-}
-
-/**
- * Behavior that lets the user modify the problem and submit an improved version.
- */
-class ImproveBehavior extends DefaultBehavior {
-	private Client client;
-	private problems:SolveProblem problem;
-	private Int solutionId;
-	private Bool submitted;
-
-	init(MainWin window, Client client, problems:SolveProblem problem, Int solutionId) {
-		init(window) {
-			client = client;
-			problem = problem;
-			solutionId = solutionId;
-			submitted = false;
-		}
-
-		StrBuf msg;
-		msg << "You may now attempt to solve the problem you found:\n";
-		msg << "1. Select \"Open in editor\" to edit the code.\n";
-		msg << "2. Save the file in your editor.\n";
-		msg << "3. Select \"Reload\" to load your changes and see if they work.\n";
-		msg << "4. Repeat 1-3 as necessary.\n";
-		msg << "5. Click \"Submit this version!\" in the green box when you are done.";
-		showMessage(window, "Improve the code", msg.toS);
-	}
-
-	// We encourage reloads!
-	Str? allowReload() : override { null; }
-
-	// But don't allow submitting through regular means.
-	Str? allowSubmit() : override { "To submit your improved version, click the button in the green bar!"; }
-
-	// Don't allow model checking, that would be too easy.
-	Str? allowModelCheck() : override { "The model checker is disabled for online problems."; }
-
-	// Don't change 'track memory'.
-	Bool allowTrackMemory() : override { false; }
-
-	// Add a panel that explains it all.
-	ProblemPanel? panel() : override {
-		ProblemPanel p("Try to fix the problem you found!");
-		p.button("Open in editor", &this.onOpenEditor());
-		p.button("Reload", &this.onReload());
-		p.button("Submit this version!", &this.onSubmit());
-		p;
-	}
-
-	private void onSubmit() {
-		// Avoid double submissions.
-		if (submitted)
-			return;
-		submitted = true;
-
-		(spawn onSubmitHelp()).detach();
-	}
-
-	private void onSubmitHelp() {
-		Str source = window.currentSource();
-		// UploadDlg dlg(client, source, problem.source.ext, "Solution to " + problem.title, solutionId);
-		// if (dlg.show(window) >= 0) {
-		// window.updateBehavior(DefaultBehavior(window));
-		// }
-	}
-
-	private void onReload() {
-		// Needed due to a bug in App on Windows.
-		(spawn window.onReload()).detach();
-	}
-
-	private void onOpenEditor() {
-		// Needed due to a bug in App on Windows.
-		(spawn window.onOpenEditor()).detach();
-	}
+	Str? allowReload() : override { "You can not reload problems while showing a solution. Open another program instead."; }
+	Str? allowSpawnThread() { "You can not spawn new threads now. Please open a new program first."; }
 }

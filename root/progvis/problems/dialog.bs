@@ -68,10 +68,7 @@ class Callback on Ui {
 			return;
 
 		var d = details(problemId);
-		var main = saveCode(d.id, "", d.main);
-		var impl = saveCode(d.id, "_impl", d.impl);
-
-		// target.done();
+		target.done(DebugAction(settings, d));
 	}
 
 	// Show a solution to a problem.
@@ -92,8 +89,43 @@ class Callback on Ui {
 			throw InternalError("Incorrect response received.");
 	}
 
+}
+
+
+/**
+ * Action to take when the ProblemsDlg is closed.
+ *
+ * Allows creating a suitable behavior for the main Ui.
+ */
+class Action on Ui {
+	// The problem to solve.
+	Problem problem;
+
+	// Code for the main program on disk.
+	Url mainCode;
+
+	// Code for the implementation on disk.
+	Url implCode;
+
+	// Create.
+	init(progvis:Settings settings, Problem problem) {
+		init {
+			problem = problem;
+			mainCode = saveCode(settings, problem.id, "", problem.main);
+			implCode = saveCode(settings, problem.id, "_impl", problem.impl);
+		}
+	}
+
+	// Create a behavior.
+	progvis:Behavior behavior(progvis:MainWin window, Client client) : abstract;
+
+	// Return a list of files to open.
+	Url[] files() {
+		[mainCode, implCode];
+	}
+
 	// Save source code to disk, and retrieve an URL for it.
-	private Url saveCode(Int problemId, Str suffix, Code code) {
+	private Url saveCode(progvis:Settings settings, Int problemId, Str suffix, Code code) : static {
 		Url file = settings.downloadFile("${problemId,f08}${suffix}.${code.language}");
 		Utf8Output out(file.write());
 		out.autoFlush = false;
@@ -102,63 +134,26 @@ class Callback on Ui {
 		out.close();
 		return file;
 	}
-
 }
 
 
 /**
- * Action to take when the ProblemsDlg is closed.
- *
- * The base class contains basic information about the base-problem to display.
+ * Debug a problem.
  */
-class Action on Ui {
-	// Which problem to solve.
-	Int problemId;
-
-	// Problem title.
-	Str title;
-
-	// Source code.
-	Url source;
-
-	init(Int id, Str title, Url source) {
-		init {
-			problemId = id;
-			title = title;
-			source = source;
-		}
+class DebugAction extends Action {
+	init(progvis:Settings settings, Problem problem) {
+		init(settings, problem) {}
 	}
-}
 
-
-/**
- * Show a problem, possibly trying to solve it as well.
- */
-class SolveProblem extends Action {
-	init(Int id, Str title, Url source) {
-		init(id, title, source) {}
+	Url[] files() : override {
+		// To prevent modifications to the implementation, we put it in an in-memory store.
+		MemoryProtocol mem;
+		Url main = problem.main.put("main", mem);
+		[implCode, main];
 	}
-}
 
-/**
- * Show a problem that can not be solved for some reason.
- */
-class ShowProblem extends Action {
-	init(Int id, Str title, Url source) {
-		init(id, title, source) {}
-	}
-}
-
-/**
- * Show a solution to a problem.
- */
-class ShowSolution extends Action {
-	// Solution to show.
-	Str solution;
-
-	init(Int id, Str title, Str solution, Url source) {
-		init(id, title, source) {
-			solution = solution;
-		}
+	progvis:Behavior behavior(progvis:MainWin window, Client client) : override {
+		// Load code.
+		return progvis:DebugProblemBehavior(window, client, this);
 	}
 }

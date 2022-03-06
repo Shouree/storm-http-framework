@@ -1,0 +1,193 @@
+use ui;
+use layout;
+use progvis:net;
+use progvis:program;
+use core:geometry;
+use core:io;
+
+/**
+ * Behavior for revisiting an already solved problem.
+ */
+class RevisitBehavior extends DefaultBehavior {
+	private Str title;
+
+	init(MainWin window, Str title) {
+		init(window) { title = title; }
+	}
+
+	Str? allowSpawnThread() : override { "Can not spawn new threads this way when solving problems."; }
+	Str? allowReload() : override { "Can not reload the current problem. Use Run -> Restart instead, or open a new problem."; }
+	Str? allowModelCheck() : override { "The model checker is disabled while looking at other solutions."; }
+	Bool allowTrackMemory() : override { false; }
+
+	ProblemPanel? panel() : override {
+		ProblemPanel("Find an error in \"${title}\" (can not submit a solution)");
+	}
+}
+
+
+/**
+ * Behavior asking the student to find and correct an error in the implementation.
+ */
+class DebugProblemBehavior extends Behavior {
+	private MainWin window;
+	private Client client;
+	private Problem problem;
+	private Url mainCode;
+	private Url implCode;
+	private StrBuf operations;
+	private Bool done;
+
+	init(MainWin window, Client client, problems:Action action) {
+		init() {
+			window = window;
+			client = client;
+			problem = action.problem;
+			mainCode = action.mainCode;
+			implCode = action.implCode;
+		}
+	}
+
+	ProblemPanel? panel() : override {
+		ProblemPanel p("Find an error in \"${problem.title}\"!");
+		p.button("Open main", &this.onOpenMain());
+		p.button("Open implementation", &this.onOpenImpl());
+		p;
+	}
+
+	private void onOpenImpl() {
+		(spawn window.openEditor(implCode)).detach();
+	}
+
+	private void onOpenMain() {
+		(spawn window.openEditor(mainCode)).detach();
+	}
+
+	void onProgramError(ProgramError error) : override {
+		if (done)
+			return;
+		done = true;
+
+		(spawn submitError(error)).detach();
+	}
+
+	private void submitError(ProgramError error) {
+		StrBuf msg;
+		msg << "You found an error of type: " << error.type << "\n";
+		msg << error.message << "\n";
+		msg << "\n";
+		msg << "Do you wish to submit this error and try to fix it?";
+		var result = showYesNoQuestion(window, "You found an error!", msg.toS, "Yes", "No");
+
+		if (result != MessageResponse:yes) {
+			window.updateBehavior(RevisitBehavior(window, "Looking at problem \"${problem.title}\""));
+			return;
+		}
+
+		print("TODO: Submit the solution!");
+
+		window.updateBehavior(ImproveBehavior(window, client, problem, mainCode, implCode));
+	}
+
+	void onUserAction(Str action) : override {
+		operations << action << ";";
+	}
+
+	void onRestart() : override {
+		operations = StrBuf();
+	}
+
+	Str? allowSpawnThread() : override { "Can not spawn new threads this way when solving problems."; }
+	Str? allowModelCheck() : override { "Try to find the error yourself using the step buttons for each thread."; }
+	Str? allowReload() : override { "Can not reload the current problem. Use Run -> Restart instead, or open a new problem."; }
+	Bool allowTrackMemory() : override { false; }
+}
+
+
+/**
+ * Behavior that lets the user modify the problem and submit an improved version.
+ */
+class ImproveBehavior extends DefaultBehavior {
+	private Client client;
+	private Problem problem;
+	private Url mainCode;
+	private Url implCode;
+	private Bool submitted;
+
+	init(MainWin window, Client client, Problem problem, Url mainCode, Url implCode) {
+		init(window) {
+			client = client;
+			problem = problem;
+			mainCode = mainCode;
+			implCode = implCode;
+			submitted = false;
+		}
+
+		StrBuf msg;
+		msg << "To solve the problem you found:\n";
+		msg << "1. Select \"Open implementation\" if you have not done so already.\n";
+		msg << "2. Save the file in your editor.\n";
+		msg << "3. Select \"Reload\" to load your changes and see if they work.\n";
+		msg << "4. Releat 2-3 as necessary.\n";
+		msg << "5. Click \"Submit\" in the green box when you are done.\n";
+		msg << "Note: You can only modify the implementation, any chainges to the main file will be ignored.\n";
+		showMessage(window, "Improve the code", msg.toS);
+	}
+
+	// We encourage reloads!
+	Str? allowReload() : override { null; }
+
+	// Don't allow spawning threads arbitrarily.
+	Str? allowSpawnThread() : override { "Can not spawn new threads this way when solving problems."; }
+
+	// Don't allow model checking, that would be too easy.
+	Str? allowModelCheck() : override { "The model checker is disabled for online problems."; }
+
+	// Don't change 'track memory'.
+	Bool allowTrackMemory() : override { false; }
+
+	// Add a panel that explains it all.
+	ProblemPanel? panel() : override {
+		ProblemPanel p("Try to fix the problem you found!");
+		p.button("Open main", &this.onOpenMain());
+		p.button("Open impl.", &this.onOpenImpl());
+		p.button("Reload", &this.onReload());
+		p.button("Submit", &this.onSubmit());
+		p;
+	}
+
+	private void onSubmit() {
+		// Avoid double submissions.
+		if (submitted)
+			return;
+		submitted = true;
+
+		(spawn onSubmitHelp()).detach();
+	}
+
+	private void onSubmitHelp() {
+		print("TODO: Submit the problem!");
+		// Str source = window.currentSource();
+		// UploadDlg dlg(client, source, problem.source.ext, "Solution to " + problem.title, solutionId);
+		// if (dlg.show(window) >= 0) {
+		// window.updateBehavior(DefaultBehavior(window));
+		// }
+	}
+
+	private void onReload() {
+		// Needed due to a bug in App on Windows.
+		(spawn window.onReload()).detach();
+	}
+
+	private void onOpenImpl() {
+		(spawn window.openEditor(implCode)).detach();
+	}
+
+	private void onOpenMain() {
+		(spawn openMainHelp()).detach();
+	}
+	private void openMainHelp() {
+		showMessage(window, "Information", "Note: You can not modify the main function in this problem. Any changes you make will be ignored.");
+		window.openEditor(mainCode);
+	}
+}

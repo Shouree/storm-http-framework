@@ -118,7 +118,7 @@ dialog UploadDlg {
 		(spawn checkCode(name.text, main, impl, ref)).detach();
 	}
 
-	private net:Code? loadCode(Str path) {
+	private progvis:net:Code? loadCode(Str path) {
 		Url url = parsePath(path);
 		if (!url.exists)
 			return null;
@@ -127,17 +127,17 @@ dialog UploadDlg {
 		if (contents.empty)
 			return null;
 
-		return net:Code(contents, url.ext);
+		return progvis:net:Code(contents, url.ext);
 	}
 
-	void checkCode(Str name, net:Code main, net:Code impl, net:Code ref) {
+	void checkCode(Str name, progvis:net:Code main, progvis:net:Code impl, progvis:net:Code ref) {
 		MemoryProtocol memory;
 		Url m = main.put("main", memory);
 		Url i = impl.put("impl", memory);
 		Url r = ref.put("ref", memory);
 
 		try {
-			if (error = check:check([m, r])) {
+			if (error = progvis:check:check([m, r])) {
 				error("The main program does not follow the specification from the reference solution.");
 				return;
 			}
@@ -148,7 +148,7 @@ dialog UploadDlg {
 
 		Bool currentError = false;
 		try {
-			if (error = check:check([m, i])) {
+			if (error = progvis:check:check([m, i])) {
 				currentError = true;
 			} else {
 				currentError = false;
@@ -171,7 +171,7 @@ dialog UploadDlg {
 
 	void error(Str message, core:lang:SrcPos pos) {
 		done();
-		CompileErrorDialog(message, pos).show(this);
+		progvis:CompileErrorDialog(message, pos).show(this);
 	}
 
 	void error(Str message) {

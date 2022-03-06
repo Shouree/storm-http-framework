@@ -295,11 +295,16 @@ class MainWin extends Frame {
 		if (currentFiles.empty()) {
 			showMessage(this, "No files open", "You have no files open currently.");
 		} else {
-			try {
-				settings.open(currentFiles[0]);
-			} catch (Exception e) {
-				showMessage(this, "Filed to launch editor", "Failed to launch the editor: ${e}. Is your configuration correct?");
-			}
+			openEditor(currentFiles[0]);
+		}
+	}
+
+	// Open an editor for the specified file.
+	public void openEditor(Url file) {
+		try {
+			settings.open(file);
+		} catch (Exception e) {
+			showMessage(this, "Failed to launch editor", "Failed to launch the editor: ${e}. Is your configuration correct?");
 		}
 	}
 
@@ -313,22 +318,17 @@ class MainWin extends Frame {
 		if (c = client) {
 			problems:ProblemsDlg dlg(c, settings);
 			dlg.show(this);
-			if (action = dlg.action as problems:SolveProblem) {
-				open(action, RecordBehavior(this, c, action));
-			} else if (action = dlg.action as problems:ShowProblem) {
-				open(action, RevisitBehavior(this, action.title));
-			} else if (action = dlg.action as problems:ShowSolution) {
-				open(action, ReplayBehavior(this, action.solution));
+			if (action = dlg.action) {
+				open(action.files, "Solving: " + action.problem.title, action.behavior(this, c));
 			}
 		}
 	}
 
 	private void onOnlineSubmit() {
-		// TODO: Ask the behavior? Or remove "allowSubmit" from it.
 		unless (c = client)
 			return;
 
-		UploadDlg(c).show(this);
+		problems:UploadDlg(c).show(this);
 	}
 
 	// Get source for the current file.
@@ -353,6 +353,10 @@ class MainWin extends Frame {
 	}
 
 	private void onSpawnThread() {
+		if (error = behavior.allowSpawnThread) {
+			showMessage(this, "Error", error);
+			return;
+		}
 		painter.spawnThread();
 	}
 
@@ -433,11 +437,6 @@ class MainWin extends Frame {
 	// Open one or more files, shows nice messages on error.
 	private void open(Url[] files) {
 		open(files, join(files, ", ", (x) => x.name).toS, DefaultBehavior(this));
-	}
-
-	// Open a problem from the server.
-	private void open(problems:Action problem, Behavior behavior) {
-		open([problem.source], "Solving: " + problem.title, behavior);
 	}
 
 	private void open(Url[] files, Str title, Behavior behavior) {

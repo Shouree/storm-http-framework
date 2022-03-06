@@ -242,6 +242,7 @@ class NewProblemRequest : extends Request, serializable {
 			main = main;
 			impl = impl;
 			refImpl = refImpl;
+			currentError = currentError;
 		}
 	}
 
