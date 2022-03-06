@@ -33,7 +33,7 @@ dialog UploadDlg {
 
 	// Upload a new problem.
 	init(Client client) {
-		init("Submit a problem", Size(300, 10)) {
+		init("Submit a problem", Size(400, 10)) {
 			client = client;
 		}
 
@@ -183,6 +183,141 @@ dialog UploadDlg {
 		progress.visible = false;
 		for (x in children)
 			x.enabled = true;
+	}
+
+}
+
+
+/**
+ * Dialog for uploading solutions to problems.
+ */
+dialog SolutionUploadDlg {
+	layout Grid {
+		expandCol: 1;
+		Label nameLbl("Name:", HAlign:right, VAlign:center) {}
+		Edit name("Name your problem") { colspan: 2; }
+		nextLine;
+		Label status("Checking your solution...") { colspan: 3; }
+		nextLine;
+		Progress progress { col: 0; colspan: 2; }
+		Button uploadButton("Upload") { col: 2; }
+	}
+
+	private Client client;
+	private Problem original;
+	private progvis:net:Code? newMain;
+	private progvis:net:Code? newImpl;
+	private ImprovedProblemRequest? request;
+
+	init(Client client, Problem original, progvis:net:Code? newMain, progvis:net:Code? newImpl) {
+		init("Submit your solution", Size(400, 10)) {
+			client = client;
+			original = original;
+			newMain = newMain;
+			newImpl = newImpl;
+		}
+
+		name.text = original.title;
+
+		progress.wait();
+		uploadButton.enabled = false;
+		defaultChoice = uploadButton;
+		uploadButton.onClick = &this.upload();
+
+		(spawn checkCode()).detach();
+	}
+
+	void upload() {
+		unless (request)
+			return;
+
+		Str n = name.text;
+		if (n.empty) {
+			showMessage(this, "Error", "You need to specify a name for the problem.");
+			return;
+		}
+
+		request.title = n;
+
+		try {
+			client.query(request);
+			close(1);
+		} catch (Exception e) {
+			showMessage(this, "Error", e.message);
+		}
+	}
+
+	void checkCode() {
+		print("TODO: We should probably allow cancelling this...");
+
+		MemoryProtocol memory;
+		Url m = (if (newMain) { newMain; } else { original.main; }).put("main", memory);
+		Url i = (if (newImpl) { newImpl; } else { original.impl; }).put("impl", memory);
+		Url r = original.ref.put("ref", memory);
+
+		if (newMain.any) {
+			try {
+				if (error = progvis:check:check([m, r])) {
+					error("The main program does not follow the specification of the problem.");
+					return;
+				}
+			} catch (core:lang:CodeError e) {
+				if (file = e.pos.file) {
+					if (file == m) {
+						error("Error while compiling your code with the reference implementation:\n" + e.message, e.pos);
+						return;
+					}
+				}
+				error("Error while compiling your code with the reference implementation:\n" + e.message);
+			}
+		}
+
+		Bool currentError = false;
+		try {
+			if (error = progvis:check:check([m, i])) {
+				currentError = true;
+			} else {
+				currentError = false;
+			}
+		} catch (core:lang:CodeError e) {
+			error("Error while compiling the implementation:\n" + e.message, e.pos);
+		}
+
+		if (newMain.any) {
+			if (currentError) {
+				done("You found an error, click \"Upload\" to proceed!");
+			} else {
+				error("You did not find an error in the current implementation, try again!");
+			}
+			size = minSize();
+		} else {
+			if (currentError) {
+				error("Your solution does not fix all errors. Try again!");
+			} else {
+				done("You fixed the current issues, click \"Upload\" to proceed!");
+			}
+		}
+
+		if (uploadButton.enabled)
+			request = ImprovedProblemRequest(original.id, "", newMain, newImpl, currentError);
+	}
+
+	private void error(Str message, core:lang:SrcPos pos) {
+		status.text = "Compilation error, try again.";
+		progvis:CompileErrorDialog(message, pos).show(this);
+	}
+
+	void error(Str message) {
+		status.text = message;
+		progress.visible = false;
+		size = minSize();
+	}
+
+	void done(Str message) {
+		status.text = message;
+		progress.visible = false;
+		uploadButton.enabled = true;
+		size = minSize();
 	}
 
 }

@@ -84,7 +84,11 @@ class DebugProblemBehavior extends Behavior {
 			return;
 		}
 
-		print("TODO: Submit the solution!");
+		try {
+			client.query(PostSolutionRequest(problem.id, error.type, operations.toS));
+		} catch (Exception e) {
+			showMessage(window, "Error", "Failed to post the result: " + e.message);
+		}
 
 		window.updateBehavior(ImproveBehavior(window, client, problem, mainCode, implCode));
 	}
@@ -128,7 +132,7 @@ class ImproveBehavior extends DefaultBehavior {
 		msg << "1. Select \"Open implementation\" if you have not done so already.\n";
 		msg << "2. Save the file in your editor.\n";
 		msg << "3. Select \"Reload\" to load your changes and see if they work.\n";
-		msg << "4. Releat 2-3 as necessary.\n";
+		msg << "4. Repeat 2-3 as necessary.\n";
 		msg << "5. Click \"Submit\" in the green box when you are done.\n";
 		msg << "Note: You can only modify the implementation, any chainges to the main file will be ignored.\n";
 		showMessage(window, "Improve the code", msg.toS);
@@ -166,12 +170,11 @@ class ImproveBehavior extends DefaultBehavior {
 	}
 
 	private void onSubmitHelp() {
-		print("TODO: Submit the problem!");
-		// Str source = window.currentSource();
-		// UploadDlg dlg(client, source, problem.source.ext, "Solution to " + problem.title, solutionId);
-		// if (dlg.show(window) >= 0) {
-		// window.updateBehavior(DefaultBehavior(window));
-		// }
+		Code implCode(window.currentSource(), problem.impl.language);
+		progvis:problems:SolutionUploadDlg dlg(client, problem, null, implCode);
+		if (dlg.show(window) >= 0) {
+			window.updateBehavior(DefaultBehavior(window));
+		}
 	}
 
 	private void onReload() {

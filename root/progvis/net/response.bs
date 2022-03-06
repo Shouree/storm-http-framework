@@ -115,14 +115,14 @@ class DetailsResponse : extends Response, serializable {
 /**
  * Response to a new solution. Contains the new solution's ID so that it can be amended with a new problem later.
  */
-// class PostSolutionResponse : extends Response, serializable {
-// 	// Solution ID.
-// 	Int id;
+class PostSolutionResponse : extends Response, serializable {
+	// Solution ID.
+	Int id;
 
-// 	init(Int id) {
-// 		init { id = id; }
-// 	}
-// }
+	init(Int id) {
+		init { id = id; }
+	}
+}
 
 /**
  * Reply to creating an new exercise.

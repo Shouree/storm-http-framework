@@ -56,6 +56,23 @@ DATABASE ProgvisDB {
 		language TEXT
 		);
 
+	// Incorrect sequences to problems of type 1 that were found by users.
+	TABLE solutions(
+		// ID of this solution.
+		id INTEGER PRIMARY KEY,
+		// Solution author (foreign key to users)
+		author INTEGER,
+		// Problem (foreign key to problems)
+		problem INTEGER,
+		// Type of error found.
+		type TEXT,
+		// Sequence found.
+		sequence TEXT,
+		// Created (time string in UTC)
+		created TEXT
+		);
+	INDEX ON solutions(problem);
+
 }
 
 class Database {
@@ -194,6 +211,21 @@ class Database {
 			VALUES (userId, title, next, mainId, implId, refId, CURRENT DATETIME);
 	}
 
+	Int improvedProblem(Int userId, Int originalId, Str title, Code? main, Code? impl, Bool currentError) {
+		unless (original = WITH db: SELECT ONE main, impl, refimpl FROM problems WHERE id == originalId)
+			throw ServerError("Problem ${originalId} does not exist.");
+
+		Int mainId = original.main;
+		if (main)
+			mainId = createCode(main);
+		Int implId = original.impl;
+		if (impl)
+			implId = createCode(impl);
+		Int next = toNext(currentError);
+		WITH db: INSERT INTO problems(author, title, next, main, impl, refimpl, improved, created)
+			VALUES (userId, title, next, mainId, implId, ${original.refimpl}, originalId, CURRENT DATETIME);
+	}
+
 	private Int createCode(Code code) {
 		WITH db: INSERT INTO code(src, language) VALUES (${code.src}, ${code.language});
 	}
@@ -215,6 +247,25 @@ class Database {
 			throw ServerError("Code ${codeId} does not exist.");
 
 		Code(code.src, code.language);
+	}
+
+	Int createSolution(Int userId, Int problemId, Str type, Str sequence) {
+		unless (author = WITH db: SELECT ONE author FROM problems WHERE id == problemId)
+			throw ServerError("No problem with the id ${problemId}!");
+
+		// Note: We could check so that we don't solve our own problems here. In the new scheme,
+		// this is not as important, so we skip it for now at least.
+		// if (author.author == server.userId)
+		// 	throw ServerError("Can not solve your own problem!");
+
+		// Avoid duplicates.
+		if (existing = WITH db: SELECT ONE id FROM solutions WHERE problem == problemId AND author == userId AND type == ${type}) {
+			WITH db: UPDATE solutions SET sequence = ${sequence} WHERE id = ${existing.id};
+			existing.id;
+		} else {
+			WITH db: INSERT INTO solutions(author, problem, type, sequence, created)
+				VALUES (userId, problemId, ${type}, ${sequence}, CURRENT DATETIME);
+		}
 	}
 
 	// Compute the points of all users in the database.

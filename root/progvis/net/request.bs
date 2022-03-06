@@ -194,35 +194,29 @@ class DetailsRequest : extends Request, serializable {
 /**
  * Submit a solution to a problem.
  */
-// class PostSolutionRequest : extends Request, serializable {
-// 	// Solution to this problem.
-// 	Int problemId;
+class PostSolutionRequest : extends Request, serializable {
+	// Solution to this problem.
+	Int problemId;
 
-// 	// Type of solution.
-// 	Str type;
+	// Type of solution.
+	Str type;
 
-// 	// Solution data (if any).
-// 	Str? solution;
+	// Solution data.
+	Str solution;
 
-// 	init(Int problemId, Str type, Str? solution) {
-// 		init {
-// 			problemId = problemId;
-// 			type = type;
-// 			solution = solution;
-// 		}
-// 	}
+	init(Int problemId, Str type, Str solution) {
+		init {
+			problemId = problemId;
+			type = type;
+			solution = solution;
+		}
+	}
 
-// 	Response? execute(ServerConn server, Database db) : override {
-// 		unless (problemAuthor = db.authorTo(problemId))
-// 			throw ServerError("No problem with the id ${problemId}!");
-
-// 		if (problemAuthor == server.userId)
-// 			throw ServerError("Can not solve your own problem!");
-
-// 		var id = db.newSolution(problemId, server.userId, type, solution);
-// 		PostSolutionResponse(id);
-// 	}
-// }
+	Response? execute(ServerConn server, Database db) : override {
+		var id = db.createSolution(server.userId, problemId, type, solution);
+		PostSolutionResponse(id);
+	}
+}
 
 /**
  * Publish a new problem.
@@ -253,19 +247,28 @@ class NewProblemRequest : extends Request, serializable {
 }
 
 /**
- * Publish an improvement to an existing solution..
+ * Publish an improvement to an existing problem.
  */
-// class NewImprovementRequest : extends NewProblemRequest, serializable {
-// 	Int solutionId;
+class ImprovedProblemRequest : extends Request, serializable {
+	Int originalId;
+	Str title;
+	Code? main;
+	Code? impl;
 
-// 	init(Str title, Str code, Str language, Int solutionId) {
-// 		init(title, code, language) {
-// 			solutionId = solutionId;
-// 		}
-// 	}
+	Bool currentError;
 
-// 	Response? execute(ServerConn server, Database db) : override {
-// 		var id = db.createImprovement(server.userId, title, code, language, solutionId);
-// 		NewProblemResponse(id);
-// 	}
-// }
+	init(Int originalId, Str title, Code? main, Code? impl, Bool currentError) {
+		init {
+			originalId = originalId;
+			title = title;
+			main = main;
+			impl = impl;
+			currentError = currentError;
+		}
+	}
+
+	Response? execute(ServerConn server, Database db) : override {
+		Int id = db.improvedProblem(server.userId, originalId, title, main, impl, currentError);
+		NewProblemResponse(id);
+	}
+}

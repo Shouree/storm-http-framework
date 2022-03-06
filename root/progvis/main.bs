@@ -333,7 +333,7 @@ class MainWin extends Frame {
 
 	// Get source for the current file.
 	public Str currentSource() {
-		if (currentFiles.count != 1 | !painter.hasProgram)
+		if (currentFiles.count < 1 | !painter.hasProgram)
 			throw InternalError("Failed to acquire source for the current file.");
 		if (text = painter.sourceFor(currentFiles[0]))
 			return text;
