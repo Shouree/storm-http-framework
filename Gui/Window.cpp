@@ -462,6 +462,9 @@ namespace gui {
 			}
 		}
 
+		if (!myEnabled)
+			style |= WS_DISABLED;
+
 		Point p = myPos.p0;
 		Size s = myPos.size();
 
@@ -620,6 +623,9 @@ namespace gui {
 			gtk_widget_show(widget);
 		else
 			gtk_widget_hide(widget);
+
+		if (!myEnabled)
+			gtk_widget_set_sensitive(widget, FALSE);
 
 		if (myFont != app(engine())->defaultFont)
 			gtk_widget_override_font(fontWidget(), myFont->desc());
