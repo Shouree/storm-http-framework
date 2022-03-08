@@ -68,7 +68,11 @@ class Callback on Ui {
 			return;
 
 		var d = details(problemId);
-		target.done(DebugAction(settings, d));
+		if (d.currentError) {
+			target.done(DebugAction(settings, d));
+		} else {
+			target.done(TestAction(settings, d));
+		}
 	}
 
 	// Show a solution to a problem.
@@ -146,14 +150,34 @@ class DebugAction extends Action {
 	}
 
 	Url[] files() : override {
-		// To prevent modifications to the implementation, we put it in an in-memory store.
+		// To prevent modifications to the main file, we put it in an in-memory store.
 		MemoryProtocol mem;
 		Url main = problem.main.put("main", mem);
 		[implCode, main];
 	}
 
 	progvis:Behavior behavior(progvis:MainWin window, Client client) : override {
-		// Load code.
 		return progvis:DebugProblemBehavior(window, client, this);
+	}
+}
+
+
+/**
+ * Test a problem (change the main function).
+ */
+class TestAction extends Action {
+	init(progvis:Settings settings, Problem problem) {
+		init(settings, problem) {}
+	}
+
+	Url[] files() : override {
+		// To prevent modifications to the implementation, we put it in an in-memory store.
+		MemoryProtocol mem;
+		Url impl = problem.impl.put("impl", mem);
+		[mainCode, impl];
+	}
+
+	progvis:Behavior behavior(progvis:MainWin window, Client client) : override {
+		return progvis:TestBehavior(window, client, problem, mainCode, implCode);
 	}
 }

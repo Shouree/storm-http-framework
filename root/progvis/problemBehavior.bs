@@ -109,14 +109,14 @@ class DebugProblemBehavior extends Behavior {
 
 
 /**
- * Behavior that lets the user modify the problem and submit an improved version.
+ * Shared base for ImproveBehavior and TestBehavior.
  */
-class ImproveBehavior extends DefaultBehavior {
-	private Client client;
-	private Problem problem;
-	private Url mainCode;
-	private Url implCode;
-	private Bool submitted;
+class UploadableBehavior extends DefaultBehavior {
+	protected Client client;
+	protected Problem problem;
+	protected Url mainCode;
+	protected Url implCode;
+	protected Bool submitted;
 
 	init(MainWin window, Client client, Problem problem, Url mainCode, Url implCode) {
 		init(window) {
@@ -126,16 +126,6 @@ class ImproveBehavior extends DefaultBehavior {
 			implCode = implCode;
 			submitted = false;
 		}
-
-		StrBuf msg;
-		msg << "To solve the problem you found:\n";
-		msg << "1. Select \"Open implementation\" if you have not done so already.\n";
-		msg << "2. Save the file in your editor.\n";
-		msg << "3. Select \"Reload\" to load your changes and see if they work.\n";
-		msg << "4. Repeat 2-3 as necessary.\n";
-		msg << "5. Click \"Submit\" in the green box when you are done.\n";
-		msg << "Note: You can only modify the implementation, any chainges to the main file will be ignored.\n";
-		showMessage(window, "Improve the code", msg.toS);
 	}
 
 	// We encourage reloads!
@@ -152,7 +142,7 @@ class ImproveBehavior extends DefaultBehavior {
 
 	// Add a panel that explains it all.
 	ProblemPanel? panel() : override {
-		ProblemPanel p("Try to fix the problem you found!");
+		ProblemPanel p(panelText());
 		p.button("Open main", &this.onOpenMain());
 		p.button("Open impl.", &this.onOpenImpl());
 		p.button("Reload", &this.onReload());
@@ -160,22 +150,19 @@ class ImproveBehavior extends DefaultBehavior {
 		p;
 	}
 
+	// Title for the panel.
+	protected Str panelText() : abstract;
+
 	private void onSubmit() {
 		// Avoid double submissions.
 		if (submitted)
 			return;
 		submitted = true;
 
-		(spawn onSubmitHelp()).detach();
+		(spawn doSubmit()).detach();
 	}
 
-	private void onSubmitHelp() {
-		Code implCode(window.currentSource(), problem.impl.language);
-		progvis:problems:SolutionUploadDlg dlg(client, problem, null, implCode);
-		if (dlg.show(window) >= 0) {
-			window.updateBehavior(DefaultBehavior(window));
-		}
-	}
+	protected void doSubmit() : abstract;
 
 	private void onReload() {
 		// Needed due to a bug in App on Windows.
@@ -183,14 +170,98 @@ class ImproveBehavior extends DefaultBehavior {
 	}
 
 	private void onOpenImpl() {
-		(spawn window.openEditor(implCode)).detach();
+		(spawn doOpenImpl()).detach();
+	}
+
+	protected void doOpenImpl() {
+		window.openEditor(implCode);
 	}
 
 	private void onOpenMain() {
-		(spawn openMainHelp()).detach();
+		(spawn doOpenMain()).detach();
 	}
-	private void openMainHelp() {
-		showMessage(window, "Information", "Note: You can not modify the main function in this problem. Any changes you make will be ignored.");
+
+	protected void doOpenMain() {
 		window.openEditor(mainCode);
+	}
+}
+
+
+/**
+ * Behavior that lets the user modify the problem and submit an improved version.
+ */
+class ImproveBehavior extends UploadableBehavior {
+	init(MainWin window, Client client, Problem problem, Url mainCode, Url implCode) {
+		init(window, client, problem, mainCode, implCode) {}
+
+		StrBuf msg;
+		msg << "To solve the problem you found:\n";
+		msg << "1. Select \"Open implementation\" if you have not done so already.\n";
+		msg << "2. Save the file in your editor.\n";
+		msg << "3. Select \"Reload\" to load your changes and see if they work.\n";
+		msg << "4. Repeat 2-3 as necessary.\n";
+		msg << "5. Click \"Submit\" in the green box when you are done.\n";
+		msg << "Note: You can only modify the implementation, any chainges to the main file will be ignored.\n";
+		showMessage(window, "Improve the code", msg.toS);
+	}
+
+	protected Str panelText() : override {
+		"Try to fix the problem you found!";
+	}
+
+	protected void doSubmit() : override {
+		Code implCode(window.currentSource(), problem.impl.language);
+		progvis:problems:SolutionUploadDlg dlg(client, problem, null, implCode);
+		if (dlg.show(window) >= 0) {
+			window.updateBehavior(DefaultBehavior(window));
+		}
+	}
+
+	protected void doOpenMain() {
+		showMessage(window, "Information", "Note: You can not modify the main file in this problem. Any changes you make will be ignored.");
+		super:doOpenMain();
+	}
+}
+
+
+/**
+ * Behavior similar to "ImproveBehavior" above, but that modifies the main file.
+ */
+class TestBehavior extends UploadableBehavior {
+	init(MainWin window, Client client, Problem problem, Url mainCode, Url implCode) {
+		init(window, client, problem, mainCode, implCode) {}
+
+		(spawn infoMessage()).detach();
+	}
+
+	private void infoMessage() {
+		sleep(200 ms);
+		StrBuf msg;
+		msg << "This implementation currently works as expected for the main program,\n";
+		msg << "but that does not mean the implementation is correct. Modify the main\n";
+		msg << "program so that it exposes a bug in the implementation:\n";
+		msg << "1. Select \"Open main\" to show the implementation.\n";
+		msg << "2. Edit and save the file in your editor.\n";
+		msg << "3. Select \"Reload\" to load your changes and see what happens.\n";
+		msg << "4. Repeat 2-3 as necessary.\n";
+		msg << "5. Click \"Submit\" in the green box when you are done.\n";
+		showMessage(window, "Improve the main program", msg.toS);
+	}
+
+	protected Str panelText() : override {
+		"Improve the main program to find a bug!";
+	}
+
+	protected void doSubmit() : override {
+		Code mainCode(window.currentSource(), problem.main.language);
+		progvis:problems:SolutionUploadDlg dlg(client, problem, mainCode, null);
+		if (dlg.show(window) >= 0) {
+			window.updateBehavior(DefaultBehavior(window));
+		}
+	}
+
+	protected void doOpenImpl() : override {
+		showMessage(window, "Information", "Note: You can not modify the implementation in this problem. Any changes you make will be ignored.");
+		super:doOpenImpl();
 	}
 }
