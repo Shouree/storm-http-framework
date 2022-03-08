@@ -68,6 +68,31 @@ class Problem : extends ProblemInfo, serializable {
 }
 
 /**
+ * A solution to a problem. I.e. a recorded sequence of steps that illustrates some error.
+ */
+class Solution : serializable {
+	// ID of this solution.
+	Int id;
+
+	// Solution to what problem?
+	Int problemId;
+
+	// Author of the solution.
+	Str author;
+
+	// Type of error found.
+	Str type;
+
+	// Sequence of steps in the solution.
+	Str steps;
+
+	// Create.
+	init(Int id, Int problemId, Str author, Str type, Str steps) {
+		init { id = id; problemId = problemId; author = author; type = type; steps = steps; }
+	}
+}
+
+/**
  * A piece of code, indicating a language as well.
  */
 class Code : serializable {

@@ -72,9 +72,9 @@ class StatsPanel extends Panel {
 
 	init(Int problemId, ProblemInfo? parent, Bool solvable, Callback callback) {
 		Str text = if (parent) {
-			"Improvement of: ${parent.title}";
+			"Improvement of \"${parent.title}\" (${parent.id})";
 		} else {
-			"New problem";
+			"First version";
 		};
 
 		Str solveText = if (solvable) {
@@ -125,75 +125,44 @@ class StatsPanel extends Panel {
 /**
  * Panel containing "replay" and "show solution" as appropriate. Used as "details" for a solution.
  */
-// class SolutionPanel extends Panel {
-// 	private Callback callback;
-// 	private Solution solution;
-// 	private Text[] buttons;
-// 	private Brush[] colors;
-// 	private Fn<void>[] actions;
-// 	private Float buttonHeight;
+class SolutionPanel extends Panel {
+	private Int problemId;
+	private Text solve;
+	private Float textHeight;
+	private Solution solution;
+	private Callback callback;
+	private Brush bg;
 
-// 	init(Solution solution, Callback callback) {
-// 		init {
-// 			solution = solution;
-// 			callback = callback;
-// 		}
+	init(Solution solution, Callback callback) {
+		init {
+			solve("Show the steps", defaultFont);
+			callback = callback;
+			solution = solution;
+			bg = SolidBrush(red + white * 0.2);
+		}
 
-// 		// TODO: How to know what we clicked?
-// 		if (solution.solution.any) {
-// 			buttons << Text("Show the issue", defaultFont);
-// 			colors << SolidBrush(red + white * 0.2);
-// 			actions << &this.showSolution();
-// 		}
-// 		if (id = solution.improved) {
-// 			buttons << Text("Show fix (ID ${id})", defaultFont);
-// 			colors << SolidBrush(green + white * 0.2);
-// 			actions << &this.showImproved();
-// 		}
+		textHeight = solve.size.h;
+	}
 
-// 		if (buttons.empty) {
-// 			buttons << Text("No more information available", defaultFont);
-// 			colors << SolidBrush(white);
-// 		}
+	Bool render(Point offset, Float width, Graphics g) : override {
+		Rect bounds(offset, Size(width, height));
+		g.fill(bounds, bg);
 
-// 		for (b in buttons) {
-// 			buttonHeight = buttonHeight.max(b.size.h);
-// 		}
-// 	}
+		g.draw(solve, tableText, bounds.center - solve.size / 2);
 
-// 	Bool render(Point offset, Float width, Graphics g) : override {
-// 		Float w = width / buttons.count.int.float;
-// 		for (i, button in buttons) {
-// 			Rect r(offset + Point(i.int.float * w, 0), Size(w, height));
-// 			g.fill(r, colors[i]);
-// 			g.draw(button, tableText, r.center - button.size / 2);
-// 			g.draw(r, tableFg);
-// 		}
+		g.draw(bounds, tableFg);
 
-// 		false;
-// 	}
+		false;
+	}
 
-// 	Float height() : override {
-// 		buttonHeight + tableVSpace;
-// 	}
+	Float height() : override {
+		textHeight + tableVSpace;
+	}
 
-// 	void onClick(Point pt, Float width, Painter p) : override {
-// 		Float w = width / buttons.count.int.float;
-// 		Nat id = (pt.x / w).int.nat;
-// 		if (id < actions.count)
-// 			actions[id].call();
-// 	}
-
-// 	private void showSolution() {
-// 		if (s = solution.solution)
-// 			(spawn callback.showSolution(solution.to, s)).detach();
-// 	}
-
-// 	private void showImproved() {
-// 		if (p = solution.improved)
-// 			(spawn callback.solveProblem(p)).detach();
-// 	}
-// }
+	void onClick(Point pt, Float width, Painter p) : override {
+		(spawn callback.showSolution(solution)).detach();
+	}
+}
 
 /**
  * Panel containing a table.

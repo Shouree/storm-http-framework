@@ -91,10 +91,14 @@ class StatsResponse : extends Response, serializable {
 	// Improvements to the problem, if requested.
 	ProblemInfo[] improvements;
 
-	init(ProblemInfo? parent, ProblemInfo[] improvements) {
+	// Solutions to the problem, if requested.
+	Solution[] solutions;
+
+	init(ProblemInfo? parent, ProblemInfo[] improvements, Solution[] solutions) {
 		init {
 			parent = parent;
 			improvements = improvements;
+			solutions = solutions;
 		}
 	}
 }

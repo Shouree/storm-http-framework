@@ -153,17 +153,22 @@ class StatsRequest : extends Request, serializable {
 	// Include improvments?
 	Bool improvements;
 
-	init(Int problem, Bool improvements) {
+	// Include solutions.
+	Bool solutions;
+
+	init(Int problem, Bool improvements, Bool solutions) {
 		init {
 			problem = problem;
 			improvements = improvements;
+			solutions = solutions;
 		}
 	}
 
-	init(Problem problem, Bool improvements) {
+	init(Problem problem, Bool improvements, Bool solutions) {
 		init {
 			problem = problem.id;
 			improvements = improvements;
+			solutions = solutions;
 		}
 	}
 
@@ -171,8 +176,11 @@ class StatsRequest : extends Request, serializable {
 		ProblemInfo[] improved;
 		if (improvements)
 			improved = db.improvementsTo(problem);
+		Solution[] solution;
+		if (solutions)
+			solution = db.solutionsTo(problem);
 		ProblemInfo? parent = db.parentTo(problem);
-		StatsResponse(parent, improved);
+		StatsResponse(parent, improved, solution);
 	}
 }
 

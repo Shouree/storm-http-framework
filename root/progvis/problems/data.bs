@@ -53,7 +53,7 @@ class View {
 	Row[] rows() : abstract;
 
 	protected Str[] problemLabels() {
-		["ID", "Problem name", "Author", "Type", "Solved"];
+		["ID", "Problem name", "Author", "Type", "Improved"];
 	}
 
 	protected Row[] getProblems(Request req) {
@@ -96,13 +96,12 @@ class UnsolvedView extends View {
 	}
 
 	Panel details(Int id) : override {
-		// Problem? parent;
-		// if (response = client.query(StatsRequest(id, false)) as StatsResponse) {
-		// 	parent = response.parent;
-		// }
+		ProblemInfo? parent;
+		if (response = client.query(StatsRequest(id, false, false)) as StatsResponse) {
+			parent = response.parent;
+		}
 
-		// StatsPanel(id, parent, true, cb);
-		StatsPanel(id, null, true, cb);
+		StatsPanel(id, parent, true, cb);
 	}
 }
 
@@ -127,15 +126,14 @@ class SolvedView extends View {
 	}
 
 	Panel details(Int id) : override {
-		// if (response = client.query(StatsRequest(id, true)) as StatsResponse) {
-		// 	MultiPanel root;
-		// 	root.add(StatsPanel(id, response.parent, false, cb));
-		// 	root.add(TablePanel(SolutionView(client, response.solutions, cb)));
-		// 	root;
-		// } else {
-		// 	StatsPanel(-1, null, false, cb);
-		// }
-		StatsPanel(-1, null, false, cb);
+		if (response = client.query(StatsRequest(id, true, true)) as StatsResponse) {
+			MultiPanel root;
+			root.add(StatsPanel(id, response.parent, false, cb));
+			root.add(TablePanel(SolutionView(client, response, cb)));
+			root;
+		} else {
+			StatsPanel(-1, null, false, cb);
+		}
 	}
 }
 
@@ -152,46 +150,52 @@ class OwnView extends SolvedView {
 	}
 }
 
+
 /**
  * View for solutions.
  */
-// class SolutionView extends View {
-// 	private Solution[] solutions;
-// 	private Callback cb;
+class SolutionView extends View {
+	private StatsResponse response;
+	private Callback cb;
 
-// 	init(Client client, Solution[] solutions, Callback cb) {
-// 		init(client) { solutions = solutions; cb = cb; }
-// 		solutions.sort();
-// 	}
+	init(Client client, StatsResponse response, Callback cb) {
+		init(client) { response = response; cb = cb; }
+	}
 
-// 	Str[] labels() : override {
-// 		["Author", "Solution"];
-// 	}
+	Str[] labels() : override {
+		["Author", "Solution"];
+	}
 
-// 	Row[] rows() : override {
-// 		Row[] result;
-// 		for (r in solutions) {
-// 			Str type = if (r.solution.empty) {
-// 				"Looks correct to me!";
-// 			} else if (r.improved.empty) {
-// 				"I found \"${r.type}\"...";
-// 			} else {
-// 				"I found \"${r.type}\" and tried to fix it";
-// 			};
-// 			result << Row(r.id, [r.author, type]);
-// 		}
-// 		result;
-// 	}
+	Row[] rows() : override {
+		Row[] result;
+		for (r in response.solutions) {
+			result << Row(-r.id, [r.author, "Steps for error: ${r.type}"]);
+		}
+		for (r in response.improvements) {
+			result << Row(r.id, [r.author, "Improved problem (${r.id}: ${r.title})"]);
+		}
+		result;
+	}
 
-// 	Panel details(Int id) : override {
-// 		// TODO: What to show here?
-// 		// We should have "show problem" (if available), "show improvement" (if available).
-// 		// for (s in solutions) {
-// 		// 	if (s.id == id)
-// 		// 		return SolutionPanel(s, cb);
-// 		// }
+	Panel details(Int id) : override {
+		if (id < 0) {
+			// This is a solution. Show the solution.
+			for (x in response.solutions) {
+				if (x.id == -id) {
+					return SolutionPanel(x, cb);
+				}
+			}
+		} else {
+			// TODO: Check if we have solved this problem already. We should get that info in the stats response.
+			ProblemInfo? parent;
+			if (response = client.query(StatsRequest(id, false, false)) as StatsResponse) {
+				parent = response.parent;
+			}
 
-// 		// Good for "zero height".
-// 		return MultiPanel();
-// 	}
-// }
+			return StatsPanel(id, parent, false, cb);
+		}
+
+		// Good for "zero height".
+		return MultiPanel();
+	}
+}

@@ -183,10 +183,14 @@ class Database {
 	}
 
 	ProblemInfo? parentTo(Int problemId) {
-		if (x = WITH db: SELECT ONE problems.id AS id, displayName, title, next FROM problems
-			JOIN users ON problems.author == users.id
-			WHERE improved == problemId) {
-			return ProblemInfo(x.id, x.title, x.displayName, fromNext(x.next), countSolved(x.id));
+		if (p = WITH db: SELECT ONE improved FROM problems WHERE id == problemId) {
+			if (improvedId = p.improved) {
+				if (x = WITH db: SELECT ONE problems.id AS id, displayName, title, next FROM problems
+					JOIN users ON problems.author == users.id
+					WHERE problems.id == improvedId) {
+					return ProblemInfo(x.id, x.title, x.displayName, fromNext(x.next), countSolved(x.id));
+				}
+			}
 		}
 		null;
 	}
@@ -198,6 +202,17 @@ class Database {
 			WHERE improved == problemId;
 		for (row in x) {
 			result << ProblemInfo(row.id, row.title, row.displayName, fromNext(row.next), countSolved(row.id));
+		}
+		result;
+	}
+
+	Solution[] solutionsTo(Int problemId) {
+		Solution[] result;
+		var x = WITH db: SELECT solutions.id AS id, displayName, type, sequence FROM solutions
+			JOIN users ON users.id == solutions.author
+			WHERE problem == problemId;
+		for (row in x) {
+			result << Solution(row.id, problemId, row.displayName, row.type, row.sequence);
 		}
 		result;
 	}
