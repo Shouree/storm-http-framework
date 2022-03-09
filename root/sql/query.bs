@@ -168,6 +168,41 @@ Expr queryBlockExpr(SrcPos pos, Block block, Query query) on Compiler {
 }
 
 /**
+ * Table name. Optionally creates an alias for the query.
+ */
+class TableName on Compiler {
+	SrcPos pos;
+	Str name;
+	Str alias;
+
+	// No alias.
+	init(SStr name) {
+		init { pos = name.pos; name = name.v; alias = name.v; }
+	}
+
+	// Create an alias.
+	init(SStr name, SStr alias) {
+		init { pos = name.pos; name = name.v; alias = alias.v; }
+	}
+
+	// Build.
+	void build(QueryBuilder b) {
+		b.name(name);
+		if (name != alias) {
+			b.query << " AS ";
+			b.name(alias);
+		}
+	}
+
+	// To string.
+	void toS(StrBuf to) {
+		to << name;
+		if (name != alias)
+			to << " AS " << alias;
+	}
+}
+
+/**
  * Context passed around while resolving a SQL query.
  */
 class ResolveContext on Compiler {
@@ -177,8 +212,8 @@ class ResolveContext on Compiler {
 	// Contents of the database.
 	Database? db;
 
-	// Which tables are visible in the current context?
-	Table[] visible;
+	// Which tables are visible in the current context? Keys are aliases and not necessarily table names.
+	Str->Table visible;
 
 	// Create typed version.
 	init(Block block, Database db) {
@@ -203,7 +238,20 @@ class ResolveContext on Compiler {
 
 		unless (found = db.find(to))
 			throw NoSuchTable(pos, to);
-		visible << found;
+		if (visible.has(to))
+			throw DuplicateAlias(pos, to);
+		visible.put(to, found);
+		found;
+	}
+	Table? addTable(TableName table) {
+		unless (db)
+			return null;
+
+		unless (found = db.find(table.name))
+			throw NoSuchTable(table.pos, table.name);
+		if (visible.has(table.alias))
+			throw DuplicateAlias(table.pos, table.alias);
+		visible.put(table.alias, found);
 		found;
 	}
 
@@ -219,25 +267,21 @@ class ResolveContext on Compiler {
 
 	// Resolve a column.
 	ResolveResult? resolve(SrcPos pos, Str? table, Str column) {
-
 		if (table) {
-			// TODO: Hashtable. That allows aliases as well.
-			for (t in visible) {
-				if (t.name != table)
-					continue;
-
-				if (col = t.find(column))
-					return ResolveResult(t.name, col);
-			}
+			if (!visible.has(table))
+				return null;
+			Table t = visible.get(table);
+			if (col = t.find(column))
+				return ResolveResult(table, col);
 			return null;
 		} else {
 			ResolveResult? result;
-			for (t in visible) {
+			for (alias, t in visible) {
 				if (col = t.find(column)) {
 					if (result) {
 						throw SyntaxError(pos, "The column name ${column} is ambigous. It exists in tables ${result.table} and ${t.name} at least.");
 					} else {
-						result = ResolveResult(t.name, col);
+						result = ResolveResult(alias, col);
 					}
 				}
 			}
@@ -421,7 +465,7 @@ class InsertQuery extends Query {
 	void toS(StrBuf to) : override {
 		to << "INSERT INTO " << table.v;
 		if (columns.any)
-			to << " (" << join(columns, ", ", (x) => x.v) << ")";
+			to << " (" << join(columns, ", ", (SStr x) => x.v) << ")";
 
 		to << " VALUES (" << join(values, ", ") << ");";
 	}
@@ -613,7 +657,7 @@ class DeleteQuery extends Query {
  */
 class SelectBase extends Query {
 	// Table.
-	SStr table;
+	TableName table;
 
 	/**
 	 * Join statement.
@@ -623,13 +667,13 @@ class SelectBase extends Query {
 		Str type;
 
 		// Table.
-		SStr table;
+		TableName table;
 
 		// Condition for join.
 		SQLExpr expr;
 
 		// Create.
-		init(Str type, SStr table, SQLExpr expr) {
+		init(Str type, TableName table, SQLExpr expr) {
 			init {
 				type = type;
 				table = table;
@@ -640,14 +684,14 @@ class SelectBase extends Query {
 		// Build.
 		void build(QueryBuilder to) {
 			to.query << type << " ";
-			to.name(table.v);
+			table.build(to);
 			to.query << " ON ";
 			expr.build(to);
 		}
 
 		// ToS.
 		void toS(StrBuf to) : override {
-			to << type << " " << table.v << " ON " << expr;
+			to << type << " " << table << " ON " << expr;
 		}
 	}
 
@@ -657,7 +701,7 @@ class SelectBase extends Query {
 	// Where clause, if present.
 	SQLExpr? condition;
 
-	init(SrcPos pos, SStr table, Join[] joins, SQLExpr? condition) {
+	init(SrcPos pos, TableName table, Join[] joins, SQLExpr? condition) {
 		init(pos) {
 			table = table;
 			joins = joins;
@@ -667,10 +711,10 @@ class SelectBase extends Query {
 
 	// Resolve.
 	void resolve(ResolveContext context) : override {
-		context.addTable(table.pos, table.v);
+		context.addTable(table);
 
 		for (j in joins) {
-			context.addTable(j.table.pos, j.table.v);
+			context.addTable(j.table);
 			// TODO: Might be too early, but I think this is how SQL works.
 			j.expr = j.expr.resolve(context);
 			if (context.typed)
@@ -701,7 +745,7 @@ class SelectBase extends Query {
 	// To string. Once again, only the tail parts.
 	protected void tailToS(StrBuf to) {
 		for (j in joins)
-			to << join;
+			to << j;
 		if (condition)
 			to << " WHERE " << condition;
 	}
@@ -781,12 +825,72 @@ class SelectQuery extends SelectBase {
 		}
 	}
 
+
+	/**
+	 * Single order by column.
+	 */
+	class OrderBy on Compiler {
+		// Position
+		SrcPos pos;
+
+		// Table (optional).
+		Str? table;
+
+		// Column.
+		Str column;
+
+		// Ascending/descending.
+		Bool ascending;
+
+		init(SrcPos pos, SStr? table, SStr column, Bool ascending) {
+			Str? t;
+			if (table)
+				t = table.v;
+
+			init {
+				pos = pos;
+				table = t;
+				column = column.v;
+				ascending = ascending;
+			}
+		}
+
+		// Build.
+		void build(QueryBuilder to) {
+			if (table) {
+				to.name(table);
+				to.query << ".";
+			}
+			to.name(column);
+
+			if (ascending)
+				to.query << " ASC";
+			else
+				to.query << " DESC";
+		}
+
+		// To string.
+		void toS(StrBuf to) {
+			if (table)
+				to << table << ".";
+			to << column;
+			if (ascending)
+				to << " ASC";
+			else
+				to << " DESC";
+		}
+	}
+
 	// Columns to select. If empty, we assume all columns.
 	Column[] cols;
 
-	init(SrcPos pos, SStr table, Column[] cols, Join[] joins, SQLExpr? condition) {
+	// Order by.
+	OrderBy[] orderBy;
+
+	init(SrcPos pos, TableName table, Column[] cols, Join[] joins, SQLExpr? condition, OrderBy[] orderBy) {
 		init(pos, table, joins, condition) {
 			cols = cols;
+			orderBy = orderBy;
 		}
 	}
 
@@ -820,10 +924,19 @@ class SelectQuery extends SelectBase {
 					if (table = col.table)
 						throw NoSuchColumn(col.pos, col.column, table);
 					else
-						throw NoSuchColumn(col.pos, col.column, table.v);
+						throw NoSuchColumn(col.pos, col.column, table.name);
 				}
 
 				col.type = resultType(result.column);
+			}
+		}
+
+		for (col in orderBy) {
+			if (context.resolve(col.pos, col.table, col.column).empty) {
+				if (table = col.table)
+					throw NoSuchColumn(col.pos, col.column, table);
+				else
+					throw NoSuchColumn(col.pos, col.column, table.name);
 			}
 		}
 	}
@@ -853,9 +966,18 @@ class SelectQuery extends SelectBase {
 			}
 		}
 		r.query << " FROM ";
-		r.name(table.v);
+		table.build(r);
 
 		buildTail(r);
+
+		if (orderBy.any) {
+			r.query << " ORDER BY ";
+			for (i, name in orderBy) {
+				if (i > 0)
+					r.query << ", ";
+				name.build(r);
+			}
+		}
 
 		r.query << ";";
 		r;
@@ -888,8 +1010,17 @@ class SelectQuery extends SelectBase {
 
 	// To string.
 	void toS(StrBuf to) : override {
-		to << "SELECT " << join(cols, ", ") << " FROM " << table.v;
+		to << "SELECT " << join(cols, ", ") << " FROM ";
+		table.toS(to);
 		tailToS(to);
+		if (orderBy.any) {
+			to << " ORDER BY ";
+			for (i, name in orderBy) {
+				if (i > 0)
+					to << ", ";
+				name.toS(to);
+			}
+		}
 	}
 }
 
@@ -899,8 +1030,8 @@ class SelectQuery extends SelectBase {
  * Works just like SELECT, but returns Maybe<Row> rather than an iterator.
  */
 class SelectOneQuery extends SelectQuery {
-	init(SrcPos pos, SStr table, Column[] cols, Join[] joins, SQLExpr? condition) {
-		init(pos, table, cols, joins, condition) {}
+	init(SrcPos pos, TableName table, Column[] cols, Join[] joins, SQLExpr? condition, OrderBy[] orderBy) {
+		init(pos, table, cols, joins, condition, orderBy) {}
 	}
 
 	// Modified result. Returns a single row (wrapped in Maybe) rather than an iterator.
@@ -954,7 +1085,7 @@ class SelectOneQuery extends SelectQuery {
  * Works like SELECT COUNT(*) FROM, but clearer. Returns a Nat.
  */
 class CountQuery extends SelectBase {
-	init(SrcPos pos, SStr table, Join[] joins, SQLExpr? condition) {
+	init(SrcPos pos, TableName table, Join[] joins, SQLExpr? condition) {
 		init(pos, table, joins, condition) {}
 	}
 
@@ -963,7 +1094,7 @@ class CountQuery extends SelectBase {
 		QueryBuilder r;
 
 		r.query << "SELECT COUNT(*) FROM ";
-		r.name(table.v);
+		table.build(r);
 
 		buildTail(r);
 
@@ -985,7 +1116,8 @@ class CountQuery extends SelectBase {
 
 	// To string.
 	void toS(StrBuf to) : override {
-		to << "COUNT FROM " << table.v;
+		to << "COUNT FROM ";
+		table.toS(to);
 		tailToS(to);
 	}
 }
@@ -1052,7 +1184,7 @@ class IndexQuery extends Query {
 	// Create.
 	init(SrcPos pos, SStr table, SStr[] columns) {
 		StrBuf name;
-		name << table.v << "_" << join(columns, "_", (x) => x.v);
+		name << table.v << "_" << join(columns, "_", (SStr x) => x.v);
 
 		init(pos) {
 			name = name.toS;

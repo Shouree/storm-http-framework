@@ -207,6 +207,46 @@ suite Join {
 	}
 }
 
+suite OrderBy {
+	SQLite db;
+	TwoTables c(db);
+
+	WITH c {
+		INSERT INTO test(id, name) VALUES (3, "c");
+		INSERT INTO test(id, name) VALUES (1, "g");
+		INSERT INTO test(id, name) VALUES (2, "g");
+
+		StrBuf all;
+		for (x in SELECT id, name FROM test ORDER BY name DESC, id ASC)
+			all << x.id << x.name << "|";
+
+		test all.toS == "1g|2g|3c|";
+
+		all = StrBuf();
+		for (x in SELECT id, name FROM test ORDER BY name ASC, id ASC)
+			all << x.id << x.name << "|";
+
+		test all.toS == "3c|1g|2g|";
+	}
+}
+
+suite TableAlias {
+	SQLite db;
+	TwoTables c(db);
+	WITH c {
+		INSERT INTO extra VALUES(1, 2, "a");
+		INSERT INTO extra VALUES(2, 3, "b");
+		INSERT INTO extra VALUES(3, 4, "c");
+
+		StrBuf all;
+		for (x in SELECT p.id AS a, q.id AS b, p.data AS c, q.data AS d FROM extra AS p JOIN extra AS q ON p.test == q.id) {
+			all << x.a << x.b << x.c << x.d << "|";
+		}
+
+		test all.toS == "12ab|23bc|";
+	}
+}
+
 DATABASE MultiPK {
 	TABLE test(
 		id1 INTEGER,

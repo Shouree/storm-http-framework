@@ -18,6 +18,15 @@ class NoSuchColumn extends SyntaxError {
 	}
 }
 
+/**
+ * Thrown on dupliate alias declaration.
+ */
+class DuplicateAlias extends SyntaxError {
+	init(SrcPos pos, Str alias) {
+		init(pos, "The alias ${alias} is already defined in this query.") {}
+	}
+}
+
 
 /**
  * Error in the database schema.

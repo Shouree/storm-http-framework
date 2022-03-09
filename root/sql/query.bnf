@@ -13,8 +13,9 @@ SWithBlock => QueryBlock(pos, block, c) : "WITH" #keyword ~ lang.bs.SExpr(block)
 SWithBlock => QueryBlock(pos, block, c) : "with" #keyword ~ lang.bs.SExpr(block) c, "{" [, (lang.bs.SBlockItem(me), )* ]+ "}";
 
 // Allow queries as "regular" statements inside these blocks.
-SWithBlock..lang.bs.SExpr => queryBlockExpr(pos, block, query) : SQuery query;
-
+// Note: The priority is needed as queries like: SELECT * FROM y; can be parsed as a multiplication
+// with a variable declaration.
+SWithBlock..lang.bs.SExpr[20] => queryBlockExpr(pos, block, query) : SQuery query;
 
 // Base of an SQL query.
 Query SQuery();
@@ -30,13 +31,13 @@ SQuery => UpdateQuery(pos, table, assign, condition) : "UPDATE" ~ SName table ~ 
 SQuery => DeleteQuery(pos, table, condition) : "DELETE" ~ "FROM" ~ SName table - SWhere condition;
 
 // Select:
-SQuery => SelectQuery(pos, table, cols, joins, condition) : "SELECT" ~ SSelectCols cols ~ "FROM" ~ SName table - SJoins joins - SWhere condition;
+SQuery => SelectQuery(pos, table, cols, joins, condition, orderBy) : "SELECT" ~ SSelectCols cols ~ "FROM" ~ STableName table - SJoins joins - SWhere condition - SOrderBy orderBy;
 
 // Select one row (or zero):
-SQuery => SelectOneQuery(pos, table, cols, joins, condition) : "SELECT" ~ "ONE" ~ SSelectCols cols ~ "FROM" ~ SName table - SJoins joins - SWhere condition;
+SQuery => SelectOneQuery(pos, table, cols, joins, condition, orderBy) : "SELECT" ~ "ONE" ~ SSelectCols cols ~ "FROM" ~ STableName table - SJoins joins - SWhere condition - SOrderBy orderBy;
 
 // Count rows:
-SQuery => CountQuery(pos, table, joins, condition) : "COUNT" ~ "FROM" ~ SName table - SJoins joins - SWhere condition;
+SQuery => CountQuery(pos, table, joins, condition) : "COUNT" ~ "FROM" ~ STableName table - SJoins joins - SWhere condition;
 
 // Create table (only untyped)
 SQuery => CreateQuery(pos, false, table) : "CREATE" ~ "TABLE" ~ SCreateTail table;
@@ -58,13 +59,27 @@ Maybe<SQLExpr> SWhere();
 SWhere => Maybe<SQLExpr>() : ;
 SWhere => Maybe<SQLExpr>(x) : ~ "WHERE" ~ SExpr x;
 
+// ORDER BY clauses
+Array<SelectQuery.OrderBy> SOrderBy();
+SOrderBy => Array<SelectQuery.OrderBy>() : ;
+SOrderBy => Array<SelectQuery.OrderBy>() : ~ "ORDER" ~ "BY" ~ SOrderByItem -> push - (, ",", SOrderByItem -> push)*;
+
+SelectQuery.OrderBy SOrderByItem();
+SOrderByItem => SelectQuery.OrderBy(pos, table, column, asc) : (SName table, "\.",)? - SName column - SAscDesc asc;
+
+Bool SAscDesc();
+SAscDesc => true : ;
+SAscDesc => true : ~ "ASC";
+SAscDesc => false : ~ "DESC";
+
 // Possible columns for a SELECT query.
 Array<SelectQuery.Column> SSelectCols();
 SSelectCols => Array<SelectQuery.Column>() : SSelectCol -> push - (, ",", SSelectCol -> push)*;
 SSelectCols => Array<SelectQuery.Column>() : "\*";
 
 SelectQuery.Column SSelectCol();
-SSelectCol => x : SSelectColI x - (~ "AS" ~ SName -> setAs)?;
+SSelectCol => x : SSelectColI x;
+SSelectCol => x : SSelectColI x ~ ("AS" ~)? SName -> setAs; // Note: the AS keyword is optional in many dialects.
 
 SelectQuery.Column SSelectColI();
 SSelectColI => SelectQuery.Column(pos, column) : SName column;
@@ -75,7 +90,7 @@ Array<SelectQuery.Join> SJoins();
 SJoins => Array<SelectQuery.Join>() : (~ SJoin -> push)*;
 
 SelectQuery.Join SJoin();
-SJoin => SelectQuery.Join(type, table, condition) : (SJoinType) type ~ SName table ~ "ON" ~ SExpr condition;
+SJoin => SelectQuery.Join(type, table, condition) : (SJoinType) type ~ STableName table ~ "ON" ~ SExpr condition;
 
 // Types of joins.
 void SJoinType();
@@ -165,6 +180,11 @@ SAssignExpr => AssignExpr(col, expr) : SName col, "=", SExpr expr;
 
 Array<AssignExpr> SAssignExprs();
 SAssignExprs => Array<AssignExpr>() : SAssignExpr -> push - (, ",", SAssignExpr -> push)*;
+
+// Table name. Allows optionally renaming the table in the query.
+TableName STableName();
+STableName => TableName(table) : SName table;
+STableName => TableName(table, as) : SName table ~ ("AS" ~)? SName as;
 
 // SQL name. We might want to extend this eventually.
 SStr SName();

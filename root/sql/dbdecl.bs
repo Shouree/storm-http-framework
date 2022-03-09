@@ -430,7 +430,7 @@ class TypedConnection {
 	// Close.
 	void close() {
 		for (k, v in statements)
-			f.finalize();
+			v.finalize();
 		connection.close();
 	}
 
