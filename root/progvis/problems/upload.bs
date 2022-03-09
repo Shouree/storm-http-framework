@@ -3,6 +3,7 @@ use layout;
 use progvis:net;
 use core:geometry;
 use core:io;
+use parser;
 
 /**
  * Dialog for uploading new problems.
@@ -280,6 +281,14 @@ dialog SolutionUploadDlg {
 			}
 		}
 
+		if (newImpl) {
+			// Check if the new implementation is different from the original one.
+			if (hashString(newImpl.src).value.toS == hashString(original.impl.src).value.toS) {
+				error("You have not modified the implementation. Make some modifications and click \"Reload\" before submitting.");
+				return;
+			}
+		}
+
 		if (cancel)
 			return;
 
@@ -303,7 +312,10 @@ dialog SolutionUploadDlg {
 			size = minSize();
 		} else {
 			if (currentError) {
-				error("Your solution does not fix all errors. Try again!");
+				// We allow uploading the problems again, but with reduced reward. Thus, one student
+				// may solve one issue, but another may solve another issue. We check so that the
+				// code is not identical as the first part here.
+				done("Your solution does not solve all errors with this main program.\nYou may still upload your solution, but you will not receive full points for it.");
 			} else {
 				done("You fixed the current issues, click \"Upload\" to proceed!");
 			}
@@ -344,4 +356,14 @@ dialog SolutionUploadDlg {
 		size = minSize();
 	}
 
+}
+
+// Remove whitespace from a string to create a "hash" of a program. Note: This is not 100%
+// accurate, but good enough to detect "significant" changes (for example "myclass a" and "my
+// classa" will hash to the same thing.
+hashString : parser(recursive descent) {
+	start = Start;
+
+	StrBuf Start();
+	Start => StrBuf() : "[ \n\r\t]*" - ("[^ \n\r\t]+" -> add - "[ \n\r\t]*")*;
 }

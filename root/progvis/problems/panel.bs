@@ -80,7 +80,7 @@ class StatsPanel extends Panel {
 		Str solveText = if (solvable) {
 			"Try to solve!";
 		} else {
-			"Check again";
+			"Try again";
 		};
 
 		init {

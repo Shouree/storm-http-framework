@@ -159,10 +159,16 @@ class UploadableBehavior extends DefaultBehavior {
 			return;
 		submitted = true;
 
-		(spawn doSubmit()).detach();
+		(spawn doSubmitHelp()).detach();
 	}
 
-	protected void doSubmit() : abstract;
+	private void doSubmitHelp() {
+		// Possibly re-set 'submitted' if the user cancelled the dialog.
+		submitted = doSubmit();
+	}
+
+	// Returns true if submission suceeded.
+	protected Bool doSubmit() : abstract;
 
 	private void onReload() {
 		// Needed due to a bug in App on Windows.
@@ -209,12 +215,14 @@ class ImproveBehavior extends UploadableBehavior {
 		"Try to fix the problem you found!";
 	}
 
-	protected void doSubmit() : override {
+	protected Bool doSubmit() : override {
 		Code implCode(window.currentSource(), problem.impl.language);
 		progvis:problems:SolutionUploadDlg dlg(client, problem, null, implCode);
 		if (dlg.show(window) >= 0) {
 			window.updateBehavior(DefaultBehavior(window));
+			return true;
 		}
+		return false;
 	}
 
 	protected void doOpenMain() {
@@ -252,12 +260,14 @@ class TestBehavior extends UploadableBehavior {
 		"Improve the main program to find a bug!";
 	}
 
-	protected void doSubmit() : override {
+	protected Bool doSubmit() : override {
 		Code mainCode(window.currentSource(), problem.main.language);
 		progvis:problems:SolutionUploadDlg dlg(client, problem, mainCode, null);
 		if (dlg.show(window) >= 0) {
 			window.updateBehavior(DefaultBehavior(window));
+			return true;
 		}
+		return false;
 	}
 
 	protected void doOpenImpl() : override {
