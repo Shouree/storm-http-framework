@@ -30,7 +30,7 @@ class LambdaExpr extends Expr {
 		var p = params.resolve(parent.scope);
 		Scope scope = lambdaScope(parent);
 		var info = lambdaInfo(scope, p, body, parent);
-		Value result = info.result.type;
+		Value result = info.result.type.asRef(false);
 
 		SimpleName name;
 		name.add("core");

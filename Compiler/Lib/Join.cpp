@@ -85,6 +85,8 @@ namespace storm {
 			if (params->count() == 3 && params->at(1).type != strType)
 				return null;
 
+			// TODO: We should verify the last parameter. Otherwise, multiple join calls with lambdas will fail.
+
 			// Just generate what we need, otherwise auto-inference does not work.
 			Array<Value> *fnParams = new (this) Array<Value>(2, Value());
 			fnParams->at(0) = Value(strType);
