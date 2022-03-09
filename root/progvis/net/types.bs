@@ -15,19 +15,19 @@ class ProblemInfo : serializable {
 	Str title;
 	Str author;
 
+	// Is this my problem?
+	Bool myProblem;
+
 	// Is the next step to modify the implementation?
 	Bool currentError;
 
-	// Number of solutions.
-	Nat solutions;
-
-	init(Int id, Str title, Str author, Bool currentError, Nat solutions) {
+	init(Int id, Str title, Str author, Bool myProblem, Bool currentError) {
 		init {
 			id = id;
 			title = title;
 			author = author;
+			myProblem = myProblem;
 			currentError = currentError;
-			solutions = solutions;
 		}
 	}
 
@@ -45,6 +45,32 @@ class ProblemInfo : serializable {
 }
 
 /**
+ * A problem with improved and solved stats.
+ */
+class ProblemDetails : extends ProblemInfo, serializable {
+	// Number of improvements.
+	Nat improvements;
+
+	// Number of solutions. Only relevant if 'currentError = true'
+	Nat solutions;
+
+	init(Int id, Str title, Str author, Bool myProblem, Bool currentError, Nat improvements, Nat solutions) {
+		init(id, title, author, myProblem, currentError) {
+			improvements = improvements;
+			solutions = solutions;
+		}
+	}
+
+	Str improvedStr() {
+		if (currentError)
+			solutions.toS + "+" + improvements.toS;
+		else
+			improvements.toS;
+	}
+}
+
+
+/**
  * Representation of a problem, including code.
  */
 class Problem : extends ProblemInfo, serializable {
@@ -58,8 +84,8 @@ class Problem : extends ProblemInfo, serializable {
 	Code ref;
 
 	// Create.
-	init(Int id, Str title, Str author, Bool currentError, Nat solutions, Code main, Code impl, Code ref) {
-		init(id, title, author, currentError, solutions) {
+	init(Int id, Str title, Str author, Bool myProblem, Bool currentError, Code main, Code impl, Code ref) {
+		init(id, title, author, myProblem, currentError) {
 			main = main;
 			impl = impl;
 			ref = ref;

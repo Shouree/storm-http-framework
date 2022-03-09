@@ -61,7 +61,7 @@ class View {
 			ans.problems.sort();
 			Row[] data;
 			for (r in ans.problems) {
-				data << Row(r.id, [r.id.toS, r.title, r.author, r.typeStr, r.solutions.toS]);
+				data << Row(r.id, [r.id.toS, r.title, r.author, r.typeStr, r.improvedStr]);
 			}
 			return data;
 		} else {
@@ -129,10 +129,13 @@ class SolvedView extends View {
 		if (response = client.query(StatsRequest(id, true, true)) as StatsResponse) {
 			MultiPanel root;
 			root.add(StatsPanel(id, response.parent, false, cb));
-			root.add(TablePanel(SolutionView(client, response, cb)));
+			if (response.solutions.any)
+				root.add(TablePanel(SolutionView(client, response.solutions, cb)));
+			root.add(TablePanel(ImprovementView(client, response.improvements, cb)));
 			root;
 		} else {
-			StatsPanel(-1, null, false, cb);
+			// Good for zero height.
+			MultiPanel();
 		}
 	}
 }
@@ -155,47 +158,73 @@ class OwnView extends SolvedView {
  * View for solutions.
  */
 class SolutionView extends View {
-	private StatsResponse response;
+	private Solution[] solutions;
 	private Callback cb;
 
-	init(Client client, StatsResponse response, Callback cb) {
-		init(client) { response = response; cb = cb; }
+	init(Client client, Solution[] solutions, Callback cb) {
+		init(client) { solutions = solutions; cb = cb; }
+		solutions.sort((a, b) => a.problemId < b.problemId);
 	}
 
 	Str[] labels() : override {
-		["Author", "Solution"];
+		["Author", "Type of error found"];
 	}
 
 	Row[] rows() : override {
 		Row[] result;
-		for (r in response.solutions) {
-			result << Row(-r.id, [r.author, "Steps for error: ${r.type}"]);
-		}
-		for (r in response.improvements) {
-			result << Row(r.id, [r.author, "Improved problem (${r.id}: ${r.title})"]);
+		for (r in solutions) {
+			result << Row(r.id, [r.author, r.type]);
 		}
 		result;
 	}
 
 	Panel details(Int id) : override {
-		if (id < 0) {
-			// This is a solution. Show the solution.
-			for (x in response.solutions) {
-				if (x.id == -id) {
-					return SolutionPanel(x, cb);
-				}
+		for (x in solutions) {
+			if (x.id == id) {
+				return SolutionPanel(x, cb);
 			}
-		} else {
-			// TODO: Check if we have solved this problem already. We should get that info in the stats response.
-			ProblemInfo? parent;
-			if (response = client.query(StatsRequest(id, false, false)) as StatsResponse) {
-				parent = response.parent;
-			}
-
-			return StatsPanel(id, parent, false, cb);
 		}
 
 		// Good for "zero height".
 		return MultiPanel();
+	}
+}
+
+
+/**
+ * View for improvements.
+ */
+class ImprovementView extends View {
+	private ProblemInfo[] improvements;
+	private Callback cb;
+
+	init(Client client, ProblemInfo[] improvements, Callback cb) {
+		init(client) { improvements = improvements; cb = cb; }
+		improvements.sort();
+	}
+
+	Str[] labels() : override {
+		["ID", "Improvement title", "Author", "Type"];
+	}
+
+	Row[] rows() : override {
+		Row[] result;
+		for (r in improvements) {
+			result << Row(r.id, [r.id.toS, r.title, r.author, r.typeStr]);
+		}
+		result;
+	}
+
+	Panel details(Int id) : override {
+		ProblemInfo? parent;
+		Bool solvable;
+		if (response = client.query(StatsRequest(id, false, false)) as StatsResponse) {
+			parent = response.parent;
+			solvable = !response.solved;
+			if (parent)
+				solvable &= !parent.myProblem;
+		}
+
+		return StatsPanel(id, parent, solvable, cb);
 	}
 }

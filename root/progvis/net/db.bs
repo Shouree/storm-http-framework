@@ -130,8 +130,8 @@ class Database {
 	// Get a list of problems in the system. Excludes problems that the user has already
 	// solved. 'currentError' indicates whether to return problems where the implementation is
 	// broken, or where the main is too weak.
-	ProblemInfo[] unsolvedProblems(Int forUser, Bool currentError) {
-		ProblemInfo[] result;
+	ProblemDetails[] unsolvedProblems(Int forUser, Bool currentError) {
+		ProblemDetails[] result;
 		Int nextV = toNext(currentError);
 		var x = WITH db: SELECT problems.id AS id, displayName, title FROM problems
 			JOIN users ON problems.author == users.id
@@ -141,7 +141,9 @@ class Database {
 
 			var solved = (WITH db: SELECT ONE id FROM problems WHERE improved == problemId AND author == forUser);
 			if (solved.empty) {
-				result << ProblemInfo(problemId, row.title, row.displayName, currentError, countSolved(problemId));
+				result << ProblemDetails(problemId, row.title, row.displayName, false, currentError,
+										countImproved(problemId),
+										countSolved(problemId, currentError));
 			}
 		}
 
@@ -149,8 +151,8 @@ class Database {
 	}
 
 	// Get users' solved problems.
-	ProblemInfo[] solvedProblems(Int forUser) {
-		ProblemInfo[] result;
+	ProblemDetails[] solvedProblems(Int forUser) {
+		ProblemDetails[] result;
 		var x = WITH db: SELECT problems.id AS id, displayName, title, next FROM problems
 			JOIN users ON problems.author == users.id
 			WHERE author != forUser;
@@ -159,7 +161,9 @@ class Database {
 
 			var solved = (WITH db: SELECT ONE id FROM problems WHERE improved == problemId AND author == forUser);
 			if (solved.any) {
-				result << ProblemInfo(problemId, row.title, row.displayName, fromNext(row.next), countSolved(problemId));
+				result << ProblemDetails(problemId, row.title, row.displayName, false, fromNext(row.next),
+										countImproved(problemId),
+										countSolved(problemId, fromNext(row.next)));
 			}
 		}
 
@@ -167,41 +171,55 @@ class Database {
 	}
 
 	// Get a list of the user's own problems.
-	ProblemInfo[] ownProblems(Int forUser) {
-		ProblemInfo[] result;
+	ProblemDetails[] ownProblems(Int forUser) {
+		ProblemDetails[] result;
 		var x = WITH db: SELECT problems.id AS id, displayName, title, next FROM problems
 			JOIN users ON problems.author == users.id
 			WHERE author == forUser;
 		for (row in x) {
-			result << ProblemInfo(row.id, row.title, row.displayName, fromNext(row.next), countSolved(row.id));
+			result << ProblemDetails(row.id, row.title, row.displayName, true, fromNext(row.next),
+									countImproved(row.id),
+									countSolved(row.id, fromNext(row.next)));
 		}
 		result;
 	}
 
-	private Nat countSolved(Int problemId) {
+	private Nat countImproved(Int problemId) {
 		WITH db: COUNT FROM problems WHERE improved == problemId;
 	}
 
-	ProblemInfo? parentTo(Int problemId) {
+	private Nat countSolved(Int problemId, Bool currentError) {
+		if (currentError)
+			WITH db: COUNT FROM solutions WHERE problem == problemId;
+		else
+			0;
+	}
+
+	ProblemInfo? parentTo(Int problemId, Int userId) {
 		if (p = WITH db: SELECT ONE improved FROM problems WHERE id == problemId) {
 			if (improvedId = p.improved) {
-				if (x = WITH db: SELECT ONE problems.id AS id, displayName, title, next FROM problems
+				if (x = WITH db: SELECT ONE problems.id AS id, author, displayName, title, next FROM problems
 					JOIN users ON problems.author == users.id
 					WHERE problems.id == improvedId) {
-					return ProblemInfo(x.id, x.title, x.displayName, fromNext(x.next), countSolved(x.id));
+					return ProblemInfo(x.id, x.title, x.displayName, x.author == userId, fromNext(x.next));
 				}
 			}
 		}
 		null;
 	}
 
-	ProblemInfo[] improvementsTo(Int problemId) {
+	Bool solvedProblem(Int userId, Int problemId) {
+		var result = WITH db: SELECT ONE id FROM problems WHERE improved == problemId AND userId == author;
+		result.any;
+	}
+
+	ProblemInfo[] improvementsTo(Int problemId, Int userId) {
 		ProblemInfo[] result;
-		var x = WITH db: SELECT problems.id AS id, displayName, title, next FROM problems
+		var x = WITH db: SELECT problems.id AS id, author, displayName, title, next FROM problems
 			JOIN users ON problems.author == users.id
 			WHERE improved == problemId;
 		for (row in x) {
-			result << ProblemInfo(row.id, row.title, row.displayName, fromNext(row.next), countSolved(row.id));
+			result << ProblemInfo(row.id, row.title, row.displayName, row.author == userId, fromNext(row.next));
 		}
 		result;
 	}
@@ -245,14 +263,14 @@ class Database {
 		WITH db: INSERT INTO code(src, language) VALUES (${code.src}, ${code.language});
 	}
 
-	Problem problemDetails(Int problemId) {
-		var x = WITH db: SELECT ONE problems.id AS id, displayName, title, next, main, impl, refimpl FROM problems
+	Problem problemDetails(Int problemId, Int userId) {
+		var x = WITH db: SELECT ONE problems.id AS id, author, displayName, title, next, main, impl, refimpl FROM problems
 			JOIN users ON problems.author == users.id
 			WHERE problems.id == problemId;
 		unless (x)
 			throw ServerError("Problem ${problemId} does not exist.");
 
-		Problem(x.id, x.title, x.displayName, fromNext(x.next), countSolved(x.id),
+		Problem(x.id, x.title, x.displayName, x.author == userId, fromNext(x.next),
 				getCode(x.main), getCode(x.impl), getCode(x.refimpl));
 	}
 
@@ -287,41 +305,85 @@ class Database {
 	Int->Int allScores() {
 		Int->Int result;
 
-		// // Points given to a solution that finds some error.
-		// Int errorSolution = 5;
-		// // Points given to a solution that don't find some error.
-		// Int correctSolution = 1;
-		// // Extra points if the solution was improved.
-		// Int improved = 2;
-		// // Points given to a problem that got an incorrect solution.
-		// Int errorProblem = 1;
-		// // Points given to a problem that got a correct solution.
-		// Int correctProblem = 2;
+		// Points given to a user who...
 
-		// var q = WITH db: SELECT
-		// 	solutions.author AS author,
-		// 	solutions.solution AS solution,
-		// 	solutions.improved AS improved,
-		// 	problems.author AS toAuthor
-		// 	FROM solutions
-		// 	JOIN problems ON solutions.to == problems.id;
-		// for (row in q) {
-		// 	Int pScore = 0;
-		// 	Int sScore = 0;
-		// 	if (row.solution) {
-		// 		sScore += errorSolution;
-		// 		pScore += errorProblem;
-		// 	} else {
-		// 		sScore += correctSolution;
-		// 		pScore += correctProblem;
-		// 	}
+		// ...finds an error in a "debug" problem.
+		Int debugFoundError = 10;
+		// ...submits a solution to a "debug" problem.
+		Int debugSubmit = 10;
+		// ...submits a solution to a "debug" problem, and solves all issues.
+		Int debugSolve = 50;
 
-		// 	if (row.improved)
-		// 		sScore += improved;
+		// ...modifies "main" to expose an error.
+		Int testFindError = 100;
 
-		// 	result[row.author] += sScore;
-		// 	result[row.toAuthor] += pScore;
-		// }
+		// Divider if the "parent" problem was the user's own.
+		Int selfPenalty = 3; // reduce by 66% to avoid making intentionally bad solutions.
+
+		WITH db {
+			// Note: I think we can solve this quite neatly with a self-join, but the SQL package
+			// does not yet support that (name collisions...).
+
+			// Remember which problems have which authors, and whether or not they contain errors.
+			Int->Int problemNext;
+			Int->Int problemAuthor;
+
+			for (row in SELECT id, author, next FROM problems) {
+				problemNext.put(row.id, row.next);
+				problemAuthor.put(row.id, row.author);
+			}
+
+			// Look through the problems once more and resolve the score for each of them.
+			for (row in SELECT author, next, improved FROM problems) {
+				// Ignore "original" problems, they do not give points.
+				unless (improved = row.improved)
+					continue;
+
+				Int prevAuthor = problemAuthor.get(improved, -1);
+
+				// Consistency error... Should not happen.
+				if (prevAuthor < 0)
+					continue;
+
+				// Score for this row.
+				Int rowScore = 0;
+
+				// Check if the previous type was a "debug" problem
+				if (fromNext(problemNext[improved])) {
+					// They submitted an improvement that had different code.
+					rowScore += debugSubmit;
+
+					// If this problem has a different "next", then they actually managed to solve all errors!
+					if (fromNext(row.next) == false)
+						rowScore += debugSolve;
+
+				} else {
+					// If they managed to upload a problem as an improvement to a "test" problem,
+					// they managed to find a test that broke the implementation. We assert this
+					// using an if statement to be robust anyway.
+					if (fromNext(row.next) == true)
+						rowScore += testFindError;
+				}
+
+				// Penalty for improving our own problem?
+				if (row.author == prevAuthor)
+					rowScore /= selfPenalty;
+
+				// Update the score.
+				result[row.author] += rowScore;
+				// print("User ${row.author} gets ${rowScore} points for problem ${row.id}");
+			}
+
+			// Finally, look at all solution rows.
+			for (row in SELECT author, problem FROM solutions) {
+				Int points = debugFoundError;
+				if (problemAuthor[row.problem] == row.author)
+					points /= selfPenalty;
+
+				result[row.author] += points;
+				// print("User ${row.author} gets ${rowScore} points for finding a bug in ${row.problem}");
+			}
+		}
 
 		result;
 	}

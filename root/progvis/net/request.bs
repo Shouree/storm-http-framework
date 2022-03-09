@@ -175,12 +175,13 @@ class StatsRequest : extends Request, serializable {
 	Response? execute(ServerConn server, Database db) : override {
 		ProblemInfo[] improved;
 		if (improvements)
-			improved = db.improvementsTo(problem);
+			improved = db.improvementsTo(problem, server.userId);
 		Solution[] solution;
 		if (solutions)
 			solution = db.solutionsTo(problem);
-		ProblemInfo? parent = db.parentTo(problem);
-		StatsResponse(parent, improved, solution);
+		ProblemInfo? parent = db.parentTo(problem, server.userId);
+		Bool solved = db.solvedProblem(server.userId, problem);
+		StatsResponse(parent, solved, improved, solution);
 	}
 }
 
@@ -195,7 +196,7 @@ class DetailsRequest : extends Request, serializable {
 	}
 
 	Response? execute(ServerConn server, Database db) : override {
-		DetailsResponse(db.problemDetails(problemId));
+		DetailsResponse(db.problemDetails(problemId, server.userId));
 	}
 }
 
