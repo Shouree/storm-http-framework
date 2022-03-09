@@ -59,9 +59,10 @@
     but the scale of the issue should be assessed first.
   - [ ] Parsing core.lang.syntax.bnf takes about 80 ms, which is a bit on the high end when compiling code...
 
-* Loose ends so far [58/102]
+* Loose ends so far [58/103]
   - [ ] We want to allocate threads in some kind of pool. since the minimum alignment for VirtualAlloc on Windows
     is 64k, we might waste quite a lot of memory when allocating small stacks.
+  - [ ] Rename "StrBuf::add" to "StrBuf::push" to be consistent with "Array".
   - [ ] Interestingly: "strBuf << maybe<Str>" calls via Variant. This is since Maybe<Str> does not have
     an "<<" operator.
   - [ ] Cyclic dependencies between packages are not always handled nicely. One idea to solve this

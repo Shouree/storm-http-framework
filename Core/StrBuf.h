@@ -128,7 +128,8 @@ namespace storm {
 		// C version.
 		wchar *c_str() const;
 
-		// Append stuff (do we need these as well?)
+		// Append stuff (these are useful in situations where we can't use the name "<<", in grammars for example)
+		// TODO: Rename to "push" to be consistent with Array etc.
 		StrBuf *add(const wchar *str);
 		StrBuf *addRaw(wchar str);
 		StrBuf *STORM_FN add(const Str *str);
