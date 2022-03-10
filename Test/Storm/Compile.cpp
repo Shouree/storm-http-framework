@@ -44,3 +44,8 @@ BEGIN_TEST(Progvis, Compile) {
 	Engine &e = gEngine();
 	CHECK_RUNS(e.package(S("progvis"))->compile());
 } END_TEST
+
+BEGIN_TEST(SQL, Compile) {
+	Engine &e = gEngine();
+	CHECK_RUNS(e.package(S("sql"))->compile());
+} END_TEST

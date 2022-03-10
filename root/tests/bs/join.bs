@@ -19,5 +19,8 @@ Str joinTfm(Array<Str> src) {
 Str joinTfmSep(Array<Str> src) {
 	StrBuf out;
 	out << join(src, ", ", (x) => "test-" + x);
+	// Two of these have been problematic historically (lambdas generate a null, which the join
+	// corrects, thus generating multiple instances of the join function.
+	out << join(src, ", ", (x) => "test2-" + x);
 	out.toS;
 }
