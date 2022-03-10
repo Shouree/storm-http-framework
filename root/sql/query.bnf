@@ -34,7 +34,7 @@ SQuery => DeleteQuery(pos, table, condition) : "DELETE" ~ "FROM" ~ SName table -
 SQuery => SelectQuery(pos, table, cols, joins, condition, orderBy) : "SELECT" ~ SSelectCols cols ~ "FROM" ~ STableName table - SJoins joins - SWhere condition - SOrderBy orderBy;
 
 // Select one row (or zero):
-SQuery => SelectOneQuery(pos, table, cols, joins, condition, orderBy) : "SELECT" ~ "ONE" ~ SSelectCols cols ~ "FROM" ~ STableName table - SJoins joins - SWhere condition - SOrderBy orderBy;
+SQuery[10] => SelectOneQuery(pos, table, cols, joins, condition, orderBy) : "SELECT" ~ "ONE" ~ SSelectCols cols ~ "FROM" ~ STableName table - SJoins joins - SWhere condition - SOrderBy orderBy;
 
 // Count rows:
 SQuery => CountQuery(pos, table, joins, condition) : "COUNT" ~ "FROM" ~ STableName table - SJoins joins - SWhere condition;
