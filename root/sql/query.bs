@@ -465,7 +465,7 @@ class InsertQuery extends Query {
 	void toS(StrBuf to) : override {
 		to << "INSERT INTO " << table.v;
 		if (columns.any)
-			to << " (" << join(columns, ", ", (SStr x) => x.v) << ")";
+			to << " (" << join(columns, ", ", (x) => x.v) << ")";
 
 		to << " VALUES (" << join(values, ", ") << ");";
 	}
@@ -1184,7 +1184,7 @@ class IndexQuery extends Query {
 	// Create.
 	init(SrcPos pos, SStr table, SStr[] columns) {
 		StrBuf name;
-		name << table.v << "_" << join(columns, "_", (SStr x) => x.v);
+		name << table.v << "_" << join(columns, "_", (x) => x.v);
 
 		init(pos) {
 			name = name.toS;

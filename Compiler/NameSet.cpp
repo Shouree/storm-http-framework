@@ -41,12 +41,21 @@ namespace storm {
 	}
 
 	void NameOverloads::add(Named *item) {
-		for (Nat i = 0; i < items->count(); i++)
+		for (Nat i = 0; i < items->count(); i++) {
+			// If we try to re-insert the same object, we don't complain. This may happen when a
+			// template "helps" the implementation to find a suitable overload (e.g. modifying a
+			// parameter) which results in a duplicate. As we look for object identity here, we only
+			// exclude cases where this is intentional (i.e. as it requires the template to remember
+			// previously created objects).
+			if (items->at(i) == item)
+				return;
+
 			if (storm::equals(item->params, items->at(i)->params)) {
 				throw new (this) TypedefError(
 					item->pos,
 					TO_S(engine(), item << S(" is already defined as ") << items->at(i)->identifier()));
 			}
+		}
 
 		items->push(item);
 	}

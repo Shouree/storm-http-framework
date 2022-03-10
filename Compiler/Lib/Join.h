@@ -56,6 +56,17 @@ namespace storm {
 
 		// Create things.
 		virtual MAYBE(Named *) STORM_FN generate(SimplePart *part);
+
+	private:
+		// Created instances of the Join class, so that we can re-use old instances in similar
+		// situations. The key here is the type in the array, i.e. the parameter that is passed to
+		// the function parameter.
+
+		// Two-parameter versions.
+		Map<Type *, Named *> *created2;
+
+		// Three-parameter versions.
+		Map<Type *, Named *> *created3;
 	};
 
 }

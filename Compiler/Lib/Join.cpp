@@ -50,7 +50,10 @@ namespace storm {
 	}
 
 
-	JoinTemplate::JoinTemplate() : Template(new (engine()) Str(S("join"))) {}
+	JoinTemplate::JoinTemplate() : Template(new (engine()) Str(S("join"))) {
+		created2 = new (this) Map<Type *, Named *>();
+		created3 = new (this) Map<Type *, Named *>();
+	}
 
 	MAYBE(Named *) JoinTemplate::generate(SimplePart *part) {
 		Array<Value> *params = part->params;
@@ -85,7 +88,13 @@ namespace storm {
 			if (params->count() == 3 && params->at(1).type != strType)
 				return null;
 
-			// TODO: We should verify the last parameter. Otherwise, multiple join calls with lambdas will fail.
+			// See if we created this version earlier.
+			Map<Type *, Named *> *created = created2;
+			if (params->count() == 3)
+				created = created3;
+
+			if (Named *x = created->get(element.type, null))
+				return x;
 
 			// Just generate what we need, otherwise auto-inference does not work.
 			Array<Value> *fnParams = new (this) Array<Value>(2, Value());
@@ -123,7 +132,9 @@ namespace storm {
 				*l << fnRet(ptrA);
 			}
 
-			return dynamicFunction(e, Value(joinType), S("join"), par, l);
+			Named *result = dynamicFunction(e, Value(joinType), S("join"), par, l);
+			created->put(element.type, result);
+			return result;
 		}
 
 		// Should not happen:

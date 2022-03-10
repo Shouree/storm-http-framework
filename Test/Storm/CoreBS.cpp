@@ -665,8 +665,8 @@ BEGIN_TEST(JoinTest, BS) {
 
 	CHECK_EQ(::toS(runFn<Str *>(S("tests.bs.joinPlain"), input)), L"ABC");
 	CHECK_EQ(::toS(runFn<Str *>(S("tests.bs.joinSep"), input)), L"A, B, C");
-	CHECK_EQ(::toS(runFn<Str *>(S("tests.bs.joinTfm"), input)), L"test-Atest-Btest-C");
-	CHECK_EQ(::toS(runFn<Str *>(S("tests.bs.joinTfmSep"), input)), L"test-A, test-B, test-C");
+	CHECK_EQ(::toS(runFn<Str *>(S("tests.bs.joinTfm"), input)), L"test-Atest-Btest-Ctest2-Atest2-Btest2-C");
+	CHECK_EQ(::toS(runFn<Str *>(S("tests.bs.joinTfmSep"), input)), L"test-A, test-B, test-Ctest2-A, test2-B, test2-C");
 } END_TEST
 
 /**
