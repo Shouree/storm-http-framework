@@ -135,7 +135,8 @@ class Database {
 		Int nextV = toNext(currentError);
 		var x = WITH db: SELECT problems.id AS id, displayName, title FROM problems
 			JOIN users ON problems.author == users.id
-			WHERE author != forUser AND next == nextV;
+			WHERE author != forUser AND next == nextV
+			ORDER BY problems.id;
 		for (row in x) {
 			var problemId = row.id;
 
@@ -155,7 +156,8 @@ class Database {
 		ProblemDetails[] result;
 		var x = WITH db: SELECT problems.id AS id, displayName, title, next FROM problems
 			JOIN users ON problems.author == users.id
-			WHERE author != forUser;
+			WHERE author != forUser
+			ORDER BY problems.id;
 		for (row in x) {
 			var problemId = row.id;
 
@@ -175,7 +177,8 @@ class Database {
 		ProblemDetails[] result;
 		var x = WITH db: SELECT problems.id AS id, displayName, title, next FROM problems
 			JOIN users ON problems.author == users.id
-			WHERE author == forUser;
+			WHERE author == forUser
+			ORDER BY problems.id;
 		for (row in x) {
 			result << ProblemDetails(row.id, row.title, row.displayName, true, fromNext(row.next),
 									countImproved(row.id),
@@ -248,6 +251,14 @@ class Database {
 		unless (original = WITH db: SELECT ONE main, impl, refimpl FROM problems WHERE id == originalId)
 			throw ServerError("Problem ${originalId} does not exist.");
 
+		// Check if this user has submitted a problem with similar enough code before.
+		for (row in WITH db: SELECT main, impl FROM problems WHERE improved == originalId AND author == userId) {
+			if (main)
+				compareCode(row.main, main);
+			if (impl)
+				compareCode(row.impl, impl);
+		}
+
 		Int mainId = original.main;
 		if (main)
 			mainId = createCode(main);
@@ -257,6 +268,16 @@ class Database {
 		Int next = toNext(currentError);
 		WITH db: INSERT INTO problems(author, title, next, main, impl, refimpl, improved, created)
 			VALUES (userId, title, next, mainId, implId, ${original.refimpl}, originalId, CURRENT DATETIME);
+	}
+
+	// Compare code for equality to disallow submitting multiple instances of essentially the same
+	// solution to hoard points. Throws on failure.
+	private void compareCode(Int original, Code newCode) {
+		unless (code = WITH db: SELECT ONE src FROM code WHERE id == original)
+			return;
+
+		if (codeSignature(code.src) == newCode.signature)
+			throw ServerError("This solution is almost identical to another solution you submitted to this problem.");
 	}
 
 	private Int createCode(Code code) {

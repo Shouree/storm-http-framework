@@ -72,7 +72,12 @@ class StatsPanel extends Panel {
 
 	init(Int problemId, ProblemInfo? parent, Bool solvable, Callback callback) {
 		Str text = if (parent) {
-			"Improvement of \"${parent.title}\" (${parent.id})";
+			if (parent.currentError) {
+				// TODO: Would be nice to know the status of the current problem as well.
+				"Fixes errors in ${parent.id}: ${parent.title}";
+			} else {
+				"Finds new errors in ${parent.id}: ${parent.title}";
+			}
 		} else {
 			"First version";
 		};

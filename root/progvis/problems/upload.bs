@@ -3,7 +3,6 @@ use layout;
 use progvis:net;
 use core:geometry;
 use core:io;
-use parser;
 
 /**
  * Dialog for uploading new problems.
@@ -283,7 +282,7 @@ dialog SolutionUploadDlg {
 
 		if (newImpl) {
 			// Check if the new implementation is different from the original one.
-			if (hashString(newImpl.src).value.toS == hashString(original.impl.src).value.toS) {
+			if (newImpl.signature == original.impl.signature) {
 				error("You have not modified the implementation. Make some modifications and click \"Reload\" before submitting.");
 				return;
 			}
@@ -356,14 +355,4 @@ dialog SolutionUploadDlg {
 		size = minSize();
 	}
 
-}
-
-// Remove whitespace from a string to create a "hash" of a program. Note: This is not 100%
-// accurate, but good enough to detect "significant" changes (for example "myclass a" and "my
-// classa" will hash to the same thing.
-hashString : parser(recursive descent) {
-	start = Start;
-
-	StrBuf Start();
-	Start => StrBuf() : "[ \n\r\t]*" - ("[^ \n\r\t]+" -> add - "[ \n\r\t]*")*;
 }

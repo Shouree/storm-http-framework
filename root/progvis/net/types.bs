@@ -1,5 +1,6 @@
 use util:serialize;
 use core:io;
+use parser;
 
 /**
  * Misc. data types.
@@ -144,6 +145,11 @@ class Code : serializable {
 		text.flush();
 		to.put(base + "." + language, out.buffer);
 	}
+
+	// Produce a "signature" for this code.
+	Str signature() {
+		codeSignature(src);
+	}
 }
 
 
@@ -162,4 +168,19 @@ class Score : serializable {
 			place = place;
 		}
 	}
+}
+
+// Create a "signature" that allows comparing code for equality.
+Str codeSignature(Str code) {
+	sigParser(code).value.toS;
+}
+
+// Remove whitespace from a string to create a "hash" of a program. Note: This is not 100%
+// accurate, but good enough to detect "significant" changes (for example "myclass a" and "my
+// classa" will hash to the same thing.
+sigParser : parser(recursive descent) {
+	start = Start;
+
+	StrBuf Start();
+	Start => StrBuf() : "[ \n\r\t]*" - ("[^ \n\r\t]+" -> add - "[ \n\r\t]*")*;
 }
