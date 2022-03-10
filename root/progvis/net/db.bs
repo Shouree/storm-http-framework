@@ -321,67 +321,49 @@ class Database {
 		Int selfPenalty = 3; // reduce by 66% to avoid making intentionally bad solutions.
 
 		WITH db {
-			// Note: I think we can solve this quite neatly with a self-join, but the SQL package
-			// does not yet support that (name collisions...).
-
-			// Remember which problems have which authors, and whether or not they contain errors.
-			Int->Int problemNext;
-			Int->Int problemAuthor;
-
-			for (row in SELECT id, author, next FROM problems) {
-				problemNext.put(row.id, row.next);
-				problemAuthor.put(row.id, row.author);
-			}
-
-			// Look through the problems once more and resolve the score for each of them.
-			for (row in SELECT author, next, improved FROM problems) {
-				// Ignore "original" problems, they do not give points.
-				unless (improved = row.improved)
-					continue;
-
-				Int prevAuthor = problemAuthor.get(improved, -1);
-
-				// Consistency error... Should not happen.
-				if (prevAuthor < 0)
-					continue;
-
+			var improvements = SELECT p.author AS author, parent.author AS pAuthor, p.next AS next, parent.next AS pNext
+				FROM problems p
+				JOIN problems parent ON parent.id == p.improved;
+			for (row in improvements) {
 				// Score for this row.
 				Int rowScore = 0;
 
-				// Check if the previous type was a "debug" problem
-				if (fromNext(problemNext[improved])) {
-					// They submitted an improvement that had different code.
-					rowScore += debugSubmit;
+				// Penalty for solving one's own problem?
+				Int penalty = 1;
+				if (row.author == row.pAuthor)
+					penalty = selfPenalty;
 
-					// If this problem has a different "next", then they actually managed to solve all errors!
-					if (fromNext(row.next) == false)
-						rowScore += debugSolve;
+				if (fromNext(row.pNext)) {
+					// If the parent problem was a "debug" problem:
 
+					// They improved it:
+					rowScore += debugFoundError / penalty;
+
+					// If it no longer has errors, they fixed all errors:
+					if (!fromNext(row.next))
+						rowScore += debugSolve / penalty;
 				} else {
-					// If they managed to upload a problem as an improvement to a "test" problem,
-					// they managed to find a test that broke the implementation. We assert this
-					// using an if statement to be robust anyway.
-					if (fromNext(row.next) == true)
-						rowScore += testFindError;
+					// If the parent problem was a "test" problem:
+
+					// The current one should contain errors, but we check for safety:
+					if (fromNext(row.next))
+						rowScore += testFindError / penalty;
 				}
 
-				// Penalty for improving our own problem?
-				if (row.author == prevAuthor)
-					rowScore /= selfPenalty;
-
-				// Update the score.
+				// Update the user's score!
 				result[row.author] += rowScore;
-				// print("User ${row.author} gets ${rowScore} points for problem ${row.id}");
 			}
 
-			// Finally, look at all solution rows.
-			for (row in SELECT author, problem FROM solutions) {
+			// Also look at solutions!
+			var solutions = SELECT solutions.author AS sAuthor, problems.author AS pAuthor
+				FROM solutions
+				JOIN problems ON problems.id == solutions.problem;
+			for (row in solutions) {
 				Int points = debugFoundError;
-				if (problemAuthor[row.problem] == row.author)
+				if (row.pAuthor == row.sAuthor)
 					points /= selfPenalty;
 
-				result[row.author] += points;
-				// print("User ${row.author} gets ${rowScore} points for finding a bug in ${row.problem}");
+				result[row.sAuthor] += points;
 			}
 		}
 
