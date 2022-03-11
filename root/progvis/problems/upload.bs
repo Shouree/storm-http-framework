@@ -13,7 +13,7 @@ dialog UploadDlg {
 		Label nameLbl("Name:", HAlign:right, VAlign:center) {}
 		Edit name("Name your problem") { colspan: 2; }
 		nextLine;
-		Label mainLbl("Main program:", HAlign:right, VAlign:center) {}
+		Label mainLbl("Test program:", HAlign:right, VAlign:center) {}
 		Edit mainName("") {}
 		Button mainButton("Select...") {}
 		nextLine;
@@ -96,7 +96,7 @@ dialog UploadDlg {
 		}
 
 		unless (main = loadCode(mainName.text)) {
-			showMessage(this, "File not found", "The file for the main program does not exist!");
+			showMessage(this, "File not found", "The file for the test program does not exist!");
 			return;
 		}
 
@@ -138,7 +138,7 @@ dialog UploadDlg {
 
 		try {
 			if (error = progvis:check:check([m, r])) {
-				error("The main program does not follow the specification from the reference solution.");
+				error("The test program does not follow the specification from the reference solution.");
 				return;
 			}
 		} catch (core:lang:CodeError e) {
@@ -266,17 +266,17 @@ dialog SolutionUploadDlg {
 		if (newMain.any) {
 			try {
 				if (error = progvis:check:check([m, r], progress)) {
-					error("The main program does not follow the specification of the problem.");
+					error("The test program does not follow the specification of the problem.");
 					return;
 				}
 			} catch (core:lang:CodeError e) {
 				if (file = e.pos.file) {
 					if (file == m) {
-						error("Error while compiling your code with the reference implementation:\n" + e.message, e.pos);
+						error("Error while compiling your test program with the reference implementation:\n" + e.message, e.pos);
 						return;
 					}
 				}
-				error("Error while compiling your code with the reference implementation:\n" + e.message);
+				error("Error while compiling your test program with the reference implementation:\n" + e.message);
 			}
 		}
 
@@ -306,7 +306,7 @@ dialog SolutionUploadDlg {
 			if (currentError) {
 				done("You found an error, click \"Upload\" to proceed!");
 			} else {
-				error("You did not find an error in the current implementation, try again!");
+				error("Your test program did not find an error in the current implementation, try again!");
 			}
 			size = minSize();
 		} else {
@@ -314,7 +314,7 @@ dialog SolutionUploadDlg {
 				// We allow uploading the problems again, but with reduced reward. Thus, one student
 				// may solve one issue, but another may solve another issue. We check so that the
 				// code is not identical as the first part here.
-				done("Your solution does not solve all errors with this main program.\nYou may still upload your solution, but you will not receive full points for it.");
+				done("Your solution does not solve all errors with this test program.\nYou may still upload your solution, but you will not receive full points for it.");
 			} else {
 				done("You fixed the current issues, click \"Upload\" to proceed!");
 			}

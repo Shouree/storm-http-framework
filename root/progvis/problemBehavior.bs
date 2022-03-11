@@ -143,7 +143,7 @@ class UploadableBehavior extends DefaultBehavior {
 	// Add a panel that explains it all.
 	ProblemPanel? panel() : override {
 		ProblemPanel p(panelText());
-		p.button("Open main", &this.onOpenMain());
+		p.button("Open test", &this.onOpenMain());
 		p.button("Open impl.", &this.onOpenImpl());
 		p.button("Reload", &this.onReload());
 		p.button("Submit", &this.onSubmit());
@@ -202,7 +202,7 @@ class ImproveBehavior extends UploadableBehavior {
 
 		StrBuf msg;
 		msg << "To solve the problem you found:\n";
-		msg << "1. Select \"Open implementation\" if you have not done so already.\n";
+		msg << "1. Select \"Open impl.\" if you have not done so already.\n";
 		msg << "2. Save the file in your editor.\n";
 		msg << "3. Select \"Reload\" to load your changes and see if they work.\n";
 		msg << "4. Repeat 2-3 as necessary.\n";
@@ -226,7 +226,7 @@ class ImproveBehavior extends UploadableBehavior {
 	}
 
 	protected void doOpenMain() {
-		showMessage(window, "Information", "Note: You can not modify the main file in this problem. Any changes you make will be ignored.");
+		showMessage(window, "Information", "Note: You can not modify the test program in this problem. Any changes you make will be ignored.");
 		super:doOpenMain();
 	}
 }
@@ -245,19 +245,19 @@ class TestBehavior extends UploadableBehavior {
 	private void infoMessage() {
 		sleep(200 ms);
 		StrBuf msg;
-		msg << "This implementation currently works as expected for the main program,\n";
-		msg << "but that does not mean the implementation is correct. Modify the main\n";
-		msg << "program so that it exposes a bug in the implementation:\n";
-		msg << "1. Select \"Open main\" to show the implementation.\n";
+		msg << "This implementation currently works as expected for the current test\n";
+		msg << "program, but that does not mean the implementation is correct. Modify\n";
+		msg << "the test program so that it finds a bug in the implementation:\n";
+		msg << "1. Select \"Open test\" to show the test program.\n";
 		msg << "2. Edit and save the file in your editor.\n";
 		msg << "3. Select \"Reload\" to load your changes and see what happens.\n";
 		msg << "4. Repeat 2-3 as necessary.\n";
 		msg << "5. Click \"Submit\" in the green box when you are done.\n";
-		showMessage(window, "Improve the main program", msg.toS);
+		showMessage(window, "Improve the test program", msg.toS);
 	}
 
 	protected Str panelText() : override {
-		"Improve the main program to find a bug!";
+		"Improve the test program to find a bug!";
 	}
 
 	protected Bool doSubmit() : override {
