@@ -20,6 +20,9 @@ class MainPainter extends Painter {
 	// Problem panel, if any.
 	private ProblemPanel? panel;
 
+	// Message to show, if any. Shown "on top" of the panel.
+	private ProblemPanel? message;
+
 	// Lock for traversals.
 	private core:sync:Lock traverseLock;
 
@@ -84,6 +87,18 @@ class MainPainter extends Painter {
 			if (m = mark.mark)
 				markAction(m);
 		}
+	}
+
+	// Show a message.
+	void showMessage(Str message) {
+		this.message = ProblemPanel(message);
+		repaint();
+	}
+
+	// Hide the message.
+	void hideMessage() {
+		this.message = null;
+		repaint();
 	}
 
 	// Open a program.
@@ -237,7 +252,9 @@ class MainPainter extends Painter {
 		Rect viewport(offset, me / scale);
 		workspace.render(viewport, g);
 
-		if (panel)
+		if (message)
+			message.render(viewport, g);
+		else if (panel)
 			panel.render(viewport, g);
 
 		false;
@@ -322,7 +339,8 @@ class MainPainter extends Painter {
 
 		if (button == MouseButton:left) {
 			if (down) {
-				if (panel) {
+				if (message.any) {
+				} else if (panel) {
 					if (panel.mouseClicked(pt))
 						return;
 				}

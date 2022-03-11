@@ -151,14 +151,15 @@ class MainWin extends Frame {
 
 	// Connect in the background.
 	public void connect() {
-		if (client.empty)
+		if (client.empty) {
+			painter.showMessage("Connecting...");
+			onlineMenu[0].enabled = false;
 			(spawn bgConnect()).detach();
+		}
 	}
 
 	// Function executed in the background to connect.
 	private void bgConnect() {
-		onlineMenu[0].enabled = false;
-
 		try {
 			Client c = Client:connect(onlineUrl, settings.onlineId);
 			this.client = c;
@@ -167,8 +168,14 @@ class MainWin extends Frame {
 				onlineMenu[i].enabled = true;
 
 			// This is only for testing.
-			if (onlineUrl == "localhost")
-				onOnlineProblems();
+			// if (onlineUrl == "localhost") {
+			// 	painter.hideMessage();
+			// 	onOnlineProblems();
+			// 	return;
+			// }
+
+			painter.showMessage("Signed in as: ${c.username}");
+			sleep(2 s);
 		} catch (SignInRedirect redirect) {
 			showMessage(this, "Sign in", "You need to sign in before using the online features. Click OK to continue.");
 			core:sys:open(redirect.to);
@@ -177,6 +184,8 @@ class MainWin extends Frame {
 			showMessage(this, "Error", "The server returned an error: ${error.message}");
 			onlineMenu[0].enabled = true;
 		}
+
+		painter.hideMessage();
 	}
 
 	// For testing, to ensure that we can terminate the server cleanly.
