@@ -504,7 +504,8 @@ void debug() on Compiler {
 		MainWin win;
 		// win.open(url / "assert.c");
 		// win.open(url / "atomics.c");
-		win.open(url / "test" / "atomic_stack.c");
+		// win.open(url / "test" / "atomic_stack.c");
+		win.open(url / "pointers" / "string.c");
 		win.waitForClose();
 	}
 }

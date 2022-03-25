@@ -25,6 +25,11 @@ Int strlen(ConstPtr<Byte> src) {
 }
 
 Ptr<Byte> strcpy(ConstPtr<Byte> src) {
+	// Old version, for compatibility.
+	strdup(src);
+}
+
+Ptr<Byte> strdup(ConstPtr<Byte> src) {
 	Int len = strlen(src);
 
 	Ptr<Byte> result = Ptr<Byte>:allocArray(len.nat + 1);

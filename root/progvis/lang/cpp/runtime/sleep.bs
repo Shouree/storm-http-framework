@@ -1,0 +1,7 @@
+void timer_msleep(Int duration) {
+	sleep(duration);
+}
+
+void sleep(Int duration) {
+	// We don't sleep, that would ruin the model checker.
+}

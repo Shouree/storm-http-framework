@@ -1,6 +1,6 @@
 int main() {
 	// Allocate on the heap to not flood the stack with data.
-	char *str = strcpy("sihtgubed");
+	char *str = strdup("sihtgubed");
 	char *stri = &str[8];
 	char *buf[9];
 	char **bufi;
