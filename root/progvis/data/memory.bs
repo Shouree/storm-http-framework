@@ -143,7 +143,7 @@ class StmtMemCheck extends MemCheck {
 		// Check reads.
 		Bool readError = false;
 		for (k, v in threads) {
-			if (v.reads.has(object, offset, size)) {
+			if (v.newReads.has(object, offset, size)) {
 				if ((writtenBy != noWrite) & (writtenBy != k))
 					readError = true;
 				result += MemAccess:read + MemAccess:newRead;
