@@ -221,8 +221,6 @@ class ImprovementView extends View {
 		if (response = client.query(StatsRequest(id, false, false)) as StatsResponse) {
 			parent = response.parent;
 			solvable = !response.solved;
-			if (parent)
-				solvable &= !parent.myProblem;
 		}
 
 		return StatsPanel(id, parent, solvable, cb);
