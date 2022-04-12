@@ -153,6 +153,8 @@ namespace gui {
 		this->size = size;
 		this->scale = scale;
 
+		// This dance is since Skia may change the current context, and since we and Gtk caches the
+		// currently active context.
 		context->clearCurrent();
 		gdk_gl_context_clear_current();
 		gdk_gl_context_make_current(context->context);
@@ -179,6 +181,9 @@ namespace gui {
 	}
 
 	Surface::PresentStatus SkiaSurface::present(bool waitForVSync) {
+		// We can not bind the same EGL context from multiple threads. So un-bind it from here first.
+		context->clearCurrent();
+		gdk_gl_context_clear_current();
 		return pRepaint;
 	}
 
@@ -189,6 +194,8 @@ namespace gui {
 							0, 0, int(size.w), int(size.h));
 		// Flush GL state from the copy to GTK. Otherwise, we might see flickering.
 		glFlush();
+		// Note: gdk_cairo_draw_from_gl generally switches GL context to the paint context, so we
+		// don't need to switch contexts.
 	}
 
 	WindowGraphics *SkiaSurface::createGraphics(Engine &e) {
