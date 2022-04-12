@@ -677,6 +677,8 @@ namespace gui {
 		if (!widget)
 			return;
 
+		// Note: This might not be entirely correct in nested structures.
+
 		for (GtkWidget *at = widget; !gtk_widget_get_has_window(at); at = gtk_widget_get_parent(at)) {
 			GtkAllocation delta;
 			gtk_widget_get_allocation(at, &delta);
@@ -687,21 +689,42 @@ namespace gui {
 	}
 
 	// Translate window coordinates to widget coordinates.
-	static bool translatePoint(GtkWidget *widget, gdouble x, gdouble y, Point &out) {
+	static bool translatePoint(GtkWidget *eventWidget, GtkWidget *to, gdouble x, gdouble y, Point &out) {
 		GtkAllocation alloc;
-		gtk_widget_get_allocation(widget, &alloc);
+		gtk_widget_get_allocation(to, &alloc);
 
-		// Traverse upwards until we find a widget with a window. That's where the event originated from!
-		for (GtkWidget *at = widget; !gtk_widget_get_has_window(at); at = gtk_widget_get_parent(at)) {
-			GtkAllocation delta;
-			gtk_widget_get_allocation(at, &delta);
+		// Make relative to 'to's window.
+		x -= alloc.x;
+		y -= alloc.y;
 
-			x -= delta.x;
-			y -= delta.y;
+		// Check if there are any other windows on the way.
+		for (GtkWidget *at = gtk_widget_get_parent(to);
+			 at != null && at != eventWidget;
+			 at = gtk_widget_get_parent(at)) {
+
+			if (gtk_widget_get_has_window(at)) {
+				GtkAllocation diff;
+				gtk_widget_get_allocation(at, &diff);
+
+				// New window, update.
+				x -= diff.x;
+				x -= diff.y;
+			}
+		}
+
+		// If 'eventWidget' does not have a window, we need to update coordinates.
+		if (eventWidget && !gtk_widget_get_has_window(eventWidget)) {
+			GtkAllocation diff;
+			gtk_widget_get_allocation(eventWidget, &diff);
+
+			x += diff.x;
+			y += diff.y;
 		}
 
 		out.x = x;
 		out.y = y;
+
+		// PLN(L"Result: " << out.x << ", " << out.y);
 
 		return out.x >= 0.0f && out.y >= 0.0f
 			&& out.x < alloc.width && out.y < alloc.height;
@@ -710,7 +733,7 @@ namespace gui {
 	gboolean Window::onButton(GdkEvent *event) {
 		Point pt;
 		GdkEventButton &b = event->button;
-		if (!translatePoint(drawWidget(), b.x, b.y, pt))
+		if (!translatePoint(handle().widget(), drawWidget(), b.x, b.y, pt))
 			return FALSE;
 
 		mouse::MouseButton button = mouse::MouseButton(b.button - 1);
@@ -735,7 +758,7 @@ namespace gui {
 	gboolean Window::onMotion(GdkEvent *event) {
 		Point pt;
 		GdkEventMotion &m = event->motion;
-		if (!translatePoint(drawWidget(), m.x, m.y, pt))
+		if (!translatePoint(handle().widget(), drawWidget(), m.x, m.y, pt))
 			return FALSE;
 
 		return onMouseMove(pt) ? TRUE : FALSE;
@@ -758,7 +781,7 @@ namespace gui {
 	gboolean Window::onScroll(GdkEvent *event) {
 		Point pt;
 		GdkEventScroll &s = event->scroll;
-		if (!translatePoint(drawWidget(), s.x, s.y, pt))
+		if (!translatePoint(handle().widget(), drawWidget(), s.x, s.y, pt))
 			return FALSE;
 
 		gdouble dx = 0, dy = 0;
