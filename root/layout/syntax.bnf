@@ -2,11 +2,12 @@ use core.lang;
 use lang.bs;
 
 // Borrow the low-level syntax from Basic Storm.
-delimiter = SDelimiter;
+optional delimiter = SDelimiter;
+required delimiter = SRequiredDelimiter;
 
 // Backend-agnostic version of the syntax. There might be more specialized variants for use
 // with specific backends for additional convenience.
-lang.bs.SAtom => block(l) : "layout[ \t]" #keyword, SLayoutRoot(block) l;
+lang.bs.SAtom => block(l) : "layout" #keyword ~ SLayoutRoot(block) l;
 
 LayoutRoot SLayoutRoot(Block block);
 SLayoutRoot => createRoot(block) : SLayout(me) -> add;

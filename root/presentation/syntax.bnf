@@ -2,14 +2,12 @@ use core.lang;
 use lang.bs;
 use layout;
 
-// TODO: Export 'layout'.
-
-
 // Borrow the low-level syntax from Basic Storm.
-delimiter = SDelimiter;
+optional delimiter = SDelimiter;
+required delimiter = SRequiredDelimiter;
 
 // Entry point to the grammar: declare a presentation.
-SPlainFileItem => PresDecl(name, title, env, cont) : "presentation" #keyword, SName name #typeName, SDumbString title, "{" [, SPresCont @cont,]+ "}";
+SPlainFileItem => PresDecl(name, title, env, cont) : "presentation" #keyword ~ SName name #typeName, SDumbString title, "{" [, SPresCont @cont,]+ "}";
 
 // Contents of a presentation block...
 void SPresCont(ExprBlock me);
@@ -19,9 +17,9 @@ SPresCont : (SPresStmt(me) -> add,)*;
 Expr SPresStmt(Block block);
 SPresStmt => e : SStmt(block) e;
 SPresStmt => slideLayout(block, layout, name, intro)
-	: (SName name, "=", )? "slide " #keyword, SIntro(block) intro, SLayoutRoot(block) layout;
+	: (SName name, "=", )? "slide" #keyword ~ SIntro(block) intro, SLayoutRoot(block) layout;
 SPresStmt => slideBackground(block, layout)
-	: "background " #keyword, SLayoutRoot(block) layout;
+	: "background" #keyword ~ SLayoutRoot(block) layout;
 
 // Slide intro animation.
 Maybe<Expr> SIntro(Block block);
