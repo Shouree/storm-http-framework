@@ -202,8 +202,15 @@ namespace storm {
 			GcType type;
 		};
 
+		// Check the return value from an MPS function, throws an exception as appropriate on failure.
+		void check(mps_res_t result, const wchar *msg);
+
 		// All freed GcType-objects which have not yet been reclaimed.
 		os::InlineSet<MpsType> freeTypes;
+
+		// Is this object fully initialized? Used for determining what type of exceptions to throw
+		// during startup or teardown.
+		bool initialized;
 
 		// During destruction - ignore any freeType() calls?
 		bool ignoreFreeType;

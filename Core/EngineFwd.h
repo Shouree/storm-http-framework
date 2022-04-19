@@ -27,6 +27,7 @@ namespace storm {
 		const Handle &(*refObjHandle)(Engine &e);
 		Type *(*typeOf)(const RootObject *o);
 		const GcType *(*gcTypeOf)(const void *alloc);
+		const GcType *(*typeGc)(Type *t);
 		Str *(*typeName)(Type *t);
 		Str *(*typeIdentifier)(Type *t);
 		MAYBE(Type *) (*fromIdentifier)(Str *name);
@@ -53,6 +54,7 @@ namespace storm {
 		RootObject *(*cloneObject)(RootObject *obj);
 		RootObject *(*cloneObjectEnv)(RootObject *obj, CloneEnv *env);
 		Engine &(*someEngine)();
+		Engine *(*someEngineUnsafe)();
 
 		// Additional functions required.
 		os::ThreadData *(*getCurrentThreadData)();

@@ -12,6 +12,7 @@
 #include "Gc/Exception.h"
 #include "OS/InlineSet.h"
 #include "Core/GcCode.h"
+#include "Core/Exception.h"
 #include "Utils/Memory.h"
 
 // Use debug pools in MPS (behaves slightly differently from the standard and may not trigger errors).
@@ -478,10 +479,50 @@ namespace storm {
 #endif
 
 
-	// Check return codes from MPS.
-	static void check(mps_res_t result, const wchar_t *msg) {
-		if (result != MPS_RES_OK)
-			throw GcError(msg);
+	// Check return codes from MPS and throw as appropriate.
+	void GcImpl::check(mps_res_t result, const wchar *msg) {
+		if (result == MPS_RES_OK)
+			return;
+
+		// Try to allocate memory. This is more or less a copy of 'alloc' below, but does not
+		// recursively call 'check' so that we can properly handle allocation failures here.
+
+		Engine *e = null;
+
+		// Don't even try if the GC is under construction or teardown.
+		if (initialized)
+			e = runtime::someEngineUnsafe();
+
+		Type *t = null;
+		if (e)
+			t = StormInfo<GcError>::type(*e);
+
+		const GcType *gc = null;
+		if (t)
+			gc = runtime::typeGc(t);
+
+		void *alloc = null;
+		if (gc && gc->kind == GcType::tFixedObj) {
+			size_t size = sizeObj(gc);
+			mps_ap_t &ap = currentAllocPoint();
+			mps_addr_t memory;
+			do {
+				mps_res_t ok = mps_reserve(&memory, ap, size);
+				if (ok != MPS_RES_OK) {
+					alloc = null;
+					break;
+				}
+				alloc = initObj(memory, gc, size);
+			} while (!mps_commit(ap, memory, size));
+		}
+
+		if (alloc) {
+			// We allocated memory! Initialize it and throw the Storm exception!
+			throw new (Place(alloc)) GcError(msg);
+		}
+
+		// Fall back to C++ exceptions on allocation failure for some reason.
+		throw BasicGcError(msg);
 	}
 
 	// Macros usable to increase readability inside 'generationParams'. Note: we measure in KB, not bytes!
@@ -525,19 +566,22 @@ namespace storm {
 		fmt::init();
 		assert(vtable::allocOffset() >= sizeof(void *), L"Invalid vtable offset (initialization failed?)");
 
+		// We are not initialized yet (used in 'check').
+		initialized = false;
+
 		// Note: This is defined in Gc/mps.c, and only aids in debugging.
 		mpsInit();
 
 		MPS_ARGS_BEGIN(args) {
 			MPS_ARGS_ADD(args, MPS_KEY_ARENA_SIZE, initialArena);
-			check(mps_arena_create_k(&arena, mps_arena_class_vm(), args), L"Failed to create GC arena.");
+			check(mps_arena_create_k(&arena, mps_arena_class_vm(), args), S("Failed to create GC arena."));
 		} MPS_ARGS_END(args);
 
 		// Note: we can use mps_arena_pause_time_set(arena, 0.0) to enforce minimal pause
 		// times. Default is 0.100 s, this should be configurable from Storm somehow.
 
 		check(mps_chain_create(&chain, arena, ARRAY_COUNT(generationParams), generationParams),
-			L"Failed to set up generations.");
+			S("Failed to set up generations."));
 
 		MPS_ARGS_BEGIN(args) {
 #if MPS_CHECK_MEMORY
@@ -551,16 +595,16 @@ namespace storm {
 			MPS_ARGS_ADD(args, MPS_KEY_FMT_FWD, &mpsMakeFwd);
 			MPS_ARGS_ADD(args, MPS_KEY_FMT_ISFWD, &mpsIsFwd);
 			MPS_ARGS_ADD(args, MPS_KEY_FMT_PAD, &mpsMakePad);
-			check(mps_fmt_create_k(&format, arena, args), L"Failed to create object format.");
+			check(mps_fmt_create_k(&format, arena, args), S("Failed to create object format."));
 		} MPS_ARGS_END(args);
 
 		MPS_ARGS_BEGIN(args) {
 			MPS_ARGS_ADD(args, MPS_KEY_CHAIN, chain);
 			MPS_ARGS_ADD(args, MPS_KEY_FORMAT, format);
 #if MPS_DEBUG_POOL
-			check(mps_pool_create_k(&pool, arena, mps_class_ams_debug(), args), L"Failed to create a GC pool.");
+			check(mps_pool_create_k(&pool, arena, mps_class_ams_debug(), args), S("Failed to create a GC pool."));
 #else
-			check(mps_pool_create_k(&pool, arena, mps_class_amc(), args), L"Failed to create a GC pool.");
+			check(mps_pool_create_k(&pool, arena, mps_class_amc(), args), S("Failed to create a GC pool."));
 #endif
 		} MPS_ARGS_END(args);
 
@@ -570,7 +614,7 @@ namespace storm {
 			MPS_ARGS_ADD(args, MPS_KEY_MEAN_SIZE, sizeof(GcType) + 10*sizeof(size_t));
 			MPS_ARGS_ADD(args, MPS_KEY_ALIGN, wordSize);
 			MPS_ARGS_ADD(args, MPS_KEY_SPARE, 0.50); // Low spare, as these objects are seldom allocated/deallocated.
-			check(mps_pool_create_k(&gcTypePool, arena, mps_class_mvff(), args), L"Failed to create a pool for types.");
+			check(mps_pool_create_k(&gcTypePool, arena, mps_class_mvff(), args), S("Failed to create a pool for types."));
 		} MPS_ARGS_END(args);
 
 		// Types are stored in a separate non-moving pool. This is to get around the limitation that
@@ -589,10 +633,10 @@ namespace storm {
 			MPS_ARGS_ADD(args, MPS_KEY_FORMAT, format);
 			// We want to support ambiguous references to this pool (eg. from the stack).
 			MPS_ARGS_ADD(args, MPS_KEY_AMS_SUPPORT_AMBIGUOUS, true);
-			check(mps_pool_create_k(&typePool, arena, mps_class_ams(), args), L"Failed to create a GC pool for types.");
+			check(mps_pool_create_k(&typePool, arena, mps_class_ams(), args), S("Failed to create a GC pool for types."));
 		} MPS_ARGS_END(args);
 
-		check(mps_ap_create_k(&typeAllocPoint, typePool, mps_args_none), L"Failed to create type allocation point.");
+		check(mps_ap_create_k(&typeAllocPoint, typePool, mps_args_none), S("Failed to create type allocation point."));
 
 		// Weak references are stored in a separate pool which supports weak references.
 		MPS_ARGS_BEGIN(args) {
@@ -600,12 +644,12 @@ namespace storm {
 			MPS_ARGS_ADD(args, MPS_KEY_FORMAT, format);
 			// Store weak tables in the second generation, as they are usually quite long-lived.
 			MPS_ARGS_ADD(args, MPS_KEY_GEN, 2);
-			check(mps_pool_create_k(&weakPool, arena, mps_class_awl(), args), L"Failed to create a weak GC pool.");
+			check(mps_pool_create_k(&weakPool, arena, mps_class_awl(), args), S("Failed to create a weak GC pool."));
 		} MPS_ARGS_END(args);
 
 		MPS_ARGS_BEGIN(args) {
 			MPS_ARGS_ADD(args, MPS_KEY_RANK, mps_rank_weak());
-			check(mps_ap_create_k(&weakAllocPoint, weakPool, args), L"Failed to create weak allocation point.");
+			check(mps_ap_create_k(&weakAllocPoint, weakPool, args), S("Failed to create weak allocation point."));
 		} MPS_ARGS_END(args);
 
 		// Code allocations.
@@ -614,10 +658,10 @@ namespace storm {
 			// patterns compared to other data.
 			MPS_ARGS_ADD(args, MPS_KEY_CHAIN, chain);
 			MPS_ARGS_ADD(args, MPS_KEY_FORMAT, format);
-			check(mps_pool_create_k(&codePool, arena, mps_class_amc(), args), L"Failed to create a code GC pool.");
+			check(mps_pool_create_k(&codePool, arena, mps_class_amc(), args), S("Failed to create a code GC pool."));
 		} MPS_ARGS_END(args);
 
-		check(mps_ap_create_k(&codeAllocPoint, codePool, mps_args_none), L"Failed to create code allocation point.");
+		check(mps_ap_create_k(&codeAllocPoint, codePool, mps_args_none), S("Failed to create code allocation point."));
 
 #ifdef MPS_USE_IO_POOL
 		// Buffer allocations.
@@ -626,13 +670,13 @@ namespace storm {
 			MPS_ARGS_ADD(args, MPS_KEY_GEN, 2);
 			MPS_ARGS_ADD(args, MPS_KEY_FORMAT, format);
 #if MPS_USE_IO_POOL == 1
-			check(mps_pool_create_k(&ioPool, arena, mps_class_lo(), args), L"Failed to create GC pool for buffers.");
+			check(mps_pool_create_k(&ioPool, arena, mps_class_lo(), args), S("Failed to create GC pool for buffers."));
 #elif MPS_USE_IO_POOL == 2
-			check(mps_pool_create_k(&ioPool, arena, mps_class_amcz(), args), L"Failed to create GC pool for buffers.");
+			check(mps_pool_create_k(&ioPool, arena, mps_class_amcz(), args), S("Failed to create GC pool for buffers."));
 #endif
 		} MPS_ARGS_END(args);
 
-		check(mps_ap_create_k(&ioAllocPoint, ioPool, mps_args_none), L"Failed to create buffer allocation point.");
+		check(mps_ap_create_k(&ioAllocPoint, ioPool, mps_args_none), S("Failed to create buffer allocation point."));
 #endif
 
 		// We want to receive finalization messages.
@@ -640,14 +684,20 @@ namespace storm {
 
 		// Add a root for exceptions in flight.
 		check(mps_root_create(&exRoot, arena, mps_rank_ambig(), (mps_rm_t)0, &mpsScanExceptions, null, 0),
-			L"Failed to create a root for the exceptions.");
+			S("Failed to create a root for the exceptions."));
 
 		// Initialize.
 		runningFinalizers = 0;
 		ignoreFreeType = false;
+
+		// Now we are good to go!
+		initialized = true;
 	}
 
 	void GcImpl::destroy() {
+		// Disable "fancy" exceptions.
+		initialized = false;
+
 		// Note: All threads are removed by the Gc class, so we can assume no threads are attached.
 
 		mps_root_destroy(exRoot);
@@ -720,7 +770,7 @@ namespace storm {
 #endif
 
 		// Register the thread with MPS.
-		check(mps_thread_reg(&desc->thread, arena), L"Failed registering a thread with the gc.");
+		check(mps_thread_reg(&desc->thread, arena), S("Failed registering a thread with the gc."));
 
 		// Find all stacks on this os-thread.
 		desc->stacks = &os::Thread::current().stacks();
@@ -736,10 +786,10 @@ namespace storm {
 												&mpsScanThread,
 												desc,
 												stackDummy),
-			L"Failed creating thread root.");
+			S("Failed creating thread root."));
 
 		// Create an allocation point for the thread.
-		check(mps_ap_create_k(&desc->ap, pool, mps_args_none), L"Failed to create an allocation point.");
+		check(mps_ap_create_k(&desc->ap, pool, mps_args_none), S("Failed to create an allocation point."));
 
 		return desc;
 	}
@@ -770,7 +820,7 @@ namespace storm {
 			// This is expected to happen rarely, so it is ok to be a bit slow here.
 			GcThread *thread = Gc::threadData(this, os::Thread::current(), null);
 			if (!thread)
-				throw GcError(L"Trying to allocate memory from a thread not registered with the GC.");
+				throw BasicGcError(L"Trying to allocate memory from a thread not registered with the GC.");
 
 			currentInfo = info = thread;
 			currentInfoOwner = this;
@@ -806,7 +856,7 @@ namespace storm {
 		mps_addr_t memory;
 		void *result;
 		do {
-			check(mps_reserve(&memory, ap, size), L"Out of memory (alloc).");
+			check(mps_reserve(&memory, ap, size), S("Out of memory (alloc)."));
 			result = initObj(memory, type, size);
 		} while (!mps_commit(ap, memory, size));
 
@@ -832,7 +882,7 @@ namespace storm {
 		mps_addr_t memory;
 		void *result;
 		do {
-			check(mps_reserve(&memory, typeAllocPoint, size), L"Out of memory (alloc type).");
+			check(mps_reserve(&memory, typeAllocPoint, size), S("Out of memory (alloc type)."));
 			result = initObj(memory, type, size);
 		} while (!mps_commit(typeAllocPoint, memory, size));
 
@@ -848,11 +898,10 @@ namespace storm {
 		size_t size = sizeArray(type, count);
 
 		util::Lock::L z(ioAllocLock);
-
 		mps_addr_t memory;
 		void *result;
 		do {
-			check(mps_reserve(&memory, ioAllocPoint, size), L"Out of memory (alloc buffer).");
+			check(mps_reserve(&memory, ioAllocPoint, size), S("Out of memory (alloc buffer)."));
 			result = initArray(memory, type, size, count);
 		} while (!mps_commit(ioAllocPoint, memory, size));
 
@@ -870,7 +919,7 @@ namespace storm {
 		mps_addr_t memory;
 		void *result;
 		do {
-			check(mps_reserve(&memory, ap, size), L"Out of memory (alloc array).");
+			check(mps_reserve(&memory, ap, size), S("Out of memory (alloc array)."));
 			result = initArray(memory, type, size, elements);
 		} while (!mps_commit(ap, memory, size));
 
@@ -891,7 +940,7 @@ namespace storm {
 		mps_addr_t memory;
 		void *result;
 		do {
-			check(mps_reserve(&memory, ap, size), L"Out of memory.");
+			check(mps_reserve(&memory, ap, size), S("Out of memory."));
 			result = initWeakArray(memory, type, size, elements);
 		} while (!mps_commit(ap, memory, size));
 
@@ -909,7 +958,7 @@ namespace storm {
 	GcType *GcImpl::allocType(GcType::Kind kind, Type *type, size_t stride, size_t entries) {
 		size_t s = mpsTypeSize(entries);
 		void *mem;
-		check(mps_alloc((mps_addr_t *)&mem, gcTypePool, s), L"Failed to allocate type info.");
+		check(mps_alloc((mps_addr_t *)&mem, gcTypePool, s), S("Failed to allocate type info."));
 		memset(mem, 0, s);
 		MpsType *t = new (mem) MpsType();
 		t->type.kind = kind;
@@ -1086,7 +1135,7 @@ namespace storm {
 				if (thread != os::Thread::invalid) {
 					GcThread *data = Gc::threadData(this, thread, null);
 					if (!data)
-						throw GcError(L"Attempting to finalize on a thread not registered with the GC!");
+						throw BasicGcError(L"Attempting to finalize on a thread not registered with the GC!");
 
 					data->finalizers.push(&finAlloc, this, obj);
 					// Note: This is fine since we know only we may start threads at the moment, and we hold a lock.
@@ -1114,7 +1163,7 @@ namespace storm {
 		util::Lock::L z(codeAllocLock);
 
 		do {
-			check(mps_reserve(&memory, codeAllocPoint, size), L"Out of memory.");
+			check(mps_reserve(&memory, codeAllocPoint, size), S("Out of memory (code)."));
 			result = initCode(memory, size, code, refs);
 		} while (!mps_commit(codeAllocPoint, memory, size));
 
@@ -1140,11 +1189,11 @@ namespace storm {
 	}
 
 	void GcImpl::startRamp() {
-		check(mps_ap_alloc_pattern_begin(currentAllocPoint(), mps_alloc_pattern_ramp()), L"RAMP");
+		check(mps_ap_alloc_pattern_begin(currentAllocPoint(), mps_alloc_pattern_ramp()), S("Failed to start ramp."));
 	}
 
 	void GcImpl::endRamp() {
-		check(mps_ap_alloc_pattern_end(currentAllocPoint(), mps_alloc_pattern_ramp()), L"RAMP");
+		check(mps_ap_alloc_pattern_end(currentAllocPoint(), mps_alloc_pattern_ramp()), S("Failed to end ramp."));
 	}
 
 	struct WalkData {
@@ -1203,7 +1252,8 @@ namespace storm {
 			return r;
 
 		delete r;
-		throw GcError(L"Failed to create a root.");
+
+		throw new (runtime::someEngine()) storm::GcError(S("Failed to create a root."));
 	}
 
 	void GcImpl::destroyRoot(Root *root) {

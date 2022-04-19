@@ -52,6 +52,9 @@ namespace storm {
 		// Get the GcType for an allocation.
 		const GcType *gcTypeOf(const void *alloc);
 
+		// Get the GcType for a particular Storm type.
+		const GcType *typeGc(Type *t);
+
 		// Get the name of a type (expected to be used for pretty-printing).
 		Str *typeName(Type *t);
 
@@ -148,6 +151,9 @@ namespace storm {
 		// returned. This is intended to be used in cases where exceptions (rarely) need to be
 		// thrown, not for general use.
 		Engine &someEngine();
+
+		// Get some engine, but may return null. The version above asserts on error.
+		Engine *someEngineUnsafe();
 
 
 	}

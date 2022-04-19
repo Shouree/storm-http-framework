@@ -101,6 +101,10 @@ namespace storm {
 			return (*fwd.typeOf)(o);
 		}
 
+		const GcType *typeGc(Type *t) {
+			return (*fwd.typeGc)(t);
+		}
+
 		Str *typeName(Type *t) {
 			return (*fwd.typeName)(t);
 		}
@@ -207,6 +211,10 @@ namespace storm {
 
 		Engine &someEngine() {
 			return (*fwd.someEngine)();
+		}
+
+		Engine *someEngineUnsafe() {
+			return (*fwd.someEngineUnsafe)();
 		}
 
 	}

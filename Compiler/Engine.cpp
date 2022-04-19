@@ -33,9 +33,13 @@ namespace storm {
 
 	static THREAD Engine *currentEngine;
 	namespace runtime {
+		Engine *someEngineUnsafe() {
+			return currentEngine;
+		}
+
 		Engine &someEngine() {
-			Engine *e = currentEngine;
-			assert(e);
+			Engine *e = someEngineUnsafe();
+			assert(e, L"Thread was not associated with an engine!");
 			return *e;
 		}
 	}

@@ -25,10 +25,25 @@ namespace storm {
 	}
 
 	Exception *Exception::saveTrace() {
-		if (stackTrace.empty())
-			stackTrace = collectStackTrace(engine());
+		if (stackTrace.empty()) {
+			try {
+				stackTrace = collectStackTrace(engine());
+			} catch (...) {
+				// If we get an error, we just ignore it here. Better that we can throw an exception
+				// at all than crashing when trying to grab a stack trace!
+			}
+		}
 		return this;
 	}
+
+	GcError::GcError(const wchar *msg) : msg(msg) {
+		saveTrace();
+	}
+
+	void GcError::message(StrBuf *to) const {
+		*to << S("GC error: ") << msg;
+	}
+
 
 	NotSupported::NotSupported(const wchar *msg) {
 		this->msg = new (this) Str(msg);

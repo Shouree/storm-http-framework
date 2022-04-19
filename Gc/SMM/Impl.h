@@ -125,6 +125,9 @@ namespace storm {
 
 		// Get the current Allocator.
 		smm::Allocator &currentAlloc();
+
+		// Throw an error as is appropriate for the current situation.
+		void throwError(const wchar *message);
 	};
 
 }

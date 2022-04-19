@@ -30,7 +30,7 @@ namespace storm {
 			while (!mem) {
 				initSize /= 2;
 				if (initSize < granularity)
-					throw GcError(L"Unable to allocate memory for the initial arena!");
+					throw BasicGcError(L"Unable to allocate memory for the initial arena!");
 				mem = vm->reserve(null, initSize);
 			}
 			addReserved(Chunk(mem, initSize));

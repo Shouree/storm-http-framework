@@ -43,6 +43,25 @@ namespace storm {
 
 
 	/**
+	 * Exception thrown by the garbage collector.
+	 *
+	 * The most common type of error is an out of memory error, but others may occur.
+	 */
+	class EXCEPTION_EXPORT GcError : public Exception {
+		STORM_EXCEPTION;
+	public:
+		// Create, basic C-string to avoid memory allocations.
+		GcError(const wchar *msg);
+
+		virtual void STORM_FN message(StrBuf *to) const;
+
+	private:
+		// The message.
+		const wchar *msg;
+	};
+
+
+	/**
 	 * Generic exceptions.
 	 */
 	class EXCEPTION_EXPORT NotSupported : public Exception {

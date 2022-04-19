@@ -50,6 +50,10 @@ namespace storm {
 			return Gc::typeOf(o)->type;
 		}
 
+		const GcType *typeGc(Type *t) {
+			return t->gcType();
+		}
+
 		Str *typeName(Type *t) {
 			return t->shortIdentifier();
 		}

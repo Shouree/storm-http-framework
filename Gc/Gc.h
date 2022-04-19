@@ -359,14 +359,16 @@ namespace storm {
 
 
 	/**
-	 * Errors thrown when interacting with the GC.
+	 * Error thrown when interacting with the GC.
 	 *
-	 * We don't try to use the Storm interface here, since the GC often throws when it is out of memory.
-	 * We might want to fix that some day.
+	 * This error is thrown in contexts where it does not make sense to allocate a Storm
+	 * exception. For example, when it is not possible to initialize the GC for some reason.
+	 *
+	 * For the GC error known by Storm, look in Core/Exception.h.
 	 */
-	class GcError : public Exception {
+	class BasicGcError : public Exception {
 	public:
-		GcError(const String &msg) : msg(msg) {}
+		BasicGcError(const String &msg) : msg(msg) {}
 		virtual String what() const { return msg; }
 	private:
 		String msg;

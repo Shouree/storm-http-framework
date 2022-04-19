@@ -13,6 +13,7 @@ namespace storm {
 			&runtime::refObjHandle,
 			&runtime::typeOf,
 			&runtime::gcTypeOf,
+			&runtime::typeGc,
 			&runtime::typeName,
 			&runtime::typeIdentifier,
 			&runtime::fromIdentifier,
@@ -39,6 +40,7 @@ namespace storm {
 			&runtime::cloneObject,
 			&runtime::cloneObjectEnv,
 			&runtime::someEngine,
+			&runtime::someEngineUnsafe,
 
 			// Others.
 			&os::currentThreadData,

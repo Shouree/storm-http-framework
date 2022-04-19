@@ -11,6 +11,7 @@
 #include "Nonmoving.h"
 #include "ArenaTicket.h"
 #include "History.h"
+#include "Core/Exception.h"
 
 namespace storm {
 
@@ -42,6 +43,42 @@ namespace storm {
 		return false;
 	}
 
+	void GcImpl::throwError(const wchar *message) {
+		Engine *e = runtime::someEngineUnsafe();
+
+		Type *t = null;
+		if (e)
+			t = StormInfo<GcError>::type(*e);
+
+		const GcType *gc = null;
+		if (t)
+			gc = runtime::typeGc(t);
+
+		void *alloc = null;
+		if (gc && gc->kind == GcType::tFixedObj) {
+			size_t size = fmt::sizeObj(gc);
+			smm::Allocator &allocator = currentAlloc();
+			smm::PendingAlloc pending;
+			do {
+				pending = allocator.reserve(size);
+				if (!pending) {
+					alloc = null;
+					break;
+				}
+				alloc = fmt::initObj(pending.mem(), gc, size);
+				if (gc->finalizer)
+					fmt::setHasFinalizer(alloc);
+			} while (!pending.commit());
+		}
+
+		if (alloc)
+			throw new (Place(alloc)) GcError(message);
+
+		// Fall back to C++ exceptions. This happens when things are really bad (e.g. no memory at
+		// all, not just a large allocation that we could not satisfy).
+		throw BasicGcError(message);
+	}
+
 	static THREAD smm::Thread *currThread = null;
 	static THREAD GcImpl *currOwner = null;
 
@@ -56,7 +93,7 @@ namespace storm {
 			// used. New setup.
 			thread = Gc::threadData(this, os::Thread::current(), null);
 			if (!thread)
-				throw GcError(L"Trying to allocate memory from a thread not registered with the GC.");
+				throwError(S("Trying to allocate memory from a thread not registered with the GC."));
 
 			currThread = thread;
 			currOwner = this;
@@ -85,7 +122,7 @@ namespace storm {
 		do {
 			alloc = allocator.reserve(size);
 			if (!alloc)
-				throw GcError(L"Out of memory (alloc).");
+				throwError(S("Out of memory (alloc)."));
 			result = fmt::initObj(alloc.mem(), type, size);
 			if (type->finalizer)
 				fmt::setHasFinalizer(result);
@@ -98,7 +135,7 @@ namespace storm {
 		smm::Nonmoving &allocs = arena.nonmoving();
 		void *result = arena.lock(allocs, &smm::Nonmoving::alloc, type);
 		if (!result)
-			throw GcError(L"Out of memory (allocStatic).");
+			throwError(S("Out of memory (allocStatic)."));
 
 		return result;
 	}
@@ -120,7 +157,7 @@ namespace storm {
 		do {
 			alloc = allocator.reserve(size);
 			if (!alloc)
-				throw GcError(L"Out of memory (allocArray).");
+				throwError(S("Out of memory (allocArray)."));
 			result = fmt::initArray(alloc.mem(), type, size, count);
 			if (type->finalizer)
 				fmt::setHasFinalizer(result);
@@ -137,7 +174,7 @@ namespace storm {
 		do {
 			alloc = allocator.reserve(size);
 			if (!alloc)
-				throw GcError(L"Out of memory (allocWeakArray).");
+				throwError(S("Out of memory (allocWeakArray)."));
 			result = fmt::initWeakArray(alloc.mem(), type, size, count);
 			if (type->finalizer)
 				fmt::setHasFinalizer(result);
@@ -159,7 +196,7 @@ namespace storm {
 		do {
 			alloc = allocator.reserve(size);
 			if (!alloc)
-				throw GcError(L"Out of memory (allocType).");
+				throwError(S("Out of memory (allocType)."));
 			result = fmt::initGcType(alloc.mem(), entries);
 		} while (!alloc.commit());
 
@@ -195,7 +232,7 @@ namespace storm {
 		do {
 			alloc = allocator.reserve(size);
 			if (!alloc)
-				throw GcError(L"Out of memory (allocCode).");
+				throwError(S("Out of memory (allocCode)."));
 			result = fmt::initCode(alloc.mem(), size, code, refs);
 			if (gccode::needFinalization())
 				fmt::setHasFinalizer(result);
