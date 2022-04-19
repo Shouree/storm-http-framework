@@ -533,6 +533,40 @@ Bool versionSerialization() {
 	copy.toS == version.toS;
 }
 
+// Deserialize some data in a buffer (from C++). This is used to ensure that we don't crash in cases
+// we previously found to crash the deserialization logic. While we don't expect random data to make
+// sense, we don't expect it to crash the system.
+void deserializeBuffer(Buffer data) {
+	ObjIStream is(MemIStream(data));
+	try {
+		Data:read(is);
+	} catch (Exception e) {
+		// This is fine, and often expected for these tests.
+	}
+
+	// Check that our memory is not all corrupt by calling the GC.
+	gc();
+}
+
+// Deserialize random data, make sure we don't crash.
+void deserializeFuzz() {
+	for (Nat i = 0; i < 100; i++) {
+		var data = crypto:RandomStream.read(128);
+		print(data.toS);
+
+		ObjIStream obj(MemIStream(data));
+		try {
+			Data:read(obj);
+			print("Read OK!");
+		} catch (Exception e) {
+			print("Error: ${e.toS}");
+		}
+
+		// Basic sanity checking by calling the GC.
+		gc();
+	}
+}
+
 // Simple measurements of serialization performance.
 void serializationPerf() {
 	Data original;
