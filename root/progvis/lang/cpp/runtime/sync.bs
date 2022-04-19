@@ -88,11 +88,12 @@ class SyncError extends progvis:TypedError {
 value semaphore {
 	// Note: Layout here is important!
 	SemaImpl? impl;
-	Int count;
+	progvis:program:MaybePositive count;
 
 	init() {
 		init {
-			count = -1;
+			// Initializes to "nothing".
+			count();
 		}
 	}
 }
@@ -304,11 +305,12 @@ class CondImpl extends Waitable {
  */
 value condition {
 	CondImpl? impl;
-	Int waiting;
+	progvis:program:MaybePositive waiting;
 
 	init() {
 		init {
-			waiting = -1;
+			// Initialized to "nothing".
+			waiting();
 		}
 	}
 }

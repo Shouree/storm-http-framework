@@ -49,6 +49,8 @@ class DefaultViewHints extends ViewHints {
 			return Pointer(info.type);
 		} else if (info.type is named{progvis:program:ThreadId}) {
 			return ThreadId();
+		} else if (info.type is named{progvis:program:MaybePositive}) {
+			return MaybePositive();
 		} else if (isPrimitive(info.type)) {
 			return Primitive(info.type);
 		} else if (type = info.type as core:lang:ArrayType) {

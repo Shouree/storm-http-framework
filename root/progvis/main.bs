@@ -505,7 +505,8 @@ void debug() on Compiler {
 		// win.open(url / "assert.c");
 		// win.open(url / "atomics.c");
 		// win.open(url / "test" / "atomic_stack.c");
-		win.open(url / "pointers" / "string.c");
+		// win.open(url / "pointers" / "string.c");
+		win.open(url / "concurrency" / "lock_sema.c");
 		win.waitForClose();
 	}
 }

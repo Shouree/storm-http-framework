@@ -60,6 +60,37 @@ value ThreadId {
 	Bool ==(Nat o) { v == o; }
 }
 
+/**
+ * Custom data type to use when referring to a positive value that should also have a representation
+ * for "not initialized".
+ *
+ * Much like ThreadId, this type needs to be exactly a Nat in size, as it is manipulated from
+ * ASM/RawPtr:s. The "no value" is represented as -1. The difference from ThreadId is that this
+ * class does not handle thread ID:s as a special case, it only provides a special representation
+ * for "no value".
+ */
+value MaybePositive {
+	// The actual value.
+	Nat v;
+
+	// Create an 'empty' value.
+	init() {
+		init { v = (-1).nat; }
+	}
+
+	// Create with a value.
+	init(Nat v) {
+		init { v = v; }
+	}
+
+	// Empty?
+	Bool empty() { v == (-1).nat; }
+
+	// Hash and equals.
+	Nat hash() { v.hash; }
+	Bool ==(Nat o) { v == o; }
+}
+
 
 /**
  * Represents a running thread inside the program.

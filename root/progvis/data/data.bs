@@ -255,9 +255,9 @@ class ThreadId extends Primitive {
 	void traverse(World:Traversal t, unsafe:RawPtr object, Nat offset) : override {
 		id.v = object.readNat(offset);
 		if (id.noInit()) {
-			value = "-";
+			value = "?";
 		} else if (id.empty()) {
-			value = "0";
+			value = "–";
 		} else {
 			value = id.v.toS;
 		}
@@ -284,6 +284,47 @@ class ThreadId extends Primitive {
 		ThreadId(this);
 	}
 	protected void copyData(Data->Data copies) : override {
+		super:copyData(copies);
+		// Nothing to do here.
+	}
+}
+
+/**
+ * Special case for MaybePositive. Shows the special -1 value as "nothing", otherwise works like a
+ * regular integer type.
+ */
+class MaybePositive extends Primitive {
+	// Create.
+	init() {
+		init(named{progvis:program:MaybePositive}) {}
+	}
+
+	// Copy.
+	init(MaybePositive original) {
+		init(original) {}
+	}
+
+	// Traverse.
+	void traverse(World:Traversal t, unsafe:RawPtr object, Nat offset) : override {
+		progvis:program:MaybePositive val(object.readNat(offset));
+		if (val.empty()) {
+			value = "?";
+		} else {
+			value = val.v.toS;
+		}
+	}
+
+	// Title.
+	Str title(World world) : override {
+		world.typeTitle(named{Int});
+	}
+
+	// Copy.
+	protected Data copyObject() : override {
+		MaybePositive(this);
+	}
+	protected void copyData(Data->Data copies) : override {
+		super:copyData(copies);
 		// Nothing to do here.
 	}
 }
