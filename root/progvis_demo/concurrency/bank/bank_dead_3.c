@@ -22,7 +22,7 @@ bool transfer(int amount, struct account *from, struct account *to) {
 	return ok;
 }
 
-void worker(int amount, int from, int to) {
+void worker(int amount, int from, int to) NO_STEP {
 	if (!transfer(amount, &accounts[from], &accounts[to]))
 		printf("Transfer %d from %d to %d failed!\n", amount, from, to);
 }
