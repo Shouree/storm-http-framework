@@ -102,11 +102,12 @@ namespace storm {
 	}
 
 	Bool WeakSetBase::removeRaw(TObject *key) {
+		// Must be first: otherwise, we might shrink to zero.
+		clean();
+
 		// Will break 'primarySlot' otherwise.
 		if (capacity() == 0)
 			return false;
-
-		clean();
 
 		if (remove(key)) {
 			return true;
