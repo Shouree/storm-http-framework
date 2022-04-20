@@ -403,6 +403,37 @@ namespace storm {
 			return alignAlloc(headerSize + code + FMT_CHECK_BYTES + sizeRefs(refs) + FMT_CHECK_BYTES);
 		}
 
+		// These functions are replicas of the size functions above, but take care to check for
+		// overflow. As such, they are slightly more expensive than the 'plain' counterparts. They
+		// return 0 in case of an overflow.
+		static inline size_t overflowSizeObj(const GcType *type) {
+			size_t result = sizeObj(type);
+			// Note: unsigned overflow *is* well defined.
+			if (result < type->stride)
+				return 0;
+			return result;
+		}
+		static inline size_t overflowSizeArray(const GcType *type, size_t count) {
+			size_t dataSize;
+			if (!multiplyOverflow(type->stride, count, dataSize))
+				return 0;
+			size_t result = alignAlloc(headerSize + arrayHeaderSize + dataSize + FMT_CHECK_BYTES);
+			if (result < dataSize)
+				return 0;
+			return result;
+		}
+		static inline size_t overflowSizeCode(size_t code, size_t refs) {
+			size_t refSize;
+			if (!multiplyOverflow(sizeof(GcCodeRef), refs, refSize))
+				return 0;
+			refSize += sizeof(GcCode) - sizeof(GcCodeRef);
+			size_t result = alignAlloc(headerSize + code + FMT_CHECK_BYTES + refSize + FMT_CHECK_BYTES);
+			if (result < refSize)
+				return 0;
+			return result;
+		}
+
+
 		// Get a pointer to the references inside a code allocation (stored immediately after the code itself).
 		static inline GcCode *refsCode(Obj *obj) {
 			size_t code = objCodeSize(obj);

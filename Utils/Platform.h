@@ -30,7 +30,7 @@
 /**
  * Compilers:
  * VISUAL_STUDIO - Visual Studio compiler. Set to the version, eg 2008 for VS2008.
- * GCC - GCC compiler, TODO: version?
+ * GCC - GCC compiler (or compatible), TODO: version?
  */
 
 /**

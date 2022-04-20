@@ -68,7 +68,10 @@ static byte bad2[] = {
 	0xE2, 0xFE, 0xD8, 0xBD, 0x38, 0x9A, 0x3F, 0x55, 0xAC, 0xDC, 0xC7, 0x82, 0x48, 0x06, 0x58, 0xDA,
 };
 
-BEGIN_TEST(SerializeMalformed, BS) {
+BEGIN_TESTX(SerializeMalformed, BS) {
+	// These degrade performance quite badly on 32-bit systems, so we don't run them by
+	// default. This is probably because the large allocations (~1G) will likely get pinned by some
+	// value on the stack and not be collected.
 	CHECK_RUNS(deserializeBuffer(bad1, sizeof(bad1)));
 	CHECK_RUNS(deserializeBuffer(bad2, sizeof(bad2)));
 } END_TEST

@@ -205,6 +205,9 @@ namespace storm {
 		// Check the return value from an MPS function, throws an exception as appropriate on failure.
 		void check(mps_res_t result, const wchar *msg);
 
+		// Throw an error as appropriate.
+		void throwError(const wchar *msg);
+
 		// All freed GcType-objects which have not yet been reclaimed.
 		os::InlineSet<MpsType> freeTypes;
 

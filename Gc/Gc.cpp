@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Gc.h"
 #include "Utils/Memory.h"
+#include "Core/Exception.h"
 
 #ifndef STORM_GC
 #error "This file must be compiled from the Gc project!"
@@ -136,6 +137,10 @@ namespace storm {
 
 
 	GcType *Gc::allocType(GcType::Kind kind, Type *type, size_t stride, size_t entries) {
+		// Disallow too large type allocations by limiting the number of entries way below what
+		// would cause an overflow.
+		if (entries > 0x01000000)
+			throw new (runtime::someEngine()) GcError(S("Too many entries to allocType."));
 		return impl->allocType(kind, type, stride, entries);
 	}
 

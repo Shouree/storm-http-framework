@@ -115,7 +115,10 @@ namespace storm {
 	}
 
 	void *GcImpl::alloc(const GcType *type) {
-		size_t size = fmt::sizeObj(type);
+		size_t size = fmt::overflowSizeObj(type);
+		if (size == 0)
+			throwError(S("Allocation too large for system (alloc)."));
+
 		smm::Allocator &allocator = currentAlloc();
 		smm::PendingAlloc alloc;
 		void *result;
@@ -150,7 +153,10 @@ namespace storm {
 	}
 
 	void *GcImpl::allocArray(const GcType *type, size_t count) {
-		size_t size = fmt::sizeArray(type, count);
+		size_t size = fmt::overflowSizeArray(type, count);
+		if (size == 0)
+			throwError(S("Allocation too large for system (allocArray)."));
+
 		smm::Allocator &allocator = currentAlloc();
 		smm::PendingAlloc alloc;
 		void *result;
@@ -167,7 +173,10 @@ namespace storm {
 	}
 
 	void *GcImpl::allocWeakArray(const GcType *type, size_t count) {
-		size_t size = fmt::sizeArray(type, count);
+		size_t size = fmt::overflowSizeArray(type, count);
+		if (size == 0)
+			throwError(S("Allocation too large for system (allocWeakArray)."));
+
 		smm::Allocator &allocator = currentAlloc();
 		smm::PendingAlloc alloc;
 		void *result;
@@ -225,7 +234,10 @@ namespace storm {
 	}
 
 	void *GcImpl::allocCode(size_t code, size_t refs) {
-		size_t size = fmt::sizeCode(code, refs);
+		size_t size = fmt::overflowSizeCode(code, refs);
+		if (size == 0)
+			throwError(S("Allocation too large for system (allocCode)."));
+
 		smm::Allocator &allocator = currentAlloc();
 		smm::PendingAlloc alloc;
 		void *result;

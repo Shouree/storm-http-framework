@@ -6,6 +6,7 @@
  * Assumes they are called with some *unsigned* type, preferrably 4 or 8 byte ones.
  */
 #include <climits>
+#include "Platform.h"
 
 /**
  * Helper class for size-dependent specializations.
@@ -136,3 +137,40 @@ template <size_t val>
 struct NextPowerOfTwo<val, sizeof(size_t) * CHAR_BIT> {
 	static const size_t value = val;
 };
+
+
+// Check multiply for overflow. Returns true if multiplication can be done without overflow.
+#if defined(GCC)
+
+inline bool multiplyOverflow(size_t a, size_t b, size_t &out) {
+	return __builtin_mul_overflow(a, b, &out);
+}
+
+#else
+
+#if defined(X86)
+
+inline bool multiplyOverflow(size_t a, size_t b, size_t &out) {
+	// Note: There are functions in the <intsafe.h> header for Win32. The compiler seems to
+	// understand this well enough, so it is likely not worthwile to bother with.
+	unsigned long long result = static_cast<unsigned long long>(a) * b;
+	out = static_cast<size_t>(result);
+	return out == result;
+}
+
+#elif defined(X64)
+
+inline bool multiplyOverflow(size_t a, size_t b, size_t &out) {
+	// On some platforms (ARM?), this might require a function call. Should be checked if/when we support ARM.
+	unsigned __int128 result = static_cast<unsigned __int128>(a) * b;
+	out = static_cast<size_t>(result);
+	return out == result;
+}
+
+#else
+
+#error "Unknown platform!"
+
+#endif
+
+#endif

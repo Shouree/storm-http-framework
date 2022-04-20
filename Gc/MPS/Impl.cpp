@@ -490,9 +490,11 @@ namespace storm {
 
 	// Check return codes from MPS and throw as appropriate.
 	void GcImpl::check(mps_res_t result, const wchar *msg) {
-		if (result == MPS_RES_OK)
-			return;
+		if (result != MPS_RES_OK)
+			throwError(msg);
+	}
 
+	void GcImpl::throwError(const wchar *msg) {
 		// Try to allocate memory. This is more or less a copy of 'alloc' below, but does not
 		// recursively call 'check' so that we can properly handle allocation failures here.
 
@@ -860,7 +862,10 @@ namespace storm {
 		assert(type->kind == GcType::tFixed
 			|| type->kind == GcType::tFixedObj, L"Wrong type for calling alloc().");
 
-		size_t size = sizeObj(type);
+		size_t size = overflowSizeObj(type);
+		if (size == 0)
+			throwError(S("Allocation too large for system (alloc)."));
+
 		mps_ap_t &ap = currentAllocPoint();
 		mps_addr_t memory;
 		void *result;
@@ -887,7 +892,10 @@ namespace storm {
 		// Since we're sharing one allocation point, take the lock for it.
 		util::Lock::L z(typeAllocLock);
 
-		size_t size = sizeObj(type);
+		size_t size = overflowSizeObj(type);
+		if (size == 0)
+			throwError(S("Allocation too large for system (alloc type)."));
+
 		mps_addr_t memory;
 		void *result;
 		do {
@@ -904,7 +912,9 @@ namespace storm {
 	GcArray<Byte> *GcImpl::allocBuffer(size_t count) {
 #ifdef MPS_USE_IO_POOL
 		const GcType *type = &byteArrayType;
-		size_t size = sizeArray(type, count);
+		size_t size = overflowSizeArray(type, count);
+		if (size == 0)
+			throwError(S("Allocation too large for system (alloc buffer)."));
 
 		util::Lock::L z(ioAllocLock);
 		mps_addr_t memory;
@@ -923,7 +933,10 @@ namespace storm {
 	void *GcImpl::allocArray(const GcType *type, size_t elements) {
 		assert(type->kind == GcType::tArray, L"Wrong type for calling allocArray().");
 
-		size_t size = sizeArray(type, elements);
+		size_t size = overflowSizeArray(type, elements);
+		if (size == 0)
+			throwError(S("Allocation too large for system (alloc array)."));
+
 		mps_ap_t &ap = currentAllocPoint();
 		mps_addr_t memory;
 		void *result;
@@ -944,12 +957,15 @@ namespace storm {
 
 		util::Lock::L z(weakAllocLock);
 
-		size_t size = sizeArray(type, elements);
+		size_t size = overflowSizeArray(type, elements);
+		if (size == 0)
+			throwError(S("Allocation too large for system (alloc weak)."));
+
 		mps_ap_t &ap = weakAllocPoint;
 		mps_addr_t memory;
 		void *result;
 		do {
-			check(mps_reserve(&memory, ap, size), S("Out of memory."));
+			check(mps_reserve(&memory, ap, size), S("Out of memory (alloc weak)."));
 			result = initWeakArray(memory, type, size, elements);
 		} while (!mps_commit(ap, memory, size));
 
@@ -1164,8 +1180,11 @@ namespace storm {
 	}
 
 	void *GcImpl::allocCode(size_t code, size_t refs) {
-		size_t size = sizeCode(code, refs);
-		dbg_assert(size > headerSize, L"Can not allocate zero-sized chunks of code!");
+		dbg_assert(code > 0 && refs > 0, L"Can not allocate zero-sized chunks of code.");
+
+		size_t size = overflowSizeCode(code, refs);
+		if (size == 0)
+			throwError(S("Allocation too large for system (code)."));
 
 		mps_addr_t memory;
 		void *result;
