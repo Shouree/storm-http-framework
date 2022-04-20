@@ -143,7 +143,7 @@ struct NextPowerOfTwo<val, sizeof(size_t) * CHAR_BIT> {
 #if defined(GCC)
 
 inline bool multiplyOverflow(size_t a, size_t b, size_t &out) {
-	return __builtin_mul_overflow(a, b, &out);
+	return !__builtin_mul_overflow(a, b, &out);
 }
 
 #else
