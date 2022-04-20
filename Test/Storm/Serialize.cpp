@@ -68,7 +68,7 @@ static byte bad2[] = {
 	0xE2, 0xFE, 0xD8, 0xBD, 0x38, 0x9A, 0x3F, 0x55, 0xAC, 0xDC, 0xC7, 0x82, 0x48, 0x06, 0x58, 0xDA,
 };
 
-BEGIN_TEST_(SerializeMalformed, BS) {
+BEGIN_TEST(SerializeMalformed, BS) {
 	CHECK_RUNS(deserializeBuffer(bad1, sizeof(bad1)));
 	CHECK_RUNS(deserializeBuffer(bad2, sizeof(bad2)));
 } END_TEST

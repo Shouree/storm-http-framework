@@ -131,10 +131,19 @@ namespace storm {
 
 		inline bool fixHeader1(GcType *ptr) {
 			if (ptr) {
-				// Note: We don't return the result here, which is not ideal, but should work fine.
-				mps_addr_t *d = (mps_addr_t *)&(ptr->type);
-				mps_word_t _mps_wt;
-				MPS_FIX12(_ss, d);
+				// Don't try to scan the type pointer if it is null. The problem with this is that
+				// sometimes the MPS has its scan state so that it sends null pointers to fix2,
+				// which always writes to the supplied pointer. This is fine in most cases, except
+				// for when we have type static definitions marked const. Even though MPS only
+				// overwrites the null with a new null, the write is illegal and will trap. So, as
+				// all constant type definitions have the type field set to null out of necessity,
+				// we simply don't scan the type definitions that are null.
+				if (ptr->type) {
+					// Note: We don't return the result here, which is not ideal, but should work fine.
+					mps_addr_t *d = (mps_addr_t *)&(ptr->type);
+					mps_word_t _mps_wt;
+					MPS_FIX12(_ss, d);
+				}
 			}
 
 			// We only scan the 'type' member in the header. No need for step 2.
