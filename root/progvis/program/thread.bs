@@ -225,8 +225,13 @@ class ProgThread on Render {
 				if (pos != last.lastStop) {
 					// Pause for a while.
 					paused = true;
-					owner.notifyChange();
-					sleep(barrierSpeed);
+					owner.notifyChange(true);
+					if (!barrierStep) {
+						// Someone asked us to pause!
+						wait();
+					} else {
+						sleep(barrierSpeed);
+					}
 					paused = false;
 				}
 			}
@@ -256,6 +261,20 @@ class ProgThread on Render {
 				if (type & Barrier:release)
 					barrierStep = false;
 			}
+		} else {
+			// If we did not wish to wait, just trigger a check now. Otherwise we might miss parts
+			// of this statement that happened before the barrier. We don't wait here, so don't
+			// trigger a repaint.
+			paused = true;
+			// Set 'barrierStep' so we can detect explicit calls to 'pause'.
+			barrierStep = true;
+			owner.notifyChange(false);
+			if (!barrierStep) {
+				// Someone asked us to pause.
+				barrierStep = false;
+				wait();
+			}
+			paused = false;
 		}
 
 		// We always clear memory at a barrier, even if we did not wait.
@@ -418,7 +437,7 @@ class ProgThread on Render {
 		// we should not notify the owner when we wake, as that wake was not due to a user action.
 		Bool wasSleeping = sleeping;
 		paused = true;
-		owner.notifyChange();
+		owner.notifyChange(true);
 		if (wasSleeping | autoStep == Duration()) {
 			running = false;
 			sema.down();

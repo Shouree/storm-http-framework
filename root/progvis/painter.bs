@@ -58,7 +58,7 @@ class MainPainter extends Painter {
 		if (world) {
 			world.trackMemory = mode;
 			// Might deadlock otherwise (if we get an error message).
-			spawn update();
+			spawn update(true);
 		}
 	}
 
@@ -113,10 +113,10 @@ class MainPainter extends Painter {
 		updateBehavior(b);
 		w.trackDeadlock = true;
 		w.trackMemory = memChecks;
-		loaded.onChange = &this.update();
+		loaded.onChange = &this.update(Bool);
 		loaded.onError = &this.onProgramError;
 		loaded.onAdvance = &this.onProgramAdvance;
-		update();
+		update(true);
 		loaded.spawn(loaded.main);
 	}
 
@@ -260,40 +260,60 @@ class MainPainter extends Painter {
 		false;
 	}
 
-	// Update the visualization of the data.
-	void update() {
+	// Update the visualization of the data. The parameter indicates whether or not the thread hit a
+	// "true" breakpoint or not, and thus whether or not we need to update the screen.
+	void update(Bool breakpoint) {
 		ProgramError? error;
 
 		if (world) {
-			core:sync:Lock:Guard z(traverseLock);
+			Bool waitForThreads = false;
+			{
+				core:sync:Lock:Guard z(traverseLock);
 
-			// Don't update now if at least one thread is running some code. If that is the case, we
-			// will get an intermediate view of that thread, and possibly report sporadic errors. We
-			// also know that the thread that is running will eventually pause again, and we will
-			// try to update later. As such, it is safe to just abort if we find that a thread is
-			// running, we don't actively need to try again.
-			if (!world.program.threadsPaused) {
-				return;
+				// If some thread is running code, we need to wait in this function until the thread
+				// paused. If we update the world while another thread is running, we will get an
+				// incomplete view of the world and possibly report sporadic errors. We still want
+				// to wait here until the other thread eventually reaches a pause, otherwise we
+				// might miss some errors. We do not, however, need to continue validating if we
+				// detect that some other thread is currently running, as that thread will call
+				// 'update' whenever it reaches a location where it pauses.
+				if (!world.program.threadsPaused) {
+					waitForThreads = true;
+				} else {
+					error = world.update();
+
+					if (o = world.program.getOutput())
+						workspace.outputText(o);
+
+					workspace.update(world);
+				}
 			}
 
-			error = world.update();
+			// We need to stop threads before the repaint to catch them before an implicit yield in
+			// repaint. We also do it before any other things that could yield.
+			if (error.any)
+				stopThreads();
 
-			if (o = world.program.getOutput())
-				workspace.outputText(o);
-
-			workspace.update(world);
-
-			if (mark) {
-				workspace.clearNext();
-				if (m = mark.mark)
-					markAction(m);
+			if (waitForThreads) {
+				// We don't want to do this while holding the lock. Otherwise the "stop threads"
+				// notification will be delayed for this thread.
+				while (!world.program.threadsPaused)
+					yield();
+				return;
 			}
 		}
 
-		repaint();
+		if (mark) {
+			workspace.clearNext();
+			if (m = mark.mark)
+				markAction(m);
+		}
 
+		if (breakpoint | error.any)
+			repaint();
+
+		// Show the error after the repaint, so that the error is visible in the background.
 		if (error) {
-			stopThreads();
 			if (behavior) {
 				behavior.onProgramError(error);
 			}

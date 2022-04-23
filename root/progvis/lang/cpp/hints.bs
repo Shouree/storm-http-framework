@@ -152,6 +152,6 @@ void wrapMain(Fn<Int> fn) {
 	var result = fn.call.toS();
 	if (program) {
 		program.addOutput("\nMain returned ${result}\n");
-		program.notifyChange();
+		program.notifyChange(true);
 	}
 }

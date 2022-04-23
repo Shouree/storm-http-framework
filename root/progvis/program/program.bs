@@ -49,7 +49,7 @@ class Program on Render {
 	public ProgThread[] sortedThreads;
 
 	// Event called whenever the state of a thread changed.
-	private Fn<void>? changeNotification;
+	private Fn<void, Bool>? changeNotification;
 
 	// Event called whenever an error is encountered from one of the threads.
 	private Fn<void, ThreadError>? errorNotification;
@@ -58,8 +58,11 @@ class Program on Render {
 	// that a "large" step (i.e. to the next barrier) was taken.
 	private Fn<void, Nat, Bool>? advanceNotification;
 
-	// Set the change notification.
-	public assign onChange(Fn<void> fn) {
+	// Set the change notification. The 'bool' parameter indicates wheter a true breakpoint was hit
+	// or not, i.e. if the thread intends to sleep for a while after the notification. This is
+	// equivalent to the question: Is it useful to redraw the screen in addition to checking for
+	// errors?
+	public assign onChange(Fn<void, Bool> fn) {
 		changeNotification = fn;
 		fn;
 	}
@@ -76,12 +79,12 @@ class Program on Render {
 		fn;
 	}
 
-	// Call the notification.
-	void notifyChange() {
+	// Call the notification. Parameter indicates whether a breakpoint was hit or not.
+	void notifyChange(Bool breakpoint) {
 		// Inhibit notifications if we're terminating.
 		if (!terminating) {
 			if (changeNotification)
-				changeNotification.call();
+				changeNotification.call(breakpoint);
 		}
 	}
 
@@ -262,7 +265,7 @@ class Program on Render {
 		}
 
 		terminating = false;
-		notifyChange();
+		notifyChange(true);
 	}
 
 	// Reset the program state, so that we may restart it later.
@@ -358,7 +361,7 @@ class Program on Render {
 
 			lastTerminatedId = t.threadId;
 			if (notify)
-				notifyChange();
+				notifyChange(true);
 		}
 	}
 

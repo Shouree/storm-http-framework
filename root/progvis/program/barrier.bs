@@ -41,6 +41,6 @@ class SrcBarrier {
 	SrcPos pos;
 
 	void toS(StrBuf to) : override {
-		to << type << "@" << pos;
+		to << "Barrier: " << type << "@" << pos;
 	}
 }

@@ -289,7 +289,7 @@ class ThreadView extends DataView {
 		if (srcAlloc)
 			srcAlloc.unstick();
 		// Make it happen now, and not later.
-		thread.src.owner.notifyChange();
+		thread.src.owner.notifyChange(true);
 	}
 
 	private Bool showingButton(SmallButton b) {
