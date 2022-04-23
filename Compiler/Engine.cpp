@@ -36,12 +36,6 @@ namespace storm {
 		Engine *someEngineUnsafe() {
 			return currentEngine;
 		}
-
-		Engine &someEngine() {
-			Engine *e = someEngineUnsafe();
-			assert(e, L"Thread was not associated with an engine!");
-			return *e;
-		}
 	}
 
 	// Default arena size. 256 MB should be enough for a while at least.

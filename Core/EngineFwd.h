@@ -53,7 +53,6 @@ namespace storm {
 		void (*postStdRequest)(Engine &e, StdRequest *request);
 		RootObject *(*cloneObject)(RootObject *obj);
 		RootObject *(*cloneObjectEnv)(RootObject *obj, CloneEnv *env);
-		Engine &(*someEngine)();
 		Engine *(*someEngineUnsafe)();
 
 		// Additional functions required.

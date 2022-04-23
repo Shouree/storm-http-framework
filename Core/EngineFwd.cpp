@@ -39,7 +39,6 @@ namespace storm {
 			&runtime::postStdRequest,
 			&runtime::cloneObject,
 			&runtime::cloneObjectEnv,
-			&runtime::someEngine,
 			&runtime::someEngineUnsafe,
 
 			// Others.
@@ -57,5 +56,13 @@ namespace storm {
 		};
 
 		return fwd;
+	}
+
+	namespace runtime {
+		Engine &someEngine() {
+			Engine *e = someEngineUnsafe();
+			assert(e, L"Thread was not associated with an engine!");
+			return *e;
+		}
 	}
 }

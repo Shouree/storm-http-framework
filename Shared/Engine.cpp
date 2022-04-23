@@ -209,10 +209,6 @@ namespace storm {
 			return (*fwd.cloneObjectEnv)(obj, env);
 		}
 
-		Engine &someEngine() {
-			return (*fwd.someEngine)();
-		}
-
 		Engine *someEngineUnsafe() {
 			return (*fwd.someEngineUnsafe)();
 		}
