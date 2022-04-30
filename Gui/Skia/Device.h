@@ -67,7 +67,7 @@ namespace gui {
 	class SkiaSurface : public Surface {
 	public:
 		// Create.
-		SkiaSurface(Size size, SkiaContext *context);
+		SkiaSurface(Size size, Float scale, SkiaContext *context);
 
 		// Destroy.
 		~SkiaSurface();

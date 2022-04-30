@@ -827,16 +827,19 @@ namespace gui {
 		Size s(drawAlloc.width, drawAlloc.height);
 		myPos.size(s);
 
-		if (myPainter)
-			myPainter->uiResize(s, 1);
+		if (myPainter) {
+			int scale = gtk_widget_get_scale_factor(draw);
+			myPainter->uiResize(s * scale, scale);
+		}
 		onResize(s);
 
 		// Queue a repaint for this window. Otherwise, resizing windows that partially contain some
 		// continuous rendering will not always be updated properly. We're probably in a race with
 		// Gtk when we just update a part of the window.
 		GdkWindow *window = gtk_widget_get_window(handle().widget());
-		if (window)
+		if (window) {
 			gdk_window_invalidate_rect(window, NULL, false);
+		}
 	}
 
 	bool Window::preExpose(GtkWidget *widget) {

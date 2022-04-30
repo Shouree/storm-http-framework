@@ -61,8 +61,8 @@ namespace gui {
 	class CairoSurface : public Surface {
 	public:
 		// Create.
-		CairoSurface(Nat id, Size size);
-		CairoSurface(Nat id, Size size, cairo_surface_t *surface);
+		CairoSurface(Nat id, Size size, Float scale);
+		CairoSurface(Nat id, Size size, Float scale, cairo_surface_t *surface);
 
 		// The cairo device.
 		cairo_t *device;
@@ -88,7 +88,7 @@ namespace gui {
 	class CairoBlitSurface : public CairoSurface {
 	public:
 		// Create.
-		CairoBlitSurface(Nat id, Size size, cairo_surface_t *surface);
+		CairoBlitSurface(Nat id, Size size, Float scale, cairo_surface_t *surface);
 
 		// Present.
 		virtual PresentStatus present(bool waitForVSync);

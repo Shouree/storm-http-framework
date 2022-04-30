@@ -36,11 +36,12 @@ namespace gui {
 	CairoSwDevice::CairoSwDevice(Engine &e) : CairoDevice(e) {}
 
 	Surface *CairoSwDevice::createSurface(Handle window) {
-		Size size(gtk_widget_get_allocated_width(window.widget()),
-				gtk_widget_get_allocated_height(window.widget()));
+		int scale = gtk_widget_get_scale_factor(window.widget());
+		Size size(gtk_widget_get_allocated_width(window.widget()) * scale,
+				gtk_widget_get_allocated_height(window.widget()) * scale);
 		cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_RGB24, size.w, size.h);
 
-		return new CairoBlitSurface(id(), size, surface);
+		return new CairoBlitSurface(id(), size, scale, surface);
 	}
 
 
@@ -51,20 +52,21 @@ namespace gui {
 		if (!win)
 			return null;
 
-		Size size(gtk_widget_get_allocated_width(window.widget()),
-				gtk_widget_get_allocated_height(window.widget()));
+		int scale = gtk_widget_get_scale_factor(window.widget());
+		Size size(gtk_widget_get_allocated_width(window.widget()) * scale,
+				gtk_widget_get_allocated_height(window.widget()) * scale);
 
-		return new CairoBlitSurface(id(), size,
+		return new CairoBlitSurface(id(), size, scale,
 									gdk_window_create_similar_surface(win, CAIRO_CONTENT_COLOR, int(size.w), int(size.h)));
 	}
 
 
-	CairoSurface::CairoSurface(Nat id, Size size)
-		: Surface(size, 1.0f), surface(null), device(null), id(id) {}
+	CairoSurface::CairoSurface(Nat id, Size size, Float scale)
+		: Surface(size, scale), surface(null), device(null), id(id) {}
 
 
-	CairoSurface::CairoSurface(Nat id, Size size, cairo_surface_t *surface)
-		: Surface(size, 1.0f), surface(surface), device(null), id(id) {
+	CairoSurface::CairoSurface(Nat id, Size size, Float scale, cairo_surface_t *surface)
+		: Surface(size, scale), surface(surface), device(null), id(id) {
 
 		if (surface)
 			device = cairo_create(surface);
@@ -86,8 +88,8 @@ namespace gui {
 	}
 
 
-	CairoBlitSurface::CairoBlitSurface(Nat id, Size size, cairo_surface_t *surface)
-		: CairoSurface(id, size, surface) {}
+	CairoBlitSurface::CairoBlitSurface(Nat id, Size size, Float scale, cairo_surface_t *surface)
+		: CairoSurface(id, size, scale, surface) {}
 
 	Surface::PresentStatus CairoBlitSurface::present(bool waitForVSync) {
 		// We cannot do much here...
@@ -95,11 +97,21 @@ namespace gui {
 	}
 
 	void CairoBlitSurface::repaint(RepaintParams *params) {
+		cairo_matrix_t matrix;
+		cairo_get_matrix(params->cairo, &matrix);
+
+		// Update the source matrix to represent the scale value.
+		cairo_scale(params->cairo, 1/scale, 1/scale);
+
+		// Then we can paint.
 		cairo_set_source_surface(params->cairo, surface, 0, 0);
 		cairo_paint(params->cairo);
 
 		// Make sure the operation is not pending, this function is called inside a lock.
 		cairo_surface_flush(cairo_get_group_target(params->cairo));
+
+		// Restore old drawing matrix.
+		cairo_set_matrix(params->cairo, &matrix);
 	}
 
 }

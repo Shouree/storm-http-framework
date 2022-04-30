@@ -75,14 +75,15 @@ namespace gui {
 	}
 
 	Surface *SkiaDevice::createSurface(GtkWidget *widget, Context *context) {
-		Size size(gtk_widget_get_allocated_width(widget),
-				gtk_widget_get_allocated_height(widget));
+		int scale = gtk_widget_get_scale_factor(widget);
+		Size size(gtk_widget_get_allocated_width(widget) * scale,
+				gtk_widget_get_allocated_height(widget) * scale);
 
 		if (context->id == 0) {
 			context->id = renderMgr(e)->allocId();
 		}
 
-		return new SkiaSurface(size, static_cast<SkiaContext *>(context));
+		return new SkiaSurface(size, scale, static_cast<SkiaContext *>(context));
 	}
 
 	TextMgr *SkiaDevice::createTextMgr() {
@@ -96,8 +97,8 @@ namespace gui {
 	// anti-aliasing anyway, so it is fine.
 	static const int msaa = 1;
 
-	SkiaSurface::SkiaSurface(Size size, SkiaContext *context)
-		: Surface(size, 1.0f), context(context) {
+	SkiaSurface::SkiaSurface(Size size, Float scale, SkiaContext *context)
+		: Surface(size, scale), context(context) {
 
 		gdk_gl_context_make_current(context->context);
 
