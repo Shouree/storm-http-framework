@@ -16,7 +16,7 @@ rendered to the display. Actual drawing is handled by a `Painter` class, which i
 window using `painter = MyPainter`. The `draw` member of the painter class will then be called
 whenever the window needs to be redrawn.
 
-DPI awareness (on Windows)
+DPI awareness
 -------------
 
 The GUI library is DPI aware on Windows. This means that the contents of windows might be rendered
@@ -30,7 +30,9 @@ window. Furthermore, as the physical size of fonts do not always scale linearly 
 long chunks of text may sometimes appear to take more space, and sometimes less. When using
 automatic layout, this is generally handled gracefully anyway.
 
-On Linux, Storm relies on the support in Gtk+.
+On Linux, Storm relies on the support in Gtk+. Thus, setting `GDK_SCALE` to an integer value behaves
+as expected. Storm does, however, not fully support the `GDK_DPI_SCALE` flag, as that only affect
+font sizes. Currently, widgets respect this flag, but not custom drawing code.
 
 Rendering
 ---------
