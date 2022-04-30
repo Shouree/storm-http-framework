@@ -254,13 +254,17 @@ class ProgThread on Render {
 				last.lastStop = last.pos;
 
 				wait();
-
-				// If this is a release barrier, make sure to stop at the next step. Otherwise, we
-				// may miss some interesting interleavings (e.g. let the new thread run first when
-				// starting a new thread).
-				if (type & Barrier:release)
-					barrierStep = false;
 			}
+
+			// If this is a release barrier, make sure to stop at the next step. Otherwise, we
+			// may miss some interesting interleavings (e.g. let the new thread run first when
+			// starting a new thread).
+			// Note: We have to do this even if we did not decide to stop here. Otherwise, we fail
+			// to stop after a barrier if we were just woken from sleep. This is an issue since
+			// that will cause us to stop at a "regular" location, which likely has the same
+			// location as this barrier.
+			if (type & Barrier:release)
+				barrierStep = false;
 		} else {
 			// If we did not wish to wait, just trigger a check now. Otherwise we might miss parts
 			// of this statement that happened before the barrier. We don't wait here, so don't
