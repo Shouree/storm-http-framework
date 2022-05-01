@@ -52,7 +52,13 @@ void runRepl(Engine &e, const wchar_t *lang, Repl *repl) {
 	}
 }
 
-int runRepl(Engine &e, const wchar_t *lang, const wchar_t *input) {
+int runRepl(Engine &e, Duration bootTime, const Path &root, const wchar_t *lang, const wchar_t *input) {
+	if (!input) {
+		wcout << L"Welcome to the Storm compiler!" << endl;
+		wcout << L"Root directory: " << root << endl;
+		wcout << L"Compiler boot in " << bootTime << endl;
+	}
+
 	if (!lang)
 		lang = L"bs";
 
@@ -97,6 +103,73 @@ bool hasColon(const wchar_t *function) {
 	return false;
 }
 
+int runFunction(Engine &e, Function *fn) {
+	Value r = fn->result;
+	if (!r.returnInReg()) {
+		wcout << L"Found a main function: " << fn->identifier() << L", but it returns a value-type." << endl;
+		wcout << L"This is not currently supported. Try running it through the REPL instead." << endl;
+		return 1;
+	}
+
+	// We can ignore the return value. But if it is an integer, we capture it and return it.
+	code::Primitive resultType;
+	if (code::PrimitiveDesc *resultDesc = as<code::PrimitiveDesc>(r.desc(e)))
+		resultType = resultDesc->v;
+
+	Nat resultSize = 0;
+	if (resultType.kind() == code::primitive::integer)
+		resultSize = resultType.size().current();
+
+	RunOn run = fn->runOn();
+	const void *addr = fn->ref().address();
+	if (run.state == RunOn::named) {
+		if (resultSize == 1) {
+			os::FnCall<Byte, 1> call = os::fnCall();
+			os::Future<Byte> result;
+			os::Thread on = run.thread->thread()->thread();
+			os::UThread::spawn(addr, false, call, result, &on);
+			return result.result();
+		} else if (resultSize == 4) {
+			os::FnCall<Int, 1> call = os::fnCall();
+			os::Future<Int> result;
+			os::Thread on = run.thread->thread()->thread();
+			os::UThread::spawn(addr, false, call, result, &on);
+			return result.result();
+		} else if (resultSize == 8) {
+			os::FnCall<Long, 1> call = os::fnCall();
+			os::Future<Long> result;
+			os::Thread on = run.thread->thread()->thread();
+			os::UThread::spawn(addr, false, call, result, &on);
+			return (int)result.result();
+		} else {
+			os::FnCall<void, 1> call = os::fnCall();
+			os::Future<void> result;
+			os::Thread on = run.thread->thread()->thread();
+			os::UThread::spawn(addr, false, call, result, &on);
+			result.result();
+		}
+	} else {
+		if (resultSize == 1) {
+			typedef Byte (*Fn1)();
+			Fn1 p = (Fn1)addr;
+			return (*p)();
+		} else if (resultSize == 4) {
+			typedef Int (*Fn4)();
+			Fn4 p = (Fn4)addr;
+			return (*p)();
+		} else if (resultSize == 8) {
+			typedef Long (*Fn8)();
+			Fn8 p = (Fn8)addr;
+			return (int)(*p)();
+		} else {
+			typedef void (*Fn)();
+			Fn p = (Fn)addr;
+			(*p)();
+		}
+	}
+	return 0;
+}
+
 int runFunction(Engine &e, const wchar_t *function) {
 	SimpleName *name = parseSimpleName(new (e) Str(function));
 	Named *found = e.scope().find(name);
@@ -113,28 +186,24 @@ int runFunction(Engine &e, const wchar_t *function) {
 		return 1;
 	}
 
-	Value r = fn->result;
-	if (!r.returnInReg()) {
-		wcout << function << L" returns a value-type. This is not yet supported." << endl;
-		wcout << L"Try running it through the REPL instead!" << endl;
-		return 1;
+	return runFunction(e, fn);
+}
+
+bool tryRun(Engine &e, Array<Package *> *pkgs, int &result) {
+	SimplePart *mainPart = new (e) SimplePart(new (e) Str(S("main")));
+
+	for (Nat i = 0; i < pkgs->count(); i++) {
+		Package *pkg = pkgs->at(i);
+		Function *main = as<Function>(pkg->find(mainPart, Scope(pkg)));
+		if (!main)
+			continue;
+
+		result = runFunction(e, main);
+		return true;
 	}
 
-	// We can just ignore the return value...
-	RunOn run = fn->runOn();
-	const void *addr = fn->ref().address();
-	if (run.state == RunOn::named) {
-		os::FnCall<void, 1> call = os::fnCall();
-		os::Future<void> result;
-		os::Thread on = run.thread->thread()->thread();
-		os::UThread::spawn(addr, false, call, result, &on);
-		result.result();
-	} else {
-		typedef void (*Fn)();
-		Fn p = (Fn)addr;
-		(*p)();
-	}
-	return 0;
+	// Failed.
+	return false;
 }
 
 int runTests(Engine &e, const wchar_t *package, bool recursive) {
@@ -172,7 +241,10 @@ int runTests(Engine &e, const wchar_t *package, bool recursive) {
 	return ok ? 0 : 1;
 }
 
-void importPkgs(Engine &into, const Params &p) {
+// Returns array of paths that we should try to run if they exist.
+Array<Package *> *importPkgs(Engine &into, const Params &p) {
+	Array<Package *> *result = new (into) Array<Package *>();
+
 	for (Nat i = 0; i < p.import.size(); i++) {
 		const Import &import = p.import[i];
 
@@ -201,7 +273,12 @@ void importPkgs(Engine &into, const Params &p) {
 		NameSet *ns = into.nameSet(n->parent(), true);
 		Package *pkg = new (into) Package(n->last()->name, path);
 		ns->add(pkg);
+
+		if (import.tryRun)
+			result->push(pkg);
 	}
+
+	return result;
 }
 
 void showVersion(Engine &e) {
@@ -254,19 +331,20 @@ int stormMain(int argc, const wchar_t *argv[]) {
 	Engine e(root, Engine::reuseMain, &argv);
 	Moment end;
 
-	importPkgs(e, p);
+	Array<Package *> *runPkgs = importPkgs(e, p);
 
 	int result = 1;
 
 	try {
 		switch (p.mode) {
-		case Params::modeRepl:
-			if (p.modeParam2 == null) {
-				wcout << L"Welcome to the Storm compiler!" << endl;
-				wcout << L"Root directory: " << root << endl;
-				wcout << L"Compiler boot in " << (end - start) << endl;
+		case Params::modeAuto:
+			if (!tryRun(e, runPkgs, result)) {
+				// If none of them contained a main function, launch the repl.
+				result = runRepl(e, (end - start), root, null, null);
 			}
-			result = runRepl(e, p.modeParam, p.modeParam2);
+			break;
+		case Params::modeRepl:
+			result = runRepl(e, (end - start), root, p.modeParam, p.modeParam2);
 			break;
 		case Params::modeFunction:
 			result = runFunction(e, p.modeParam);

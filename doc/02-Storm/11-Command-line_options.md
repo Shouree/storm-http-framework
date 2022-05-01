@@ -2,10 +2,13 @@ Command-line options
 =====================
 
 By default, launching Storm `Storm` from the command line launches the REPL (i.e. an interactive
-session) for Basic Storm. This behavior can be changed by using different command-line flags.
+session) for Basic Storm. This behavior can be changed by using different command-line flags, or by
+passing files or directories as parameters. Storm will try to run code from any files specified
+directly (see below).
 
 To start a REPL of another language, pass `-l <language>`. For example: `Storm -l bs` to start the
-Basic Storm REPL.
+Basic Storm REPL. This can also be used to force starting the REPL if another option would cause
+something else to happen.
 
 To pass a string to the REPL of a language, use the flag `-c`. For example: `Storm -l bs -c 1+2` sends
 the expression `1+2` to the Basic Storm REPL. This flag can of course be used without the `-l` flag.
@@ -27,6 +30,8 @@ imports the file into `mypkg` instead. Both `-i` and `-I` works with both files 
 directories. These flags do not alter the default behavior, so unless you specify something else, a
 REPL is still launched.
 
-Any options without a preceeding flag are treated the same as `-i`, i.e. as names of files or
-directories. So, to launch a function `main` inside the file `test.bs`, you can run: `Storm test.bs -f test.main`.
-
+Any options without a preceeding flag are treated the same as `-i` (i.e. as the names of files or
+directories), with one important difference: Storm will try to execute the function `main` from
+these imports if they exist. So, to run the function `main` in the file `myprogram.bs`, one can type
+`Storm myprogram.bs`. To launch the REPL in this context, either type `storm -i myprogram.bs` or
+`storm myprogram.bs -l bs`.

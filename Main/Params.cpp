@@ -56,7 +56,8 @@ static StatePtr importShort(const wchar_t *arg, Params &result) {
 	EXPECT_MORE(L"Missing import path.");
 	Import i = {
 		arg,
-		null
+		null,
+		false
 	};
 	result.import.push_back(i);
 	return &start;
@@ -72,7 +73,8 @@ static StatePtr importLong(const wchar_t *arg, Params &result) {
 	EXPECT_MORE(L"Missing import target.");
 	Import i = {
 		null,
-		arg
+		arg,
+		false
 	};
 	result.import.push_back(i);
 	return &importPath;
@@ -121,7 +123,8 @@ static StatePtr start(const wchar_t *arg, Params &result) {
 		// This is the same as -i
 		Import i = {
 			arg,
-			null
+			null,
+			true
 		};
 		result.import.push_back(i);
 		return &start;
@@ -129,7 +132,7 @@ static StatePtr start(const wchar_t *arg, Params &result) {
 }
 
 Params::Params(int argc, const wchar_t *argv[])
-	: mode(modeRepl),
+	: mode(modeAuto),
 	  root(null),
 	  modeParam(L"bs"),
 	  modeParam2(null),
@@ -157,7 +160,7 @@ Params::Params(int argc, const wchar_t *argv[])
 void help(const wchar_t *cmd) {
 	wcout << L"Usage: " << endl;
 	wcout << cmd << L"                  - launch the default REPL." << endl;
-	wcout << cmd << L" <path>           - import file or directory (like -i) and launch REPL." << endl;
+	wcout << cmd << L" <path>           - import file or directory (like -i), launch function 'main' if able." << endl;
 	wcout << cmd << L" -l <language>    - launch the REPL for <language>." << endl;
 	wcout << cmd << L" -f <function>    - run <function> then exit." << endl;
 	wcout << cmd << L" -t <package>     - run all tests in <package> then exit." << endl;

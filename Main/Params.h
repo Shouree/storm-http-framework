@@ -10,6 +10,7 @@
 struct Import {
 	const wchar_t *path;
 	const wchar_t *into;
+	bool tryRun;
 };
 
 /**
@@ -24,6 +25,7 @@ public:
 	 */
 	enum Mode {
 		modeHelp,
+		modeAuto,
 		modeRepl,
 		modeFunction,
 		modeTests,
