@@ -3,24 +3,48 @@ use progvis:program;
 /**
  * Memory access.
  *
- * Used to report whether data was read from and/or written to.
+ * Used to report whether data was read from and/or written to. Also reports which threads read and
+ * wrote to the data for the model checker.
  *
- * Note 'newRead' implies 'read', and 'newWrite' implies 'write'.
+ * The class makes a distinction between "new" reads/writes and "old" reads/writes. This is mainly
+ * for the benefit of the visualization.
  *
- * 'error' is used to indicate an error, readError and writeError are more specific for inhibiting
- * the same types of error in subsequent steps. Due to how 'has' works, it is possible to use 'error'
- * to check for both read and write errors.
+ * 'error' is used to indicate if an error was present.
  */
-enum MemAccess : bitmask {
-	none = 0x00,
-	read = 0x01,
-	write = 0x02,
-	newRead = 0x04,
-	newWrite = 0x08,
+value MemAccess {
+	// Reads - 0=none, 1=old, 2>=new
+	Byte read;
+	// Writes - 0=none, 1=old, 2>=new
+	Byte write;
+	// Read error?
+	Bool readError;
+	// Write error?
+	Bool writeError;
 
-	error = 0x30,
-	readError = 0x10,
-	writeError = 0x20,
+	// Exact reads+writes. This is mainly for the model checker. Contains the operations that are
+	// important for the current memory checker, this may not overlap entirely with the values in
+	// 'read' and 'write'. Stores thread ID:s of writing threads, followed by a zero, followed by
+	// thread ID:s of reading threads.
+	Nat[] threads;
+
+	// Create.
+	init() {
+		init {}
+	}
+
+	// Clear everything.
+	void clear() {
+		read = 0;
+		write = 0;
+		readError = false;
+		writeError = false;
+		threads.clear();
+	}
+
+	// Any error?
+	Bool error() {
+		readError | writeError;
+	}
 }
 
 
@@ -89,17 +113,19 @@ class MemCheck {
 class NoMemCheck extends MemCheck {
 	// Query the memory access for some data.
 	MemAccess query(MemAccess old, unsafe:RawPtr object, Nat offset, Nat size) : override {
-		MemAccess result = MemAccess:none;
+		MemAccess result;
 
 		// Check reads and writes for the visualization. We don't check correctness.
 		for (k, v in threads) {
 			if (v.newWrites.has(object, offset, size)) {
-				result += MemAccess:newWrite + MemAccess:write;
+				result.write = 2;
 			}
 			if (v.newReads.has(object, offset, size)) {
-				result += MemAccess:newRead + MemAccess:read;
+				result.read = 2;
 			}
 		}
+
+		// Note: We don't touch "threads" as we don't check for errors.
 
 		result;
 	}
@@ -111,62 +137,47 @@ class NoMemCheck extends MemCheck {
  */
 class StmtMemCheck extends MemCheck {
 	// Query the memory access for some data.
-	// This is the fast-path: it does not allocate memory in the case no errors happen
-	// (which is the normal case). It calls one of the error functions in case of an error.
-	// These will have to re-do parts of the work in order to provide better error messages,
-	// but as they are on the slow path, this is fine.
 	MemAccess query(MemAccess old, unsafe:RawPtr object, Nat offset, Nat size) : override {
-		MemAccess result = MemAccess:none;
-
-		// Dummy value, not a valid thread ID (if we have this many threads, we have other
-		// problems...)
-		Nat noWrite = 0xFFFFFFFF;
-		Nat writtenBy = noWrite;
-		Bool writeError = false;
+		MemAccess result;
 
 		// Check writes.
 		for (k, v in threads) {
 			if (v.newWrites.has(object, offset, size)) {
-				if (writtenBy != noWrite)
-					writeError = true;
-				writtenBy = k;
-				result += MemAccess:write + MemAccess:newWrite;
+				result.write = 2;
+				result.threads << k;
 			}
 		}
 
-		if (writeError) {
-			if (!old.has(MemAccess:writeError))
-				dualWriteError(object, offset, size);
-			result += MemAccess:writeError;
+		if (result.threads.count > 1) {
+			if (!old.writeError)
+				dualWriteError(result.threads);
+			result.writeError = true;
 		}
+
+		result.threads << 0;
+		Nat writtenBy = result.threads[0];
 
 		// Check reads.
-		Bool readError = false;
 		for (k, v in threads) {
 			if (v.newReads.has(object, offset, size)) {
-				if ((writtenBy != noWrite) & (writtenBy != k))
-					readError = true;
-				result += MemAccess:read + MemAccess:newRead;
+				if ((writtenBy != 0) & (writtenBy != k))
+					result.readError = true;
+				result.read = 2;
+				result.threads << k;
 			}
 		}
 
-		if (!writeError & readError) {
-			if (!old.has(MemAccess:readError))
-				readWriteError(object, offset, size);
-			result += MemAccess:readError;
+		if (result.readError) {
+			if (!old.readError) {
+				readWriteError(result.threads);
+			}
 		}
 
 		result;
 	}
 
 	// Add an error message concerning multiple writes.
-	private void dualWriteError(unsafe:RawPtr object, Nat offset, Nat size) {
-		Nat[] writes;
-
-		for (k, v in threads)
-			if (v.newWrites.has(object, offset, size))
-				writes << k;
-
+	private void dualWriteError(Nat[] writes) {
 		writes.sort();
 
 		StrBuf result;
@@ -175,15 +186,19 @@ class StmtMemCheck extends MemCheck {
 	}
 
 	// Add an error message concerning read-write errors.
-	private void readWriteError(unsafe:RawPtr object, Nat offset, Nat size) {
+	private void readWriteError(Nat[] threads) {
 		Nat[] writes;
 		Nat[] reads;
 
-		for (k, v in threads) {
-			if (v.newWrites.has(object, offset, size))
-				writes << k;
-			else if (v.newReads.has(object, offset, size))
-				reads << k;
+		Bool zero = false;
+		for (v in threads) {
+			if (v == 0) {
+				zero = true;
+			} else if (zero) {
+				reads << v;
+			} else {
+				writes << v;
+			}
 		}
 
 		writes.sort();
@@ -216,61 +231,55 @@ class FullMemCheck extends MemCheck {
 	// These will have to re-do parts of the work in order to provide better error messages,
 	// but as they are on the slow path, this is fine.
 	MemAccess query(MemAccess old, unsafe:RawPtr object, Nat offset, Nat size) : override {
-		MemAccess result = MemAccess:none;
-
-		// Dummy value, not a valid thread ID (if we have this many threads, we have other
-		// problems...)
-		Nat noWrite = 0xFFFFFFFF;
-		Nat writtenBy = noWrite;
-		Bool writeError = false;
+		MemAccess result;
 
 		// Check writes.
 		for (k, v in threads) {
 			if (v.writes.has(object, offset, size)) {
-				if (writtenBy != noWrite)
-					writeError = true;
-				writtenBy = k;
-				result += MemAccess:write;
-				if (v.newWrites.has(object, offset, size))
-					result += MemAccess:newWrite;
+				result.write |= 1;
+				result.threads << k;
+
+				if (v.newWrites.has(object, offset, size)) {
+					result.write = 2;
+				}
 			}
 		}
 
-		if (writeError) {
-			if (!old.has(MemAccess:writeError))
-				dualWriteError(object, offset, size);
-			result += MemAccess:writeError;
+		if (result.threads.count > 1) {
+			if (!old.writeError)
+				dualWriteError(result.threads);
+			result.writeError = true;
 		}
+
+		result.threads << 0;
+		Nat writtenBy = result.threads[0];
 
 		// Check reads.
-		Bool readError = false;
 		for (k, v in threads) {
 			if (v.reads.has(object, offset, size)) {
-				if ((writtenBy != noWrite) & (writtenBy != k))
-					readError = true;
-				result += MemAccess:read;
-				if (v.newReads.has(object, offset, size))
-					result += MemAccess:newRead;
+				if ((writtenBy != 0) & (writtenBy != k))
+					result.readError = true;
+				result.read |= 1;
+				result.threads << k;
+
+				if (v.newReads.has(object, offset, size)) {
+					result.read = 2;
+				}
 			}
 		}
 
-		if (!writeError & readError) {
-			if (!old.has(MemAccess:readError))
-				readWriteError(object, offset, size);
-			result += MemAccess:readError;
+		if (result.readError) {
+			if (!old.readError) {
+				readWriteError(result.threads);
+			}
 		}
 
 		result;
 	}
 
+
 	// Add an error message concerning multiple writes.
-	private void dualWriteError(unsafe:RawPtr object, Nat offset, Nat size) {
-		Nat[] writes;
-
-		for (k, v in threads)
-			if (v.writes.has(object, offset, size))
-				writes << k;
-
+	private void dualWriteError(Nat[] writes) {
 		writes.sort();
 
 		StrBuf result;
@@ -279,21 +288,23 @@ class FullMemCheck extends MemCheck {
 	}
 
 	// Add an error message concerning read-write errors.
-	private void readWriteError(unsafe:RawPtr object, Nat offset, Nat size) {
+	private void readWriteError(Nat[] threads) {
 		Nat[] writes;
 		Nat[] reads;
 
-		for (k, v in threads) {
-			if (v.writes.has(object, offset, size))
-				writes << k;
-			else if (v.reads.has(object, offset, size))
-				reads << k;
+		Bool zero = false;
+		for (v in threads) {
+			if (v == 0) {
+				zero = true;
+			} else if (zero) {
+				reads << v;
+			} else {
+				writes << v;
+			}
 		}
 
 		writes.sort();
 		reads.sort();
-
-		// print("TODO: Inhibit reports of the same concurrency error after it has been found.");
 
 		StrBuf result;
 		if (writes.count > 1)
@@ -308,4 +319,5 @@ class FullMemCheck extends MemCheck {
 		result << join(reads, ", ") << " read from concurrently.";
 		errors << result.toS;
 	}
+
 }

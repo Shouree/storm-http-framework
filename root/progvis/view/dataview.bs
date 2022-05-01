@@ -83,19 +83,19 @@ class AtomView extends DataView {
 	void draw(Graphics g, Bool active) : override {
 		Rect r = rect;
 
-		if (access.has(MemAccess:read) & access.has(MemAccess:write)) {
+		if (access.read > 0 & access.write > 0) {
 			Float center = r.center.x;
 			g.fill(Rect(r.p0, Point(center, r.p1.y)), readColor);
 			g.fill(Rect(Point(center, r.p0.y), r.p1), writeColor);
-		} else if (access.has(MemAccess:read)) {
+		} else if (access.read > 0) {
 			g.fill(r, readColor);
-		} else if (access.has(MemAccess:write)) {
+		} else if (access.write > 0) {
 			g.fill(r, writeColor);
 		} else {
 			g.fill(r, dataBg);
 		}
 
-		if (access.has(MemAccess:error)) {
+		if (access.error) {
 			g.line(r.p0, r.p1, dataError);
 			g.line(Point(r.p0.x, r.p1.y), Point(r.p1.x, r.p0.y), dataError);
 		}
@@ -105,7 +105,7 @@ class AtomView extends DataView {
 
 	// Read color.
 	private Brush readColor() {
-		if (access.has(MemAccess:newRead))
+		if (access.read > 1)
 			dataReadBg;
 		else
 			dataReadFaint;
@@ -113,7 +113,7 @@ class AtomView extends DataView {
 
 	// Write color.
 	private Brush writeColor() {
-		if (access.has(MemAccess:newWrite))
+		if (access.write > 1)
 			dataWriteBg;
 		else
 			dataWriteFaint;

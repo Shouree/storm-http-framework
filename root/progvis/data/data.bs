@@ -163,13 +163,23 @@ class Atom extends Data {
 
 	// Add the access to the summary.
 	protected void putSummary(StrBuf to, SummaryData data) : override {
-		to << "?" << access.v;
-		// if (access & MemAccess:read)
-		// 	to << "r";
-		// if (access & MemAccess:write)
-		// 	to << "w";
-		// if (access & MemAccess:error)
-		// 	to << "e";
+		Nat[] writes;
+		Nat[] reads;
+		Nat[] current = writes;
+		for (thread in access.threads) {
+			if (thread == 0) {
+				current = reads;
+			} else {
+				current << data.threadId.get(thread);
+			}
+		}
+
+		writes.sort();
+		reads.sort();
+		for (x in writes)
+			to << "w" << x;
+		for (x in reads)
+			to << "r" << x;
 	}
 }
 
