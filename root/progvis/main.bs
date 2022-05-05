@@ -530,12 +530,30 @@ void debugServer() {
 	sleep(500 ms);
 }
 
-// void testCpp() on Compiler {
-// 	if (url = named{progvis_demo}.url) {
-// 		if (p = Program:load(url / "cpp.cpp")) {
-// 			p.run(p.main);
-// 		} else {
-// 			print("Failed to run the program!");
-// 		}
-// 	}
-// }
+Bool testCpp(Url path) on Compiler {
+	for (child in path.children) {
+		if (child.dir) {
+			if (!testCpp(child))
+				return false;
+		} else if (child.ext == "c" | child.ext == "cpp") {
+			if (child.title.endsWith("_error")) {
+				print("Skipping ${child}");
+			} else {
+				print("Compiling ${child}...");
+				try {
+				Program:load(child);
+				} catch (Exception e) {
+					print("Failed: " + e.toS);
+					return false;
+				}
+			}
+		}
+	}
+	true;
+}
+
+void testCpp() on Compiler {
+	if (url = named{progvis_demo}.url) {
+		print("Compiling all code: " + testCpp(url).toS);
+	}
+}
