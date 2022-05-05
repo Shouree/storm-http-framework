@@ -186,12 +186,18 @@ Array<Value> SNameParams(Scope scope);
 SNameParams => Array<Value>() :;
 SNameParams => Array<Value>() : STypeName(scope) -> push, (",", STypeName(scope) -> push)*;
 
+// Block or statement, directly after keyword. Ensures that we must have a whitespace before a
+// statement, but does not require it before a block.
+Stmt SKeywordStmt(Block block);
+SKeywordStmt => StmtBlock(pos, block) : "{", (SStmt(me) -> add,)* "}";
+SKeywordStmt => e : ~ SStmt(block) e;
+
 // Statements and expressions:
 Stmt SStmt(Block block);
 SStmt => StmtBlock(pos, block) : "{", (SStmt(me) -> add,)* "}";
 SStmt => e : SExpr(block) e, ";";
 SStmt => NullStmt(pos) : ";";
-SStmt[50] => Return(pos, block, expr) : "return[ \t]" #keyword, SExpr(block) expr, ";";
+SStmt[50] => Return(pos, block, expr) : "return" #keyword ~ SExpr(block) expr, ";";
 SStmt[50] => Return(pos, block) : "return" #keyword, ";";
 SStmt[10] => VarDecl(pos, block, type, name) : STypeName(block.scope) type, SIdentifier name #varName, ";";
 SStmt[10] => VarDecl.assign(pos, block, type, name, init) : STypeName(block.scope) type, SIdentifier name #varName, "=", SExpr(block) init, ";";
@@ -201,12 +207,12 @@ SStmt[10] => ArrayDecl(pos, block, type, name, size) : STypeName(block.scope) ty
 SStmt[10] => arrayDecl(pos, block, type, name, size, init) : STypeName(block.scope) type, SIdentifier name #varName, "\[", "[0-9]+" size, "\]", "=", SArrayInit(block) init, ";";
 SStmt[10] => arrayDecl(pos, block, type, name, init) : STypeName(block.scope) type, SIdentifier name #varName, "\[", "\]", "=", SArrayInit(block) init, ";";
 // "delete" is technically an expression, but we don't do that. That's crazy!
-SStmt[50] => DeleteStmt(pos, expr, false) : "delete[ \t]" #keyword, SOp2(block) expr, ";";
+SStmt[50] => DeleteStmt(pos, expr, false) : "delete" #keyword ~ SOp2(block) expr, ";";
 SStmt[50] => DeleteStmt(pos, expr, true) : "delete" #keyword, "\[", "\]", SOp2(block) expr, ";";
 SStmt[50] => WhileStmt(pos, block) : "while" #keyword, "(", SExpr(me) -> cond, ")", SStmt(me) -> body;
-SStmt[50] => DoWhileStmt(pos, block) : "do[ \t\n]" #keyword, SStmt(me) -> body, "while" #keyword, "(", SExpr(me) -> cond, ")", ";";
-SStmt[50] => ForStmt(pos, block) : "for[ \t]" #keyword, "(", SStmt(me) -> init, SExpr(me) -> cond, ";", SExpr(me) -> update, ")", SStmt(me) -> body;
-SStmt[40] => IfStmt(pos, block) : "if" #keyword, "(", SExpr(me) -> cond, ")", SStmt(me) -> ifTrue - (,"else[ \t\n]" #keyword, SStmt(me) -> ifFalse)?;
+SStmt[50] => DoWhileStmt(pos, block) : "do" #keyword - SKeywordStmt(me) -> body, "while" #keyword, "(", SExpr(me) -> cond, ")", ";";
+SStmt[50] => ForStmt(pos, block) : "for" #keyword, "(", SStmt(me) -> init, SExpr(me) -> cond, ";", SExpr(me) -> update, ")", SStmt(me) -> body;
+SStmt[40] => IfStmt(pos, block) : "if" #keyword, "(", SExpr(me) -> cond, ")", SStmt(me) -> ifTrue - (,"else" #keyword - SKeywordStmt(me) -> ifFalse)?;
 SStmt[50] => Break(pos, block) : "break" #keyword, ";";
 SStmt[50] => Continue(pos, block) : "continue" #keyword, ";";
 
@@ -294,15 +300,15 @@ SOp3 => unaryOperator(block, op, n) : "\+" @op, SOp2(block) n;
 SOp3 => unaryOperator(block, op, n) : "-" @op, SOp2(block) n;
 SOp3 => operatorNoConst(block, op, n) : "\+\+" @op, SOp3(block) n;
 SOp3 => operatorNoConst(block, op, n) : "--" @op, SOp3(block) n;
-SOp3 => NewExpr(pos, block, type) : "new[ \t]" #keyword, STypeName(block.scope) type;
-SOp3 => NewExpr(pos, block, type, actuals) : "new[ \t]" #keyword, STypeName(block.scope) type, "(", SActuals(block) actuals, ")";
-SOp3 => NewExpr(pos, block, type, actuals) : "new[ \t]" #keyword, STypeName(block.scope) type, "{", SActuals(block) actuals, "}";
-SOp3 => NewExpr(pos, block, type, count) : "new[ \t]" #keyword, STypeName(block.scope) type, "\[", SExpr(block) count, "\]";
+SOp3 => NewExpr(pos, block, type) : "new" #keyword ~ STypeName(block.scope) type;
+SOp3 => NewExpr(pos, block, type, actuals) : "new" #keyword ~ STypeName(block.scope) type, "(", SActuals(block) actuals, ")";
+SOp3 => NewExpr(pos, block, type, actuals) : "new" #keyword ~ STypeName(block.scope) type, "{", SActuals(block) actuals, "}";
+SOp3 => NewExpr(pos, block, type, count) : "new" #keyword ~ STypeName(block.scope) type, "\[", SExpr(block) count, "\]";
 SOp3[10] => sizeofExpr(pos, type) : "sizeof" #keyword - SizeofType(block.scope) type;
-// SOp3 : "(", STypeName, ")", SOp3; // C-style cast.
+SOp3 => castError(pos) : "(", STypeName, ")", SOp3; // C-style cast.
 
 Value SizeofType(Scope scope);
-SizeofType => v : "[ \t]", STypeName(scope) v;
+SizeofType => v : ~ STypeName(scope) v;
 SizeofType => v : , "(", SizeofType(scope) v, ")";
 SizeofType => v : , "(", STypeName(scope) v, ")";
 

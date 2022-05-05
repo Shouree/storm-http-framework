@@ -1622,3 +1622,8 @@ class CommaExpr extends Expr {
 	}
 
 }
+
+// Descriptive error for c-style casts.
+Expr castError(SrcPos pos) {
+	throw SyntaxError(pos, "C-style casts are not supported. You don't need to cast the return value of malloc().");
+}
