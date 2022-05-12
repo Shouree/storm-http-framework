@@ -41,7 +41,7 @@ void SDef(Content content);
 SDef : "# *[a-zA-Z]+[^\n]*\n" #comment;
 
 // Global variables (We do not support initialization at the moment).
-SDef => addGlobal(content, pos, type, name) : STypeName @type, SIdentifier name #varName, ";";
+SDef => addGlobal(content, pos, type, name) : ("static" #keyword ~)? - STypeName @type, SIdentifier name #varName, ";";
 SDef => globalInitError(pos) : STypeName, SIdentifier #varName, "=", SExpr, ";";
 
 // Class declarations
