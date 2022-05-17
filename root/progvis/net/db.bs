@@ -358,7 +358,7 @@ class Database {
 					// If the parent problem was a "debug" problem:
 
 					// They improved it:
-					rowScore += debugFoundError / penalty;
+					rowScore += debugSubmit / penalty;
 
 					// If it no longer has errors, they fixed all errors:
 					if (!fromNext(row.next))
