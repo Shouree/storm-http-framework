@@ -282,6 +282,7 @@ class ProgThread on Render {
 		}
 
 		// We always clear memory at a barrier, even if we did not wait.
+		// TODO: It might be enough to clear reads at an acquire barrier.
 		memory.clearAll();
 	}
 
