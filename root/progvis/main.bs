@@ -498,9 +498,7 @@ void main() on Compiler {
 void debug() on Compiler {
 	named{progvis}.compile();
 
-	if (url = named{progvis}.url) {
-		url = url / ".." / "progvis_demo";
-
+	if (url = examplesDir()) {
 		MainWin win;
 		// win.open(url / "assert.c");
 		// win.open(url / "atomics.c");
@@ -553,7 +551,7 @@ Bool testCpp(Url path) on Compiler {
 }
 
 void testCpp() on Compiler {
-	if (url = named{progvis_demo}.url) {
+	if (url = examplesDir()) {
 		print("Compiling all code: " + testCpp(url).toS);
 	}
 }
