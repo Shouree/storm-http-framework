@@ -11,6 +11,7 @@
  * Machine type defines:
  * X86 - x86 cpu
  * X64 - x86-64/amd64 cpu
+ * ARM64 - Aarch64 (64-bit ARM)
  */
 
 /**
@@ -91,6 +92,8 @@
 #define X64
 #elif defined(__i386__)
 #define X86
+#elif defined(__aarch64__)
+#define ARM64
 #else
 #error "Unknown (and probably unsupported) architecture for Linux."
 #endif
@@ -151,7 +154,7 @@
 #define ALIGN_AS(x) alignas(x)
 #endif
 
-#if defined(X86) || defined(X64)
+#if defined(X86) || defined(X64) || defined(ARM64)
 #define LITTLE_ENDIAN
 #else
 #error "Unknown endianness for your platform. Define either LITTLE_ENDIAN or BIG_ENDIAN here."
@@ -182,8 +185,8 @@
 #define CODECALL
 #endif
 
-#if defined(GCC) && defined(X64)
-// X86-64 does not need to specify a calling convention. There is a single standard convention!
+#if defined(GCC) && (defined(X64) || defined(ARM64))
+// X86-64 and ARM64 does not need to specify a calling convention. There is a single standard convention!
 
 // We're using -falign-functions=2, but that seems to be ignored for static template functions on
 // GCC 8.1.0, so we specify it here as well to be safe.
