@@ -192,34 +192,24 @@ namespace os {
 
 #if defined(GCC) && defined(POSIX) && defined(X64)
 
-		/**
-		 * On GCC for Unix and X64, a member function pointer is actually 2 machine words. The first
-		 * (64-bit) word is where the actual pointer is located, while the second word contains an
-		 * offset to the vtable. Since we truncate function pointers to 1 machine word, the vtable
-		 * pointer is unfortunatly lost. This is, however, fine in Storm since we know that the
-		 * vtable is always located at offset 0. This is known since all objects with virtual
-		 * function inherit from an object for which this is true, and we do not support multiple
-		 * (virtual) inheritance.
-		 *
-		 * GCC abuses the function pointer a bit with regards to virtual dispatch as well. The
-		 * function pointer is either a plain pointer to the machine code to execute (always aligned
-		 * to at least 2 bytes) or an offset into the vtable of the object. The first case is easy:
-		 * just call the function at the other end of the pointer. In case the function pointer is a
-		 * vtable offset, we need to perform the vtable lookup through the object's vtable. We can
-		 * distinguish between the two cases by examining the least significant bit of the
-		 * pointer. If it is set (ie. if the address is odd), the pointer is actually an offset into
-		 * the vtable +1. Otherwise it is a pointer.
-		 *
-		 * This was derived by examining the assembler output from GCC when compiling the file
-		 * Experiments/membercall.cpp with 'g++ -S membercall.cpp'.
-		 */
+		template <class R>
+		void toMember(R &to, const void *from) {
+			to = asMemberPtr<R>(from);
+		}
+
+		inline bool memberCall(bool member, const void *fn) {
+			// Do not attempt to perform a member call if the function pointer is not a vtable
+			// reference. In some cases, especially when using optimizations, GCC makes full use of
+			// its assumptions that 'this' pointers are not null and may thus crash 'too early' in
+			// some cases.
+			return member && (size_t(fn) & 0x1);
+		}
+
+#elif defined(GCC) && defined(POSIX) && defined(ARM64)
 
 		template <class R>
 		void toMember(R &to, const void *from) {
-			// Set everything to zero first.
-			memset(&to, 0, sizeof(R));
-			// Then copy the pointer to the first word.
-			memcpy(&to, &from, sizeof(void *));
+			to = asMemberPtr<R>(from);
 		}
 
 		inline bool memberCall(bool member, const void *fn) {

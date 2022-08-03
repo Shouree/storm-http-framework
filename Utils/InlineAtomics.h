@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Platform.h"
+#include "Assert.h"
 
 /**
  * Atomic operations for various platforms. Declared as inlined functions to make them cheaper.
@@ -46,7 +47,7 @@ void shortUnalignedAtomicWrite(volatile nat &v, nat value);
 
 
 // Special case implementations for 64-bit machines where sizeof(size_t) != sizeof(nat)
-#ifdef X64
+#if defined(X64) || defined(ARM64)
 nat atomicIncrement(volatile nat &v);
 nat atomicDecrement(volatile nat &v);
 nat atomicCAS(volatile nat &v, nat compare, nat exchange);
@@ -379,6 +380,23 @@ inline void shortUnalignedAtomicWrite(volatile nat &v, nat value) {
 		:
 		: [addr] "r"(&v), [value] "r"(value)
 		: "rax", "rcx", "memory");
+}
+
+#elif defined(ARM64)
+
+inline size_t unalignedAtomicRead(volatile size_t &v) {
+	// Not supported at all...
+	assert(false, "Unaligned access not supported on ARM.");
+}
+
+inline void unalignedAtomicWrite(volatile size_t &v, size_t value) {
+	// Not supported at all...
+	assert(false, "Unaligned access not supported on ARM.");
+}
+
+inline void unalignedAtomicWrite(volatile nat &v, nat value) {
+	// Not supported at all...
+	assert(false, "Unaligned access not supported on ARM.");
 }
 
 #else

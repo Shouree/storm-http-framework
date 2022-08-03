@@ -120,28 +120,6 @@ inline float radToDeg(float angle) {
 }
 
 
-// Hack to allow casting member function pointers into void *.
-template <class T>
-inline const void *address(T fn) {
-#ifdef VISUAL_STUDIO
-	return (const void *&)fn;
-#else
-	return reinterpret_cast<const void *>(fn);
-#endif
-}
-
-// Hack to allow casting void * into member function pointers.
-template <class Fn>
-inline Fn asMemberPtr(const void *fn) {
-	union {
-		Fn fn;
-		const void *raw;
-	} x;
-	memset(&x, 0, sizeof(x));
-	x.raw = fn;
-	return x.fn;
-}
-
 //Delete an object, and clear the pointer to it.
 template <class T>
 inline void del(T *&ptr) {
@@ -278,6 +256,7 @@ private:
 #include "Debug.h"
 #include "InlineAtomics.h" // Must be below 'debug.h' for some reason...
 #include "Assert.h"
+#include "FnPtr.h"
 
 template <class T>
 void dumpHex(const T &v) {

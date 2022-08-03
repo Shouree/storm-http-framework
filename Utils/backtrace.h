@@ -12,6 +12,8 @@
 #define BACKTRACE_ELF_SIZE 32
 #elif defined(X64)
 #define BACKTRACE_ELF_SIZE 64
+#elif defined(ARM64)
+#define BACKTRACE_ELF_SIZE 64
 #else
 #error "Backtrace elf size not known."
 #endif
