@@ -3,6 +3,7 @@
 #include "Reg.h"
 #include "X86/Arena.h"
 #include "X64/Arena.h"
+#include "Arm64/Arena.h"
 #include "Core/Str.h"
 
 namespace code {
@@ -79,6 +80,10 @@ namespace code {
 #elif defined(X64) && defined(POSIX)
 	Arena *arena(EnginePtr e) {
 		return new (e.v) x64::Arena();
+	}
+#elif defined(ARM64) && defined(POSIX)
+	Arena *arena(EnginePtr e) {
+		return new (e.v) arm64::Arena();
 	}
 #else
 #error "Please note which is the default arena for your platform."

@@ -4,8 +4,8 @@
 #include "Core/GcType.h"
 #include "OS/UThread.h"
 
-#if !defined(X86) && !defined(X64)
-#error "Stack scanning for machines other than X86 and X86-64 is not implemented yet."
+#if !defined(X86) && !defined(X64) && !defined(ARM64)
+#error "Stack scanning for machines other than X86, X86-64 and ARM64 is not implemented yet."
 #endif
 
 namespace storm {

@@ -6,7 +6,6 @@
 #include "Sync.h"
 #include "Utils/Bitwise.h"
 #include "Utils/Lock.h"
-#include "UThreadX64.h"
 #include <limits>
 
 #ifdef POSIX
@@ -601,11 +600,12 @@ namespace os {
 		UThreadState::current()->reap();
 	}
 
+
 	/**
-	 * Machine specific code.
+	 * OS-specific code.
 	 */
 
-#if defined(X86)
+#if defined(WINDOWS)
 
 	static int64 timestamp() {
 		LARGE_INTEGER v;
@@ -628,6 +628,40 @@ namespace os {
 		QueryPerformanceFrequency(&v);
 		return nat((1000 * (target - now)) / v.QuadPart);
 	}
+
+#elif defined(POSIX)
+
+	static int64 timestamp() {
+		struct timespec time = {0, 0};
+		clock_gettime(CLOCK_MONOTONIC, &time);
+
+		int64 r = time.tv_sec;
+		r *= 1000 * 1000;
+		r += time.tv_nsec / 1000;
+		return r;
+	}
+
+	static int64 msInTimestamp(nat ms) {
+		return int64(ms * 1000);
+	}
+
+	static nat remainingMs(int64 target) {
+		int64 now = timestamp();
+		if (target <= now)
+			return 0;
+
+		int64 remaining = target - now;
+		return nat(remaining / 1000);
+	}
+
+#endif
+
+
+	/**
+	 * Machine specific code.
+	 */
+
+#if defined(X86)
 
 	static void *&stackPtr(Stack &stack) {
 		return stack.desc->low;
@@ -796,29 +830,6 @@ namespace os {
 
 #elif defined(GCC) && defined(X64)
 
-	static int64 timestamp() {
-		struct timespec time = {0, 0};
-		clock_gettime(CLOCK_MONOTONIC, &time);
-
-		int64 r = time.tv_sec;
-		r *= 1000 * 1000;
-		r += time.tv_nsec / 1000;
-		return r;
-	}
-
-	static int64 msInTimestamp(nat ms) {
-		return int64(ms * 1000);
-	}
-
-	static nat remainingMs(int64 target) {
-		int64 now = timestamp();
-		if (target <= now)
-			return 0;
-
-		int64 remaining = target - now;
-		return nat(remaining / 1000);
-	}
-
 	static void *&stackPtr(Stack &stack) {
 		return stack.desc->low;
 	}
@@ -934,6 +945,14 @@ namespace os {
 		return member
 			? address(doEndDetourMember)
 			: address(doEndDetour);
+	}
+
+#elif defined(GCC) && defined(ARM64)
+
+	// Note: This is currently incomplete!
+
+	static const void *endDetourFn(bool member) {
+		return null;
 	}
 
 #endif

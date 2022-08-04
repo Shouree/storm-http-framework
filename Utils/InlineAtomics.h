@@ -220,45 +220,56 @@ inline void shortUnalignedAtomicWrite(volatile nat &v, nat value) {
 #define BARRIER asm volatile ("" ::: "memory")
 
 inline size_t atomicIncrement(volatile size_t &v) {
-	return __sync_add_and_fetch(&v, 1);
+	return __atomic_add_fetch(&v, 1, __ATOMIC_SEQ_CST);
 }
 
 inline size_t atomicDecrement(volatile size_t &v) {
-	return __sync_sub_and_fetch(&v, 1);
+	return __atomic_sub_fetch(&v, 1, __ATOMIC_SEQ_CST);
 }
 
 inline size_t atomicAnd(volatile size_t &v, size_t with) {
-	return __sync_fetch_and_and(&v, with);
+	return __atomic_and_fetch(&v, with, __ATOMIC_SEQ_CST);
 }
 
 inline size_t atomicOr(volatile size_t &v, size_t with) {
-	return __sync_fetch_and_or(&v, with);
+	return __atomic_or_fetch(&v, with, __ATOMIC_SEQ_CST);
 }
 
 inline size_t atomicXor(volatile size_t &v, size_t with) {
-	return __sync_fetch_and_xor(&v, with);
+	return __atomic_xor_fetch(&v, with, __ATOMIC_SEQ_CST);
 }
 
 inline size_t atomicCAS(volatile size_t &v, size_t compare, size_t exchange) {
-	return __sync_val_compare_and_swap(&v, compare, exchange);
+	__atomic_compare_exchange_n(&v, &exchange, compare, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+	// Result is stored in "exchange".
+	return exchange;
 }
 
 inline void *atomicCAS(void *volatile &v, void *compare, void *exchange) {
-	return __sync_val_compare_and_swap(&v, compare, exchange);
+	__atomic_compare_exchange_n(&v, &exchange, compare, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+	// Result is stored in "exchange".
+	return exchange;
 }
 
-#ifdef X64
+#if defined(X64) || defined(ARM64) // 64-bit architectures
+
 inline nat atomicIncrement(volatile nat &v) {
-	return __sync_add_and_fetch(&v, 1);
+	return __atomic_add_fetch(&v, 1, __ATOMIC_SEQ_CST);
 }
 
 inline nat atomicDecrement(volatile nat &v) {
-	return __sync_sub_and_fetch(&v, 1);
+	return __atomic_sub_fetch(&v, 1, __ATOMIC_SEQ_CST);
 }
 
 inline nat atomicCAS(volatile nat &v, nat compare, nat exchange) {
-	return __sync_val_compare_and_swap(&v, compare, exchange);
+	__atomic_compare_exchange_n(&v, &exchange, compare, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+	// Result is stored in "exchange".
+	return exchange;
 }
+
+#endif
+
+#ifdef X64
 
 inline nat atomicRead(volatile const nat &v) {
 	BARRIER;
@@ -307,6 +318,34 @@ inline void atomicWrite(void *volatile &v, void *value) {
 	// Volatile writes are atomic on X86/X64 as long as they are aligned.
 	v = value;
 	BARRIER;
+}
+
+#endif
+
+#if defined(ARM64)
+
+inline nat atomicRead(volatile const nat &v) {
+	return __atomic_load_n(&v, __ATOMIC_SEQ_CST);
+}
+
+inline void atomicWrite(volatile nat &v, nat value) {
+	__atomic_store_n(&v, value, __ATOMIC_SEQ_CST);
+}
+
+inline size_t atomicRead(volatile const size_t &v) {
+	return __atomic_load_n(&v, __ATOMIC_SEQ_CST);
+}
+
+inline void *atomicRead(void *volatile const &v) {
+	return __atomic_load_n(&v, __ATOMIC_SEQ_CST);
+}
+
+inline void atomicWrite(volatile size_t &v, size_t value) {
+	__atomic_store_n(&v, value, __ATOMIC_SEQ_CST);
+}
+
+inline void atomicWrite(void *volatile &v, void *value) {
+	__atomic_store_n(&v, value, __ATOMIC_SEQ_CST);
 }
 
 #endif

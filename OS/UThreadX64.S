@@ -1,3 +1,6 @@
+#include "Utils/Platform.h"
+#ifdef X64	
+
 	.text
 
 	# Address of the logical return location inside 'doSwitch'. Used to get decend stack traces, not much more.
@@ -263,3 +266,8 @@ doEndDetourMember:
 NO_MEMBER:
 	# Let 'ret' handle the other one, which should contain an address now!
 	retq
+
+#endif
+
+	# No executable stack.
+	.section .note.GNU-stack,"",%progbits

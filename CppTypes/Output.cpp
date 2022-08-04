@@ -1096,6 +1096,26 @@ static void genGccX64(wostream &to, World &w) {
 	}
 }
 
+static void genGccArm64(wostream &to, World &w) {
+	for (nat i = 0; i < w.types.size(); i++) {
+		const Type &t = *w.types[i];
+		if (!hasVTable(t))
+			continue;
+
+		String sName = stormVTableName(t.name);
+		to << L"\t.globl " << sName << L"\n";
+		to << L"\t.type " << sName << L", @function\n";
+		to << L"\t.hidden " << sName << L"\n";
+		to << sName << L":\n";
+
+		String symName = gccVTableName(t.name);
+		to << L"\tadrp x0, :got:" << symName << L"\n";
+		to << L"\tldr x0, [x0, #:got_lo12:" << symName << L"]\n";
+		to << L"\tadd x0, x0, 16\n"; // Note: As for X86-64, we are interested in the offfset + 16.
+		to << L"\tret\n\n";
+	}
+}
+
 GenerateMap asmMap() {
 	struct E {
 		const wchar_t *tag;
@@ -1106,6 +1126,7 @@ GenerateMap asmMap() {
 		{ L"VS_X86_DECL", &genVsX86Decl },
 		{ L"VS_X86_IMPL", &genVsX86Impl },
 		{ L"GCC_X64", &genGccX64 },
+		{ L"GCC_ARM64", &genGccArm64 },
 	};
 
 	GenerateMap g;

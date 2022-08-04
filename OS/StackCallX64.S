@@ -1,3 +1,6 @@
+#include "Utils/Platform.h"
+#ifdef X64
+
 	.text
 
 	.globl doStackCall
@@ -59,3 +62,8 @@ doStackCall:
 	.cfi_def_cfa rsp, 8
 	retq
 	.cfi_endproc
+
+#endif
+
+	# No executable stack.
+	.section .note.GNU-stack,"",%progbits

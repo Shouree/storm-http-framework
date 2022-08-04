@@ -23,7 +23,7 @@ namespace ssl {
 		StrBIO(Str *data) {
 			size_t count = convert(data->c_str(), (char *)0, 0);
 			// Remove null-terminator.
-			count = max(count, 1) - 1;
+			count = max(count, size_t(1)) - 1;
 			buffer = std::vector<char>(count, 0);
 			convert(data->c_str(), &buffer[0], count);
 

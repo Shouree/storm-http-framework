@@ -1,3 +1,6 @@
+#include "Utils/Platform.h"
+#ifdef X64
+
 	.text
 
 	.globl spillRegs
@@ -14,3 +17,8 @@ spillRegs:
 	movq %r14, 0x30(%rdi)
 	movq %r15, 0x38(%rdi)
 	retq
+
+#endif
+
+	# No executable stack.
+	.section .note.GNU-stack,"",%progbits

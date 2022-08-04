@@ -185,7 +185,7 @@ namespace gui {
 		Nat rangeMin = min(offset, id);
 		Nat rangeMax = max(offset, id) + 1;
 		if (more)
-			rangeMax = max(rangeMax, more->count + 1);
+			rangeMax = max(rangeMax, Nat(more->count) + 1);
 
 		resize(rangeMin, rangeMax);
 

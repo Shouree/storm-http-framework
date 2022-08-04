@@ -1,0 +1,10 @@
+#include "stdafx.h"
+#include "$header$"
+
+namespace code {
+	namespace arm64 {
+
+		$$
+
+	}
+}

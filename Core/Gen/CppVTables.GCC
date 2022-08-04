@@ -1,0 +1,15 @@
+#include "Utils/Platform.h"
+
+	.section .note.GNU-stack,"",%progbits
+
+#if defined(X64)
+
+	.text
+# // GCC_X64
+
+#elif defined(ARM64)
+
+	.text
+# // GCC_ARM64
+
+#endif

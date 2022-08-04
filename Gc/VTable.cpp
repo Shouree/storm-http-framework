@@ -126,7 +126,7 @@ namespace storm {
 			return size - 1;
 		}
 
-#elif defined(GCC) && defined(POSIX) && defined(X64) // might hold for other architectures as well...
+#elif defined(GCC) && defined(POSIX) && (defined(X64) || defined(ARM64)) // might hold for other architectures as well...
 
 		// GCC stores a zero (probably base offset or similar) and type info at the two first
 		// indices (as -2 and -1). We use -3!

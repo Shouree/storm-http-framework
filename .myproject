@@ -213,11 +213,10 @@ cflags+=-fvisibility=hidden
 
 linkFlags+=-pthread
 
-ext+=s
+# Note: We exclude ".s" since we want to use the preprocessor in general.
 ext+=S
 noIncludes+=*.s
 noIncludes+=*.S
-compile+=*.s:gcc -g <file> -c -o <output>
 compile+=*.S:gcc -g <file> <includes> -c -o <output>
 
 [stormpp]
@@ -237,9 +236,9 @@ stormppAsmOut=Gen/CppVTables.asm
 preBuildCreates+=Gen/CppVTables.asm
 
 [stormpp,unix]
-stormppAsmTemplate=../Core/Gen/CppVTables.GCC_X64
-stormppAsmOut=Gen/CppVTables.s
-preBuildCreates+=Gen/CppVTables.s
+stormppAsmTemplate=../Core/Gen/CppVTables.GCC
+stormppAsmOut=Gen/CppVTables.S
+preBuildCreates+=Gen/CppVTables.S
 
 [sharedlib]
 packagePath=../root/<package>/

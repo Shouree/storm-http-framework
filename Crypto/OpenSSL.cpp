@@ -347,7 +347,7 @@ namespace ssl {
 
 		if (d->buffer != null && d->consumed < d->buffer->filled) {
 			// Read data from the buffer first.
-			Nat copy = min(to.free(), d->buffer->filled - d->consumed);
+			Nat copy = min(to.free(), Nat(d->buffer->filled) - d->consumed);
 			memcpy(to.dataPtr() + to.filled(), d->buffer->v + d->consumed, copy);
 			to.filled(to.filled() + copy);
 			d->consumed += copy;
@@ -382,7 +382,7 @@ namespace ssl {
 			fillBuffer(to.free(), data);
 		}
 
-		Nat copy = min(to.free(), d->buffer->filled - d->consumed);
+		Nat copy = min(to.free(), Nat(d->buffer->filled) - d->consumed);
 		memcpy(to.dataPtr() + to.filled(), d->buffer->v + d->consumed, copy);
 		to.filled(to.filled() + copy);
 	}

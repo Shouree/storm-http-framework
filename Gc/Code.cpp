@@ -5,11 +5,14 @@
 
 #include "CodeX86.h"
 #include "CodeX64.h"
+#include "CodeArm64.h"
 
 #if defined(X86)
 #define ARCH x86
 #elif defined(X64)
 #define ARCH x64
+#elif defined(ARM64)
+#define ARCH arm64
 #else
 #error "Updating code segments is not implemented for your architecture yet!"
 #endif

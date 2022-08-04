@@ -1,0 +1,10 @@
+#pragma once
+
+namespace code {
+	namespace arm64 {
+		STORM_PKG(core.asm.arm64);
+
+		$$
+
+	}
+}

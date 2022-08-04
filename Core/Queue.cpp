@@ -45,7 +45,7 @@ namespace storm {
 
 		if (data) {
 			// Copy from head to the end.
-			Nat firstBatch = min(oldCount, data->count - head);
+			Nat firstBatch = min(oldCount, Nat(data->count) - head);
 			memcpy(ptr(newData, 0), ptr(head), handle.size*firstBatch);
 
 			// If needed, copy remaining elements.

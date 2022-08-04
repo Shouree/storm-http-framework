@@ -22,7 +22,7 @@ namespace storm {
 	/**
 	 * Variant used to pre-allocate a GcArray of a certain size somewhere.
 	 */
-	template <class T, nat size>
+	template <class T, size_t size>
 	struct GcPreArray {
 		const size_t count;
 		size_t filled;

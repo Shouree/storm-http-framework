@@ -127,14 +127,14 @@ namespace storm {
 				continue;
 			}
 
-			Nat toWrite = min(data->count - filled, from.filled() - start);
+			Nat toWrite = min(Nat(data->count) - filled, from.filled() - start);
 
 			Nat tail = readPos + filled;
 			if (tail >= data->count)
 				tail -= data->count;
 
 			// Take wrapping into account.
-			toWrite = min(data->count - tail, toWrite);
+			toWrite = min(Nat(data->count) - tail, toWrite);
 
 			memcpy(data->v + tail, from.dataPtr() + start, toWrite);
 
