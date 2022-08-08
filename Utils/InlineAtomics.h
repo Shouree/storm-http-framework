@@ -240,15 +240,15 @@ inline size_t atomicXor(volatile size_t &v, size_t with) {
 }
 
 inline size_t atomicCAS(volatile size_t &v, size_t compare, size_t exchange) {
-	__atomic_compare_exchange_n(&v, &exchange, compare, false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
-	// Result is stored in "exchange".
-	return exchange;
+	__atomic_compare_exchange_n(&v, &compare, exchange, false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
+	// Result is stored in "compare".
+	return compare;
 }
 
 inline void *atomicCAS(void *volatile &v, void *compare, void *exchange) {
-	__atomic_compare_exchange_n(&v, &exchange, compare, false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
-	// Result is stored in "exchange".
-	return exchange;
+	__atomic_compare_exchange_n(&v, &compare, exchange, false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
+	// Result is stored in "compare".
+	return compare;
 }
 
 #if defined(X64) || defined(ARM64) // 64-bit architectures
@@ -262,9 +262,9 @@ inline nat atomicDecrement(volatile nat &v) {
 }
 
 inline nat atomicCAS(volatile nat &v, nat compare, nat exchange) {
-	__atomic_compare_exchange_n(&v, &exchange, compare, false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
-	// Result is stored in "exchange".
-	return exchange;
+	__atomic_compare_exchange_n(&v, &compare, exchange, false, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
+	// Result is stored in "compare".
+	return compare;
 }
 
 #endif
