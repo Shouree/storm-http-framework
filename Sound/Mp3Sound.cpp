@@ -170,7 +170,7 @@ namespace sound {
 
 	ssize_t Mp3Sound::read(void *handle, void *to, size_t count) {
 		Mp3Stream *stream = (Mp3Stream *)handle;
-		storm::Buffer b = stream->src->read(Nat(min(std::numeric_limits<Nat>::max(), count)));
+		storm::Buffer b = stream->src->read(Nat(min(size_t(std::numeric_limits<Nat>::max()), count)));
 		memcpy(to, b.dataPtr(), b.filled());
 		return b.filled();
 	}

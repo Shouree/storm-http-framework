@@ -1,3 +1,6 @@
+#include "Utils/Platform.h"
+#if defined(X64)
+
 	.text
 
 	.globl checkCall
@@ -37,3 +40,18 @@ checkCall:
 	movq %rbp, %rsp
 	popq %rbp
 	retq
+
+#elif defined(ARM64)
+
+	.text
+
+	.globl checkCall
+	.type checkCall, @function
+checkCall:
+	# TODO: Finish!
+	ret
+
+#endif
+
+	# No executable stack.
+	.section .note.GNU-stack,"",%progbits

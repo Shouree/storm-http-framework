@@ -77,14 +77,6 @@ inline int64 abs(int64 v) {
 }
 #endif
 
-#ifdef X64
-// Allow max() and min() on Nat and size_t, even if they are different sizes.
-inline size_t max(size_t x, nat y) { return max(x, size_t(y)); }
-inline size_t max(nat x, size_t y) { return max(size_t(x), y); }
-inline size_t min(size_t x, nat y) { return min(x, size_t(y)); }
-inline size_t min(nat x, size_t y) { return min(size_t(x), y); }
-#endif
-
 template <class T>
 inline void limitMax(T &toLimit, const T &b) {
 	toLimit = min(toLimit, b);

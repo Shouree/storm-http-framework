@@ -132,7 +132,7 @@ namespace storm {
 	TemplateList::Node *TemplateList::allocNode(const Node *original, Nat count) {
 		Node *mem = allocNode(count);
 		mem->done = original->done;
-		for (nat i = 0; i < min(count, original->count); i++)
+		for (nat i = 0; i < min(count, nat(original->count)); i++)
 			mem->next[i] = original->next[i];
 		return mem;
 	}

@@ -438,6 +438,10 @@ inline void unalignedAtomicWrite(volatile nat &v, nat value) {
 	assert(false, "Unaligned access not supported on ARM.");
 }
 
+inline void shortUnalignedAtomicWrite(volatile nat &v, nat value) {
+	assert(false, "Unaligned access not supported on ARM.");
+}
+
 #else
 #error "Unaligned operations not supported for this architecture yet."
 #endif

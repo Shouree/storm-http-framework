@@ -11,7 +11,8 @@ namespace storm {
 		refs = null;
 	}
 
-	void VTableStorm::resize(Nat count) {
+	void VTableStorm::resize(Nat c) {
+		size_t count = c;
 		if (table != null && count <= table->count) {
 			// Release possible GC retention.
 			for (size_t i = min(table->filled, count); i < table->count; i++) {
@@ -26,7 +27,7 @@ namespace storm {
 		}
 
 		// Grow! Note: growing 10 elements at a time as opposed to quadratic.
-		nat size = table ? table->count : 0;
+		size_t size = table ? table->count : 0;
 		size = max(count, size + 10);
 
 		GcArray<const void *> *n = runtime::allocArray<const void *>(engine(), &pointerArrayType, size);

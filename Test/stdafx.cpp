@@ -64,23 +64,12 @@ int64 callFn(const void *fnPtr, int64 p) {
 	return r;
 }
 
-#elif defined(X64) && defined(GCC)
+#elif (defined(X64) || defined(ARM64)) && defined(GCC)
 #include "CheckCall64.h"
 
-Reg64 regValues() {
-	Reg64 r = {
-		0x1111111111111111,
-		0x2222222222222222,
-		0x3333333333333333,
-		0x4444444444444444,
-		0x5555555555555555,
-	};
-	return r;
-}
-
 int callFn(const void *fnPtr, int p) {
-	Reg64 before = regValues();
-	Reg64 after = regValues();
+	Reg64 before = defaultReg64();
+	Reg64 after = defaultReg64();
 
 	int result = (int)checkCall(fnPtr, p, &after);
 
@@ -90,8 +79,8 @@ int callFn(const void *fnPtr, int p) {
 }
 
 int64 callFn(const void *fnPtr, int64 p) {
-	Reg64 before = regValues();
-	Reg64 after = regValues();
+	Reg64 before = defaultReg64();
+	Reg64 after = defaultReg64();
 
 	size_t result = checkCall(fnPtr, p, &after);
 

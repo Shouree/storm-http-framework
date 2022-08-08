@@ -18,25 +18,32 @@ namespace code {
 // 			l = code::transform(l, this, new (this) Layout(owner));
 
 // 			return l;
+			assert(false, L"TODO!");
 			return null;
 		}
 
 		void Arena::output(Listing *src, Output *to) const {
 			// code::x64::output(src, to);
+			assert(false, L"TODO!");
 		}
 
 		LabelOutput *Arena::labelOutput() const {
 			// return new (this) LabelOutput(8);
+			assert(false, L"TODO!");
+			return null;
 		}
 
 		CodeOutput *Arena::codeOutput(Binary *owner, Array<Nat> *offsets, Nat size, Nat refs) const {
 			// return new (this) CodeOut(owner, offsets, size, refs);
+			assert(false, L"TODO!");
+			return null;
 		}
 
 		void Arena::removeFnRegs(RegSet *from) const {
 			// RegSet *r = fnDirtyRegs(engine());
 			// for (RegSet::Iter i = r->begin(); i != r->end(); ++i)
 			// 	from->remove(i.v());
+			assert(false, L"TODO!");
 		}
 
 		Listing *Arena::redirect(Bool member, TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand param) {
@@ -76,6 +83,8 @@ namespace code {
 			// *l << jmp(ptrA);
 
 			// return l;
+			assert(false, L"TODO!");
+			return null;
 		}
 
 		Listing *Arena::engineRedirect(TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand engine) {
@@ -125,6 +134,8 @@ namespace code {
 			// *l << jmp(fn);
 
 			// return l;
+			assert(false, L"TODO!");
+			return null;
 		}
 
 		Nat Arena::firstParamId(MAYBE(TypeDesc *) desc) {
@@ -132,6 +143,8 @@ namespace code {
 			// 	return 2;
 
 			// return result(desc)->memory ? 1 : 0;
+			assert(false, L"TODO!");
+			return 0;
 		}
 
 		Operand Arena::firstParamLoc(Nat id) {
@@ -145,6 +158,8 @@ namespace code {
 			// default:
 			// 	return Operand();
 			// }
+			assert(false, L"TODO!");
+			return Operand();
 		}
 
 	}

@@ -952,6 +952,24 @@ namespace os {
 	// Note: This is currently incomplete!
 
 	static const void *endDetourFn(bool member) {
+		assert(false, L"Not implemented yet!");
+		return null;
+	}
+
+	extern "C" void doSwitch(StackDesc **newEsp, StackDesc **oldEsp) {
+		assert(false, L"TODO: Implement in ASM!");
+	}
+
+	void UThreadData::pushContext(const void *fn) {
+		assert(false, L"TODO: Implement me!");
+	}
+
+	void UThreadData::pushContext(const void *fn, void *param) {
+		assert(false, L"TODO: Implement me!");
+	}
+
+	StackDesc *UThreadData::pushSubContext(const void *fn, void *param) {
+		assert(false, L"TODO: Implement me!");
 		return null;
 	}
 

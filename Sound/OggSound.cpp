@@ -127,7 +127,7 @@ namespace sound {
 	size_t OggSound::srcRead(void *to, size_t size, size_t nmemb, void *data) {
 		OggSound *me = (OggSound *)data;
 		size_t s = size * nmemb;
-		s = min(s, std::numeric_limits<Nat>::max());
+		s = min(s, size_t(std::numeric_limits<Nat>::max()));
 
 		storm::Buffer r = me->src->read(Nat(s));
 		memcpy(to, r.dataPtr(), r.filled());

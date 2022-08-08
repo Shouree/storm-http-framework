@@ -149,6 +149,14 @@ namespace storm {
 #define Elf_Ehdr Elf64_Ehdr
 #define Elf_Shdr Elf64_Shdr
 #define Elf_Sym Elf64_Sym
+#elif defined(ARM64)
+#define EM_CURRENT EM_AARCH64
+#define EI_CLASS_CURRENT ELFCLASS64
+#define EI_DATA_CURRENT ELFDATA2LSB
+#define EI_OSABI_CURRENT ELFOSABI_SYSV
+#define Elf_Ehdr Elf64_Ehdr
+#define Elf_Shdr Elf64_Shdr
+#define Elf_Sym Elf64_Sym
 #else
 #error "I do not know your current machine type."
 #endif
