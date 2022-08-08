@@ -40,6 +40,8 @@ BEGIN_TEST(StackCall, OS) {
 
 #ifndef WINDOWS
 
+	// Note: Does not work on Win32, and is currently not needed there. It is used for a workaround
+	// in the Gui library on Linux.
 	src = 1;
 	try {
 		os::stackCall(s, address(&stackThrow), second, false);

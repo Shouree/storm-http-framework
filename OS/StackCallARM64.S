@@ -7,8 +7,15 @@
 	.type doStackCall, @function
 	.align 4
 doStackCall:
+	# 'current' is in x0
+	# 'callOn' is in x1
+	# 'fn' is in x2
+	# 'fnCall' is in x3
+	# 'member' is in x4
+	# 'result' is in x5
+
 	.cfi_startproc
-	# TODO: We need stack-switching logic for ARM here.
+
 	ret
 	.cfi_endproc
 
