@@ -32,15 +32,15 @@ doStackCall:
 
 	# We create the following structure on the stack:
 	# +40:  current (for recovery)
-	# +32:  desc.high
+	# +32:  desc.high (set to zero)
 	# +24:  desc.dummy
-	# +16:  desc.low
+	# +16:  desc.low (set to the addr of this struct, as we don't need to scan more than that)
 	#  +8:  x30
 	#  +0:  x29
 
-	stp xzr, xzr, [sp, 16]
 	add x9, sp, #16
-	stp x9, x0, [sp, 32]
+	stp x9, xzr, [sp, 16]
+	stp xzr, x0, [sp, 32]
 
 	# Store it in the current thread.
 	str x9, [x0, 16] // current.desc = "addr of Stack::Desc" struct.

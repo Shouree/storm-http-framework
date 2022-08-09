@@ -28,10 +28,10 @@ doStackCall:
 	push %rdi
 
 	# First, we need to make the old stack scannable. Thus, we need to store a Stack::Desc struct there.
-	pushq $0 		# low
+	pushq $0 		# high
 	pushq $0		# dummy
 	leaq -8(%rsp), %rax
-	pushq %rax		# high
+	pushq %rax		# low
 	
 	movq %rsp, 16(%rdi)	# current.desc = %rsp
 	movq %rsi, 32(%rdi)	# current.detourTo = callOn
