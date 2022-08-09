@@ -15,7 +15,7 @@ namespace os {
 		initDesc();
 	}
 
-	Stack::Stack(void *limit) : desc(null), detourActive(0), detourTo(null), alloc(limit), size(0) {
+	Stack::Stack(void *base) : desc(null), detourActive(0), detourTo(null), alloc(base), size(0) {
 		// Nothing more to do!
 	}
 

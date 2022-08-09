@@ -15,7 +15,7 @@ namespace os {
 	 * (typically, the system knows which thread a particular stack belongs to, so it does not need
 	 * to search for it).
 	 *
-	 * When a threada has been allocated, a sample "desc" is initialized. This description is
+	 * When a thread has been allocated, a sample "desc" is initialized. This description is
 	 * located in the "cold" end of the stack, i.e. the end of the stack that will not be
 	 * immediately overwritten. The "low" and "high" values are both initialized to the "hot" end of
 	 * the stack, i.e. where values are to be pushed.
@@ -26,9 +26,9 @@ namespace os {
 		explicit Stack(size_t size);
 
 		// Create a stack that represents a OS-allocated stack. It is assumed to be running at the
-		// moment. The parameter provided is the address of the "limit" of the stack, i.e. somewhere
+		// moment. The parameter provided is the address of the "base" of the stack, i.e. somewhere
 		// near the bottom of the stack. Typically the address of a local variable near "main".
-		explicit Stack(void *limit);
+		explicit Stack(void *base);
 
 		// Destroy.
 		~Stack();
@@ -48,17 +48,14 @@ namespace os {
 		// Note: Assumed to be the first member of the class, except for the pointers in SetMember.
 		Desc *desc;
 
-		// Get the limit of the stack, i.e. the address that will only be used whenever the stack is
-		// full. For X86 and the like, this represents an address close to the high part of the
-		// address.
+		// Get the limit of the stack, i.e. the cold end of the stack.
 		inline void *limit() const {
-			return (byte *)alloc + size;
+			return alloc;
 		}
 
-		// Get the base of the stack, i.e. the address used first. For X86 and the like, this is an
-		// address close to the low part of the address.
+		// Get the base of the stack, i.e. the hot end of the stack, which is typically always used.
 		inline void *base() const {
-			return alloc;
+			return (byte *)alloc + size;
 		}
 
 		// Is this thread participating in a detour? Updated atomically.

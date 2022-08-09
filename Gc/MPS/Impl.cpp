@@ -407,7 +407,7 @@ namespace storm {
 							dbg_assert(to == null, L"We found two potential main stacks.");
 
 							// This is the main stack! Scan that later.
-							to = (void **)stack->limit();
+							to = (void **)stack->high();
 
 							// Do a quick sanity check. If the stack is allocated, then we don't want to
 							// scan it if "current" is outside the range. This can happen when an
@@ -424,7 +424,7 @@ namespace storm {
 
 						// All is well, scan it!
 						void **low = (void **)stack->desc->low;
-						void **high = (void **)stack->limit();
+						void **high = (void **)stack->high();
 
 						bytesScanned += (char *)high - (char *)low;
 						for (void **at = low; at < high; at++) {
