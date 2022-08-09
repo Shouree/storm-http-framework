@@ -19,7 +19,7 @@ void stackThrow(int on) {
 BEGIN_TEST(StackCall, OS) {
 	onStack(100);
 
-	os::Stack s(1024);
+	os::Stack s(1024*1024); // Note: ARM64 needs more than 1K of stack for proper exception handling.
 
 	int src = 42;
 	os::FnCall<int, 2> call = os::fnCall().add(src);
