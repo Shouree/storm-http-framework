@@ -15,7 +15,7 @@ inline const void *address(T fn) {
 }
 
 template <class Fn>
-inline Fn asMemberPtr(void *fn) {
+inline Fn asMemberPtr(const void *fn) {
 	Fn result;
 	memset(&result, 0, sizeof(result));
 	memcpy(&result, &fn, sizeof(fn));

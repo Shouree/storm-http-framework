@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Platform.h"
-#include "Assert.h"
 
 /**
  * Atomic operations for various platforms. Declared as inlined functions to make them cheaper.
@@ -422,6 +421,9 @@ inline void shortUnalignedAtomicWrite(volatile nat &v, nat value) {
 }
 
 #elif defined(ARM64)
+
+// Note: Only included where needed, as it makes compilation on Visual Studio fail for some reason.
+#include "Assert.h"
 
 inline size_t unalignedAtomicRead(volatile size_t &v) {
 	// Not supported at all...
