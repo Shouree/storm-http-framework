@@ -20,7 +20,7 @@ doStackCall:
 	# x29 and x30 is the frame- and link register. x30 is the register used upon return.
 
 	.cfi_startproc
-	# Store stack and frame pointers to the stack. Also decrements the stack.
+	# Store link and frame pointers to the stack. Also decrements the stack.
 	# We allocate enough memory for everything here.
 	stp x29, x30, [sp, -48]!
 	.cfi_def_cfa_offset 48
@@ -34,15 +34,16 @@ doStackCall:
 	# +40:  current (for recovery)
 	# +32:  desc.high (set to zero)
 	# +24:  desc.dummy
-	# +16:  desc.low (set to the addr of this struct, as we don't need to scan more than that)
+	# +16:  desc.low (set to sp)
 	#  +8:  x30
 	#  +0:  x29
 
-	add x9, sp, #16
+	mov x9, sp
 	stp x9, xzr, [sp, 16]
 	stp xzr, x0, [sp, 32]
 
 	# Store it in the current thread.
+	add x9, sp, #16  // address to struct
 	str x9, [x0, 16] // current.desc = "addr of Stack::Desc" struct.
 	str x1, [x0, 32] // current.detourTo = callOn
 

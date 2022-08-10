@@ -949,27 +949,69 @@ namespace os {
 
 #elif defined(GCC) && defined(ARM64)
 
-	// Note: This is currently incomplete!
-
-	static const void *endDetourFn(bool member) {
-		assert(false, L"Not implemented yet!");
-		return null;
+	static void *&stackPtr(Stack &stack) {
+		return stack.desc->low;
 	}
 
-	extern "C" void doSwitch(StackDesc **newEsp, StackDesc **oldEsp) {
-		assert(false, L"TODO: Implement in ASM!");
+	void UThreadData::push(void *v) {
+		void **sp = (void **)stackPtr(stack);
+		*--sp = v;
+		stackPtr(stack) = sp;
+	}
+
+	void UThreadData::push(uintptr_t v) {
+		void **sp = (void **)stackPtr(stack);
+		*--sp = (void *)v;
+		stackPtr(stack) = sp;
+	}
+
+	void UThreadData::push(intptr_t v) {
+		void **sp = (void **)stackPtr(stack);
+		*--sp = (void *)v;
+		stackPtr(stack) = sp;
 	}
 
 	void UThreadData::pushContext(const void *fn) {
-		assert(false, L"TODO: Implement me!");
+		pushContext(fn, null);
 	}
 
 	void UThreadData::pushContext(const void *fn, void *param) {
-		assert(false, L"TODO: Implement me!");
+		const int frameWords = 24;
+
+		void **sp = (void **)stackPtr(stack);
+
+		// We need a bit of padding for exceptions to work. They read a few words here (maybe due to
+		// incorrect unwind info?) Remember: Stack must be 16-byte aligned.
+		sp -= 2*sizeof(void *);
+
+		sp -= frameWords;
+		stackPtr(stack) = sp;
+
+		// Zero everything.
+		memset(sp, 0, sizeof(void *)*frameWords);
+
+		// Store the state we need.
+		sp[1] = (void *)fn; // Return to.
+		sp[23] = param;
+		sp[20] = stack.desc->low;
+		sp[21] = stack.desc->dummy;
+		sp[22] = stack.desc->high;
+
+		// Now we can use the new Desc on the stack.
+		atomicWrite(stack.desc, (StackDesc *)(sp + 20));
 	}
+
+	// Logical location where thread switches are made. Used to get good backtraces.
+	// Note: This is a label in asm, so the interesting thing about this is its address.
+	extern "C" char doSwitchReturnLoc;
 
 	StackDesc *UThreadData::pushSubContext(const void *fn, void *param) {
 		assert(false, L"TODO: Implement me!");
+		return null;
+	}
+
+	static const void *endDetourFn(bool member) {
+		assert(false, L"Not implemented yet!");
 		return null;
 	}
 

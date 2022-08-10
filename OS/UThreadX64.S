@@ -7,7 +7,6 @@
 	# Used in the C++ code.
 	.globl doSwitchReturnLoc
 
-	# os::doSwitch(...) is _ZN2os8doSwitchEPPNS_12UThreadStack4DescES3_
 	.globl doSwitch
 	.type doSwitch, @function
 	.align 4
@@ -54,7 +53,7 @@ doSwitch:
 	.cfi_def_cfa_offset 80
 	pushq $0
 	.cfi_def_cfa_offset 88
-	# Current stack pointer, overlaps with 'high' in StackDesc.
+	# Current stack pointer, overlaps with 'low' in StackDesc.
 	leaq -8(%rsp), %rbx
 	pushq %rbx
 	.cfi_def_cfa_offset 96
