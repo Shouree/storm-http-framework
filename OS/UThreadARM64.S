@@ -147,6 +147,110 @@ doSwitchReturnLoc:
 	ret
 	.cfi_endproc
 
+
+	# Note: Uses x10 to determine whether to use member call or non-member-call.
+	.globl doEndDetourCommon
+	.type doEndDetourCommon, @function
+	.align 4
+doEndDetourCommon:
+
+	# Stack layout:
+	# 22: (size)
+	# 21: (unused)
+	# 20: (jump to)
+	# 19: v7
+	# 18: v6
+	# 17: v5
+	# 16: v4
+	# 15: v3
+	# 14: v2
+	# 13: v1
+	# 12: v0
+	# 11: x10 (use member calls?)
+	# 10: x8  (might not be strictly necessary, but it is the address of the return value)
+	#  9: x7
+	#  8: x6
+	#  7: x5
+	#  6: x4
+	#  5: x3
+	#  4: x2
+	#  3: x1
+	#  2: x0
+	#  1: x30
+	#  0: x29
+
+	.cfi_startproc
+	stp x29, x30, [sp, -22*8]!
+	.cfi_def_cfa_offset 22*8
+	.cfi_offset 29, -22*8
+	.cfi_offset 30, -21*8
+
+	# Save everything on the stack.
+	stp x0, x1, [sp, 2*8]
+	stp x2, x3, [sp, 4*8]
+	stp x4, x5, [sp, 6*8]
+	stp x6, x7, [sp, 8*8]
+	stp x8, x10, [sp, 10*8]
+	stp d0, d1, [sp, 12*8]
+	stp d2, d3, [sp, 14*8]
+	stp d4, d5, [sp, 16*8]
+	stp d6, d7, [sp, 18*8]
+
+	# Everything is saved. Call doEndDetour2 in C to do thread switching!
+	add x0, sp, 20*8
+	bl doEndDetour2
+
+	# Restore.
+	ldp x0, x1, [sp, 2*8]
+	ldp x2, x3, [sp, 4*8]
+	ldp x4, x5, [sp, 6*8]
+	ldp x6, x7, [sp, 8*8]
+	ldp x8, x10, [sp, 10*8]
+	ldp d0, d1, [sp, 12*8]
+	ldp d2, d3, [sp, 14*8]
+	ldp d4, d5, [sp, 16*8]
+	ldp d6, d7, [sp, 18*8]
+
+	# Load where to jump to.
+	ldr x11, [sp, 20*8]
+
+	# Epilog.
+	ldp x29, x30, [sp], 22*8
+
+	# Now, we can call the function!
+	
+	# First, check if this is a non-member function.
+	cmp x10, #0
+	b.eq 1f
+
+	# Might be a member function. Check LSB of pointer. If it is zero, it is a regular pointer that we can just call.
+	tst x11, #1
+	b.eq 1f
+
+	# We need to do a vtable lookup to find the vtable.
+	ldr x10, [x0]
+	add x10, x10, x11
+	sub x10, x10, #1  // remove tag
+	ldr x11, [x10]
+
+	# This is a regular function. Just call it!
+1:	br x11
+	.cfi_endproc
+
+	.globl doEndDetour
+	.type doEndDetour, @function
+	.align 4
+doEndDetour:
+	mov x10, #0
+	b doEndDetourCommon
+
+	.globl doEndDetourMember
+	.type doEndDetourMember, @function
+	.align 4
+doEndDetourMember:
+	mov x10, #1
+	b doEndDetourCommon
+	
 #endif
 
 	# No executable stack.

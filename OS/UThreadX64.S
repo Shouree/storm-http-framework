@@ -251,9 +251,8 @@ doEndDetourMember:
 	movq (%rsp), %rax
 
 	# If it is odd, we need to do a vtable lookup!
-	andq $1, %rax
-	testq %rax, %rax
-	je NO_MEMBER
+	testq $1, %rax
+	jeq 1f
 
 	# Perform a vtable lookup and store it on the stack, ready for 'retq' to consume.
 	movq (%rdi), %rax  # load the vtable pointer
@@ -262,7 +261,7 @@ doEndDetourMember:
 	movq (%rax), %rax  # read the function pointer
 	movq %rax, (%rsp)  # and save it to the stack for 'retq'
 
-NO_MEMBER:
+1:
 	# Let 'ret' handle the other one, which should contain an address now!
 	retq
 

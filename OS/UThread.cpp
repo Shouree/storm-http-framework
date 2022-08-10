@@ -1010,9 +1010,18 @@ namespace os {
 		return null;
 	}
 
+	// Called from ASM.
+	extern "C" void doEndDetour2(void **result) {
+		UThreadState::current()->endDetour(result);
+	}
+
+	extern "C" void doEndDetour();
+	extern "C" void doEndDetourMember();
+
 	static const void *endDetourFn(bool member) {
-		assert(false, L"Not implemented yet!");
-		return null;
+		return member
+			? address(doEndDetourMember)
+			: address(doEndDetour);
 	}
 
 #endif
