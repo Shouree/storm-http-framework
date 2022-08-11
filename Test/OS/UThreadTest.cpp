@@ -2,6 +2,7 @@
 #include "OS/Thread.h"
 #include "OS/UThread.h"
 #include "OS/ThreadGroup.h"
+#include "OS/StackTrace.h"
 #include "Tracker.h"
 
 using namespace os;
@@ -336,6 +337,65 @@ BEGIN_TEST(UThreadExTest, OS) {
 	CHECK_EQ(exceptions, 2);
 } END_TEST
 
+static nat counter = 0;
+
+static void recurseInner(nat depth = 0) {
+	if (depth >= 2)
+		UThread::leave();
+	else
+		recurseInner(depth + 1);
+
+	// Write global to avoid the compiler optimizing the call away.
+	counter++;
+}
+
+static void recurseBase() {
+	recurseInner(0);
+}
+
+// Count the number of frames that contain "recurseInner".
+static size_t countFn(::StackTrace &trace, const String &function) {
+	String formatted = format(trace);
+	size_t count = 0;
+	size_t at = 0;
+	while (true) {
+		at = formatted.find(function, at);
+		if (at >= formatted.size())
+			break;
+		at++;
+		count++;
+	}
+	return count;
+}
+
+// Tests the detour function by doing stack traces on all UThreads.
+// Does not verify that the stack traces are sensible, but ensures that we don't crash at least.
+BEGIN_TEST(UThreadTracesTest, OS) {
+	UThread::spawn(util::simpleVoidFn(&recurseBase));
+	UThread::spawn(util::simpleVoidFn(&recurseBase));
+
+	UThread::leave();
+
+	vector<::StackTrace> traces = os::stackTraces(os::Thread::current());
+	CHECK_EQ(traces.size(), 3);
+
+	size_t numUThreads = 0;
+	for (size_t i = 0; i < traces.size(); i++) {
+		// PLN(L"Thread " << i);
+		// PLN(format(traces[i]));
+		if (countFn(traces[i], L"recurseInner") >= 3)
+			numUThreads++;
+	}
+
+	// Should find the two threads that are recursing now.
+	// Note: If this test fails, it is possible that the debug information stopped working,
+	// or that the compiler optimized the "recurseInner" recursion a bit too hard.
+	CHECK_GTE(numUThreads, 2);
+
+	// Make threads exit.
+	UThread::leave();
+	UThread::leave();
+} END_TEST
 
 
 struct SemaTest {

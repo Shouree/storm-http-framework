@@ -22,7 +22,7 @@ doSwitch:
 
 	# Stack layout:
 	#  -0 24 +192: (end)
-	#  -1 23 +184: x0 -- only restored, to allow calling functions initially
+	#  -1 23 +184: (unused)
 	#  -2 22 +176: Stack::Desc::hi
 	#  -3 21 +168: Stack::Desc::dummy
 	#  -4 20 +160: Stack::Desc::low
@@ -54,6 +54,9 @@ doSwitch:
 	.cfi_def_cfa_offset 24*8
 	.cfi_offset 29, -24*8
 	.cfi_offset 30, -23*8
+
+	# Store base pointer.
+	mov x29, sp
 
 	# Save state.
 	stp x28, x27, [sp, 2*8]
@@ -135,9 +138,6 @@ doSwitchReturnLoc:
 	# Clear the new thread's description. The GC will start scanning the stack based on RSP rather than what is in the StackDesc.
 	str xzr, [x0]
 
-	# Load parameter register (only necessary when we spawn a new thread).
-	ldr x0, [sp, 23*8]
-
 	# Restore link and base pointer.
 	ldp x29, x30, [sp], 24*8
 	.cfi_restore 29
@@ -146,6 +146,22 @@ doSwitchReturnLoc:
 	# Done!
 	ret
 	.cfi_endproc
+
+
+	# Helper ASM stub to launch a new thread.
+	# This is not a function that follows the calling convention since we can't set
+	# the appropriate registers from "doSwitch" (that ability would cost os cycles
+	# in the general case, so it is not desirable to fix).
+	#
+	# This stub calls the function in x28 with the parameter in x27.
+	# It makes it appear as if the function was called from address in x26.
+	.globl launchThreadStub
+	.type launchThreadStub, @function
+	.align 4
+launchThreadStub:
+	mov x0, x27
+	mov x30, x26
+	br x28
 
 
 	# Note: Uses x10 to determine whether to use member call or non-member-call.

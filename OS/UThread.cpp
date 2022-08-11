@@ -930,7 +930,7 @@ namespace os {
 	}
 
 	void UThreadData::restoreContext(StackDesc *desc) {
-		atomicWrite(stack.desc, (StackDesc *)(desc));
+		atomicWrite(stack.desc, (StackDesc *)desc);
 	}
 
 	// Called from UThreadX64.S
@@ -975,27 +975,36 @@ namespace os {
 		pushContext(fn, null);
 	}
 
-	void UThreadData::pushContext(const void *fn, void *param) {
-		const int frameWords = 24;
+	// Function for launching new threads. Not callable from C, so a regular variable.
+	extern "C" char launchThreadStub;
 
+	const int arm64FrameWords = 24; // Size of the arm64 context in 8-byte words.
+
+	void UThreadData::pushContext(const void *fn, void *param) {
 		void **sp = (void **)stackPtr(stack);
 
 		// We need a bit of padding for exceptions to work. They read a few words here (maybe due to
 		// incorrect unwind info?) Remember: Stack must be 16-byte aligned.
-		sp -= 2*sizeof(void *);
+		// sp -= 2*sizeof(void *);
 
-		sp -= frameWords;
+		sp -= arm64FrameWords;
 		stackPtr(stack) = sp;
 
 		// Zero everything.
-		memset(sp, 0, sizeof(void *)*frameWords);
+		memset(sp, 0, sizeof(void *)*arm64FrameWords);
 
 		// Store the state we need.
-		sp[1] = (void *)fn; // Return to.
+		sp[1] = &launchThreadStub; // Return to.
 		sp[23] = param;
 		sp[20] = stack.desc->low;
 		sp[21] = stack.desc->dummy;
 		sp[22] = stack.desc->high;
+
+		// Parameters to 'launchThread':
+		sp[0] = null; // base pointer of prev frame.
+		sp[2] = (void *)fn; // function to call
+		sp[3] = param; // parameter
+		sp[4] = null; // apparent caller (none).
 
 		// Now we can use the new Desc on the stack.
 		atomicWrite(stack.desc, (StackDesc *)(sp + 20));
@@ -1006,8 +1015,36 @@ namespace os {
 	extern "C" char doSwitchReturnLoc;
 
 	StackDesc *UThreadData::pushSubContext(const void *fn, void *param) {
-		assert(false, L"TODO: Implement me!");
-		return null;
+		void **sp = (void **)stackPtr(stack);
+		void *oldSp = sp;
+		sp -= arm64FrameWords;
+		// Note: We don't save the sp in the old desc, since we don't want to trash it!
+
+		// Zero the stack frame.
+		memset(sp, 0, sizeof(void *)*arm64FrameWords);
+
+		// Store the state we need. Similar to pushContext.
+		sp[1] = &launchThreadStub; // Return to.
+		sp[20] = sp; // low of new desc.
+		sp[21] = stack.desc->dummy;
+		sp[22] = stack.desc->high;
+
+		// Parameters to 'launchThread':
+		sp[0] = oldSp; // stored frame pointer.
+		sp[2] = (void *)fn; // function to call.
+		sp[3] = param; // parameter
+		sp[4] = &doSwitchReturnLoc; // apparent return address (for stack traces to work properly)
+
+		StackDesc *old = stack.desc;
+
+		// Set the new desc.
+		atomicWrite(stack.desc, (StackDesc *)(sp + 20));
+
+		return old;
+	}
+
+	void UThreadData::restoreContext(StackDesc *desc) {
+		atomicWrite(stack.desc, (StackDesc *)desc);
 	}
 
 	// Called from ASM.
