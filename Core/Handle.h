@@ -163,7 +163,7 @@ namespace storm {
 	/**
 	 * Signed 64-bit number (using two's complement).
 	 *
-	 * Can store values from ‭-9 223 372 036 854 775 808 to ‭9 223 372 036 854 775 807. Languages may
+	 * Can store values from -9 223 372 036 854 775 808 to 9 223 372 036 854 775 807. Languages may
 	 * assume that overflow does not occur (as C++ does). Currently, no language in Storm does this.
 	 *
 	 * Prefer to use Int over Long if possible, as the former is more efficient on most systems (32
