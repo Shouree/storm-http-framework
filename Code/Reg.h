@@ -11,8 +11,13 @@ namespace code {
 	 *
 	 * Format: 0xABC where:
 	 * A is the size (0 = pointer size)
-	 * B is the backend id (0 = general, 1 = x86, etc)
+	 * B is the backend id (0 = general, ...)
 	 * C is specific identifier to the backend
+	 *
+	 * Backend ID:s:
+	 * 0 - general (below)
+	 * 1, 2 - x86, x64
+	 * 3, 4, 5, 6 - arm64
 	 */
 	enum Reg {
 		// No register.
@@ -183,9 +188,9 @@ namespace code {
 
 		// Constants:
 		enum {
-			// 4 banks is enough for now. Make sure to add 'data' entries up to the number of banks used.
+			// 5 banks is enough for now. Make sure to add 'data' entries up to the number of banks used.
 			// At least 2, maximum 9.
-			banks = 4,
+			banks = 5,
 
 			// Slots per data entry. Should be 16.
 			dataSlots = 8 * sizeof(Nat) / 2,
@@ -200,6 +205,7 @@ namespace code {
 		Nat data1;
 		Nat data2;
 		Nat data3;
+		Nat data4;
 
 		// # of registers in here.
 		Nat numSet;

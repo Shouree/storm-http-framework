@@ -1,5 +1,9 @@
 #include "stdafx.h"
 #include "Arena.h"
+#include "Asm.h"
+#include "Output.h"
+#include "Code/Listing.h"
+#include "Code/Output.h"
 
 namespace code {
 	namespace arm64 {
@@ -28,15 +32,11 @@ namespace code {
 		}
 
 		LabelOutput *Arena::labelOutput() const {
-			// return new (this) LabelOutput(8);
-			assert(false, L"TODO!");
-			return null;
+			return new (this) LabelOutput(8);
 		}
 
 		CodeOutput *Arena::codeOutput(Binary *owner, Array<Nat> *offsets, Nat size, Nat refs) const {
-			// return new (this) CodeOut(owner, offsets, size, refs);
-			assert(false, L"TODO!");
-			return null;
+			return new (this) CodeOut(owner, offsets, size, refs);
 		}
 
 		void Arena::removeFnRegs(RegSet *from) const {
@@ -47,7 +47,7 @@ namespace code {
 		}
 
 		Listing *Arena::redirect(Bool member, TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand param) {
-			// Listing *l = new (this) Listing(this);
+			Listing *l = new (this) Listing(this);
 
 			// // Generate a layout of all parameters so we can properly restore them later.
 			// Params *layout = layoutParams(result, params);
@@ -82,9 +82,8 @@ namespace code {
 			// *l << epilog();
 			// *l << jmp(ptrA);
 
-			// return l;
-			assert(false, L"TODO!");
-			return null;
+			TODO(L"Implement me!");
+			return l;
 		}
 
 		Listing *Arena::engineRedirect(TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand engine) {
@@ -139,11 +138,11 @@ namespace code {
 		}
 
 		Nat Arena::firstParamId(MAYBE(TypeDesc *) desc) {
-			// if (!desc)
-			// 	return 2;
+			TODO(L"FIX ME!");
+			// Note: From skimming the ABI spec, it seems like this is the same for all cases.
+			if (!desc)
+				return 1;
 
-			// return result(desc)->memory ? 1 : 0;
-			assert(false, L"TODO!");
 			return 0;
 		}
 

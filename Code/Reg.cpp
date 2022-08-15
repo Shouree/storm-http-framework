@@ -2,6 +2,7 @@
 #include "Reg.h"
 #include "X86/Asm.h"
 #include "X64/Asm.h"
+#include "Arm64/Asm.h"
 #include "Core/StrBuf.h"
 
 namespace code {
@@ -42,6 +43,8 @@ namespace code {
 			if (const wchar *n = x86::nameX86(r))
 				return n;
 			if (const wchar *n = x64::nameX64(r))
+				return n;
+			if (const wchar *n = arm64::nameArm64(r))
 				return n;
 			assert(false, L"Unknown register: " + ::toS(r));
 			return S("<unknown>");
