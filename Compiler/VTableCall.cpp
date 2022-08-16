@@ -43,7 +43,7 @@ namespace storm {
 			return entry;
 
 		using namespace code;
-
+		TODO(L"We need to use a different temporary register on ARM.");
 		Listing *l = new (this) Listing();
 		*l << mov(ptrA, engine().arena()->firstParamLoc(id));
 		*l << mov(ptrA, ptrRel(ptrA, Offset()));
@@ -60,7 +60,7 @@ namespace storm {
 			return entry;
 
 		using namespace code;
-
+		TODO(L"We need to use a different temporary register on ARM.");
 		Listing *l = new (this) Listing();
 		*l << mov(ptrA, engine().arena()->firstParamLoc(id));
 		*l << mov(ptrA, ptrRel(ptrA, Offset()));

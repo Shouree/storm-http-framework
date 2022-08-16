@@ -1,9 +1,12 @@
 #include "stdafx.h"
 #include "Arena.h"
 #include "Asm.h"
+#include "AsmOut.h"
 #include "Output.h"
 #include "Code/Listing.h"
 #include "Code/Output.h"
+#include "RemoveInvalid.h"
+#include "Layout.h"
 
 namespace code {
 	namespace arm64 {
@@ -11,24 +14,24 @@ namespace code {
 		Arena::Arena() {}
 
 		Listing *Arena::transform(Listing *l, Binary *owner) const {
+			TODO(L"Activate info!");
 // #if defined(POSIX) && defined(X64)
 // 			activateInfo();
 // #endif
 
-// 			// Remove unsupported OP-codes, replacing them with their equivalents.
-// 			l = code::transform(l, this, new (this) RemoveInvalid());
+			// Remove unsupported OP-codes, replacing them with their equivalents.
+			l = code::transform(l, this, new (this) RemoveInvalid());
 
-// 			// Expand variables and function calls as well as function prolog and epilog.
-// 			l = code::transform(l, this, new (this) Layout(owner));
+			// Expand variables and function calls as well as function prolog and epilog.
+			l = code::transform(l, this, new (this) Layout(owner));
 
-// 			return l;
-			assert(false, L"TODO!");
-			return null;
+			TODO(L"Not done yet!");
+			PVAR(l);
+			return l;
 		}
 
 		void Arena::output(Listing *src, Output *to) const {
-			// code::x64::output(src, to);
-			assert(false, L"TODO!");
+			code::arm64::output(src, to);
 		}
 
 		LabelOutput *Arena::labelOutput() const {
@@ -40,10 +43,12 @@ namespace code {
 		}
 
 		void Arena::removeFnRegs(RegSet *from) const {
-			// RegSet *r = fnDirtyRegs(engine());
-			// for (RegSet::Iter i = r->begin(); i != r->end(); ++i)
-			// 	from->remove(i.v());
-			assert(false, L"TODO!");
+			for (Nat i = 0; i < 18; i++)
+				from->remove(ptrr(i));
+
+			TODO(L"Add fp regs.");
+			// for (Nat i = 0; i < 8; i++)
+			// 	from->remove(qr(i));
 		}
 
 		Listing *Arena::redirect(Bool member, TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand param) {
@@ -157,8 +162,8 @@ namespace code {
 			// default:
 			// 	return Operand();
 			// }
-			assert(false, L"TODO!");
-			return Operand();
+			TODO(L"Implement me!");
+			return ptrr(0); // I think this is fine?
 		}
 
 	}
