@@ -304,7 +304,6 @@ namespace os {
 		}
 
 		delete []oldInfo;
-		delete []oldInfo;
 		delete []oldKey;
 		delete []oldVal;
 	}
