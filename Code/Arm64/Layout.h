@@ -33,7 +33,14 @@ namespace code {
 		private:
 			// Owner.
 			Binary *owner;
+
+			// Variable layout.
+			Array<Offset> *layout;
 		};
+
+		// Compute the layout of variables, given a listing, parameters and the number of registers
+		// that need to be spilled into memory in the function prolog and epilog.
+		Array<Offset> *STORM_FN layout(Listing *l, /* Params *params, */ Nat spilled);
 
 	}
 }

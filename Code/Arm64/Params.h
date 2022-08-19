@@ -5,26 +5,26 @@
 #include "Core/Array.h"
 
 namespace code {
-	namespace x64 {
-		STORM_PKG(core.asm.x64);
+	namespace arm64 {
+		STORM_PKG(core.asm.arm64);
 
 		/**
 		 * Implements the logic for laying out parameters on the stack and into registers.
 		 *
-		 * On X86-64 parameters are passed according to the following rules:
-		 * - The first six integer or pointer arguments are passed in registers
-		 *   RDI, RSI, RDX, RCX, R8 and R9.
-		 * - The first eight floating-point arguments are passed in registers
-		 *   XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6 and XMM7
+		 * On ARM64 parameters are passed according to the following rules:
+		 * - The first eight integer or pointer parameters are passed in registers x0..x7
+		 * - The first eight floating-point arguments are passed in registers d0..d7
 		 * - Any parameters that do not fit in registers are passed on the stack.
-		 * - Classes containing a trivial copy constructor are decomposed into primitive types
-		 *   and passed as separate parameters. However, if the entire class does not fit into
-		 *   registers, the entire class is passed on the stack.
-		 * - Classes without a trivial copy constructor are passed by pointer. The caller is
-		 *   responsible for copying the parameter and destroying it when the function call is
-		 *   completed.
+		 * - Composite types that are not "trivial" are passed on the stack.
+		 * - Composite types are passed on the stack if they are larger than 16 bytes.
+		 * - Composite types of size up to 16 bytes might be split into two registers.
+		 *   If this is done, the register number is rounded up to the next even number.
+		 * - Note: Arguments copied to the stack will have to be aligned to 8 bytes, even
+		 *   if their natural alignment is smaller.
+		 * - Floating-point values are passed in fp registers. According to the descripton
+		 *   of the ABI, it is unclear what happens to composite values that have both int-
+		 *   and float values inside of them. Likely they are passed in integer registers.
 		 */
-
 
 		/**
 		 * Describes what a single register is supposed to contain.
@@ -32,7 +32,7 @@ namespace code {
 		class Param {
 			STORM_VALUE;
 		public:
-			// Create an empty parameter.
+			// Create empty parameter.
 			STORM_CTOR Param();
 			STORM_CTOR Param(Nat id, Primitive p);
 			STORM_CTOR Param(Nat id, Nat size, Nat offset);
@@ -79,7 +79,7 @@ namespace code {
 
 
 		/**
-		 * Describes how parameters are laid out during a function call. This is specific to X86-64,
+		 * Describes how parameters are laid out during a function call. This is specific to ARM64,
 		 * so any sizes and offsets stored here are for that specific platform.
 		 */
 		class Params : public storm::Object {
@@ -148,8 +148,13 @@ namespace code {
 		// Create a 'params' object from a list of TypeDesc objects.
 		Params *STORM_FN params(Array<TypeDesc *> *types);
 
+
 		/**
 		 * Describes how the return value is stored.
+		 *
+		 * On ARM64, the rule is that if the function "fn(X)" would pass "X" in register, the same
+		 * registers are used for returning a value of type "X". Otherwise, an address to memory is
+		 * passed in x8.
 		 */
 		class Result : public storm::Object {
 			STORM_CLASS;
@@ -176,9 +181,6 @@ namespace code {
 
 		// Create a 'result' object describing how the return value shall be represented.
 		Result *STORM_FN result(TypeDesc *type);
-
-		// Perform a full layout of parameters.
-		Params *STORM_FN layoutParams(TypeDesc *result, Array<TypeDesc *> *params);
 
 	}
 }

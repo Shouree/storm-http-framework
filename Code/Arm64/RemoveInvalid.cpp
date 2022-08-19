@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "RemoveInvalid.h"
+#include "../Listing.h"
 
 namespace code {
 	namespace arm64 {
