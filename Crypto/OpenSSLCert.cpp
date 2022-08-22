@@ -126,46 +126,6 @@ namespace ssl {
 	const wchar *OpenSSLCertKey::validate(SSLCert *cert) {
 		RefPtr<OpenSSLCert> c = cert->openSSL();
 
-		const wchar *error = null;
-
-		switch (EVP_PKEY_base_id(data)) {
-		case EVP_PKEY_RSA: {
-			RSA *rsa = EVP_PKEY_get1_RSA(data);
-			if (!RSA_check_key(rsa))
-				error = S("Invalid RSA key.");
-			RSA_free(rsa);
-			break;
-		}
-		case EVP_PKEY_DSA: {
-			// There does not seem to be a DSA_check_key function...
-			// DSA *dsa = EVP_PKEY_get1_DSA(data);
-			// if (!DSA_check_key(dsa))
-			// 	error = S("Invalid DSA key.");
-			// DSA_free(dsa);
-			break;
-		}
-		case EVP_PKEY_DH: {
-			// Neither for DH keys.
-			// DH *dh = EVP_PKEY_get1_DH(data);
-			// if (!DH_check_key(dh))
-			// 	error = S("Invalid DH key.");
-			// DH_free(dh);
-			break;
-		}
-		case EVP_PKEY_EC: {
-			EC_KEY *ec = EVP_PKEY_get1_EC_KEY(data);
-			if (!EC_KEY_check_key(ec))
-				error = S("Invalid EC key.");
-			EC_KEY_free(ec);
-			break;
-		}
-		default:
-			error = S("Unknown key type.");
-		}
-
-		if (error)
-			return error;
-
 		if (!X509_verify(c->data, data))
 			return S("Certificate and key does not match.");
 
