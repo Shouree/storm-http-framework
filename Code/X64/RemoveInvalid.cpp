@@ -9,13 +9,6 @@
 namespace code {
 	namespace x64 {
 
-		ParamInfo::ParamInfo(TypeDesc *desc, const Operand &src, Bool ref)
-			: type(desc), src(src), ref(ref), lea(false) {}
-
-		ParamInfo::ParamInfo(TypeDesc *desc, const Operand &src, Bool ref, Bool lea)
-			: type(desc), src(src), ref(ref), lea(lea) {}
-
-
 #define TRANSFORM(x) { op::x, &RemoveInvalid::x ## Tfm }
 #define IMM_REG(x) { op::x, &RemoveInvalid::immRegTfm }
 #define DEST_W_REG(x) { op::x, &RemoveInvalid::destRegWTfm }

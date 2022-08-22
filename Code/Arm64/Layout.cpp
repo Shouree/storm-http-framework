@@ -10,15 +10,24 @@ namespace code {
 		Layout::Layout(Binary *owner) : owner(owner) {}
 
 		void Layout::before(Listing *dest, Listing *src) {
+			// Find parameters.
+			Array<Var> *p = src->allParams();
+			params = new (this) Params();
+			for (Nat i = 0; i < p->count(); i++) {
+				params->add(i, src->paramDesc(p->at(i)));
+			}
+
 			PVAR(src);
-			layout = code::arm64::layout(src, 0);
+			layout = code::arm64::layout(src, params, 0);
 
 			PLN(L"Layout:");
 			for (Nat i = 0; i < layout->count(); i++)
 				PLN(i << L": " << layout->at(i));
 		}
 
-		void Layout::during(Listing *dest, Listing *src, Nat id) {}
+		void Layout::during(Listing *dest, Listing *src, Nat id) {
+			*dest << src->at(id);
+		}
 
 		void Layout::after(Listing *dest, Listing *src) {
 			*dest << alignAs(Size::sPtr);
@@ -30,8 +39,10 @@ namespace code {
 			*dest << dat(objPtr(owner));
 		}
 
-		Array<Offset> *layout(Listing *src, /* Params *params, */ Nat spilled) {
+		Array<Offset> *layout(Listing *src, Params *params, Nat spilled) {
 			Array<Offset> *result = code::layout(src);
+
+			// TODO!
 
 			return result;
 		}

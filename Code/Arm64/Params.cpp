@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Params.h"
 #include "Asm.h"
+#include "Utils/Bitwise.h"
 
 namespace code {
 	namespace arm64 {
@@ -10,21 +11,22 @@ namespace code {
 		}
 
 		Param::Param(Nat id, Primitive p) {
-			set(id, p.size().size64(), p.offset().v64());
+			set(id, p.size().size64(), p.offset().v64(), false);
 		}
 
-		Param::Param(Nat id, Nat size, Nat offset) {
-			set(id, size, offset);
+		Param::Param(Nat id, Nat size, Nat offset, Bool stack) {
+			set(id, size, offset, stack);
 		}
 
 		void Param::clear() {
-			set(0xFF, 0, 0xFFFFFFFF);
+			set(0xFF, 0, 0xFFFFFFFF, false);
 		}
 
-		void Param::set(Nat id, Nat size, Nat offset) {
+		void Param::set(Nat id, Nat size, Nat offset, Bool stack) {
 			data = size & 0xF;
-			data |= (id & 0xFF) << 4;
-			data |= (offset & 0xFFFFFF) << 12;
+			data |= Nat(stack) << 4;
+			data |= (id & 0xFF) << 5;
+			data |= (offset & 0xFFFFFF) << 13;
 		}
 
 		wostream &operator <<(wostream &to, Param p) {
@@ -33,6 +35,8 @@ namespace code {
 			} else {
 				to << L"#" << p.id() << L"+" << p.offset() << L"," << p.size();
 			}
+			if (p.stack())
+				to << L"(stack)";
 			return to;
 		}
 
@@ -42,6 +46,8 @@ namespace code {
 			} else {
 				to << S("#") << p.id() << S("+") << p.offset() << S(",") << p.size();
 			}
+			if (p.stack())
+				to << S("(stack)");
 			return to;
 		}
 
@@ -52,7 +58,6 @@ namespace code {
 
 
 		Params::Params() {
-			TODO(L"FIXME!");
 			integer = runtime::allocArray<Param>(engine(), &natArrayType, 8);
 			real = runtime::allocArray<Param>(engine(), &natArrayType, 8);
 			integer->filled = 0;
@@ -81,10 +86,10 @@ namespace code {
 				break;
 			case primitive::pointer:
 			case primitive::integer:
-				tryAdd(integer, Param(id, p));
+				addParam(integer, Param(id, p));
 				break;
 			case primitive::real:
-				tryAdd(real, Param(id, p));
+				addParam(real, Param(id, p));
 				break;
 			default:
 				dbg_assert(false, L"Unknown primitive type!");
@@ -93,10 +98,10 @@ namespace code {
 
 		void Params::addDesc(Nat id, ComplexDesc *type) {
 			// The complex types are actually simple. We just add a pointer to our parameter list!
-			tryAdd(integer, Param(id, 8, 0));
+			addParam(integer, Param(id, 8, 0, true));
 		}
 
-		void Params::tryAdd(GcArray<Param> *to, Param p) {
+		void Params::addParam(GcArray<Param> *to, Param p) {
 			if (to->filled < to->count) {
 				to->v[to->filled++] = p;
 			} else {
@@ -150,66 +155,73 @@ namespace code {
 			return result;
 		}
 
+		// Check if the parameter is a uniform float struct.
+		static Bool uniformFp(SimpleDesc *type) {
+			GcArray<Primitive> *layout = type->v;
+			if (layout->count <= 0)
+				return false;
+			if (layout->v[0].kind() != primitive::real)
+				return false;
+			if (layout->v[0].offset().v64() != 0)
+				return false;
+
+			// Check for this size.
+			Nat size = layout->v[0].size().size64();
+
+			// Others should be evenly distributed.
+			for (Nat i = 0; i < layout->count; i++) {
+				if (layout->v[i].kind() != primitive::real)
+					return false;
+				if (layout->v[i].size().size64() != size)
+					return false;
+				if (Nat(layout->v[i].offset().v64()) != i * size)
+					return false;
+			}
+
+			return true;
+		}
+
 		void Params::addDesc(Nat id, SimpleDesc *type) {
-			// Here, we should check 'type' to see if we shall pass parts of it in registers.
-			// It seems the algorithm works roughly as follows (from the offical documentation
-			// and examining the output of GCC from Experiments/call64.cpp):
-			// - If the struct is larger than 2 64-bit words, pass it on the stack.
-			// - If the struct does not fit entirely into registers, pass it on the stack.
-			// - Examine each 64-bit word of the struct:
-			//   - if the word contains only floating point numbers, pass them into a real register.
-			//   - otherwise, pass the word in an integer register (eg. int + float).
+			// Here, we need to check the type to see if we shall pass parts of it in registers.
+			// The rules are roughly:
+			// - If the struct is larger than 2 words, pass it on the stack.
+			// - If the parameter uses 2 registers: "pad" to the next even register.
+			// - If registers are full, pass it on the stack.
+			// - If all members are floats: pass in fp register. Otherwise, int register.
+
+			// TODO: In some cases, we need to replace the parameter with a pointer to the
+			// stack-allocated copy. It is currently not entirely clear *when* to do this.
 
 			Nat size = type->size().size64();
-			if (size > 2*8) {
+			if (size > 16) {
 				// Too large: pass on the stack!
 				stack->push(id);
 				return;
 			}
 
-			primitive::Kind first = paramKind(type->v, 0, 8);
-			primitive::Kind second = paramKind(type->v, 8, 16);
+			// Check which registers to use.
+			GcArray<Param> *regType = uniformFp(type) ? real : integer;
 
-			Nat firstSize = min(size, Nat(8));
-			Nat secondSize = (size > 8) ? (size - 8) : 0;
+			// Two registers?
+			if (size > 8) {
+				// Round up to the next even register.
+				regType->filled = min(roundUp(regType->filled, size_t(2)), regType->count);
 
-			size_t iCount = integer->filled;
-			size_t rCount = real->filled;
-
-			if (tryAdd(first, Param(id, firstSize, 0)) &&
-				tryAdd(second, Param(id, secondSize, 8))) {
-				// It worked!
+				// Check if enough space.
+				if (regType->filled + 2 <= regType->count) {
+					regType->v[regType->filled++] = Param(id, 8, 0, false);
+					regType->v[regType->filled++] = Param(id, 8, 8, false);
+					return;
+				}
 			} else {
-				// Not enough room. Roll back and pass on the stack instead.
-				integer->filled = iCount;
-				clear(integer);
-				real->filled = rCount;
-				clear(real);
-
-				stack->push(id);
-			}
-		}
-
-		bool Params::tryAdd(primitive::Kind kind, Param p) {
-			GcArray<Param> *use = null;
-			switch (kind) {
-			case primitive::none:
-				return true;
-			case primitive::pointer:
-			case primitive::integer:
-				use = integer;
-				break;
-			case primitive::real:
-				use = real;
-				break;
+				if (regType->filled + 1 <= regType->count) {
+					regType->v[regType->filled++] = Param(id, size, 0, false);
+					return;
+				}
 			}
 
-			if (use->filled < use->count) {
-				use->v[use->filled++] = p;
-				return true;
-			}
-
-			return false;
+			// Fallback: Push it on the stack.
+			stack->push(id);
 		}
 
 		static void put(StrBuf *to, GcArray<Param> *p, const wchar **names) {
@@ -220,9 +232,6 @@ namespace code {
 
 		void Params::toS(StrBuf *to) const {
 			*to << S("Parameters:");
-			const wchar *i[] = { S("RDI"), S("RSI"), S("RDX"), S("RCX"), S("R8"), S("R9") };
-			const wchar *e[] = { S("XMM0"), S("XMM1"), S("XMM2"), S("XMM3"), S("XMM4"), S("XMM5"), S("XMM6"), S("XMM7") };
-
 			for (Nat i = 0; i < integer->filled; i++)
 				*to << S("\nx") << i << S(":") << integer->v[i];
 			for (Nat i = 0; i < real->filled; i++)
@@ -250,13 +259,13 @@ namespace code {
 		}
 
 		Reg Params::registerSrc(Nat n) const {
-			if (n < 8)
+			if (n < integer->count)
 				return ptrr(n);
 			else
-				return dr(n);
+				return dr(n - integer->count);
 		}
 
-		Params *params(Array<TypeDesc *> *types) {
+		Params *layoutParams(Array<TypeDesc *> *types) {
 			Params *p = new (types) Params();
 			for (Nat i = 0; i < types->count(); i++)
 				p->add(i, types->at(i));
@@ -269,8 +278,7 @@ namespace code {
 		 */
 
 		Result::Result(TypeDesc *result) {
-			part1 = primitive::none;
-			part2 = primitive::none;
+			regType = primitive::none;
 			memory = false;
 
 			if (PrimitiveDesc *p = as<PrimitiveDesc>(result)) {
@@ -282,21 +290,22 @@ namespace code {
 			} else {
 				assert(false, L"Unknown type description found.");
 			}
-
-			if (part1 == primitive::pointer)
-				part1 = primitive::integer;
-			if (part2 == primitive::pointer)
-				part2 = primitive::integer;
 		}
 
 		void Result::toS(StrBuf *to) const {
-			*to << primitive::name(part1) << S(":") << primitive::name(part2);
+			if (memory) {
+				*to << S("(memory)");
+			} else if (regType == primitive::none) {
+				*to << S("(none)");
+			} else {
+				*to << primitive::name(regType);
+			}
 		}
 
 		void Result::add(PrimitiveDesc *desc) {
-			// Just add the primitive to the relevant register.
-			// We do not support >64 bit numbers, so this is fine!
-			part1 = desc->v.kind();
+			regType = desc->v.kind();
+			if (regType == primitive::pointer)
+				regType = primitive::integer;
 		}
 
 		void Result::add(ComplexDesc *desc) {
@@ -306,14 +315,16 @@ namespace code {
 
 		void Result::add(SimpleDesc *desc) {
 			// The logic here is very similar to 'Params::addDesc'.
-			if (desc->size().size64() > 2*8) {
+			if (desc->size().size64() > 16) {
 				// Too large. Pass it on the stack!
 				memory = true;
 				return;
 			}
 
-			part1 = paramKind(desc->v, 0, 8);
-			part2 = paramKind(desc->v, 8, 16);
+			if (uniformFp(desc))
+				regType = primitive::real;
+			else
+				regType = primitive::integer;
 		}
 
 		Result *result(TypeDesc *result) {

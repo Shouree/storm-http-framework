@@ -21,9 +21,19 @@ namespace code {
 		 *   If this is done, the register number is rounded up to the next even number.
 		 * - Note: Arguments copied to the stack will have to be aligned to 8 bytes, even
 		 *   if their natural alignment is smaller.
-		 * - Floating-point values are passed in fp registers. According to the descripton
-		 *   of the ABI, it is unclear what happens to composite values that have both int-
-		 *   and float values inside of them. Likely they are passed in integer registers.
+		 * - Floating-point values are passed in fp registers. If int- and float parameters
+		 *   overlap, they are passed in int registers. This is also true when a struct
+		 *   contains two different words, and they could be passed in different types
+		 *   of registers.
+		 *
+		 * In summary, some important differences from the X86-64 calling convention are:
+		 * - Each parameter gets allocated to *one* set of registers. It is never split between
+		 *   integer registers and fp registers.
+		 * - Return values are handled as "regular" parameters.
+		 * - No special cases with regards to the "this" parameter.
+		 * - Register numbers are "aligned" when large structs are passed.
+		 * - FP registers are *only* used for uniform float parameters. I.e., not if a struct
+		 *   contains e.g. 2 floats and 1 double.
 		 */
 
 		/**
@@ -35,23 +45,26 @@ namespace code {
 			// Create empty parameter.
 			STORM_CTOR Param();
 			STORM_CTOR Param(Nat id, Primitive p);
-			STORM_CTOR Param(Nat id, Nat size, Nat offset);
+			STORM_CTOR Param(Nat id, Nat size, Nat offset, Bool stack);
 
 			// Reset.
 			void clear();
 
 			// Set to values.
-			void set(Nat id, Nat size, Nat offset);
+			void set(Nat id, Nat size, Nat offset, Bool stack);
 
 			// Get the different fields stored in here:
 			inline Nat size() const {
 				return data & 0xF;
 			}
+			inline Bool stack() const {
+				return (data & 0x10) != 0;
+			}
 			inline Nat id() const {
-				return (data & 0xFF0) >> 4;
+				return (data >> 5) & 0xFF;
 			}
 			inline Nat offset() const {
-				return (data & 0xFFFFF000) >> 12;
+				return data >> 13;
 			}
 
 			// Compare for equality.
@@ -68,8 +81,9 @@ namespace code {
 		private:
 			// Stored as follows:
 			// Bits 0-3: Size of the register (in bytes).
-			// Bits 4-11: Parameter number. 0xFF = unused.
-			// Bits 12-31: Offset into parameter (in bytes).
+			// Bit  4: Pointer to stack parameter?
+			// Bits 5-12: Parameter number. 0xFF = unused.
+			// Bits 13-31: Offset into parameter (in bytes).
 			Nat data;
 		};
 
@@ -139,14 +153,11 @@ namespace code {
 			void addDesc(Nat id, SimpleDesc *type);
 
 			// Try to add a parameter to 'to', otherwise add it to the stack.
-			void tryAdd(GcArray<Param> *to, Param p);
-
-			// Try to add a parameter to a register described by 'kind'. Otherwise, do nothing.
-			bool tryAdd(primitive::Kind kind, Param p);
+			void addParam(GcArray<Param> *to, Param p);
 		};
 
 		// Create a 'params' object from a list of TypeDesc objects.
-		Params *STORM_FN params(Array<TypeDesc *> *types);
+		Params *STORM_FN layoutParams(Array<TypeDesc *> *types);
 
 
 		/**
@@ -162,9 +173,8 @@ namespace code {
 			// Create.
 			STORM_CTOR Result(TypeDesc *type);
 
-			// We're using a maximum of 2 registers. Reg1 is always at offset 0 and reg2 at offset 8.
-			primitive::PrimitiveKind part1;
-			primitive::PrimitiveKind part2;
+			// What types of registers to use for the result. They are always of the same type on Arm64.
+			primitive::PrimitiveKind regType;
 
 			// Return in memory?
 			Bool memory;

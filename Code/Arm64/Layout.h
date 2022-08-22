@@ -4,6 +4,7 @@
 #include "../Reg.h"
 #include "../Instr.h"
 #include "Core/Array.h"
+#include "Params.h"
 
 namespace code {
 	class Binary;
@@ -36,11 +37,14 @@ namespace code {
 
 			// Variable layout.
 			Array<Offset> *layout;
+
+			// Parameters.
+			Params *params;
 		};
 
 		// Compute the layout of variables, given a listing, parameters and the number of registers
 		// that need to be spilled into memory in the function prolog and epilog.
-		Array<Offset> *STORM_FN layout(Listing *l, /* Params *params, */ Nat spilled);
+		Array<Offset> *STORM_FN layout(Listing *l, Params *params, Nat spilled);
 
 	}
 }

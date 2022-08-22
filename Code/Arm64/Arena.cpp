@@ -7,6 +7,7 @@
 #include "Code/Output.h"
 #include "RemoveInvalid.h"
 #include "Layout.h"
+#include "Params.h"
 
 namespace code {
 	namespace arm64 {
@@ -54,40 +55,51 @@ namespace code {
 		Listing *Arena::redirect(Bool member, TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand param) {
 			Listing *l = new (this) Listing(this);
 
-			// // Generate a layout of all parameters so we can properly restore them later.
-			// Params *layout = layoutParams(result, params);
+			// Generate a layout of all parameters so we can properly restore them later.
+			Params *layout = layoutParams(params);
+			Result *res = code::arm64::result(result);
 
-			// // Note: We want to use the 'prolog' and 'epilog' functionality so that exceptions from
-			// // 'fn' are able to propagate through this stub properly.
-			// *l << prolog();
+			// Note: We want to use the 'prolog' and 'epilog' functionality so that exceptions from
+			// 'fn' are able to propagate through this stub properly.
+			*l << prolog();
 
-			// // Store the registers used for parameters inside variables on the stack.
-			// Array<Var> *vars = new (this) Array<Var>(layout->registerCount(), Var());
-			// for (Nat i = 0; i < layout->registerCount(); i++) {
-			// 	if (layout->registerAt(i) != Param()) {
-			// 		Var &v = vars->at(i);
-			// 		v = l->createVar(l->root(), Size::sLong);
-			// 		*l << mov(v, asSize(layout->registerSrc(i), Size::sLong));
-			// 	}
-			// }
+			// Store the registers used for parameters inside variables on the stack.
+			Array<Var> *vars = new (this) Array<Var>(layout->registerCount(), Var());
+			for (Nat i = 0; i < layout->registerCount(); i++) {
+				if (layout->registerAt(i) != Param()) {
+					Var &v = vars->at(i);
+					v = l->createVar(l->root(), Size::sLong);
+					*l << mov(v, asSize(layout->registerSrc(i), Size::sLong));
+				}
+			}
 
-			// // Call 'fn' to obtain the actual function to call.
-			// if (!param.empty())
-			// 	*l << fnParam(ptrDesc(engine()), param);
-			// *l << fnCall(fn, member, ptrDesc(engine()), ptrA);
+			// If result is in memory, we need to save/restore x8 as well!
+			Var resVar;
+			if (res->memory) {
+				resVar = l->createVar(l->root(), Size::sPtr);
+				*l << mov(resVar, ptrr(8));
+			}
 
-			// // Restore the registers.
-			// for (Nat i = 0; i < layout->registerCount(); i++) {
-			// 	Var v = vars->at(i);
-			// 	if (v != Var())
-			// 		*l << mov(asSize(layout->registerSrc(i), Size::sLong), v);
-			// }
+			// Call 'fn' to obtain the actual function to call.
+			if (!param.empty())
+				*l << fnParam(ptrDesc(engine()), param);
+			*l << fnCall(fn, member, ptrDesc(engine()), ptrA);
 
-			// // Note: The epilog will preserve all registers in this case since there are no destructors to call!
-			// *l << epilog();
-			// *l << jmp(ptrA);
+			// Restore the registers.
+			for (Nat i = 0; i < layout->registerCount(); i++) {
+				Var v = vars->at(i);
+				if (v != Var())
+					*l << mov(asSize(layout->registerSrc(i), Size::sLong), v);
+			}
 
-			TODO(L"Implement me!");
+			if (res->memory) {
+				*l << mov(ptrr(8), resVar);
+			}
+
+			// Note: The epilog will preserve all registers in this case since there are no destructors to call!
+			*l << epilog();
+			*l << jmp(ptrA);
+
 			return l;
 		}
 
