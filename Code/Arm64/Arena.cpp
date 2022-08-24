@@ -44,12 +44,8 @@ namespace code {
 		}
 
 		void Arena::removeFnRegs(RegSet *from) const {
-			for (Nat i = 0; i < 18; i++)
-				from->remove(ptrr(i));
-
-			TODO(L"Add fp regs.");
-			// for (Nat i = 0; i < 8; i++)
-			// 	from->remove(qr(i));
+			for (size_t i = 0; i < fnDirtyCount; i++)
+				from->remove(fnDirtyRegs[i]);
 		}
 
 		Listing *Arena::redirect(Bool member, TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand param) {

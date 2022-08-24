@@ -434,7 +434,6 @@ namespace code {
 
 		static Block copyComplex(Listing *dest, RegSet *used, Array<ParamInfo> *params, Block currentBlock) {
 			Block block = dest->createBlock(currentBlock);
-			Array<Var> *copies = new (dest->engine()) Array<Var>(params->count(), Var());
 
 			if (used->has(ptrA)) {
 				Reg r = unusedReg(used);
@@ -453,7 +452,6 @@ namespace code {
 
 				if (ComplexDesc *c = as<ComplexDesc>(param.type)) {
 					Var v = dest->createVar(block, c, freeDef | freeInactive);
-					copies->at(i) = v;
 
 					// Call the copy constructor.
 					*dest << lea(ptrDi, v);

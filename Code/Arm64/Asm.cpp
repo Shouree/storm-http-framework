@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Asm.h"
+#include "../Listing.h"
 
 namespace code {
 	namespace arm64 {
@@ -166,6 +167,50 @@ namespace code {
 			}
 
 			return null;
+		}
+
+		static const Reg dirtyRegs[] = {
+			ptrr(0), ptrr(1), ptrr(2), ptrr(3), ptrr(4), ptrr(5), ptrr(6), ptrr(7), ptrr(8),
+			ptrr(9), ptrr(10), ptrr(11), ptrr(12), ptrr(13), ptrr(14), ptrr(15), ptrr(16), ptrr(17), ptrr(18),
+			dr(0), dr(1), dr(2), dr(3), dr(4), dr(5), dr(6), dr(7),
+		};
+		const Reg *fnDirtyRegs = dirtyRegs;
+		const size_t fnDirtyCount = ARRAY_COUNT(dirtyRegs);
+
+
+		Operand preserveReg(Reg reg, RegSet *used, Listing *dest, Block block) {
+			Reg targetReg = noReg;
+			if (isIntReg(reg)) {
+				for (Nat i = 19; i < 29; i++) {
+					if (used->has(ptrr(i)))
+						continue;
+
+					targetReg = ptrr(i);
+					break;
+				}
+			} else {
+				for (Nat i = 8; i < 16; i++) {
+					if (used->has(dr(i)))
+						continue;
+
+					targetReg = dr(i);
+					break;
+				}
+			}
+
+			used->remove(reg);
+
+			if (targetReg != noReg) {
+				targetReg = asSize(targetReg, size(reg));
+				used->put(targetReg);
+				*dest << mov(targetReg, reg);
+				return targetReg;
+			}
+
+			// Store on the stack.
+			Var to = dest->createVar(block, size(reg));
+			*dest << mov(to, reg);
+			return to;
 		}
 
 	}

@@ -22,6 +22,9 @@ namespace code {
 
 			// Is 'src' a reference to the actual data?
 			Bool ref;
+
+			// Should we pass the address of 'src'? Used internally.
+			Bool lea;
 		};
 
 		/**

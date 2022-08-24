@@ -40,5 +40,14 @@ namespace code {
 		// Register name.
 		const wchar *nameArm64(Reg r);
 
+		// Registers clobbered by function calls.
+		extern const Reg *fnDirtyRegs;
+		extern const size_t fnDirtyCount;
+
+		// Preserve a register by saving it to a register that is safe through function
+		// calls. Returns new location of the operand. It could be in memory.
+		// Note: The RegSet is *updated* to match new register allocation.
+		Operand preserveReg(Reg reg, RegSet *used, Listing *dest, Block block);
+
 	}
 }

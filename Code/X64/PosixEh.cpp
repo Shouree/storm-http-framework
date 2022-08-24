@@ -275,6 +275,8 @@ namespace code {
 			size_t pc = _Unwind_GetIP(context);
 			size_t rbp = _Unwind_GetGR(context, DW_REG_RBP);
 
+			TODO(L"Set stack pointer to what we would expect. Otherwise, the stack pointer might be offset when unwinding function calls with stacked parameters.");
+
 			const FnData *fnData = getData((const void *)fn);
 
 			if (actions & _UA_SEARCH_PHASE) {
