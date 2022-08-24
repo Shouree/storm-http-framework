@@ -152,9 +152,9 @@ namespace code {
 			// The layout we want to produce.
 			Params *layout;
 			// Currently computing an assignment?
-			Array<Bool> *active;
+			Bool active[16];
 			// Finished assigning a register?
-			Array<Bool> *finished;
+			Bool finished[16];
 		};
 
 		static void setRegister(RegEnv &env, Nat i);
@@ -169,11 +169,11 @@ namespace code {
 				const Operand &src = env.src->at(p.id()).src;
 				if (src.hasRegister() && same(src.reg(), reg)) {
 					// We need to set this register now, otherwise it will be destroyed!
-					if (env.active->at(i)) {
+					if (env.active[i]) {
 						// Cycle detected. Push the register we should vacate onto the stack and
 						// keep a note about that for later.
 						*env.dest << push(src);
-						env.active->at(i) = false;
+						env.active[i] = false;
 					} else {
 						setRegister(env, i);
 					}
@@ -247,21 +247,21 @@ namespace code {
 			if (param == Param())
 				return;
 			// Already done?
-			if (env.finished->at(i))
+			if (env.finished[i])
 				return;
 
 			Reg target = env.layout->registerSrc(i);
 			ParamInfo &p = env.src->at(param.id());
 
 			// See if 'target' contains something that is used by other parameters.
-			env.active->at(i) = true;
+			env.active[i] = true;
 			vacateRegister(env, target);
-			if (!env.active->at(i)) {
+			if (!env.active[i]) {
 				// This register is stored on the stack for now. Restore it before we continue!
 				p.src = Operand(asSize(target, p.src.size()));
 				*env.dest << pop(p.src);
 			}
-			env.active->at(i) = false;
+			env.active[i] = false;
 
 			// Set the register.
 			if (p.ref == p.lea)
@@ -272,7 +272,7 @@ namespace code {
 				setRegisterLea(env, target, param, p.src);
 
 			// Note that we're done.
-			env.finished->at(i) = true;
+			env.finished[i] = true;
 		}
 
 		// Set all registers to their proper values for a function call.
@@ -281,8 +281,8 @@ namespace code {
 				dest,
 				src,
 				layout,
-				new (dest) Array<Bool>(layout->registerCount(), false),
-				new (dest) Array<Bool>(layout->registerCount(), false),
+				{ false },
+				{ false },
 			};
 
 			for (Nat i = 0; i < layout->registerCount(); i++) {
