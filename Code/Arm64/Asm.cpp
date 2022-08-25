@@ -213,5 +213,49 @@ namespace code {
 			return to;
 		}
 
+		// Get a pointer-sized offset into whatever "operand" represents.
+		Operand opPtrOffset(Operand op, Nat offset) {
+			switch (op.type()) {
+			case opRelative:
+				return ptrRel(op.reg(), op.offset() + Offset(offset));
+			case opVariable:
+				return ptrRel(op.var(), op.offset() + Offset(offset));
+			default:
+				assert(false, L"Unsupported operand passed to 'opPtrOffset'!");
+			}
+		}
+
+		void inlineMemcpy(Listing *dest, Operand to, Operand from, Reg tmpA, Reg tmpB) {
+			Nat size = from.size().size64();
+			if (size <= 8) {
+				*dest << mov(asSize(tmpA, from.size()), from);
+				*dest << mov(to, asSize(tmpA, from.size()));
+				return;
+			}
+
+			// Make them pointer-sized.
+			tmpA = asSize(tmpA, Size::sPtr);
+			tmpB = asSize(tmpB, Size::sPtr);
+
+			Nat offset = 0;
+			while (offset + 16 <= size) {
+				// The backend will make this into a double-load.
+				*dest << mov(tmpA, opPtrOffset(from, offset));
+				*dest << mov(tmpB, opPtrOffset(from, offset + 8));
+
+				// The backend will make this into a double-store.
+				*dest << mov(opPtrOffset(to, offset), tmpA);
+				*dest << mov(opPtrOffset(to, offset + 8), tmpB);
+
+				offset += 16;
+			}
+
+			// Copy remaining 8 bytes (up to machine alignment, typically OK).
+			if (offset < size) {
+				*dest << mov(tmpA, opPtrOffset(from, offset));
+				*dest << mov(opPtrOffset(to, offset), tmpA);
+			}
+		}
+
 	}
 }

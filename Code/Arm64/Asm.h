@@ -49,5 +49,13 @@ namespace code {
 		// Note: The RegSet is *updated* to match new register allocation.
 		Operand preserveReg(Reg reg, RegSet *used, Listing *dest, Block block);
 
+		// Perform a memcpy operation of a fixed size. Uses the two specified registers as
+		// temporaries (ARM has load pair and store pair). Copies up to 7 bytes beyond the specified
+		// location (i.e., copies a multiple of 8 bytes).
+		void inlineMemcpy(Listing *dest, Operand to, Operand from, Reg tmpA, Reg tmpB);
+
+		// Get a pointer-sized offset into whatever "operand" represents.
+		Operand opPtrOffset(Operand op, Nat offset);
+
 	}
 }

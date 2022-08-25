@@ -112,22 +112,31 @@ namespace code {
 
 			for (Nat i = 0; i < layout->stackCount(); i++) {
 				ParamInfo &info = params->at(layout->stackAt(i));
-				Size sz = info.src.size();
+				Size sz = info.type->size();
 				if (info.lea == info.ref) {
 					Operand dst = xRel(sz, sp, Offset(offsets->at(i)));
-					if (info.src.type() == OpType::opRegister) {
-						*dest << mov(dst, info.src);
-					} else if (sz.size64() <= 8) {
-						*dest << mov(asSize(reg1, sz), info.src);
-						*dest << mov(dst, asSize(reg1, sz));
+					if (info.src.type() == opRelative || info.src.type() == opVariable) {
+						inlineMemcpy(dest, dst, info.src, reg1, reg2);
 					} else {
-						assert(false, L"Pushing this large operand is not implemented yet!");
+						// We can copy it natively.
+						*dest << mov(dst, info.src);
 					}
 				} else if (info.lea) {
 					*dest << lea(reg1, info.src);
 					*dest << mov(ptrRel(sp, Offset(offsets->at(i))), reg1);
 				} else if (info.ref) {
-					assert(false, L"Not implemented yet!");
+					Reg tmpReg = noReg;
+					if (info.src.type() == opRegister) {
+						tmpReg = info.src.reg();
+					} else {
+						TODO(L"Use a suitable temporary register!");
+						// Note: We can probably use x8 since we set the result later. We should check though.
+						tmpReg = ptrr(8);
+						*dest << mov(tmpReg, info.src);
+					}
+					Operand dst = xRel(sz, sp, Offset(offsets->at(i)));
+					Operand src = xRel(sz, tmpReg, Offset(0));
+					inlineMemcpy(dest, dst, src, reg1, reg2);
 				}
 			}
 		}
@@ -310,13 +319,61 @@ namespace code {
 			// Start copying parameters into registers.
 			setRegisters(dest, params, paramLayout);
 
+			// Set x8 to a pointer to the result if required.
+			if (resultLayout->memory) {
+				if (resultRef) {
+					*dest << mov(ptrr(8), resultPos);
+				} else {
+					*dest << lea(ptrr(8), resultPos);
+				}
+			}
+
 			// Call the function! (We don't need accurate information about registers, so it is OK to pass Size()).
 			*dest << call(toCall, Size());
 
+			// Handle the result if required.
+			if (!resultLayout->memory) {
+				Reg srcReg1 = ptrr(0);
+				Reg srcReg2 = ptrr(0);
+				if (resultLayout->regType == primitive::real) {
+					srcReg1 = dr(0);
+					srcReg2 = dr(0);
+				}
+
+				Operand store = resultPos;
+				if (resultRef) {
+					Reg r = ptrr(2);
+					if (store.type() == opRegister)
+						r = store.reg();
+					store = xRel(resultType->size(), r, Offset());
+				}
+
+				// Is it already in the right location?
+				if (store.type() == opRegister && same(store.reg(), srcReg1)) {
+					// Nothing needs to be done!
+				} else {
+					// We need to copy the result to memory.
+					Nat resultSz = resultType->size().size64();
+					if (resultSz <= 8) {
+						*dest << mov(store, asSize(srcReg1, store.size()));
+					} else {
+						*dest << mov(opPtrOffset(store, 0), srcReg1);
+						*dest << mov(opPtrOffset(store, 8), srcReg2);
+					}
+				}
+			}
+
 			// Disable the block if we used it.
 			if (block != Block()) {
-				TODO(L"Preserve the result while running destructors!");
-				*dest << end(block);
+				if (resultPos.type() == opRegister) {
+					// x19 should be free now, it is not exposed outside of the backend.
+					Reg tmp = asSize(ptrr(19), target.size());
+					*dest << mov(tmp, resultPos);
+					*dest << end(block);
+					*dest << mov(resultPos, tmp);
+				} else {
+					*dest << end(block);
+				}
 			}
 		}
 
