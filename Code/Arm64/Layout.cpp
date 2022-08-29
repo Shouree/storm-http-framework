@@ -41,10 +41,71 @@ namespace code {
 
 		Array<Offset> *layout(Listing *src, Params *params, Nat spilled) {
 			Array<Offset> *result = code::layout(src);
+			Array<Var> *paramVars = src->allParams();
 
-			// TODO: Look at parameters and figure out where they are, and how they should be spilled to the stack.
+			// A stack frame on Arm64 is as follows. Offsets are relative sp and x29 (frame
+			// ptr). The prolog will make sure that we can use x29 as the frame pointer in the
+			// generated code. This is important as the function-call code adjusts sp to make room
+			// for parameters, and we still need the ability to access local variables at that
+			// point.
+			//
+			// ...
+			// param1
+			// param0    <- old sp
+			// localN
+			// ...
+			// local0
+			// spilled-paramN
+			// ...
+			// spilled-param0
+			// spilledN
+			// ...
+			// spilled0
+			// old-x30
+			// old-x29   <- sp, x29
 
-			// TODO: Layout data on the stack.
+			// Account for parameters that are in registers and need to be spilled to the stack.
+			// TODO: It would be nice to avoid this, but we need more advanced register allocation
+			// for that to work properly.
+			Nat spilledParams = 0;
+			for (Nat i = 0; i < params->registerCount(); i++)
+				if (params->registerAt(i) != Param())
+					spilledParams++;
+
+			// TODO: We might need to align spilled registers to a 16-byte boundary to make stp and
+			// ldp work properly.
+
+			// Account for the "stack frame" (x30 and x29):
+			spilled += 2;
+
+			// Adjust "result" to account for spilled registers.
+			Nat adjust = (spilled + spilledParams) * 8;
+			for (Nat i = 0; i < result->count(); i++) {
+				result->at(i) += Offset(adjust);
+			}
+
+			// Fill in the parameters that need to be spilled to the stack.
+			Nat spillCount = spilled;
+			for (Nat i = 0; i < params->registerCount(); i++) {
+				Param p = params->registerAt(i);
+				// Some params are "padding".
+				if (p == Param())
+					continue;
+
+				result->at(paramVars->at(p.id()).key()) = Offset(spillCount * 8);
+				spillCount += 1;
+			}
+
+			// Fill in the offset of parameters passed on the stack.
+			for (Nat i = 0; i < params->stackCount(); i++) {
+				Offset off(params->stackOffset(i));
+				off += result->last(); // Increase w. size of entire stack frame.
+				result->at(paramVars->at(params->stackParam(i)).key()) = off;
+			}
+
+			// Finally: ensure that the size of the stack is rounded up to a multiple of 16 bytes.
+			if (result->last().v64() & 0xF)
+				result->last() += Offset::sPtr;
 
 			return result;
 		}
