@@ -84,25 +84,8 @@ namespace code {
 			if (layout->stackCount() == 0)
 				return;
 
-			// Compute stack layout first, since we need to decrease the stack pointer first.
-			Array<Nat> *offsets = new (dest) Array<Nat>(layout->stackCount(), 0);
-			Nat size = 0;
-			for (Nat i = 0; i < layout->stackCount(); i++) {
-				ParamInfo &info = params->at(layout->stackAt(i));
-				Size sz;
-				if (info.lea)
-					sz = Size::sPtr;
-				else
-					sz = info.type->size().aligned();
-
-				size = roundUp(size, sz.align64()); // Align argument properly.
-				offsets->at(i) = size;
-				size += roundUp(sz.size64(), Nat(8)); // Minimum alignment is 8.
-			}
-
-			// Stack needs to be 16-byte aligned.
-			size = roundUp(size, Nat(16));
-			*dest << sub(ptrStack, natConst(size));
+			// Reserve space on the stack first.
+			*dest << sub(ptrStack, natConst(layout->stackTotalSize()));
 
 			// Now we can copy parameters! We need to be careful to not emit memory-memory moves, as
 			// we are called inside "RemoveInvalid".
@@ -111,10 +94,10 @@ namespace code {
 			Reg reg2 = ptrr(17);
 
 			for (Nat i = 0; i < layout->stackCount(); i++) {
-				ParamInfo &info = params->at(layout->stackAt(i));
+				ParamInfo &info = params->at(layout->stackParam(i));
 				Size sz = info.type->size();
 				if (info.lea == info.ref) {
-					Operand dst = xRel(sz, sp, Offset(offsets->at(i)));
+					Operand dst = xRel(sz, sp, Offset(layout->stackOffset(i)));
 					if (info.src.type() == opRelative || info.src.type() == opVariable) {
 						inlineMemcpy(dest, dst, info.src, reg1, reg2);
 					} else {
@@ -123,7 +106,7 @@ namespace code {
 					}
 				} else if (info.lea) {
 					*dest << lea(reg1, info.src);
-					*dest << mov(ptrRel(sp, Offset(offsets->at(i))), reg1);
+					*dest << mov(ptrRel(sp, Offset(layout->stackOffset(i))), reg1);
 				} else if (info.ref) {
 					Reg tmpReg = noReg;
 					if (info.src.type() == opRegister) {
@@ -134,7 +117,7 @@ namespace code {
 						tmpReg = ptrr(8);
 						*dest << mov(tmpReg, info.src);
 					}
-					Operand dst = xRel(sz, sp, Offset(offsets->at(i)));
+					Operand dst = xRel(sz, sp, Offset(layout->stackOffset(i)));
 					Operand src = xRel(sz, tmpReg, Offset(0));
 					inlineMemcpy(dest, dst, src, reg1, reg2);
 				}

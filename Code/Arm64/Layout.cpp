@@ -42,7 +42,9 @@ namespace code {
 		Array<Offset> *layout(Listing *src, Params *params, Nat spilled) {
 			Array<Offset> *result = code::layout(src);
 
-			// TODO!
+			// TODO: Look at parameters and figure out where they are, and how they should be spilled to the stack.
+
+			// TODO: Layout data on the stack.
 
 			return result;
 		}

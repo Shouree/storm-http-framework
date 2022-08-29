@@ -3,6 +3,7 @@
 #include "../Reg.h"
 #include "Core/Object.h"
 #include "Core/Array.h"
+#include "Utils/Bitwise.h"
 
 namespace code {
 	namespace arm64 {
@@ -117,12 +118,23 @@ namespace code {
 
 			// Get the total number of elements on the stack.
 			Nat STORM_FN stackCount() const {
-				return stack->count();
+				return stackPar->count();
 			}
 
 			// Get stack element number 'n'.
-			Nat STORM_FN stackAt(Nat n) const {
-				return stack->at(n);
+			Nat STORM_FN stackParam(Nat n) const {
+				return stackPar->at(n);
+			}
+
+			// Get stack element's offset relative to SP.
+			Nat STORM_FN stackOffset(Nat n) const {
+				return stackOff->at(n);
+			}
+
+			// Get total size of stack.
+			Nat STORM_FN stackTotalSize() const {
+				// Must be 16-byte aligned.
+				return roundUp(stackSize, Nat(16));
 			}
 
 			/**
@@ -146,7 +158,11 @@ namespace code {
 			// Real registers, for floating point parameters.
 			GcArray<Param> *real;
 			// Stores all parameters that are to be passed on the stack.
-			Array<Nat> *stack;
+			Array<Nat> *stackPar;
+			// Stores offsets of all stack parameters, relative to SP on function call entry.
+			Array<Nat> *stackOff;
+			// Total stack size.
+			Nat stackSize;
 
 			// Add complex and simple structs.
 			void addDesc(Nat id, ComplexDesc *type);
@@ -154,6 +170,10 @@ namespace code {
 
 			// Try to add a parameter to 'to', otherwise add it to the stack.
 			void addParam(GcArray<Param> *to, Param p);
+
+			// Push parameter onto stack. Assumes "desc" will be copied onto the stack.
+			void addStack(Nat id, TypeDesc *desc);
+			void addStack(Nat id, Size size);
 		};
 
 		// Create a 'params' object from a list of TypeDesc objects.

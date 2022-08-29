@@ -64,7 +64,9 @@ namespace code {
 			real->filled = 0;
 			clear(integer);
 			clear(real);
-			stack = new (this) Array<Nat>();
+			stackPar = new (this) Array<Nat>();
+			stackOff = new (this) Array<Nat>();
+			stackSize = 0;
 		}
 
 		void Params::add(Nat id, TypeDesc *type) {
@@ -105,7 +107,7 @@ namespace code {
 			if (to->filled < to->count) {
 				to->v[to->filled++] = p;
 			} else {
-				stack->push(p.id());
+				addStack(p.id(), Size(p.size()));
 			}
 		}
 
@@ -195,7 +197,7 @@ namespace code {
 			Nat size = type->size().size64();
 			if (size > 16) {
 				// Too large: pass on the stack!
-				stack->push(id);
+				addStack(id, type);
 				return;
 			}
 
@@ -221,7 +223,22 @@ namespace code {
 			}
 
 			// Fallback: Push it on the stack.
-			stack->push(id);
+			addStack(id, type);
+		}
+
+		void Params::addStack(Nat id, TypeDesc *desc) {
+			addStack(id, desc->size());
+		}
+
+		void Params::addStack(Nat id, Size size) {
+			// Align argument properly.
+			stackSize = roundUp(stackSize, size.align64());
+
+			stackPar->push(id);
+			stackOff->push(stackSize);
+
+			// Update size. Minimum alignment is 8.
+			stackSize += roundUp(size.aligned().size64(), Nat(8));
 		}
 
 		static void put(StrBuf *to, GcArray<Param> *p, const wchar **names) {
@@ -237,10 +254,10 @@ namespace code {
 			for (Nat i = 0; i < real->filled; i++)
 				*to << S("\nd") << i << S(":") << real->v[i];
 
-			if (stack->count() > 0) {
-				*to << S("\nOn stack: ") << stack->at(0);
-				for (Nat i = 1; i < stack->count(); i++) {
-					*to << S(", ") << stack->at(i);
+			if (stackCount() > 0) {
+				*to << S("\nOn stack:");
+				for (Nat i = 0; i < stackCount(); i++) {
+					*to << S(" ") << stackParam(i) << S("@") << stackOffset(i) << S("\n");
 				}
 			}
 		}
