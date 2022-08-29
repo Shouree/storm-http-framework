@@ -367,7 +367,7 @@ namespace code {
 			if (block != Block()) {
 				if (resultPos.type() == opRegister) {
 					// x19 should be free now, it is not exposed outside of the backend.
-					Reg tmp = asSize(ptrr(19), target.size());
+					Reg tmp = asSize(ptrr(19), resultPos.size());
 					*dest << mov(tmp, resultPos);
 					*dest << end(block);
 					*dest << mov(resultPos, tmp);
