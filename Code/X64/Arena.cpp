@@ -153,6 +153,9 @@ namespace code {
 			}
 		}
 
+		Reg Arena::functionDispatchReg() {
+			return ptrA;
+		}
 
 	}
 }

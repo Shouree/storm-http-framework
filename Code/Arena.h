@@ -94,6 +94,9 @@ namespace code {
 		// Access the location of the first parameter in a function size. The returned Operand is
 		// always pointer-sized.
 		virtual Operand STORM_FN firstParamLoc(Nat id);
+
+		// Get a parameter that can safely be used to implement function dispatches.
+		virtual Reg STORM_FN functionDispatchReg();
 	};
 
 	// Create an arena for this platform.

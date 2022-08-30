@@ -72,6 +72,11 @@ namespace code {
 		return Operand();
 	}
 
+	Reg Arena::functionDispatchReg() {
+		assert(false);
+		return noReg;
+	}
+
 
 #if defined(X86) && defined(WINDOWS)
 	Arena *arena(EnginePtr e) {

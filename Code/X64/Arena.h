@@ -42,6 +42,7 @@ namespace code {
 			virtual Listing *STORM_FN engineRedirect(TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand engine);
 			virtual Nat STORM_FN firstParamId(MAYBE(TypeDesc *) desc);
 			virtual Operand STORM_FN firstParamLoc(Nat id);
+			virtual Reg STORM_FN functionDispatchReg();
 		};
 
 	}

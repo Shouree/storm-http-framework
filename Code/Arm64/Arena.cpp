@@ -174,5 +174,9 @@ namespace code {
 			return ptrr(0); // I think this is fine?
 		}
 
+		Reg Arena::functionDispatchReg() {
+			return ptrr(16); // We can also use x17 if needed.
+		}
+
 	}
 }

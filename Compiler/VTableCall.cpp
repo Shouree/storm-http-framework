@@ -43,11 +43,12 @@ namespace storm {
 			return entry;
 
 		using namespace code;
-		TODO(L"We need to use a different temporary register on ARM.");
+		Reg tmpReg = engine().arena()->functionDispatchReg();
+
 		Listing *l = new (this) Listing();
-		*l << mov(ptrA, engine().arena()->firstParamLoc(id));
-		*l << mov(ptrA, ptrRel(ptrA, Offset()));
-		*l << jmp(ptrRel(ptrA, Offset::sPtr * offset));
+		*l << mov(tmpReg, engine().arena()->firstParamLoc(id));
+		*l << mov(tmpReg, ptrRel(tmpReg, Offset()));
+		*l << jmp(ptrRel(tmpReg, Offset::sPtr * offset));
 
 		Binary *b = new (this) Binary(engine().arena(), l);
 		entry = new (this) VTableSource(cppSlot(offset), id, b);
@@ -60,12 +61,13 @@ namespace storm {
 			return entry;
 
 		using namespace code;
-		TODO(L"We need to use a different temporary register on ARM.");
+		Reg tmpReg = engine().arena()->functionDispatchReg();
+
 		Listing *l = new (this) Listing();
-		*l << mov(ptrA, engine().arena()->firstParamLoc(id));
-		*l << mov(ptrA, ptrRel(ptrA, Offset()));
-		*l << mov(ptrA, ptrRel(ptrA, -Offset::sPtr * vtable::extraOffset));
-		*l << jmp(ptrRel(ptrA, Offset::sPtr * (offset + 2))); // 2 for the 2 size_t members in arrays.
+		*l << mov(tmpReg, engine().arena()->firstParamLoc(id));
+		*l << mov(tmpReg, ptrRel(tmpReg, Offset()));
+		*l << mov(tmpReg, ptrRel(tmpReg, -Offset::sPtr * vtable::extraOffset));
+		*l << jmp(ptrRel(tmpReg, Offset::sPtr * (offset + 2))); // 2 for the 2 size_t members in arrays.
 
 		Binary *b = new (this) Binary(engine().arena(), l);
 		entry = new (this) VTableSource(stormSlot(offset), id, b);

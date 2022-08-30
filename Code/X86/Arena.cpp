@@ -121,5 +121,10 @@ namespace code {
 
 			return ptrRel(ptrStack, Offset::sPtr);
 		}
+
+		Reg Arena::functionDispatchReg() {
+			return ptrA;
+		}
+
 	}
 }
