@@ -40,6 +40,38 @@ namespace code {
 
 			// Parameters.
 			Params *params;
+
+			// Result.
+			Result *result;
+
+			// Current block.
+			Block currentBlock;
+
+			// Registers that need to be preserved.
+			RegSet *preserved;
+
+			// Offset where "pointer to result" is stored, if we need it.
+			Operand resultLocation() {
+				return ptrRel(ptrFrame, Offset(16));
+			}
+
+			// Resolve local variables.
+			Operand resolve(Listing *src, const Operand &op);
+			Operand resolve(Listing *src, const Operand &op, const Size &size);
+
+			// Transform table.
+			typedef void (Layout::*TransformFn)(Listing *dest, Instr *src);
+			static const OpEntry<TransformFn> transformMap[];
+
+			// Transform of specific instructions.
+			void prologTfm(Listing *dest, Instr *src);
+			void epilogTfm(Listing *dest, Instr *src);
+			void beginBlockTfm(Listing *dest, Instr *src);
+			void endBlockTfm(Listing *dest, Instr *src);
+			void jmpBlockTfm(Listing *dest, Instr *src);
+			void activateTfm(Listing *dest, Instr *src);
+			void fnRetTfm(Listing *dest, Instr *src);
+			void fnRetRefTfm(Listing *dest, Instr *src);
 		};
 
 		// Compute the layout of variables, given a listing, parameters and the number of registers

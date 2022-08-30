@@ -1,15 +1,43 @@
 #include "stdafx.h"
 #include "Layout.h"
+#include "Asm.h"
 #include "../Listing.h"
 #include "../Binary.h"
 #include "../Layout.h"
+#include "../Exception.h"
+#include "../UsedRegs.h"
 
 namespace code {
 	namespace arm64 {
 
+#define TRANSFORM(x) { op::x, &Layout::x ## Tfm }
+
+		const OpEntry<Layout::TransformFn> Layout::transformMap[] = {
+			TRANSFORM(prolog),
+			TRANSFORM(epilog),
+			TRANSFORM(beginBlock),
+			TRANSFORM(endBlock),
+			TRANSFORM(jmpBlock),
+			TRANSFORM(activate),
+
+			TRANSFORM(fnRet),
+			TRANSFORM(fnRetRef),
+		};
+
 		Layout::Layout(Binary *owner) : owner(owner) {}
 
 		void Layout::before(Listing *dest, Listing *src) {
+			// Initialize state.
+			currentBlock = Block();
+
+			// Find registers that need to be preserved.
+			preserved = allUsedRegs(src);
+			for (Nat i = 0; i < fnDirtyCount; i++)
+				preserved->remove(fnDirtyRegs[i]);
+
+			// Figure out result.
+			result = code::arm64::result(src->result);
+
 			// Find parameters.
 			Array<Var> *p = src->allParams();
 			params = new (this) Params();
@@ -17,16 +45,23 @@ namespace code {
 				params->add(i, src->paramDesc(p->at(i)));
 			}
 
-			PVAR(src);
-			layout = code::arm64::layout(src, params, 0);
-
-			PLN(L"Layout:");
-			for (Nat i = 0; i < layout->count(); i++)
-				PLN(i << L": " << layout->at(i));
+			Nat preserveCount = preserved->count();
+			// If result is passed in memory, we need to spill it to the stack as well. We treat it
+			// as a regular clobbered register.
+			if (result->memory)
+				preserveCount++;
+			layout = code::arm64::layout(src, params, preserveCount);
 		}
 
 		void Layout::during(Listing *dest, Listing *src, Nat id) {
-			*dest << src->at(id);
+			static OpTable<TransformFn> t(transformMap, ARRAY_COUNT(transformMap));
+
+			Instr *i = src->at(id);
+			if (TransformFn f = t[i->op()]) {
+				(this->*f)(dest, i);
+			} else {
+				*dest << i->alter(resolve(src, i->dest()), resolve(src, i->src()));
+			}
 		}
 
 		void Layout::after(Listing *dest, Listing *src) {
@@ -37,6 +72,114 @@ namespace code {
 
 			// Owner.
 			*dest << dat(objPtr(owner));
+
+			PLN(L"Layout:");
+			for (Nat i = 0; i < layout->count(); i++)
+				PLN(i << L": " << layout->at(i));
+			PVAR(dest);
+		}
+
+		Operand Layout::resolve(Listing *src, const Operand &op) {
+			return resolve(src, op, op.size());
+		}
+
+		Operand Layout::resolve(Listing *src, const Operand &op, const Size &size) {
+			if (op.type() != opVariable)
+				return op;
+
+			Var v = op.var();
+			if (!src->accessible(v, currentBlock))
+				throw new (this) VariableUseError(v, currentBlock);
+			return xRel(size, ptrFrame, layout->at(v.key()) + op.offset());
+		}
+
+		void Layout::prologTfm(Listing *dest, Instr *src) {
+			// Emit instruction for updating sp, also preserves sp and fp from old frame, and sets fp to sp.
+			*dest << instrSrc(engine(), op::prolog, ptrConst(layout->last()));
+
+			// Preserve registers.
+			Nat offset = 16; // After sp and fp.
+
+			// Store x8 if we need it.
+			if (result->memory) {
+				*dest << mov(resultLocation(), ptrr(8));
+				offset += 8;
+			}
+
+			// Preserve remaining registers.
+			for (RegSet::Iter begin = preserved->begin(), end = preserved->end(); begin != end; ++begin) {
+				Operand memory = longRel(ptrFrame, Offset(offset));
+				Reg reg = asSize(begin.v(), Size::sLong);
+				*dest << mov(memory, reg);
+				*dest << preserve(memory, reg);
+				offset += 8;
+			}
+
+			// Preserve parameters.
+			Array<Var> *paramVars = dest->allParams();
+			for (Nat i = 0; i < params->registerCount(); i++) {
+				Param p = params->registerAt(i);
+				if (p == Param())
+					continue;
+
+				Offset offset = layout->at(paramVars->at(p.id()).key());
+				*dest << mov(longRel(ptrFrame, offset), asSize(params->registerSrc(i), Size::sLong));
+			}
+
+			// TODO: Initialize the block!
+			currentBlock = dest->root();
+		}
+
+		void Layout::epilogTfm(Listing *dest, Instr *src) {
+			// Destroy blocks. Note: We shall not modify 'currentBlock', nor alter the exception
+			// table as this may be an early return from the function.
+			Block oldBlock = currentBlock;
+			for (Block now = currentBlock; now != Block(); now = dest->parent(now)) {
+				// destroy block
+			}
+			currentBlock = oldBlock;
+
+			// Restore spilled registers.
+			Nat offset = 16;
+			if (result->memory)
+				offset += 8; // Adjust for preserving x8, but we don't need to restore it.
+			for (RegSet::Iter begin = preserved->begin(), end = preserved->end(); begin != end; ++begin) {
+				*dest << mov(asSize(begin.v(), Size::sLong), longRel(ptrFrame, Offset(offset)));
+				offset += 8;
+			}
+
+			// Emit the epilog, and related metadata.
+			*dest << instrSrc(engine(), op::epilog, ptrConst(layout->last()));
+		}
+
+		void Layout::beginBlockTfm(Listing *dest, Instr *src) {
+			currentBlock = src->src().block();
+			// TODO: Initialize the block.
+		}
+
+		void Layout::endBlockTfm(Listing *dest, Instr *src) {
+			currentBlock = dest->parent(src->src().block());
+			// TODO: Destroy the block.
+		}
+
+		void Layout::jmpBlockTfm(Listing *dest, Instr *src) {
+			// TODO: Implement!
+		}
+
+		void Layout::activateTfm(Listing *dest, Instr *src) {
+			// TODO: Implement!
+		}
+
+		void Layout::fnRetTfm(Listing *dest, Instr *src) {
+			// TODO: Finish.
+			epilogTfm(dest, src);
+			*dest << ret(Size()); // We won't do register usage analysis, so this is OK.
+		}
+
+		void Layout::fnRetRefTfm(Listing *dest, Instr *src) {
+			// TODO: Finish.
+			epilogTfm(dest, src);
+			*dest << ret(Size()); // We won't do register usage analysis, so this is OK.
 		}
 
 		Array<Offset> *layout(Listing *src, Params *params, Nat spilled) {

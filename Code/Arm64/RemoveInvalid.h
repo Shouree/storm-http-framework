@@ -33,7 +33,7 @@ namespace code {
 			// Used registers for each line.
 			Array<RegSet *> *used;
 
-			// Current actuve block. Mainly used for introducing blocks inside the 'fnCall' transform.
+			// Current active block. Mainly used for introducing blocks inside the 'fnCall' transform.
 			Block currentBlock;
 
 			// Function parameters.
