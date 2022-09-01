@@ -224,6 +224,7 @@ namespace code {
 				offset -= Offset::sPtr;
 			}
 
+			// TODO: We could emit a "LEAVE" instr instead, that is supposedly faster.
 			*dest << mov(ptrStack, ptrFrame);
 			*dest << pop(ptrFrame);
 
