@@ -10,40 +10,49 @@ namespace code {
 		// Good reference for instruction encoding:
 		// https://developer.arm.com/documentation/ddi0596/2021-12/Index-by-Encoding?lang=en
 
-		// Debug instruction in big endian.
-		void debugInstr(Nat op) {
-			PLN(L"./disas_arm64.sh " << toHex(Byte(op & 0xFF))
-				<< L" " << toHex(Byte((op >> 8) & 0xFF))
-				<< L" " << toHex(Byte((op >> 16) & 0xFF))
-				<< L" " << toHex(Byte((op >> 24) & 0xFF)));
-		}
+		// TODO: Move checking of immediate size to the "putData" functions?
 
 		// Put data instructions. 3 registers, and a 6-bit immediate.
-		void putData(Output *to, Nat op, Nat rDest, Nat ra, Nat rb, Nat imm) {
+		static inline void putData(Output *to, Nat op, Nat rDest, Nat ra, Nat rb, Nat imm) {
 			Nat instr = (op << 21) | rDest | (ra << 16) | (rb << 5) | ((imm & 0x3F) << 10);
-			debugInstr(instr);
 			to->putInt(instr);
 		}
 
 		// Put data instructions. 2 registers, 12-bit immediate.
-		void putData(Output *to, Nat op, nat rDest, Nat rSrc, Nat imm) {
+		static inline void putData(Output *to, Nat op, nat rDest, Nat rSrc, Nat imm) {
 			Nat instr = (op << 22) | rDest | (rSrc << 5) | ((imm & 0xFFF) << 10);
-			debugInstr(instr);
 			to->putInt(instr);
 		}
 
 		// Put instructions for loads and stores: 3 registers and a 7-bit immediate.
-		void putLoadStore(Output *to, Nat op, Nat base, Nat r1, Nat r2, Nat imm) {
+		static inline void putLoadStore(Output *to, Nat op, Nat base, Nat r1, Nat r2, Nat imm) {
 			Nat instr = (op << 22) | r1 | (base << 5) | (r2 << 10) | ((imm & 0x7F) << 15);
-			debugInstr(instr);
 			to->putInt(instr);
 		}
 
 		// Put a "large" load/store (for bytes, mainly): 2 registers and 12-bit immediate.
-		void putLoadStoreLarge(Output *to, Nat op, Nat base, Nat r1, Nat imm) {
+		static inline void putLoadStoreLarge(Output *to, Nat op, Nat base, Nat r1, Nat imm) {
 			Nat instr = (op << 22) | r1 | (base << 5) | ((0xFFF & imm) << 10);
-			debugInstr(instr);
 			to->putInt(instr);
+		}
+
+		// Put a load/store with 19-bit immediate offset from PC.
+		static inline void putLoadStoreImm(Output *to, Nat op, Nat reg, Nat imm) {
+			Nat instr = (op << 24) | reg | ((0x7FFFF & imm) << 5);
+			to->putInt(instr);
+		}
+
+		// Load a "long" constant into a register. Uses the table of references to store the data.
+		static inline void loadLongConst(Output *to, Nat reg, Ref value) {
+			// Emit "ldr" with literal, make the literal refer to location in the table after the code block.
+			putLoadStoreImm(to, 0x58, reg, 0);
+			to->markGc(GcCodeRef::relativeHereImm19, 4, value);
+		}
+		static inline void loadLongConst(Output *to, Nat reg, RootObject *obj) {
+			// Emit "ldr" with literal, make the literal refer to location in the table after the code block.
+			putLoadStoreImm(to, 0x58, reg, 0);
+			to->markGc(GcCodeRef::relativeHereImm19, 4, (Word)obj);
+			PLN(L"Marked GC!");
 		}
 
 		// Check if value fits in 7-bit signed.
@@ -56,9 +65,8 @@ namespace code {
 			return value >= -0x800 && value <= 0x7FF;
 		}
 
-		bool prologOut(Output *to, Instr *instr, Instr *) {
+		void prologOut(Output *to, Instr *instr) {
 			Offset stackSize = instr->src().offset();
-			PVAR(stackSize);
 			Int scaled = stackSize.v64() / 8;
 			if (!isImm7(scaled)) {
 				TODO(L"Make prolog that handles this properly.");
@@ -72,13 +80,12 @@ namespace code {
 			putData(to, 0x244, 29, 31, 0);
 
 			// TODO: Output DWARF metadata as well.
-			return false;
 		}
 
-		bool epilogOut(Output *to, Instr *instr, Instr *) {
+		void epilogOut(Output *to, Instr *instr) {
 			Offset stackSize = instr->src().offset();
 			Int scaled = stackSize.v64() / 8;
-			if (isImm7(scaled)) {
+			if (!isImm7(scaled)) {
 				TODO(L"Make epilog that handles this properly.");
 				throw new (to) InvalidValue(S("Too large stack size for Arm64!"));
 			}
@@ -92,10 +99,9 @@ namespace code {
 			// this is more robust against messing up SP, but uses more instructions, and is likely slower.
 
 			// Note: No DWARF metadata since this could be an early return.
-			return false;
 		}
 
-		bool loadOut(Output *to, Instr *instr, Instr *next) {
+		bool loadOut(Output *to, Instr *instr, MAYBE(Instr *) next) {
 			Reg baseReg = instr->src().reg();
 			Int offset = instr->src().offset().v64();
 			Int opSize = instr->dest().size().size64();
@@ -111,7 +117,7 @@ namespace code {
 			}
 
 			// Look at "next" to see if we can merge it with this instruction.
-			if (next->op() == op::mov && next->dest().type() == opRegister && next->src().type() == opRelative) {
+			if (next && next->dest().type() == opRegister && next->src().type() == opRelative) {
 				if (same(next->src().reg(), baseReg) && Int(next->dest().size().size64()) == opSize) {
 					// Look at the offsets, if they are next to each other, we can merge them.
 					Int off = next->src().offset().v64();
@@ -149,7 +155,7 @@ namespace code {
 			return dest2 != noReg;
 		}
 
-		bool storeOut(Output *to, Instr *instr, Instr *next) {
+		bool storeOut(Output *to, Instr *instr, MAYBE(Instr *) next) {
 			Reg baseReg = instr->dest().reg();
 			Int offset = instr->dest().offset().v64();
 			Int opSize = instr->src().size().size64();
@@ -165,7 +171,7 @@ namespace code {
 			}
 
 			// Look at "next" to see if we can merge it with this instruction.
-			if (next->op() == op::mov && next->src().type() == opRegister && next->dest().type() == opRelative) {
+			if (next && next->src().type() == opRegister && next->dest().type() == opRelative) {
 				if (same(next->dest().reg(), baseReg) && Int(next->src().size().size64()) == opSize) {
 					// Look at the offsets, if they are next to each other, we can merge them.
 					Int off = next->dest().offset().v64();
@@ -208,27 +214,37 @@ namespace code {
 			Bool intDst = isIntReg(dest);
 			if (intSrc && intDst) {
 				if (size(src).size64() > 4)
-					putData(to, 0x560, intRegNumber(dest), intRegNumber(src), 31);
+					putData(to, 0x550, intRegNumber(dest), intRegNumber(src), 31, 0);
 				else
-					putData(to, 0x160, intRegNumber(dest), intRegNumber(src), 31);
+					putData(to, 0x150, intRegNumber(dest), intRegNumber(src), 31, 0);
 			} else {
 				assert(false, L"Mov to/from fp registers is not yet implemented!");
 			}
 		}
 
-		bool movOut(Output *to, Instr *instr, Instr *next) {
-			PVAR(instr); PVAR(next);
+		// Special version called directly when more than one mov was found. Returns "true" if we
+		// could merge the two passed to us. We know that "next" is a mov op if it is non-null.
+		bool movOut(Output *to, Instr *instr, MAYBE(Instr *) next) {
 			switch (instr->src().type()) {
 			case opRegister:
-				// Fall thru to below.
+				// Fall thru to next switch statement.
 				break;
 			case opRelative:
 				return loadOut(to, instr, next);
+			case opReference:
+				// Must be a pointer: Also, dest must be register.
+				loadLongConst(to, intRegNumber(instr->dest().reg()), instr->src().ref());
+				return false;
+			case opObjReference:
+				// Must be a pointer, and dest must be a register.
+				loadLongConst(to, intRegNumber(instr->dest().reg()), instr->src().object());
+				return false;
 
 				// TODO: More, for example:
 				// case opConstant:
 			default:
-				assert(false, L"Unsupported mov src operand.");
+				PVAR(instr); PVAR(instr->src().type());
+				assert(false, L"Unsupported mov source operand.");
 				return false;
 			}
 
@@ -241,12 +257,107 @@ namespace code {
 			case opRelative:
 				return storeOut(to, instr, next);
 			default:
-				assert(false, L"Unsupported mov destination.");
+				assert(false, L"Unsupported mov destination operand.");
 				return false;
 			}
 		}
 
-		bool datOut(Output *to, Instr *instr, Instr *) {
+		void movOut(Output *to, Instr *instr) {
+			movOut(to, instr, null);
+		}
+
+		void callOut(Output *to, Instr *instr) {
+			// Note: We need to use x17 for temporary values. This is assumed by the code in Gc/CodeArm64.cpp.
+
+			Nat offset;
+			Operand target = instr->src();
+			switch (target.type()) {
+			case opReference:
+				// Load addr. into x17.
+				putLoadStoreImm(to, 0x58, 17, 0);
+				// blr x17
+				to->putInt(0xD63F0220);
+				// Mark it accordingly.
+				to->markGc(GcCodeRef::jump, 8, target.ref());
+				break;
+			case opRegister:
+				to->putInt(0xD63F0000 | (intRegNumber(target.reg()) << 5));
+				break;
+				// Split into two op-codes: a load and a register call.
+				offset = target.offset().v64() / 8;
+				if (!isImm12(offset))
+					throw new (to) InvalidValue(S("Too large offset!"));
+
+				putLoadStoreLarge(to, 0x3E5, intRegNumber(target.reg()), 17, offset);
+				// blr x17
+				to->putInt(0xD63F0220);
+				break;
+			default:
+				assert(false, L"Unsupported call target!");
+				break;
+			}
+		}
+
+		void retOut(Output *to, Instr *) {
+			to->putInt(0xD65F03C0);
+		}
+
+		void jmpCondOut(Output *to, CondFlag cond, const Operand &target) {
+			// Note: Conditional jumps are limited on Arm to only use imm19.
+			assert(false, L"Implement me!");
+		}
+
+		void jmpOut(Output *to, Instr *instr) {
+			CondFlag cond = instr->src().condFlag();
+			Operand target = instr->dest();
+			Nat offset;
+
+			if (cond == ifNever)
+				return;
+
+			if (cond != ifAlways) {
+				// Conditional jumps are special, handle them separately.
+				jmpCondOut(to, cond, target);
+				return;
+			}
+
+			// Note: We need to use x17 for temporary values for long jumps. This is assumed by the
+			// code in Gc/CodeArm64.cpp.
+
+			switch (target.type()) {
+			case opReference:
+				// Load addr. into x17.
+				putLoadStoreImm(to, 0x58, 17, 0);
+				// br x17
+				to->putInt(0xD61F0220);
+				// Mark it accordingly.
+				to->markGc(GcCodeRef::jump, 8, target.ref());
+				break;
+			case opRegister:
+				to->putInt(0xD61F0000 | (intRegNumber(target.reg()) << 5));
+				break;
+			case opRelative:
+				// Split into two op-codes: a load and a register jump.
+				offset = target.offset().v64() / 8;
+				if (!isImm12(offset))
+					throw new (to) InvalidValue(S("Too large offset!"));
+
+				putLoadStoreLarge(to, 0x3E5, intRegNumber(target.reg()), 17, offset);
+				// br x17
+				to->putInt(0xD61F0220);
+				break;
+			default:
+				PVAR(target);
+				assert(false, L"Unsupported jump target!");
+				break;
+			}
+		}
+
+		void preserveOut(Output *to, Instr *instr) {
+			TODO(L"Implement PRESERVE pseudo-op!");
+		}
+
+		void datOut(Output *to, Instr *instr) {
 			Operand src = instr->src();
 			switch (src.type()) {
 			case opLabel:
@@ -265,28 +376,26 @@ namespace code {
 				assert(false, L"Unsupported type for 'dat'.");
 				break;
 			}
-
-			return false;
 		}
 
-		bool alignOut(Output *to, Instr *instr, Instr *) {
+		void alignOut(Output *to, Instr *instr) {
 			to->align(Nat(instr->src().constant()));
-			return false;
 		}
 
 #define OUTPUT(x) { op::x, &x ## Out }
 
-		// This is a bit special compared to other backends:
-		// To allow minimal peephole optimization when generating code, the next instruction
-		// is provided as well. If "next" is non-null, then there is no label between the
-		// instructions, so we can merge them. If the output chose to merge instructions,
-		// the output function should return "true".
-		typedef bool (*OutputFn)(Output *to, Instr *instr, MAYBE(Instr *) next);
+		typedef void (*OutputFn)(Output *to, Instr *instr);
 
+		// Note: "mov" is special: we try to merge mov operations.
 		const OpEntry<OutputFn> outputMap[] = {
 			OUTPUT(prolog),
 			OUTPUT(epilog),
 			OUTPUT(mov),
+			OUTPUT(call),
+			OUTPUT(ret),
+			OUTPUT(jmp),
+
+			OUTPUT(preserve),
 
 			OUTPUT(dat),
 			OUTPUT(align),
@@ -296,25 +405,64 @@ namespace code {
 			return x == null || x->empty();
 		}
 
+		enum MergeResult {
+			mergeNone,
+			mergeSimple,
+			mergePreserve,
+		};
+
+		MergeResult mergeMov(Listing *src, Output *to, Instr *first, Nat at) {
+			Nat remaining = src->count() - at;
+
+			if (remaining >= 1) {
+				// Immediately followed by a mov?
+				Instr *second = src->at(at + 1);
+				if (second->op() == op::mov) {
+					return movOut(to, first, second) ? mergeSimple : mergeNone;
+				}
+
+				// Maybe a "preserve" is between?
+				if (remaining >= 2 && second->op() == op::preserve) {
+					Instr *third = src->at(at + 2);
+					if (third->op() == op::mov) {
+						return movOut(to, first, third) ? mergePreserve : mergeNone;
+					}
+				}
+			}
+
+			// If nothing else, just emit a regular mov.
+			movOut(to, first);
+			return mergeNone;
+		}
+
 		void output(Listing *src, Output *to) {
 			static OpTable<OutputFn> t(outputMap, ARRAY_COUNT(outputMap));
-
-			// TODO: Handle cases where we have "store" ops between stores. Strip them out when passing to ops.
 
 			for (Nat i = 0; i < src->count(); i++) {
 				to->mark(src->labels(i));
 
 				Instr *instr = src->at(i);
-				OutputFn fn = t[instr->op()];
-				if (fn) {
-					Instr *next = null;
-					if (i + 1 < src->count() && empty(src->labels(i + 1)))
-						next = src->at(i + 1);
-
-					if ((*fn)(to, instr, next))
+				op::OpCode opCode = instr->op();
+				if (opCode == op::mov) {
+					// We can merge "mov" ops into ldp and stp sometimes. If we find mov ops
+					// (possibly separated by "preserve" pseudo-ops), we can try to merge them.
+					MergeResult r = mergeMov(src, to, instr, i);
+					if (r == mergeSimple) {
+						// Consumed 2 ops.
 						i++;
+					} else if (r == mergePreserve) {
+						// Consumed 3 ops, but we need to handle the "preserve" now (out of order).
+						preserveOut(to, src->at(i + 2));
+						i += 2;
+					}
 				} else {
-					assert(false, L"Unsupported op-code: " + String(name(instr->op())));
+					// Regular path.
+					OutputFn fn = t[instr->op()];
+					if (fn) {
+						(*fn)(to, instr);
+					} else {
+						assert(false, L"Unsupported op-code: " + String(name(instr->op())));
+					}
 				}
 			}
 

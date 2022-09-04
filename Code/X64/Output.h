@@ -19,6 +19,7 @@ namespace code {
 			virtual void STORM_FN putPtr(Word w);
 			virtual void STORM_FN align(Nat to);
 			virtual void putGc(GcCodeRef::Kind kind, Nat size, Word w);
+			virtual void markGc(GcCodeRef::Kind kind, Nat size, Word w);
 			virtual void STORM_FN putGcPtr(Word w);
 			virtual void STORM_FN putGcRelative(Word w);
 			virtual void STORM_FN putRelativeStatic(Word w);

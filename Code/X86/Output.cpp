@@ -78,6 +78,16 @@ namespace code {
 			pos += size;
 		}
 
+		void CodeOut::markGc(GcCodeRef::Kind kind, Nat size, Word w) {
+			GcCode *refs = runtime::codeRefs(code);
+			assert(ref < refs->refCount);
+			assert(pos >= size);
+			refs->refs[ref].offset = pos - size;
+			refs->refs[ref].kind = kind;
+			refs->refs[ref].pointer = (void *)w;
+			ref++;
+		}
+
 		void CodeOut::putGcPtr(Word w) {
 			GcCode *refs = runtime::codeRefs(code);
 			assert(ref < refs->refCount);

@@ -36,6 +36,15 @@ namespace code {
 		markGcRef(ref);
 	}
 
+	void Output::markGc(GcCodeRef::Kind kind, Nat size, Word w) {
+		assert(false);
+	}
+
+	void Output::markGc(GcCodeRef::Kind kind, Nat size, Ref ref) {
+		markGc(kind, size, Word(ref.address()));
+		markGcRef(ref);
+	}
+
 	void Output::putGcPtr(Word w) {
 		assert(false);
 	}
@@ -179,6 +188,10 @@ namespace code {
 
 	void LabelOutput::putGc(GcCodeRef::Kind kind, Nat size, Word w) {
 		this->size += size;
+		refs++;
+	}
+
+	void LabelOutput::markGc(GcCodeRef::Kind kind, Nat size, Word w) {
 		refs++;
 	}
 

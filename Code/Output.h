@@ -37,6 +37,10 @@ namespace code {
 		virtual void putGc(GcCodeRef::Kind kind, Nat size, Word w);
 		void putGc(GcCodeRef::Kind kind, Nat size, Ref ref);
 
+		// Update the last written thing with a custom GC pointer.
+		virtual void markGc(GcCodeRef::Kind kind, Nat size, Word w);
+		void markGc(GcCodeRef::Kind kind, Nat size, Ref ref);
+
 		// Put a pointer to a gc:d object. 4 or 8 bytes.
 		virtual void STORM_FN putGcPtr(Word w);
 
@@ -124,6 +128,7 @@ namespace code {
 		virtual void STORM_FN putPtr(Word w);
 		virtual void STORM_FN align(Nat to);
 		virtual void putGc(GcCodeRef::Kind kind, Nat size, Word w);
+		virtual void markGc(GcCodeRef::Kind kind, Nat size, Word w);
 		virtual void STORM_FN putGcPtr(Word w);
 		virtual void STORM_FN putGcRelative(Word w);
 		virtual void STORM_FN putRelativeStatic(Word w);

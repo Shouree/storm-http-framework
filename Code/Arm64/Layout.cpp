@@ -73,10 +73,10 @@ namespace code {
 			// Owner.
 			*dest << dat(objPtr(owner));
 
-			PLN(L"Layout:");
-			for (Nat i = 0; i < layout->count(); i++)
-				PLN(i << L": " << layout->at(i));
-			PVAR(dest);
+			// PLN(L"Layout:");
+			// for (Nat i = 0; i < layout->count(); i++)
+			// 	PLN(i << L": " << layout->at(i));
+			// PVAR(dest);
 		}
 
 		Operand Layout::resolve(Listing *src, const Operand &op) {

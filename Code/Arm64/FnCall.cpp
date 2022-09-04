@@ -315,7 +315,7 @@ namespace code {
 			*dest << call(toCall, Size());
 
 			// Handle the result if required.
-			if (!resultLayout->memory) {
+			if (!resultLayout->memory && resultPos != Operand()) {
 				Reg srcReg1 = ptrr(0);
 				Reg srcReg2 = ptrr(0);
 				if (resultLayout->regType == primitive::real) {

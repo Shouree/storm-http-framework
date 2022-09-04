@@ -26,13 +26,22 @@ namespace code {
 			// Expand variables and function calls as well as function prolog and epilog.
 			l = code::transform(l, this, new (this) Layout(owner));
 
-			TODO(L"Not done yet!");
-			PVAR(l);
 			return l;
 		}
 
 		void Arena::output(Listing *src, Output *to) const {
 			code::arm64::output(src, to);
+
+			if (CodeOutput *c = as<CodeOutput>(to)) {
+				PLN(L"-- BEGIN --");
+				PVAR(src);
+				PNN(L"Generated code:\n./disas_arm64.sh");
+				Byte *code = (Byte *)c->codePtr();
+				for (Nat i = 0; i < c->tell(); i++) {
+					PNN(L" " << toHex(code[i]));
+				}
+				PLN(L"\n-- END --");
+			}
 		}
 
 		LabelOutput *Arena::labelOutput() const {
@@ -81,6 +90,9 @@ namespace code {
 				*l << fnParam(ptrDesc(engine()), param);
 			*l << fnCall(fn, member, ptrDesc(engine()), ptrA);
 
+			// Save the output from x0 to another register, otherwise parameters will overwrite it. x17 is good.
+			*l << mov(ptrr(17), ptrA);
+
 			// Restore the registers.
 			for (Nat i = 0; i < layout->registerCount(); i++) {
 				Var v = vars->at(i);
@@ -94,7 +106,7 @@ namespace code {
 
 			// Note: The epilog will preserve all registers in this case since there are no destructors to call!
 			*l << epilog();
-			*l << jmp(ptrA);
+			*l << jmp(ptrr(17));
 
 			return l;
 		}

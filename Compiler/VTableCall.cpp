@@ -44,10 +44,18 @@ namespace storm {
 
 		using namespace code;
 		Reg tmpReg = engine().arena()->functionDispatchReg();
+		Reg firstReg = tmpReg;
+		Operand firstParam = engine().arena()->firstParamLoc(id);
 
 		Listing *l = new (this) Listing();
-		*l << mov(tmpReg, engine().arena()->firstParamLoc(id));
-		*l << mov(tmpReg, ptrRel(tmpReg, Offset()));
+		if (firstParam.type() == opRegister) {
+			firstReg = firstParam.reg();
+		} else {
+			*l << mov(tmpReg, firstParam);
+			firstReg = tmpReg;
+		}
+
+		*l << mov(tmpReg, ptrRel(firstReg, Offset()));
 		*l << jmp(ptrRel(tmpReg, Offset::sPtr * offset));
 
 		Binary *b = new (this) Binary(engine().arena(), l);
@@ -62,10 +70,18 @@ namespace storm {
 
 		using namespace code;
 		Reg tmpReg = engine().arena()->functionDispatchReg();
+		Reg firstReg = tmpReg;
+		Operand firstParam = engine().arena()->firstParamLoc(id);
 
 		Listing *l = new (this) Listing();
-		*l << mov(tmpReg, engine().arena()->firstParamLoc(id));
-		*l << mov(tmpReg, ptrRel(tmpReg, Offset()));
+		if (firstParam.type() == opRegister) {
+			firstReg = firstParam.reg();
+		} else {
+			*l << mov(tmpReg, engine().arena()->firstParamLoc(id));
+			firstReg = tmpReg;
+		}
+
+		*l << mov(tmpReg, ptrRel(firstReg, Offset()));
 		*l << mov(tmpReg, ptrRel(tmpReg, -Offset::sPtr * vtable::extraOffset));
 		*l << jmp(ptrRel(tmpReg, Offset::sPtr * (offset + 2))); // 2 for the 2 size_t members in arrays.
 

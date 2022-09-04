@@ -54,6 +54,11 @@ namespace storm {
 			// pointer to the location that shall be updated. Architecture specific.
 			unwindInfo = 0x70,
 
+			// ARM-specific version of "relativeHere". Writes an offset to the "pointer" member in
+			// this struct at the offset indicated in 'offset'. This offset must be aligned to 4
+			// bytes. This option assumes that it updates a 19-bit immediate located at bits 5..23.
+			relativeHereImm19 = 0x81,
+
 			// ...
 		};
 

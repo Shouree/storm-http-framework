@@ -4,7 +4,8 @@
 
 # Convert from hex to binary.
 truncate --size 0 /tmp/blob
-echo "0:" "$@" | xxd -r - /tmp/blob
+echo -ne "$(echo " $@" | sed -E 's/ +(..)/\\x\1/g')" > /tmp/blob
+# echo "0:" "$@" | xxd -r - /tmp/blob
 
 # Disassemble the output.
 objdump -D -b binary -mi386:x86-64 -Msuffix /tmp/blob
