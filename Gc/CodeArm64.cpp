@@ -38,7 +38,7 @@ namespace storm {
 				// version depending on the current distance. We need to leave the load instruction
 				// so that we may switch at any time.
 				write = ((byte *)code) + ref.offset + sizeof(Nat);
-				delta = size_t(ref.pointer) - (size_t(write) + sizeof(Nat));
+				delta = size_t(ref.pointer) - size_t(write);
 				delta /= 4; // 2 zero bits are implicit
 
 				original = *(Nat *)write;
@@ -67,7 +67,7 @@ namespace storm {
 				// fall through
 			case GcCodeRef::relativeHereImm19:
 				write = ((byte *)code) + ref.offset;
-				delta = size_t(&ref.pointer) - (size_t(write) + sizeof(Nat));
+				delta = size_t(&ref.pointer) - size_t(write);
 				delta /= 4; // 2 zero bits are implicit
 
 				original = *(Nat *)write;
