@@ -8,6 +8,7 @@
 #include "RemoveInvalid.h"
 #include "Layout.h"
 #include "Params.h"
+#include "../Exception.h"
 
 namespace code {
 	namespace arm64 {
@@ -111,83 +112,73 @@ namespace code {
 			return l;
 		}
 
+		static Reg nextIntReg(Params *params, Nat &id) {
+			while (id > 0) {
+				Reg r = params->registerSrc(--id);
+				if (r == noReg || isVectorReg(r))
+					continue;
+
+				if (params->registerAt(id) == Param())
+					continue;
+
+				return r;
+			}
+
+			return noReg;
+		}
+
 		Listing *Arena::engineRedirect(TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand engine) {
-			// Listing *l = new (this) Listing(this);
+			Listing *l = new (this) Listing(this);
 
-			// // Examine the parameters to see if we have room for an additional parameter without
-			// // spilling to the stack. We assume that no stack spilling is required since it vastly
-			// // simplifies the implementation of the redirect, and we expect it to be needed very
-			// // rarely. The functions that require an EnginePtr are generally small free-standing toS
-			// // functions that do not require many parameters. Functions that would require spilling
-			// // to the stack should probably be moved into some object anyway.
-			// Params *layout = layoutParams(result, params);
+			// Examine parameters to see what we need to do. Aarch64 is a bit tricky since some
+			// register usage is "aligned" to even numbers. For this reason, we produce two layouts
+			// and "diff" them.
+			Params *called = new (this) Params();
+			Params *toCall = new (this) Params();
+			toCall->add(0, Primitive(primitive::pointer, Size::sPtr, Offset()));
+			for (Nat i = 0; i < params->count(); i++) {
+				called->add(i + 1, params->at(i));
+				toCall->add(i + 1, params->at(i));
+			}
 
-			// // Shift all registers.
-			// Reg last = noReg;
-			// for (Nat i = layout->registerCount(); i > 0; i--) {
-			// 	Nat id = i - 1;
+			if (toCall->stackCount() > 0 || called->stackCount() > 0)
+				throw new (this) InvalidValue(S("Can not create an engine redirect for this function. ")
+											S("It has too many (integer) parameters."));
 
-			// 	Reg r = layout->registerSrc(id);
-			// 	// Interesting?
-			// 	if (fpRegister(r))
-			// 		continue;
 
-			// 	Param par = layout->registerAt(id);
-			// 	// Unused?
-			// 	if (par == Param()) {
-			// 		last = r;
-			// 		continue;
-			// 	}
-			// 	// Result parameter? Don't touch that!
-			// 	if (par.id() == Param::returnId) {
-			// 		continue;
-			// 	}
-			// 	// All integer registers full?
-			// 	if (last == noReg)
-			// 		throw new (this) InvalidValue(S("Can not create an engine redirect for this function. ")
-			// 									S("It has too many (integer) parameters."));
+			// Traverse backwards to ensure we don't overwrite anything.
+			Nat calledId = called->registerCount();
+			Nat toCallId = toCall->registerCount();
+			while (true) {
+				// Find the next source register:
+				Reg srcReg = nextIntReg(called, calledId);
+				Reg destReg = nextIntReg(toCall, toCallId);
 
-			// 	// Move the registers one step 'up'.
-			// 	*l << mov(last, r);
-			// 	last = r;
-			// }
+				if (srcReg == noReg)
+					break;
+				assert(destReg, L"Internal inconsistency when creating a redirect stub!");
+				*l << mov(destReg, srcReg);
+			}
 
-			// // Now, we can simply put the engine ptr inside the first register and jump on to the
-			// // function we actually wanted to call.
-			// *l << mov(last, engine);
-			// *l << jmp(fn);
+			// Now, we can simply put the engine ptr in x0 and jump to the function we need to call.
+			*l << mov(ptrr(0), engine);
+			*l << jmp(fn);
 
-			// return l;
-			assert(false, L"TODO!");
-			return null;
+			return l;
 		}
 
 		Nat Arena::firstParamId(MAYBE(TypeDesc *) desc) {
-			TODO(L"FIX ME!");
-			// Note: From skimming the ABI spec, it seems like this is the same for all cases.
 			if (!desc)
 				return 1;
-
 			return 0;
 		}
 
 		Operand Arena::firstParamLoc(Nat id) {
-			// switch (id) {
-			// case 0:
-			// 	// In a register, first parameter.
-			// 	return ptrDi;
-			// case 1:
-			// 	// In memory, second parameter.
-			// 	return ptrSi;
-			// default:
-			// 	return Operand();
-			// }
-			TODO(L"Implement me!");
-			return ptrr(0); // I think this is fine?
+			return ptrr(0);
 		}
 
 		Reg Arena::functionDispatchReg() {
-			return ptrr(16); // We can also use x17 if needed.
+			return ptrr(17); // We can also use x16. x17 is nice as we use that elsewhere.
 		}
 
 	}
