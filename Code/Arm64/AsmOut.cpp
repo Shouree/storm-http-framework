@@ -52,7 +52,6 @@ namespace code {
 			// Emit "ldr" with literal, make the literal refer to location in the table after the code block.
 			putLoadStoreImm(to, 0x58, reg, 0);
 			to->markGc(GcCodeRef::relativeHereImm19, 4, (Word)obj);
-			PLN(L"Marked GC!");
 		}
 
 		// Check if value fits in 7-bit signed.
