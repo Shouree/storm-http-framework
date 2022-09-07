@@ -30,6 +30,11 @@ namespace code {
 		virtual void STORM_FN align(Nat to);
 
 		/**
+		 * Tell the output that we are finished. This is sometimes needed for cache-coherency.
+		 */
+		virtual void STORM_FN finish();
+
+		/**
 		 * Special cases for GC interaction.
 		 */
 
@@ -155,6 +160,7 @@ namespace code {
 		STORM_CTOR CodeOutput();
 
 		virtual void *codePtr() const;
+		virtual void finish();
 	};
 
 	/**

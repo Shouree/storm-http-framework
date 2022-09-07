@@ -32,17 +32,18 @@ namespace code {
 
 		void Arena::output(Listing *src, Output *to) const {
 			code::arm64::output(src, to);
+			to->finish();
 
-			if (CodeOutput *c = as<CodeOutput>(to)) {
-				PLN(L"-- BEGIN --");
-				PVAR(src);
-				PNN(L"Generated code:\n./disas_arm64.sh");
-				Byte *code = (Byte *)c->codePtr();
-				for (Nat i = 0; i < c->tell(); i++) {
-					PNN(L" " << toHex(code[i]));
-				}
-				PLN(L"\n-- END --");
-			}
+			// if (CodeOutput *c = as<CodeOutput>(to)) {
+			// 	PLN(L"-- BEGIN --");
+			// 	PVAR(src);
+			// 	PNN(L"Generated code:\n./disas_arm64.sh");
+			// 	Byte *code = (Byte *)c->codePtr();
+			// 	for (Nat i = 0; i < c->tell(); i++) {
+			// 		PNN(L" " << toHex(code[i]));
+			// 	}
+			// 	PLN(L"\n-- END --");
+			// }
 		}
 
 		LabelOutput *Arena::labelOutput() const {

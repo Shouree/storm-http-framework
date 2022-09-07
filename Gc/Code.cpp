@@ -65,6 +65,9 @@ namespace storm {
 		void writePtr(void *code, Nat id) {
 			GcCode *refs = Gc::codeRefs(code);
 			doWritePtr(code, refs, id);
+
+			// Invalidate cache. TODO: merge calls if possible.
+			invalidateCache(code, fmt::skip(code));
 		}
 
 		Bool needFinalization() {

@@ -2,6 +2,7 @@
 #include "Utils/Memory.h"
 #include "Utils/Bitwise.h"
 #include "Utils/Templates.h"
+#include "Utils/Cache.h"
 #include "Core/GcType.h"
 #include "Core/GcCode.h"
 #include "Scan.h"
@@ -951,6 +952,7 @@ namespace storm {
 				Scanner s(source);
 				Result r;
 				void *next = base;
+				bool invalidateCache = false;
 				for (void *at = base; at < limit; at = next) {
 					Obj *o = fromClient(at);
 					FMT_CHECK_OBJ(o);
@@ -1011,6 +1013,7 @@ namespace storm {
 
 						// Update the pointers in the code blob as well.
 						gccode::updatePtrs(at, c);
+						invalidateCache = true;
 					} else {
 						// Scan the regular object.
 						Header *h = objHeader(o);
@@ -1102,6 +1105,10 @@ namespace storm {
 						}
 					}
 				}
+
+				// TODO: This could probably be done more efficiently. Also, we need it in other threads as well.
+				if (invalidateCache)
+					::invalidateCache(base, limit);
 
 				return Result();
 			}

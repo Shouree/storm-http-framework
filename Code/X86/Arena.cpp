@@ -46,6 +46,7 @@ namespace code {
 
 		void Arena::output(Listing *src, Output *to) const {
 			code::x86::output(src, to);
+			to->finish();
 		}
 
 		LabelOutput *Arena::labelOutput() const {

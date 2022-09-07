@@ -4,6 +4,7 @@
 #include "Core/Runtime.h"
 #include "Core/GcCode.h"
 #include "Utils/Bitwise.h"
+#include "Utils/Cache.h"
 
 namespace code {
 
@@ -26,6 +27,8 @@ namespace code {
 	void Output::align(Nat to) {
 		assert(false);
 	}
+
+	void Output::finish() {}
 
 	void Output::putGc(GcCodeRef::Kind kind, Nat size, Word w) {
 		assert(false);
@@ -250,6 +253,13 @@ namespace code {
 
 	void *CodeOutput::codePtr() const {
 		return null;
+	}
+
+	void CodeOutput::finish() {
+		// Invalidate icache if needed.
+		void *code = codePtr();
+		if (code)
+			invalidateCache(code, runtime::codeSize(code));
 	}
 
 	/**
