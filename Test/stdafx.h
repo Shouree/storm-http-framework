@@ -36,7 +36,7 @@ SUITE(GcThreads, 3); // Note: Normally disabled
 // Basic operation of the runtime. No code generation yet.
 SUITE(Core, 4);
 // Basic tests of the code generation backend. Further tests rely on these to work.
-SUITE(CodeBasic, 5);
+SUITE_(CodeBasic, 5);
 // Tests of the code generation backend.
 SUITE(Code, 6);
 // More tests of the code generation backend. Requires code generation to function.

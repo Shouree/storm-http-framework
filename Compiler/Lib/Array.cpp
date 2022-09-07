@@ -243,6 +243,8 @@ namespace storm {
 	}
 
 	void ArrayType::addSerialization(SerializeInfo *info) {
+		TODO(L"REMOVE");
+		return;
 		Function *ctor = readCtor(info);
 		add(ctor);
 
