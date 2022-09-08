@@ -113,6 +113,10 @@ namespace code {
 		putPtrSelf(start + offset);
 	}
 
+	Nat Output::offset(Label lbl) {
+		return labelOffset(lbl.id);
+	}
+
 	void Output::putRelative(Ref ref) {
 		putGcRelative(Word(ref.address()));
 		markGcRef(ref);

@@ -14,6 +14,7 @@ namespace code {
 			TRANSFORM(fnCallRef),
 			TRANSFORM(fnParam),
 			TRANSFORM(fnParamRef),
+			TRANSFORM(mov),
 		};
 
 		RemoveInvalid::RemoveInvalid() {}
@@ -36,6 +37,8 @@ namespace code {
 		void RemoveInvalid::before(Listing *dest, Listing *src) {
 			used = usedRegs(dest->arena, src).used;
 			params = new (this) Array<ParamInfo>();
+			large = new (this) Array<Operand>();
+			lblLarge = dest->label();
 
 			// Set the 'freeIndirect' flag on all complex parameters.
 			Array<Var> *vars = dest->allParams();
@@ -67,7 +70,14 @@ namespace code {
 			}
 		}
 
-		void RemoveInvalid::after(Listing *dest, Listing *src) {}
+		void RemoveInvalid::after(Listing *dest, Listing *src) {
+			for (Nat i = 0; i < large->count(); i++) {
+				*dest << alignAs(Size::sPtr);
+				if (i == 0)
+					*dest << lblLarge;
+				*dest << dat(large->at(i));
+			}
+		}
 
 
 		void RemoveInvalid::prologTfm(Listing *dest, Instr *instr, Nat line) {
@@ -122,6 +132,19 @@ namespace code {
 
 			emitFnCall(dest, t->src(), t->dest(), t->type, true, currentBlock, used->at(line), params);
 			params->clear();
+		}
+
+		void RemoveInvalid::movTfm(Listing *dest, Instr *instr, Nat line) {
+			if (instr->src().type() == opConstant) {
+				if (instr->src().constant() > 0xFFFF) {
+					large->push(instr->src());
+					// TODO: Make sure that the destination is a register.
+					*dest << instr->alterSrc(xRel(large->last().size(), lblLarge, Offset::sWord*(large->count()-1)));
+					return;
+				}
+			}
+
+			*dest << instr;
 		}
 
 	}

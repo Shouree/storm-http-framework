@@ -85,7 +85,7 @@ namespace code {
 				return;
 
 			// Reserve space on the stack first.
-			*dest << sub(ptrStack, natConst(layout->stackTotalSize()));
+			*dest << sub(ptrStack, ptrConst(layout->stackTotalSize()));
 
 			// Now we can copy parameters! We need to be careful to not emit memory-memory moves, as
 			// we are called inside "RemoveInvalid".

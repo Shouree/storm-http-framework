@@ -72,6 +72,7 @@ namespace code {
 		void STORM_FN putRelative(Label lbl, Nat offset);
 		void STORM_FN putOffset(Label lbl); // Writes 4 bytes. Offset relative to the start of the blob.
 		void STORM_FN putAddress(Label lbl); // Writes 4 or 8 bytes.
+		Nat STORM_FN offset(Label lbl);
 
 		// References.
 		void STORM_FN putRelative(Ref ref); // Writes 4 or 8 bytes.

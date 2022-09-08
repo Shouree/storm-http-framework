@@ -10,34 +10,73 @@ namespace code {
 		// Good reference for instruction encoding:
 		// https://developer.arm.com/documentation/ddi0596/2021-12/Index-by-Encoding?lang=en
 
-		// TODO: Move checking of immediate size to the "putData" functions?
+		// Check if value fits in 6-bit signed.
+		static Bool isImm6(Int value) {
+			return value >= -0x20 && value <= 0x1F;
+		}
+		static void checkImm6(RootObject *e, Int value) {
+			if (!isImm6(value))
+				throw new (e) InvalidValue(TO_S(e, S("Too large 6-bit immediate value: ") << value));
+		}
+
+		// Check if value fits in 7-bit signed.
+		static Bool isImm7(Int value) {
+			return value >= -0x40 && value <= 0x3F;
+		}
+		static void checkImm7(RootObject *e, Int value) {
+			if (!isImm7(value))
+				throw new (e) InvalidValue(TO_S(e, S("Too large 7-bit immediate value: ") << value));
+		}
+
+		// Check if value fits in 12-bit signed.
+		static Bool isImm12(Int value) {
+			return value >= -0x800 && value <= 0x7FF;
+		}
+		static void checkImm12(RootObject *e, Int value) {
+			if (!isImm12(value))
+				throw new (e) InvalidValue(TO_S(e, S("Too large 12-bit immediate value: ") << value));
+		}
+
+		// Check if value fits in 19-bit signed.
+		static Bool isImm19(Int value) {
+			return value >= -0x4000 && value <= 0x3FFF;
+		}
+		static void checkImm19(RootObject *e, Int value) {
+			if (!isImm19(value))
+				throw new (e) InvalidValue(TO_S(e, S("Too large 19-bit immediate value: ") << value));
+		}
 
 		// Put data instructions. 3 registers, and a 6-bit immediate.
 		static inline void putData(Output *to, Nat op, Nat rDest, Nat ra, Nat rb, Nat imm) {
+			checkImm6(to, imm);
 			Nat instr = (op << 21) | rDest | (ra << 16) | (rb << 5) | ((imm & 0x3F) << 10);
 			to->putInt(instr);
 		}
 
 		// Put data instructions. 2 registers, 12-bit immediate.
 		static inline void putData(Output *to, Nat op, nat rDest, Nat rSrc, Nat imm) {
+			checkImm12(to, imm);
 			Nat instr = (op << 22) | rDest | (rSrc << 5) | ((imm & 0xFFF) << 10);
 			to->putInt(instr);
 		}
 
 		// Put instructions for loads and stores: 3 registers and a 7-bit immediate.
 		static inline void putLoadStore(Output *to, Nat op, Nat base, Nat r1, Nat r2, Nat imm) {
+			checkImm7(to, imm);
 			Nat instr = (op << 22) | r1 | (base << 5) | (r2 << 10) | ((imm & 0x7F) << 15);
 			to->putInt(instr);
 		}
 
 		// Put a "large" load/store (for bytes, mainly): 2 registers and 12-bit immediate.
 		static inline void putLoadStoreLarge(Output *to, Nat op, Nat base, Nat r1, Nat imm) {
+			checkImm12(to, imm);
 			Nat instr = (op << 22) | r1 | (base << 5) | ((0xFFF & imm) << 10);
 			to->putInt(instr);
 		}
 
 		// Put a load/store with 19-bit immediate offset from PC.
 		static inline void putLoadStoreImm(Output *to, Nat op, Nat reg, Nat imm) {
+			checkImm19(to, imm);
 			Nat instr = (op << 24) | reg | ((0x7FFFF & imm) << 5);
 			to->putInt(instr);
 		}
@@ -52,16 +91,6 @@ namespace code {
 			// Emit "ldr" with literal, make the literal refer to location in the table after the code block.
 			putLoadStoreImm(to, 0x58, reg, 0);
 			to->markGc(GcCodeRef::relativeHereImm19, 4, (Word)obj);
-		}
-
-		// Check if value fits in 7-bit signed.
-		static Bool isImm7(Int value) {
-			return value >= -0x40 && value <= 0x3F;
-		}
-
-		// Check if value fits in 12-bit signed.
-		static Bool isImm12(Int value) {
-			return value >= -0x800 && value <= 0x7FF;
 		}
 
 		void prologOut(Output *to, Instr *instr) {
@@ -109,8 +138,6 @@ namespace code {
 
 			// Bytes are special:
 			if (opSize == 1) {
-				if (!isImm12(offset))
-					throw new (to) InvalidValue(S("Too large offset!"));
 				putLoadStoreLarge(to, 0x0E5, intRegNumber(baseReg), intRegNumber(dest1), offset);
 				return false;
 			}
@@ -144,9 +171,6 @@ namespace code {
 				Nat op = opSize == 4 ? 0x0A5 : 0x2A5;
 				putLoadStore(to, op, intRegNumber(baseReg), intRegNumber(dest1), intRegNumber(dest2), offset);
 			} else {
-				if (!isImm12(offset))
-					throw new (to) InvalidValue(S("Too large offset!"));
-
 				Nat op = opSize == 4 ? 0x2E5 : 0x3E5;
 				putLoadStoreLarge(to, op, intRegNumber(baseReg), intRegNumber(dest1), offset);
 			}
@@ -163,8 +187,6 @@ namespace code {
 
 			// Bytes are special:
 			if (opSize == 1) {
-				if (!isImm12(offset))
-					throw new (to) InvalidValue(S("Too large offset!"));
 				putLoadStoreLarge(to, 0x0E4, intRegNumber(baseReg), intRegNumber(src1), offset);
 				return false;
 			}
@@ -191,16 +213,9 @@ namespace code {
 
 			// TODO: Handle fp registers!
 			if (src2 != noReg) {
-				// Note: Should not happen if merging code above is correct.
-				if (!isImm7(offset))
-					throw new (to) InvalidValue(S("Too large offset!"));
-
 				Nat op = opSize == 4 ? 0x0A4 : 0x2A4;
 				putLoadStore(to, op, intRegNumber(baseReg), intRegNumber(src1), intRegNumber(src2), offset);
 			} else {
-				if (!isImm12(offset))
-					throw new (to) InvalidValue(S("Too large offset!"));
-
 				Nat op = opSize == 4 ? 0x2E4 : 0x3E4;
 				putLoadStoreLarge(to, op, intRegNumber(baseReg), intRegNumber(src1), offset);
 			}
@@ -224,40 +239,50 @@ namespace code {
 		// Special version called directly when more than one mov was found. Returns "true" if we
 		// could merge the two passed to us. We know that "next" is a mov op if it is non-null.
 		bool movOut(Output *to, Instr *instr, MAYBE(Instr *) next) {
-			switch (instr->src().type()) {
+			switch (instr->dest().type()) {
 			case opRegister:
-				// Fall thru to next switch statement.
+				// Fall through to next switch statement.
 				break;
+			case opRelative:
+				if (instr->src().type() != opRegister)
+					throw new (to) InvalidValue(S("Invalid source for store operation on ARM."));
+				return storeOut(to, instr, next);
+			default:
+				throw new (to) InvalidValue(TO_S(to, S("Invalid destination for move operation: ") << instr));
+			}
+
+			// dest is a register!
+			Reg destReg = instr->dest().reg();
+			Operand src = instr->src();
+
+			switch (src.type()) {
+			case opRegister:
+				regRegMove(to, destReg, src.reg());
+				return false;
 			case opRelative:
 				return loadOut(to, instr, next);
 			case opReference:
 				// Must be a pointer: Also, dest must be register.
-				loadLongConst(to, intRegNumber(instr->dest().reg()), instr->src().ref());
+				loadLongConst(to, intRegNumber(destReg), src.ref());
 				return false;
 			case opObjReference:
 				// Must be a pointer, and dest must be a register.
-				loadLongConst(to, intRegNumber(instr->dest().reg()), instr->src().object());
+				loadLongConst(to, intRegNumber(destReg), src.object());
 				return false;
-
-				// TODO: More, for example:
-				// case opConstant:
-			default:
-				PVAR(instr); PVAR(instr->src().type());
-				assert(false, L"Unsupported mov source operand.");
+			case opConstant:
+				if (src.constant() >= 0xFFFF)
+					throw new (to) InvalidValue(S("Too large immediate to load"));
+				// Note: No difference between nat and word version.
+				to->putInt(0xD2800000 | ((0xFFFF & src.constant()) << 5) | intRegNumber(destReg));
+				return false;
+			case opLabel:
+			case opRelativeLbl: {
+				Int offset = to->offset(src.label()) + src.offset().v64() - to->tell();
+				putLoadStoreImm(to, 0x58, intRegNumber(destReg), offset / 4);
 				return false;
 			}
-
-			// "src" is now a register. Examine "dest".
-
-			switch (instr->dest().type()) {
-			case opRegister:
-				regRegMove(to, instr->dest().reg(), instr->src().reg());
-				return false;
-			case opRelative:
-				return storeOut(to, instr, next);
 			default:
-				assert(false, L"Unsupported mov destination operand.");
-				return false;
+				throw new (to) InvalidValue(TO_S(to, S("Invalid source for move operation: ") << instr));
 			}
 		}
 
@@ -284,9 +309,6 @@ namespace code {
 				break;
 				// Split into two op-codes: a load and a register call.
 				offset = target.offset().v64() / 8;
-				if (!isImm12(offset))
-					throw new (to) InvalidValue(S("Too large offset!"));
-
 				putLoadStoreLarge(to, 0x3E5, intRegNumber(target.reg()), 17, offset);
 				// blr x17
 				to->putInt(0xD63F0220);
@@ -338,9 +360,6 @@ namespace code {
 			case opRelative:
 				// Split into two op-codes: a load and a register jump.
 				offset = target.offset().v64() / 8;
-				if (!isImm12(offset))
-					throw new (to) InvalidValue(S("Too large offset!"));
-
 				putLoadStoreLarge(to, 0x3E5, intRegNumber(target.reg()), 17, offset);
 				// br x17
 				to->putInt(0xD61F0220);
@@ -349,6 +368,34 @@ namespace code {
 				PVAR(target);
 				assert(false, L"Unsupported jump target!");
 				break;
+			}
+		}
+
+		void addOut(Output *to, Instr *instr) {
+			switch (instr->dest().type()) {
+			case opRegister:
+				if (instr->dest().reg() == ptrStack) {
+					putData(to, 0x244, 31, 31, instr->src().constant());
+				} else {
+					assert(false, L"Unsupported sub register!");
+				}
+				break;
+			default:
+				assert(false, L"Unsupported sub operands");
+			}
+		}
+
+		void subOut(Output *to, Instr *instr) {
+			switch (instr->dest().type()) {
+			case opRegister:
+				if (instr->dest().reg() == ptrStack) {
+					putData(to, 0x344, 31, 31, instr->src().constant());
+				} else {
+					assert(false, L"Unsupported sub register!");
+				}
+				break;
+			default:
+				assert(false, L"Unsupported sub operands");
 			}
 		}
 
@@ -393,6 +440,8 @@ namespace code {
 			OUTPUT(call),
 			OUTPUT(ret),
 			OUTPUT(jmp),
+			OUTPUT(sub),
+			OUTPUT(add),
 
 			OUTPUT(preserve),
 

@@ -39,6 +39,12 @@ namespace code {
 			// Function parameters.
 			Array<ParamInfo> *params;
 
+			// Large operands. Emitted at the end of the function so that we can load them.
+			Array<Operand> *large;
+
+			// Label to the start of the large constants section.
+			Label lblLarge;
+
 			// Signature for the table of transform functions.
 			typedef void (RemoveInvalid::*TransformFn)(Listing *dest, Instr *instr, Nat line);
 
@@ -55,6 +61,9 @@ namespace code {
 			void prologTfm(Listing *dest, Instr *instr, Nat line);
 			void beginBlockTfm(Listing *dest, Instr *instr, Nat line);
 			void endBlockTfm(Listing *dest, Instr *instr, Nat line);
+
+			// Fix constraints.
+			void movTfm(Listing *dest, Instr *instr, Nat line);
 		};
 
 	}

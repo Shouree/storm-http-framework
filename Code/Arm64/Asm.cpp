@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Asm.h"
 #include "../Listing.h"
+#include "../Exception.h"
 
 namespace code {
 	namespace arm64 {
@@ -169,9 +170,29 @@ namespace code {
 			return null;
 		}
 
+		Reg unusedReg(RegSet *used) {
+			Reg r = unusedRegUnsafe(used);
+			if (r == noReg)
+				throw new (used) InvalidValue(S("We should not run out of registers on ARM64."));
+			return r;
+		}
+
+		Reg unusedRegUnsafe(RegSet *used) {
+			static const Reg candidates[] = {
+				ptrr(0), ptrr(1), ptrr(2), ptrr(3), ptrr(4), ptrr(5), ptrr(6), ptrr(7), ptrr(8),
+				ptrr(9), ptrr(10), ptrr(11), ptrr(12), ptrr(13), ptrr(14), ptrr(15), ptrr(16), ptrr(17),
+				ptrr(19), ptrr(20), ptrr(21), ptrr(22), ptrr(23), ptrr(24), ptrr(25), ptrr(26), ptrr(27),
+				ptrr(28),
+			};
+			for (Nat i = 0; i < ARRAY_COUNT(candidates); i++)
+				if (!used->has(candidates[i]))
+					return candidates[i];
+			return noReg;
+		}
+
 		static const Reg dirtyRegs[] = {
 			ptrr(0), ptrr(1), ptrr(2), ptrr(3), ptrr(4), ptrr(5), ptrr(6), ptrr(7), ptrr(8),
-			ptrr(9), ptrr(10), ptrr(11), ptrr(12), ptrr(13), ptrr(14), ptrr(15), ptrr(16), ptrr(17), ptrr(18),
+			ptrr(9), ptrr(10), ptrr(11), ptrr(12), ptrr(13), ptrr(14), ptrr(15), ptrr(16), ptrr(17),
 			dr(0), dr(1), dr(2), dr(3), dr(4), dr(5), dr(6), dr(7),
 		};
 		const Reg *fnDirtyRegs = dirtyRegs;

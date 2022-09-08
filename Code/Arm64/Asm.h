@@ -44,6 +44,12 @@ namespace code {
 		extern const Reg *fnDirtyRegs;
 		extern const size_t fnDirtyCount;
 
+		// Get an unused register.
+		Reg unusedReg(RegSet *used);
+
+		// Get unused register, don't throw if none is available.
+		Reg unusedRegUnsafe(RegSet *used);
+
 		// Preserve a register by saving it to a register that is safe through function
 		// calls. Returns new location of the operand. It could be in memory.
 		// Note: The RegSet is *updated* to match new register allocation.
