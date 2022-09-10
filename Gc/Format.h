@@ -1106,9 +1106,11 @@ namespace storm {
 					}
 				}
 
-				// TODO: This could probably be done more efficiently. Also, we need it in other threads as well.
-				if (invalidateCache)
+				// TODO: This could probably be done more efficiently by coalescing- and
+				// de-duplicating calls. Also, we need it in other threads as well.
+				if (invalidateCache) {
 					::invalidateCache(base, limit);
+				}
 
 				return Result();
 			}
