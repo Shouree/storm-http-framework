@@ -10,6 +10,9 @@
 namespace code {
 	namespace arm64 {
 
+		// Number used for inactive variables.
+		static const Nat INACTIVE = 0xFFFFFFFF;
+
 #define TRANSFORM(x) { op::x, &Layout::x ## Tfm }
 
 		const OpEntry<Layout::TransformFn> Layout::transformMap[] = {
@@ -29,6 +32,7 @@ namespace code {
 		void Layout::before(Listing *dest, Listing *src) {
 			// Initialize state.
 			currentBlock = Block();
+			usingEH = src->exceptionAware();
 
 			// Find registers that need to be preserved.
 			preserved = allUsedRegs(src);
@@ -51,6 +55,20 @@ namespace code {
 			if (result->memory)
 				preserveCount++;
 			layout = code::arm64::layout(src, params, preserveCount);
+
+			// Initialize our bookkeeping of active variables.
+			Array<Var> *vars = src->allVars();
+			activated = new (this) Array<Nat>(vars->count(), 0);
+			activationId = 0;
+
+			for (Nat i = 0; i < vars->count(); i++) {
+				Var var = vars->at(i);
+				if (src->freeOpt(var) & freeInactive)
+					activated->at(var.key()) = INACTIVE;
+			}
+
+			// Keep track of active blocks.
+			activeBlocks = new (this) Array<ActiveBlock>();
 		}
 
 		void Layout::during(Listing *dest, Listing *src, Nat id) {
@@ -68,7 +86,29 @@ namespace code {
 			*dest << alignAs(Size::sPtr);
 			*dest << dest->meta();
 
-			TODO(L"Add metadata!");
+			// Total stack size.
+			*dest << dat(ptrConst(layout->last()));
+
+			// Output metadata table.
+			Array<Var> *vars = src->allVars();
+			for (Nat i = 0; i < vars->count(); i++) {
+				Var &v = vars->at(i);
+				Operand fn = src->freeFn(v);
+				if (fn.empty())
+					*dest << dat(ptrConst(Offset(0)));
+				else
+					*dest << dat(src->freeFn(v));
+				*dest << dat(intConst(layout->at(v.key())));
+				*dest << dat(natConst(activated->at(v.key())));
+			}
+
+			// Output active blocks. Used by the exception handling.
+			*dest << alignAs(Size::sPtr);
+			for (Nat i = 0; i < activeBlocks->count(); i++) {
+				const ActiveBlock &a = activeBlocks->at(i);
+				*dest << lblOffset(a.pos);
+				*dest << dat(natConst(0)); // TODO: Store "a" here!
+			}
 
 			// Owner.
 			*dest << dat(objPtr(owner));
@@ -91,6 +131,108 @@ namespace code {
 			if (!src->accessible(v, currentBlock))
 				throw new (this) VariableUseError(v, currentBlock);
 			return xRel(size, ptrFrame, layout->at(v.key()) + op.offset());
+		}
+
+		static void zeroVar(Listing *dest, Offset offset, Size size) {
+			// Note: Everything is aligned to 8 bytes, so we can just fill memory with 8-byte store
+			// instructions that can be merged by the code generation.
+			Nat s = size.size64();
+			for (Nat i = 0; i < s; i += 8) {
+				*dest << mov(longRel(ptrFrame, offset), xzr);
+				offset += Size::sLong;
+			}
+		}
+
+		void Layout::initBlock(Listing *dest, Block init) {
+			if (currentBlock != dest->parent(init)) {
+				Str *msg = TO_S(engine(), S("Can not begin ") << init << S(" unless the current is ")
+								<< dest->parent(init) << S(". Current is ") << currentBlock);
+				throw new (this) BlockBeginError(msg);
+			}
+
+			currentBlock = init;
+
+			Array<Var> *vars = dest->allVars(init);
+			for (Nat i = 0; i < vars->count(); i++) {
+				Var v = vars->at(i);
+				if (!dest->isParam(v))
+					zeroVar(dest, layout->at(v.key()), v.size());
+			}
+
+			if (usingEH) {
+				// Remember where the block started.
+				Label lbl = dest->label();
+				*dest << lbl;
+				activeBlocks->push(ActiveBlock(currentBlock, activationId, lbl));
+			}
+		}
+
+		static void saveResult(Listing *dest, Result *result) {
+			TODO(L"Save result!");
+		}
+
+		static void restoreResult(Listing *dest, Result *result) {
+			TODO(L"Restore result!");
+		}
+
+		void Layout::destroyBlock(Listing *dest, Block destroy, Bool preserveResult, Bool table) {
+			if (destroy != currentBlock)
+				throw new (this) BlockEndError();
+
+			// Did we save the result?
+			Bool savedResult = false;
+
+			// Destroy in reverse order.
+			Array<Var> *vars = dest->allVars(destroy);
+			for (Nat i = vars->count(); i > 0; i--) {
+				Var v = vars->at(i - 1);
+
+				Operand dtor = dest->freeFn(v);
+				FreeOpt when = dest->freeOpt(v);
+
+				if (!dtor.empty() && (when & freeOnBlockExit) == freeOnBlockExit) {
+					// Should we destroy it right now?
+					if (activated->at(v.key()) > activationId)
+						continue;
+
+					if (preserveResult && !savedResult) {
+						saveResult(dest, result);
+						savedResult = true;
+					}
+
+					Reg param = ptrr(0);
+					if (when & freeIndirection) {
+						if (when & freePtr) {
+							*dest << mov(param, resolve(dest, v, Size::sPtr));
+							*dest << call(dtor, Size());
+						} else {
+							*dest << mov(param, resolve(dest, v, Size::sPtr));
+							*dest << mov(asSize(param, v.size()), xRel(v.size(), param, Offset()));
+							*dest << call(dtor, Size());
+						}
+					} else {
+						if (when & freePtr) {
+							*dest << lea(param, resolve(dest, v));
+							*dest << call(dtor, Size());
+						} else {
+							*dest << mov(asSize(param, v.size()), resolve(dest, v));
+							*dest << call(dtor, Size());
+						}
+					}
+					// TODO: Zero memory to avoid multiple destruction in rare cases?
+				}
+			}
+
+			if (savedResult) {
+				restoreResult(dest, result);
+			}
+
+			currentBlock = dest->parent(currentBlock);
+			if (usingEH && table) {
+				Label lbl = dest->label();
+				*dest << lbl;
+				activeBlocks->push(ActiveBlock(currentBlock, activationId, lbl));
+			}
 		}
 
 		void Layout::prologTfm(Listing *dest, Instr *src) {
@@ -126,8 +268,8 @@ namespace code {
 				*dest << mov(longRel(ptrFrame, offset), asSize(params->registerSrc(i), Size::sLong));
 			}
 
-			// TODO: Initialize the block!
-			currentBlock = dest->root();
+			// Initialize the root block.
+			initBlock(dest, dest->root());
 		}
 
 		void Layout::epilogTfm(Listing *dest, Instr *src) {
@@ -135,7 +277,7 @@ namespace code {
 			// table as this may be an early return from the function.
 			Block oldBlock = currentBlock;
 			for (Block now = currentBlock; now != Block(); now = dest->parent(now)) {
-				// destroy block
+				destroyBlock(dest, now, true, false);
 			}
 			currentBlock = oldBlock;
 
@@ -153,21 +295,49 @@ namespace code {
 		}
 
 		void Layout::beginBlockTfm(Listing *dest, Instr *src) {
-			currentBlock = src->src().block();
-			// TODO: Initialize the block.
+			initBlock(dest, src->src().block());
 		}
 
 		void Layout::endBlockTfm(Listing *dest, Instr *src) {
-			currentBlock = dest->parent(src->src().block());
-			// TODO: Destroy the block.
+			destroyBlock(dest, src->src().block(), false, true);
 		}
 
 		void Layout::jmpBlockTfm(Listing *dest, Instr *src) {
-			// TODO: Implement!
+			// Destroy blocks until we find 'to'.
+			Block to = src->src().block();
+
+			// We shall not modify the block level after we're done, so we must restore it.
+			Block oldBlock = currentBlock;
+			for (Block now = currentBlock; now != to; now = dest->parent(now)) {
+				if (now == Block()) {
+					Str *msg = TO_S(this, S("The block ") << to << S(" is not a parent of ") << oldBlock << S("."));
+					throw new (this) BlockEndError(msg);
+				}
+
+				destroyBlock(dest, now, false, false);
+			}
+
+			*dest << jmp(src->dest().label());
+			currentBlock = oldBlock;
 		}
 
 		void Layout::activateTfm(Listing *dest, Instr *src) {
-			// TODO: Implement!
+			Var var = src->src().var();
+			Nat &id = activated->at(var.key());
+
+			if (id == 0)
+				throw new (this) VariableActivationError(var, S("must be marked with 'freeInactive'."));
+			if (id != INACTIVE)
+				throw new (this) VariableActivationError(var, S("already activated."));
+
+			id = ++activationId;
+
+			// We only need to update the block id if this impacts exception handling.
+			if (dest->freeOpt(var) & freeOnException) {
+				Label lbl = dest->label();
+				*dest << lbl;
+				activeBlocks->push(ActiveBlock(currentBlock, activationId, lbl));
+			}
 		}
 
 		void Layout::fnRetTfm(Listing *dest, Instr *src) {

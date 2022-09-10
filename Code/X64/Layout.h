@@ -4,6 +4,7 @@
 #include "../Transform.h"
 #include "../OpTable.h"
 #include "../UsedRegs.h"
+#include "../ActiveBlock.h"
 
 namespace code {
 	class Binary;
@@ -60,28 +61,8 @@ namespace code {
 			// Currently active block.
 			Block block;
 
-			// Temporary storage of the active block table.
-			class Active {
-				STORM_VALUE;
-			public:
-				Active(Block block, Nat activated, Label pos);
-
-				// Which block?
-				Block block;
-
-				// Which activation ID?
-				Nat activated;
-
-				// Where does the block start?
-				Label pos;
-
-				// Encode the stored value.
-				inline Nat encode() const {
-					return encodeFnState(block.key(), activated);
-				}
-			};
-
-			Array<Active> *activeBlocks;
+			// Temporary storage of active blocks.
+			Array<ActiveBlock> *activeBlocks;
 
 			// Using exception handling here?
 			Bool usingEH;

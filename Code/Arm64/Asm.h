@@ -34,7 +34,7 @@ namespace code {
 		// Check if register is vector register.
 		Bool isVectorReg(Reg r);
 
-		// Arm integer register number for register.
+		// Arm integer register number for register. Returns "out-of-bounds" values for pc, etc.
 		Nat intRegNumber(Reg r);
 
 		// Register name.

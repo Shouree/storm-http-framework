@@ -3,6 +3,7 @@
 #include "../OpTable.h"
 #include "../Reg.h"
 #include "../Instr.h"
+#include "../ActiveBlock.h"
 #include "Core/Array.h"
 #include "Params.h"
 
@@ -44,9 +45,6 @@ namespace code {
 			// Result.
 			Result *result;
 
-			// Current block.
-			Block currentBlock;
-
 			// Registers that need to be preserved.
 			RegSet *preserved;
 
@@ -55,9 +53,28 @@ namespace code {
 				return ptrRel(ptrFrame, Offset(16));
 			}
 
+			// Index where each variable was activated.
+			Array<Nat> *activated;
+
+			// Current activation ID.
+			Nat activationId;
+
+			// Current block.
+			Block currentBlock;
+
+			// Temporary storage of the active block table.
+			Array<ActiveBlock> *activeBlocks;
+
+			// Using exception handling here?
+			Bool usingEH;
+
 			// Resolve local variables.
 			Operand resolve(Listing *src, const Operand &op);
 			Operand resolve(Listing *src, const Operand &op, const Size &size);
+
+			// Initialize and destroy blocks.
+			void initBlock(Listing *dest, Block init);
+			void destroyBlock(Listing *dest, Block destroy, Bool preserveResult, Bool notifyTable);
 
 			// Transform table.
 			typedef void (Layout::*TransformFn)(Listing *dest, Instr *src);

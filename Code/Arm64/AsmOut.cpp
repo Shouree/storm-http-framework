@@ -7,6 +7,24 @@
 namespace code {
 	namespace arm64 {
 
+		// Get register number where 31=sp.
+		static Nat intRegSP(Reg reg) {
+			Nat r = intRegNumber(reg);
+			if (r < 31)
+				return r;
+			if (r == 32)
+				return 31;
+			assert(false, L"Can not use this register with this op-code.");
+		}
+
+		// Get register number where 31=zr.
+		static Nat intRegZR(Reg reg) {
+			Nat r = intRegNumber(reg);
+			if (r < 32)
+				return r;
+			assert(false, L"Can not use this register with this op-code.");
+		}
+
 		// Good reference for instruction encoding:
 		// https://developer.arm.com/documentation/ddi0596/2021-12/Index-by-Encoding?lang=en
 
@@ -138,7 +156,7 @@ namespace code {
 
 			// Bytes are special:
 			if (opSize == 1) {
-				putLoadStoreLarge(to, 0x0E5, intRegNumber(baseReg), intRegNumber(dest1), offset);
+				putLoadStoreLarge(to, 0x0E5, intRegSP(baseReg), intRegZR(dest1), offset);
 				return false;
 			}
 
@@ -169,10 +187,10 @@ namespace code {
 					throw new (to) InvalidValue(S("Too large offset!"));
 
 				Nat op = opSize == 4 ? 0x0A5 : 0x2A5;
-				putLoadStore(to, op, intRegNumber(baseReg), intRegNumber(dest1), intRegNumber(dest2), offset);
+				putLoadStore(to, op, intRegSP(baseReg), intRegZR(dest1), intRegZR(dest2), offset);
 			} else {
 				Nat op = opSize == 4 ? 0x2E5 : 0x3E5;
-				putLoadStoreLarge(to, op, intRegNumber(baseReg), intRegNumber(dest1), offset);
+				putLoadStoreLarge(to, op, intRegSP(baseReg), intRegZR(dest1), offset);
 			}
 
 			return dest2 != noReg;
@@ -187,7 +205,7 @@ namespace code {
 
 			// Bytes are special:
 			if (opSize == 1) {
-				putLoadStoreLarge(to, 0x0E4, intRegNumber(baseReg), intRegNumber(src1), offset);
+				putLoadStoreLarge(to, 0x0E4, intRegSP(baseReg), intRegZR(src1), offset);
 				return false;
 			}
 
@@ -214,10 +232,10 @@ namespace code {
 			// TODO: Handle fp registers!
 			if (src2 != noReg) {
 				Nat op = opSize == 4 ? 0x0A4 : 0x2A4;
-				putLoadStore(to, op, intRegNumber(baseReg), intRegNumber(src1), intRegNumber(src2), offset);
+				putLoadStore(to, op, intRegSP(baseReg), intRegZR(src1), intRegZR(src2), offset);
 			} else {
 				Nat op = opSize == 4 ? 0x2E4 : 0x3E4;
-				putLoadStoreLarge(to, op, intRegNumber(baseReg), intRegNumber(src1), offset);
+				putLoadStoreLarge(to, op, intRegSP(baseReg), intRegZR(src1), offset);
 			}
 
 			return src2 != noReg;
@@ -228,9 +246,9 @@ namespace code {
 			Bool intDst = isIntReg(dest);
 			if (intSrc && intDst) {
 				if (size(src).size64() > 4)
-					putData(to, 0x550, intRegNumber(dest), intRegNumber(src), 31, 0);
+					putData(to, 0x550, intRegZR(dest), intRegZR(src), 31, 0);
 				else
-					putData(to, 0x150, intRegNumber(dest), intRegNumber(src), 31, 0);
+					putData(to, 0x150, intRegZR(dest), intRegZR(src), 31, 0);
 			} else {
 				assert(false, L"Mov to/from fp registers is not yet implemented!");
 			}
@@ -263,22 +281,22 @@ namespace code {
 				return loadOut(to, instr, next);
 			case opReference:
 				// Must be a pointer: Also, dest must be register.
-				loadLongConst(to, intRegNumber(destReg), src.ref());
+				loadLongConst(to, intRegZR(destReg), src.ref());
 				return false;
 			case opObjReference:
 				// Must be a pointer, and dest must be a register.
-				loadLongConst(to, intRegNumber(destReg), src.object());
+				loadLongConst(to, intRegZR(destReg), src.object());
 				return false;
 			case opConstant:
 				if (src.constant() >= 0xFFFF)
 					throw new (to) InvalidValue(S("Too large immediate to load"));
 				// Note: No difference between nat and word version.
-				to->putInt(0xD2800000 | ((0xFFFF & src.constant()) << 5) | intRegNumber(destReg));
+				to->putInt(0xD2800000 | ((0xFFFF & src.constant()) << 5) | intRegZR(destReg));
 				return false;
 			case opLabel:
 			case opRelativeLbl: {
 				Int offset = to->offset(src.label()) + src.offset().v64() - to->tell();
-				putLoadStoreImm(to, 0x58, intRegNumber(destReg), offset / 4);
+				putLoadStoreImm(to, 0x58, intRegZR(destReg), offset / 4);
 				return false;
 			}
 			default:
@@ -288,6 +306,23 @@ namespace code {
 
 		void movOut(Output *to, Instr *instr) {
 			movOut(to, instr, null);
+		}
+
+		void leaOut(Output *to, Instr *instr) {
+			Operand destOp = instr->dest();
+			if (destOp.type() != opRegister)
+				throw new (to) InvalidValue(S("Destination of lea should have bbeen transformed to a register."));
+			Nat dest = intRegZR(destOp.reg());
+
+			Operand src = instr->src();
+			switch (src.type()) {
+			case opRelative:
+				// add:
+				putData(to, 0x244, dest, intRegZR(src.reg()), src.offset().v64());
+				break;
+			default:
+				throw new (to) InvalidValue(TO_S(to, S("Unsupported source operand for lea: ") << src));
+			}
 		}
 
 		void callOut(Output *to, Instr *instr) {
@@ -305,11 +340,11 @@ namespace code {
 				to->markGc(GcCodeRef::jump, 8, target.ref());
 				break;
 			case opRegister:
-				to->putInt(0xD63F0000 | (intRegNumber(target.reg()) << 5));
+				to->putInt(0xD63F0000 | (intRegZR(target.reg()) << 5));
 				break;
 				// Split into two op-codes: a load and a register call.
 				offset = target.offset().v64() / 8;
-				putLoadStoreLarge(to, 0x3E5, intRegNumber(target.reg()), 17, offset);
+				putLoadStoreLarge(to, 0x3E5, intRegZR(target.reg()), 17, offset);
 				// blr x17
 				to->putInt(0xD63F0220);
 				break;
@@ -355,12 +390,12 @@ namespace code {
 				to->markGc(GcCodeRef::jump, 8, target.ref());
 				break;
 			case opRegister:
-				to->putInt(0xD61F0000 | (intRegNumber(target.reg()) << 5));
+				to->putInt(0xD61F0000 | (intRegZR(target.reg()) << 5));
 				break;
 			case opRelative:
 				// Split into two op-codes: a load and a register jump.
 				offset = target.offset().v64() / 8;
-				putLoadStoreLarge(to, 0x3E5, intRegNumber(target.reg()), 17, offset);
+				putLoadStoreLarge(to, 0x3E5, intRegZR(target.reg()), 17, offset);
 				// br x17
 				to->putInt(0xD61F0220);
 				break;
@@ -424,6 +459,10 @@ namespace code {
 			}
 		}
 
+		void lblOffsetOut(Output *to, Instr *instr) {
+			to->putOffset(instr->src().label());
+		}
+
 		void alignOut(Output *to, Instr *instr) {
 			to->align(Nat(instr->src().constant()));
 		}
@@ -437,6 +476,7 @@ namespace code {
 			OUTPUT(prolog),
 			OUTPUT(epilog),
 			OUTPUT(mov),
+			OUTPUT(lea),
 			OUTPUT(call),
 			OUTPUT(ret),
 			OUTPUT(jmp),
@@ -446,6 +486,7 @@ namespace code {
 			OUTPUT(preserve),
 
 			OUTPUT(dat),
+			OUTPUT(lblOffset),
 			OUTPUT(align),
 		};
 

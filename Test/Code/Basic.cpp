@@ -3,6 +3,7 @@
 #include "Code/Binary.h"
 #include "Code/Exception.h"
 #include "Code/X64/Layout.h"
+#include "Code/Arm64/Layout.h"
 
 using namespace code;
 
@@ -160,7 +161,8 @@ BEGIN_TEST(SwapTest, CodeBasic) {
 
 // Do some heavy GC allocations to make the Gc do a collection.
 static void triggerCollect() {
-	for (nat j = 0; j < 10; j++) {
+	// Note: Number of iterations reduced due to long execution time on ARM.
+	for (nat j = 0; j < 2; j++) {
 		for (nat i = 0; i < 100; i++)
 			new (gEngine()) Str(S("Hello"));
 
@@ -196,8 +198,9 @@ BEGIN_TEST(CodeHereTest, CodeBasic) {
 	Listing *l = new (e) Listing();
 
 	*l << prolog();
-	*l << push(arena->external(S("triggerCollect"), address(&triggerCollect)));
-	*l << pop(ptrA);
+	*l << mov(ptrA, arena->external(S("triggerCollect"), address(&triggerCollect)));
+	// *l << push(arena->external(S("triggerCollect"), address(&triggerCollect)));
+	// *l << pop(ptrA);
 	l->result = intDesc(e);
 	*l << fnRet(eax);
 
@@ -245,4 +248,44 @@ BEGIN_TEST(CodeX64Layout, CodeBasic) {
 	CHECK_EQ(p->registerAt(2), Param(2, 8, 8));
 	CHECK_EQ(p->registerAt(3), Param(3, 8, 0));
 	CHECK_EQ(p->registerAt(7), Param(3, 8, 8));
+} END_TEST
+
+BEGIN_TEST(CodeArm64Layout, CodeBasic) {
+	using namespace code::arm64;
+
+	Engine &e = gEngine();
+
+	code::arm64::Params *p = new (e) code::arm64::Params();
+	p->add(0, new (e) PrimitiveDesc(intPrimitive()));
+	p->add(1, new (e) PrimitiveDesc(floatPrimitive()));
+
+	SimpleDesc *s = new (e) SimpleDesc(Size::sInt*4, 4);
+	s->at(0) = Primitive(primitive::integer, Size::sInt, Offset());
+	s->at(1) = Primitive(primitive::real, Size::sFloat, Offset::sInt);
+	s->at(2) = Primitive(primitive::real, Size::sFloat, Offset::sInt*2);
+	s->at(3) = Primitive(primitive::integer, Size::sInt, Offset::sInt*3);
+	p->add(2, s);
+
+	SimpleDesc *t = new (e) SimpleDesc(Size::sInt*4, 4);
+	t->at(0) = Primitive(primitive::integer, Size::sInt, Offset());
+	t->at(1) = Primitive(primitive::integer, Size::sInt, Offset::sInt);
+	t->at(2) = Primitive(primitive::real, Size::sFloat, Offset::sInt*2);
+	t->at(3) = Primitive(primitive::real, Size::sFloat, Offset::sInt*3);
+	p->add(3, t);
+
+	SimpleDesc *u = new (e) SimpleDesc(Size::sLong*3, 4);
+	t->at(0) = Primitive(primitive::integer, Size::sLong, Offset());
+	t->at(1) = Primitive(primitive::integer, Size::sLong, Offset::sLong);
+	t->at(2) = Primitive(primitive::integer, Size::sLong, Offset::sLong*2);
+	p->add(4, u);
+
+	CHECK_EQ(p->stackCount(), 1);
+	CHECK_EQ(p->stackParam(0), 4);
+	CHECK_EQ(p->stackOffset(0), 0);
+	CHECK_EQ(p->registerAt(0), Param(0, 4, 0, false));
+	CHECK_EQ(p->registerAt(8), Param(1, 4, 0, false));
+	CHECK_EQ(p->registerAt(2), Param(2, 8, 0, false));
+	CHECK_EQ(p->registerAt(3), Param(2, 8, 8, false));
+	CHECK_EQ(p->registerAt(4), Param(3, 8, 0, false));
+	CHECK_EQ(p->registerAt(5), Param(3, 8, 8, false));
 } END_TEST

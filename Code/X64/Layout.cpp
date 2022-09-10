@@ -25,7 +25,6 @@ namespace code {
 			TRANSFORM(fnRetRef),
 		};
 
-		Layout::Active::Active(Block block, Nat activated, Label pos) : block(block), activated(activated), pos(pos) {}
 
 		Layout::Layout(Binary *owner) : owner(owner) {}
 
@@ -81,7 +80,7 @@ namespace code {
 			}
 
 			// The EH table.
-			activeBlocks = new (this) Array<Active>();
+			activeBlocks = new (this) Array<ActiveBlock>();
 		}
 
 		void Layout::during(Listing *dest, Listing *src, Nat line) {
@@ -129,9 +128,9 @@ namespace code {
 			*dest << alignAs(Size::sPtr);
 			// Table contents. Each 'row' is 8 bytes.
 			for (Nat i = 0; i < activeBlocks->count(); i++) {
-				const Active &a = activeBlocks->at(i);
+				const ActiveBlock &a = activeBlocks->at(i);
 				*dest << lblOffset(a.pos);
-				*dest << dat(natConst(a.encode()));
+				*dest << dat(natConst(encodeFnState(a.block.key(), a.activated)));
 			}
 
 			// Table size.
@@ -274,7 +273,7 @@ namespace code {
 			if (src->freeOpt(var) & freeOnException) {
 				Label lbl = dest->label();
 				*dest << lbl;
-				activeBlocks->push(Active(block, activationId, lbl));
+				activeBlocks->push(ActiveBlock(block, activationId, lbl));
 			}
 		}
 
@@ -337,7 +336,7 @@ namespace code {
 				// Remember where the block started.
 				Label lbl = dest->label();
 				*dest << lbl;
-				activeBlocks->push(Active(block, activationId, lbl));
+				activeBlocks->push(ActiveBlock(block, activationId, lbl));
 			}
 		}
 
@@ -394,7 +393,7 @@ namespace code {
 			if (usingEH && table) {
 				Label lbl = dest->label();
 				*dest << lbl;
-				activeBlocks->push(Active(block, activationId, lbl));
+				activeBlocks->push(ActiveBlock(block, activationId, lbl));
 			}
 		}
 

@@ -30,9 +30,9 @@ namespace code {
 			else if (arm == 30)
 				return 0x04A;
 			else if (arm == 31)
-				return ptrStack;
-			else if (arm == 32)
 				return 0x04B;
+			else if (arm == 32)
+				return ptrStack;
 			else if (arm == 33)
 				return 0x04C;
 			else
@@ -45,8 +45,7 @@ namespace code {
 			Nat type = storm >> 4;
 
 			if (storm == 0x01) {
-				// SP.
-				return 31;
+				return 32; // sp
 			} else if (storm == 0x2) {
 				// Reg. 29 is frame ptr.
 				return 29;
@@ -60,9 +59,9 @@ namespace code {
 				else if (storm == 0x4A)
 					return 30;
 				else if (storm == 0x4B)
-					return 32;
+					return 31; // xzr
 				else if (storm == 0x4C)
-					return 33;
+					return 33; // pc
 			}
 
 			return -1;
@@ -160,7 +159,7 @@ namespace code {
 				ARM_REG_CASE(28);
 				ARM_REG_CASE(29);
 				ARM_REG_CASE(30);
-				ARM_REG_SPECIAL(32, "zr");
+				ARM_REG_SPECIAL(31, "zr");
 				if (number == 33)
 					return S("pc");
 			} else if (isVectorReg(r)) {
