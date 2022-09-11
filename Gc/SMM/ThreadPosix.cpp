@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ThreadPosix.h"
+#include "Utils/Cache.h"
 
 #if STORM_GC == STORM_GC_SMM && defined(POSIX)
 
@@ -10,7 +11,7 @@ namespace storm {
 	namespace smm {
 
 		// Signals to use.
-		static const int sigStop = SIGXCPU;
+		static const int sigStop = SIGRTMIN;
 
 		// Number of threads currently active. If >= 0, we have inserted a global signal handler.
 		static size_t activeThreadCount = 0;
@@ -33,6 +34,7 @@ namespace storm {
 				tlInfo->context = (ucontext_t *)context;
 				tlInfo->onStop.up();
 				tlInfo->onResume.down();
+				clearLocalICache();
 			}
 		}
 

@@ -1,9 +1,12 @@
 #include "stdafx.h"
 #include "Utils/Mode.h"
 #include "Utils/Platform.h"
+#include "Utils/Cache.h"
 #include "Lib.h"
 
 #if STORM_GC == STORM_GC_MPS
+
+void mps_before_resume();
 
 #pragma warning(disable: 4068) // Do not warn about unknown pragmas.
 #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
@@ -26,6 +29,10 @@ void mps_decrease_scanned(mps_ss_t mps_ss, size_t decrease) {
 void mps_increase_scanned(mps_ss_t mps_ss, size_t increase) {
 	ScanState ss = PARENT(ScanStateStruct, ss_s, mps_ss);
 	ss->scannedSize += increase;
+}
+
+void mps_before_resume() {
+	clearLocalICache();
 }
 
 void gc_panic_stacktrace(void);

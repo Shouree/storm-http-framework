@@ -18,6 +18,14 @@ extern "C" {
 	// Run MPS in the hot configuration.
 #endif
 
+	// Use real-time signals for suspend and resume. This lessens the risk of clashes for programs
+	// actually using the default SIGXFSZ and SIGXCPU.
+#define CONFIG_PTHREADEXT_SIGSUSPEND (SIGRTMIN)
+#define CONFIG_PTHREADEXT_SIGRESUME (SIGRTMIN+1)
+
+	// Call a cache-invalidation function before resuming threads.
+#define CONFIG_CALL_BEFORE_RESUME() mps_before_resume()
+
 #ifdef __cplusplus
 	// Do not include these if we're compiled from 'mps.c', since that will break the MPS setup of
 	// defines for the system.

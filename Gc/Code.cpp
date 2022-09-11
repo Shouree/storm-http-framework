@@ -36,19 +36,23 @@ namespace storm {
 				break;
 			case GcCodeRef::rawPtr:
 				unalignedAtomicWrite(*(size_t *)write, ptr);
+				invalidateSingleICache(write);
 				break;
 			case GcCodeRef::relativePtr:
 			case GcCodeRef::relative:
 				unalignedAtomicWrite(*(size_t *)write, ptr - (size_t(write) + sizeof(size_t)));
+				invalidateSingleICache(write);
 				break;
 			case GcCodeRef::inside:
 				unalignedAtomicWrite(*(size_t *)write, ptr + size_t(code));
+				invalidateSingleICache(write);
 				break;
 			case GcCodeRef::relativeHere:
 				// Write a relative pointer to 'pointer' itself. Should always be the same, but the
 				// offset is not really exposed conveniently anywhere else.
 				ptr = size_t(&ref.pointer);
 				shortUnalignedAtomicWrite(*(nat *)write, nat(ptr - (size_t(write) + sizeof(nat))));
+				invalidateSingleICache(write);
 				break;
 			default:
 				// Pass on to the architecture specific parts:
@@ -65,9 +69,6 @@ namespace storm {
 		void writePtr(void *code, Nat id) {
 			GcCode *refs = Gc::codeRefs(code);
 			doWritePtr(code, refs, id);
-
-			// Invalidate cache. TODO: merge calls if possible.
-			invalidateCache(code, fmt::skip(code));
 		}
 
 		Bool needFinalization() {

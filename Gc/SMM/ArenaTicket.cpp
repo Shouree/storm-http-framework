@@ -5,8 +5,8 @@
 
 #include "Nonmoving.h"
 #include "FinalizerPool.h"
-
 #include "Thread.h"
+#include "Utils/Cache.h"
 
 namespace storm {
 	namespace smm {
@@ -33,6 +33,7 @@ namespace storm {
 			owner.entries--;
 			owner.arenaLock.unlock();
 			locked = false;
+			clearLocalICache();
 		}
 
 

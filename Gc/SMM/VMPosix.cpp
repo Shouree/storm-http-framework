@@ -3,6 +3,7 @@
 
 #if STORM_GC == STORM_GC_SMM && defined(POSIX)
 
+#include "Utils/Cache.h"
 #include "Utils.h"
 #include "VMAlloc.h"
 #include "Block.h"
@@ -34,8 +35,10 @@ namespace storm {
 			(void)context;
 
 			// If we can do something about the error, we don't need to panic.
-			if (VM::notifyWrite(info->si_addr))
+			if (VM::notifyWrite(info->si_addr)) {
+				clearLocalICache();
 				return;
+			}
 
 			// We don't know this memory. Trigger another signal to terminate us.
 #ifdef DEBUG

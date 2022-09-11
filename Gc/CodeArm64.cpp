@@ -62,6 +62,7 @@ namespace storm {
 				}
 
 				shortUnalignedAtomicWrite(*(Nat *)write, original);
+				invalidateSingleICache(write);
 
 				// Fall through to update the load instruction.
 				// fall through
@@ -74,6 +75,7 @@ namespace storm {
 				original &= 0xFF00001F;
 				original |= (delta & 0x7FFFF) << 5;
 				shortUnalignedAtomicWrite(*(Nat *)write, original);
+				invalidateSingleICache(write);
 				break;
 			case GcCodeRef::unwindInfo:
 				if (ref.pointer)

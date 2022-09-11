@@ -3,6 +3,7 @@
 #include "Gc.h"
 #include "Core/GcCode.h"
 #include "DwarfTable.h"
+#include "Utils/Cache.h"
 
 namespace storm {
 	namespace x64 {
@@ -81,6 +82,7 @@ namespace storm {
 
 			// Write the value back to memory.
 			unalignedAtomicWrite(*(size_t *)mem, insert);
+			invalidateICache(mem);
 		}
 
 #endif

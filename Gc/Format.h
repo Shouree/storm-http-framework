@@ -952,7 +952,6 @@ namespace storm {
 				Scanner s(source);
 				Result r;
 				void *next = base;
-				bool invalidateCache = false;
 				for (void *at = base; at < limit; at = next) {
 					Obj *o = fromClient(at);
 					FMT_CHECK_OBJ(o);
@@ -1013,7 +1012,6 @@ namespace storm {
 
 						// Update the pointers in the code blob as well.
 						gccode::updatePtrs(at, c);
-						invalidateCache = true;
 					} else {
 						// Scan the regular object.
 						Header *h = objHeader(o);
@@ -1104,12 +1102,6 @@ namespace storm {
 #endif
 						}
 					}
-				}
-
-				// TODO: This could probably be done more efficiently by coalescing- and
-				// de-duplicating calls. Also, we need it in other threads as well.
-				if (invalidateCache) {
-					::invalidateCache(base, limit);
 				}
 
 				return Result();

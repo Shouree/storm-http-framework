@@ -262,8 +262,10 @@ namespace code {
 	void CodeOutput::finish() {
 		// Invalidate icache if needed.
 		void *code = codePtr();
-		if (code)
-			invalidateCache(code, runtime::codeSize(code));
+		if (code) {
+			invalidateICache(code, (byte *)code + runtime::codeSize(code));
+			clearLocalICache();
+		}
 	}
 
 	/**
