@@ -277,6 +277,37 @@
     all usages of that token with the corresponding color.
   - [X] In Array.get(), do not create the exception in getRaw() since it takes up a lot of valuable space in
     the i-cache. Instead, call a separate function or reverse the logic.
+* Bugs in Progvis [0/2]
+  - [ ] Rendering is very flickering when resizing the Progvis window.
+    Probably due to repaints from the window system fail to ensure that
+    a new frame is rendered for some reason. Most notably visible on Linux,
+    but also on high-refresh displays on Windows in some situations.
+  - [ ] The program below does not behave correctly in Progvis, the call
+    to "thread_main" is skipped, and Progvis seems generally confused about
+    what is happening:
+#+BEGIN_SRC c
+struct data {
+	int a;
+	int b;
+};
+
+void thread_main(struct data *d) {
+	int temp = d->a;
+	temp += d->b;
+	d->b = temp;
+}
+
+int main(void) {
+	struct data *d = malloc(sizeof(struct data));
+	d->a = 10;
+	d->b = 20;
+	thread_new(&thread_main, d);
+	// Note: This is skipped for some reason...
+	thread_main(d);
+	return 0;
+}
+#+END_SRC
+
 * C++ front-end (in Progvis) [7/14]
   - [ ] Ability to make const member functions.
   - [ ] Check if function resolution works somewhat properly with const parameters etc.
