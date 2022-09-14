@@ -67,6 +67,7 @@ namespace code {
 
 			// Fix constraints for specific operations.
 			void movTfm(Listing *to, Instr *instr, Nat line);
+			void swapTfm(Listing *to, Instr *instr, Nat line);
 
 			// Generic constraint fixing:
 			// Constraints for data operations with a 12 bit immediate or a (shifted) register.

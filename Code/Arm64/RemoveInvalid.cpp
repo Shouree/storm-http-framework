@@ -17,6 +17,7 @@ namespace code {
 			TRANSFORM(fnParam),
 			TRANSFORM(fnParamRef),
 			TRANSFORM(mov),
+			TRANSFORM(swap),
 
 			DATA12(add),
 			DATA12(sub),
@@ -173,6 +174,27 @@ namespace code {
 				*to << instr->alterDest(tmpReg);
 				*to << instr->alterSrc(tmpReg);
 			}
+		}
+
+		void RemoveInvalid::swapTfm(Listing *to, Instr *instr, Nat line) {
+			// Note: This is really only needed in the X64 backend, so it is not too important to
+			// implement it extremely efficiently here. I think this implementation supports more
+			// cases than what is supported on X86 and X64 (there, it is needed to avoid using extra
+			// registers, but we don't really have that problem here).
+
+			Operand src = instr->src();
+			Operand dest = instr->dest();
+			Reg tmp = unusedReg(used->at(line), src.size());
+			*to << mov(tmp, src);
+			if (src.type() == opRegister || dest.type() == opRegister) {
+				*to << mov(src, dest);
+			} else {
+				used->at(line)->put(tmp);
+				Reg tmp2 = unusedReg(used->at(line), src.size());
+				*to << mov(tmp2, dest);
+				*to << mov(src, tmp2);
+			}
+			*to << mov(dest, tmp);
 		}
 
 		void RemoveInvalid::dataInstr12Tfm(Listing *to, Instr *instr, Nat line) {

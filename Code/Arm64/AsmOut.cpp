@@ -455,16 +455,17 @@ namespace code {
 				L"Destinations for data operations should have been transformed into registers.");
 			Nat dest = intRegSP(instr->dest().reg());
 
-			Nat sz = 0;
-			if (instr->src().size().size64() >= 8)
-				sz = 0x200;
+			if (instr->src().size().size64() >= 8) {
+				opImm |= 0x200;
+				opReg |= 0x400;
+			}
 
 			switch (instr->src().type()) {
 			case opRegister:
-				putData(to, opReg | sz, dest, dest, intRegSP(instr->src().reg()), 0);
+				putData(to, opReg, dest, intRegSP(instr->src().reg()), dest, 0);
 				break;
 			case opConstant:
-				putData(to, opImm | sz, dest, dest, instr->src().constant());
+				putData(to, opImm, dest, dest, instr->src().constant());
 				break;
 			default:
 				assert(false, L"Unsupported source for data operation.");
@@ -477,7 +478,7 @@ namespace code {
 		}
 
 		void subOut(Output *to, Instr *instr) {
-			data12Out(to, instr, 0x144, 0x158);
+			data12Out(to, instr, 0x144, 0x258);
 		}
 
 		void preserveOut(Output *to, Instr *instr) {
