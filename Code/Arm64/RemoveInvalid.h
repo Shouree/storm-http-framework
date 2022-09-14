@@ -46,24 +46,31 @@ namespace code {
 			Label lblLarge;
 
 			// Signature for the table of transform functions.
-			typedef void (RemoveInvalid::*TransformFn)(Listing *dest, Instr *instr, Nat line);
+			typedef void (RemoveInvalid::*TransformFn)(Listing *to, Instr *instr, Nat line);
 
 			// Transform table.
 			static const OpEntry<TransformFn> transformMap[];
 
+			// Helper function to create a constant for a large integer.
+			Operand largeConstant(const Operand &constant);
+
 			// Function calls.
-			void fnParamTfm(Listing *dest, Instr *instr, Nat line);
-			void fnParamRefTfm(Listing *dest, Instr *instr, Nat line);
-			void fnCallTfm(Listing *dest, Instr *instr, Nat line);
-			void fnCallRefTfm(Listing *dest, Instr *instr, Nat line);
+			void fnParamTfm(Listing *to, Instr *instr, Nat line);
+			void fnParamRefTfm(Listing *to, Instr *instr, Nat line);
+			void fnCallTfm(Listing *to, Instr *instr, Nat line);
+			void fnCallRefTfm(Listing *to, Instr *instr, Nat line);
 
 			// Keep track of the current part.
-			void prologTfm(Listing *dest, Instr *instr, Nat line);
-			void beginBlockTfm(Listing *dest, Instr *instr, Nat line);
-			void endBlockTfm(Listing *dest, Instr *instr, Nat line);
+			void prologTfm(Listing *to, Instr *instr, Nat line);
+			void beginBlockTfm(Listing *to, Instr *instr, Nat line);
+			void endBlockTfm(Listing *to, Instr *instr, Nat line);
 
-			// Fix constraints.
-			void movTfm(Listing *dest, Instr *instr, Nat line);
+			// Fix constraints for specific operations.
+			void movTfm(Listing *to, Instr *instr, Nat line);
+
+			// Generic constraint fixing:
+			// Constraints for data operations with a 12 bit immediate or a (shifted) register.
+			void dataInstr12Tfm(Listing *to, Instr *instr, Nat line);
 		};
 
 	}

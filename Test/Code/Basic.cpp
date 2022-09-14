@@ -119,7 +119,7 @@ BEGIN_TEST(CodeTest, CodeBasic) {
 	*l << mov(v, p);
 	*l << add(v, intConst(1));
 	*l << l1 << mov(ptrA, l1);
-	// Use 'ebx' so that we have to preserve some registers during the function call...
+	// Use 'ebx' so that we have to preserve some registers during the function call on x64...
 	*l << mov(ebx, v);
 	*l << mov(eax, ebx);
 	l->result = intDesc(e);

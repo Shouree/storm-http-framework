@@ -29,72 +29,108 @@ namespace code {
 		// https://developer.arm.com/documentation/ddi0596/2021-12/Index-by-Encoding?lang=en
 
 		// Check if value fits in 6-bit signed.
-		static Bool isImm6(Int value) {
+		static Bool isImm6S(Int value) {
 			return value >= -0x20 && value <= 0x1F;
 		}
-		static void checkImm6(RootObject *e, Int value) {
-			if (!isImm6(value))
-				throw new (e) InvalidValue(TO_S(e, S("Too large 6-bit immediate value: ") << value));
+		static void checkImm6S(RootObject *e, Int value) {
+			if (!isImm6S(value))
+				throw new (e) InvalidValue(TO_S(e, S("Too large signed 6-bit immediate value: ") << value));
+		}
+
+		// Check if value fits in 6-bit unsigned.
+		static Bool isImm6U(Nat value) {
+			return value <= 0x3F;
+		}
+		static void checkImm6U(RootObject *e, Int value) {
+			if (!isImm6U(value))
+				throw new (e) InvalidValue(TO_S(e, S("Too large unsigned 6-bit immediate value: ") << value));
 		}
 
 		// Check if value fits in 7-bit signed.
-		static Bool isImm7(Int value) {
+		static Bool isImm7S(Int value) {
 			return value >= -0x40 && value <= 0x3F;
 		}
-		static void checkImm7(RootObject *e, Int value) {
-			if (!isImm7(value))
-				throw new (e) InvalidValue(TO_S(e, S("Too large 7-bit immediate value: ") << value));
+		static void checkImm7S(RootObject *e, Int value) {
+			if (!isImm7S(value))
+				throw new (e) InvalidValue(TO_S(e, S("Too large signed 7-bit immediate value: ") << value));
+		}
+
+		// Check if value fits in 7-bit unsigned.
+		static Bool isImm7U(Nat value) {
+			return value <= 0x7F;
+		}
+		static void checkImm7U(RootObject *e, Nat value) {
+			if (!isImm7U(value))
+				throw new (e) InvalidValue(TO_S(e, S("Too large unsigned 7-bit immediate value: ") << value));
 		}
 
 		// Check if value fits in 12-bit signed.
-		static Bool isImm12(Int value) {
+		static Bool isImm12S(Int value) {
 			return value >= -0x800 && value <= 0x7FF;
 		}
-		static void checkImm12(RootObject *e, Int value) {
-			if (!isImm12(value))
-				throw new (e) InvalidValue(TO_S(e, S("Too large 12-bit immediate value: ") << value));
+		static void checkImm12S(RootObject *e, Int value) {
+			if (!isImm12S(value))
+				throw new (e) InvalidValue(TO_S(e, S("Too large signed 12-bit immediate value: ") << value));
+		}
+
+		// Check if value fits in 12-bit unsigned.
+		static Bool isImm12U(Nat value) {
+			return value <= 0xFFF;
+		}
+		static void checkImm12U(RootObject *e, Nat value) {
+			if (!isImm12U(value))
+				throw new (e) InvalidValue(TO_S(e, S("Too large unsigned 12-bit immediate value: ") << value));
 		}
 
 		// Check if value fits in 19-bit signed.
-		static Bool isImm19(Int value) {
-			return value >= -0x4000 && value <= 0x3FFF;
+		static Bool isImm19S(Int value) {
+			return value >= -0x40000 && value <= 0x3FFFF;
 		}
-		static void checkImm19(RootObject *e, Int value) {
-			if (!isImm19(value))
-				throw new (e) InvalidValue(TO_S(e, S("Too large 19-bit immediate value: ") << value));
+		static void checkImm19S(RootObject *e, Int value) {
+			if (!isImm19S(value))
+				throw new (e) InvalidValue(TO_S(e, S("Too large signed 19-bit immediate value: ") << value));
 		}
 
-		// Put data instructions. 3 registers, and a 6-bit immediate.
+		// Check if value fits in 19-bit unsigned.
+		static Bool isImm19U(Nat value) {
+			return value <= 0x7FFFF;
+		}
+		static void checkImm19U(RootObject *e, Int value) {
+			if (!isImm19U(value))
+				throw new (e) InvalidValue(TO_S(e, S("Too large unsigned 19-bit immediate value: ") << value));
+		}
+
+		// Put data instructions. 3 registers, and a 6-bit unsigned immediate.
 		static inline void putData(Output *to, Nat op, Nat rDest, Nat ra, Nat rb, Nat imm) {
-			checkImm6(to, imm);
+			checkImm6U(to, imm);
 			Nat instr = (op << 21) | rDest | (ra << 16) | (rb << 5) | ((imm & 0x3F) << 10);
 			to->putInt(instr);
 		}
 
-		// Put data instructions. 2 registers, 12-bit immediate.
+		// Put data instructions. 2 registers, 12-bit unsigned immediate.
 		static inline void putData(Output *to, Nat op, nat rDest, Nat rSrc, Nat imm) {
-			checkImm12(to, imm);
+			checkImm12U(to, imm);
 			Nat instr = (op << 22) | rDest | (rSrc << 5) | ((imm & 0xFFF) << 10);
 			to->putInt(instr);
 		}
 
-		// Put instructions for loads and stores: 3 registers and a 7-bit immediate.
-		static inline void putLoadStore(Output *to, Nat op, Nat base, Nat r1, Nat r2, Nat imm) {
-			checkImm7(to, imm);
+		// Put instructions for loads and stores: 3 registers and a 7-bit signed immediate.
+		static inline void putLoadStore(Output *to, Nat op, Nat base, Nat r1, Nat r2, Int imm) {
+			checkImm7S(to, imm);
 			Nat instr = (op << 22) | r1 | (base << 5) | (r2 << 10) | ((imm & 0x7F) << 15);
 			to->putInt(instr);
 		}
 
 		// Put a "large" load/store (for bytes, mainly): 2 registers and 12-bit immediate.
-		static inline void putLoadStoreLarge(Output *to, Nat op, Nat base, Nat r1, Nat imm) {
-			checkImm12(to, imm);
+		static inline void putLoadStoreLarge(Output *to, Nat op, Nat base, Nat r1, Int imm) {
+			checkImm12S(to, imm);
 			Nat instr = (op << 22) | r1 | (base << 5) | ((0xFFF & imm) << 10);
 			to->putInt(instr);
 		}
 
 		// Put a load/store with 19-bit immediate offset from PC.
-		static inline void putLoadStoreImm(Output *to, Nat op, Nat reg, Nat imm) {
-			checkImm19(to, imm);
+		static inline void putLoadStoreImm(Output *to, Nat op, Nat reg, Int imm) {
+			checkImm19S(to, imm);
 			Nat instr = (op << 24) | reg | ((0x7FFFF & imm) << 5);
 			to->putInt(instr);
 		}
@@ -114,7 +150,7 @@ namespace code {
 		void prologOut(Output *to, Instr *instr) {
 			Offset stackSize = instr->src().offset();
 			Int scaled = stackSize.v64() / 8;
-			if (!isImm7(scaled)) {
+			if (!isImm7S(scaled)) {
 				TODO(L"Make prolog that handles this properly.");
 				throw new (to) InvalidValue(S("Too large stack size for Arm64!"));
 			}
@@ -131,7 +167,7 @@ namespace code {
 		void epilogOut(Output *to, Instr *instr) {
 			Offset stackSize = instr->src().offset();
 			Int scaled = stackSize.v64() / 8;
-			if (!isImm7(scaled)) {
+			if (!isImm7S(scaled)) {
 				TODO(L"Make epilog that handles this properly.");
 				throw new (to) InvalidValue(S("Too large stack size for Arm64!"));
 			}
@@ -165,9 +201,9 @@ namespace code {
 				if (same(next->src().reg(), baseReg) && Int(next->dest().size().size64()) == opSize) {
 					// Look at the offsets, if they are next to each other, we can merge them.
 					Int off = next->src().offset().v64();
-					if (off == offset + opSize && isImm7(offset / opSize)) {
+					if (off == offset + opSize && isImm7S(offset / opSize)) {
 						dest2 = next->dest().reg();
-					} else if (off == offset - opSize && isImm7(off / opSize)) {
+					} else if (off == offset - opSize && isImm7S(off / opSize)) {
 						// Put the second one first.
 						dest2 = dest1;
 						dest1 = next->dest().reg();
@@ -183,7 +219,7 @@ namespace code {
 			// TODO: Handle fp registers!
 			if (dest2 != noReg) {
 				// Note: Should not happen if merging code above is correct.
-				if (!isImm7(offset))
+				if (!isImm7S(offset))
 					throw new (to) InvalidValue(S("Too large offset!"));
 
 				Nat op = opSize == 4 ? 0x0A5 : 0x2A5;
@@ -214,9 +250,9 @@ namespace code {
 				if (same(next->dest().reg(), baseReg) && Int(next->src().size().size64()) == opSize) {
 					// Look at the offsets, if they are next to each other, we can merge them.
 					Int off = next->dest().offset().v64();
-					if (off == offset + opSize && isImm7(offset / opSize)) {
+					if (off == offset + opSize && isImm7S(offset / opSize)) {
 						src2 = next->src().reg();
-					} else if (off == offset - opSize && isImm7(off / opSize)) {
+					} else if (off == offset - opSize && isImm7S(off / opSize)) {
 						// Put the second one first.
 						src2 = src1;
 						src1 = next->src().reg();
@@ -317,8 +353,14 @@ namespace code {
 			Operand src = instr->src();
 			switch (src.type()) {
 			case opRelative:
-				// add:
-				putData(to, 0x244, dest, intRegZR(src.reg()), src.offset().v64());
+				// Note: These are not sign-extended, so we need to be careful about the sign.
+				if (src.offset().v64() > 0) {
+					// add:
+					putData(to, 0x244, dest, intRegZR(src.reg()), src.offset().v64());
+				} else {
+					// sub:
+					putData(to, 0x344, dest, intRegZR(src.reg()), -src.offset().v64());
+				}
 				break;
 			default:
 				throw new (to) InvalidValue(TO_S(to, S("Unsupported source operand for lea: ") << src));
@@ -406,32 +448,36 @@ namespace code {
 			}
 		}
 
-		void addOut(Output *to, Instr *instr) {
-			switch (instr->dest().type()) {
+		// Generic output of data instructions that use 12-bit immediates or registers. Assumes that
+		// the high bit of the op-code is the size bit.
+		static void data12Out(Output *to, Instr *instr, Nat opImm, Nat opReg) {
+			assert(instr->dest().type() == opRegister,
+				L"Destinations for data operations should have been transformed into registers.");
+			Nat dest = intRegSP(instr->dest().reg());
+
+			Nat sz = 0;
+			if (instr->src().size().size64() >= 8)
+				sz = 0x200;
+
+			switch (instr->src().type()) {
 			case opRegister:
-				if (instr->dest().reg() == ptrStack) {
-					putData(to, 0x244, 31, 31, instr->src().constant());
-				} else {
-					assert(false, L"Unsupported sub register!");
-				}
+				putData(to, opReg | sz, dest, dest, intRegSP(instr->src().reg()), 0);
+				break;
+			case opConstant:
+				putData(to, opImm | sz, dest, dest, instr->src().constant());
 				break;
 			default:
-				assert(false, L"Unsupported sub operands");
+				assert(false, L"Unsupported source for data operation.");
+				break;
 			}
 		}
 
+		void addOut(Output *to, Instr *instr) {
+			data12Out(to, instr, 0x044, 0x058);
+		}
+
 		void subOut(Output *to, Instr *instr) {
-			switch (instr->dest().type()) {
-			case opRegister:
-				if (instr->dest().reg() == ptrStack) {
-					putData(to, 0x344, 31, 31, instr->src().constant());
-				} else {
-					assert(false, L"Unsupported sub register!");
-				}
-				break;
-			default:
-				assert(false, L"Unsupported sub operands");
-			}
+			data12Out(to, instr, 0x144, 0x158);
 		}
 
 		void preserveOut(Output *to, Instr *instr) {

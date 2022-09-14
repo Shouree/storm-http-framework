@@ -47,6 +47,9 @@ namespace code {
 		// Get an unused register.
 		Reg unusedReg(RegSet *used);
 
+		// Get unused register (as above), but specify desired size.
+		Reg unusedReg(RegSet *used, Size size);
+
 		// Get unused register, don't throw if none is available.
 		Reg unusedRegUnsafe(RegSet *used);
 

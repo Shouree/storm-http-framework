@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "RemoveInvalid.h"
+#include "Asm.h"
 #include "../Listing.h"
 #include "../UsedRegs.h"
 #include "../Exception.h"
@@ -8,6 +9,7 @@ namespace code {
 	namespace arm64 {
 
 #define TRANSFORM(x) { op::x, &RemoveInvalid::x ## Tfm }
+#define DATA12(x) { op::x, &RemoveInvalid::dataInstr12Tfm }
 
 		const OpEntry<RemoveInvalid::TransformFn> RemoveInvalid::transformMap[] = {
 			TRANSFORM(fnCall),
@@ -15,6 +17,9 @@ namespace code {
 			TRANSFORM(fnParam),
 			TRANSFORM(fnParamRef),
 			TRANSFORM(mov),
+
+			DATA12(add),
+			DATA12(sub),
 		};
 
 		RemoveInvalid::RemoveInvalid() {}
@@ -79,24 +84,30 @@ namespace code {
 			}
 		}
 
-
-		void RemoveInvalid::prologTfm(Listing *dest, Instr *instr, Nat line) {
-			currentBlock = dest->root();
-			*dest << instr;
+		Operand RemoveInvalid::largeConstant(const Operand &data) {
+			Nat offset = large->count();
+			large->push(data);
+			return xRel(data.size(), lblLarge, Offset::sWord * offset);
 		}
 
-		void RemoveInvalid::beginBlockTfm(Listing *dest, Instr *instr, Nat line) {
+
+		void RemoveInvalid::prologTfm(Listing *to, Instr *instr, Nat line) {
+			currentBlock = to->root();
+			*to << instr;
+		}
+
+		void RemoveInvalid::beginBlockTfm(Listing *to, Instr *instr, Nat line) {
 			currentBlock = instr->src().block();
-			*dest << instr;
+			*to << instr;
 		}
 
-		void RemoveInvalid::endBlockTfm(Listing *dest, Instr *instr, Nat line) {
+		void RemoveInvalid::endBlockTfm(Listing *to, Instr *instr, Nat line) {
 			Block ended = instr->src().block();
-			currentBlock = dest->parent(ended);
-			*dest << instr;
+			currentBlock = to->parent(ended);
+			*to << instr;
 		}
 
-		void RemoveInvalid::fnParamTfm(Listing *dest, Instr *instr, Nat line) {
+		void RemoveInvalid::fnParamTfm(Listing *to, Instr *instr, Nat line) {
 			TypeInstr *i = as<TypeInstr>(instr);
 			if (!i) {
 				throw new (this) InvalidValue(S("Expected a TypeInstr for 'fnParam'."));
@@ -105,7 +116,7 @@ namespace code {
 			params->push(ParamInfo(i->type, i->src(), false));
 		}
 
-		void RemoveInvalid::fnParamRefTfm(Listing *dest, Instr *instr, Nat line) {
+		void RemoveInvalid::fnParamRefTfm(Listing *to, Instr *instr, Nat line) {
 			TypeInstr *i = as<TypeInstr>(instr);
 			if (!i) {
 				throw new (this) InvalidValue(S("Expected a TypeInstr for 'fnParamRef'."));
@@ -114,37 +125,91 @@ namespace code {
 			params->push(ParamInfo(i->type, i->src(), true));
 		}
 
-		void RemoveInvalid::fnCallTfm(Listing *dest, Instr *instr, Nat line) {
+		void RemoveInvalid::fnCallTfm(Listing *to, Instr *instr, Nat line) {
 			TypeInstr *t = as<TypeInstr>(instr);
 			if (!t) {
 				throw new (this) InvalidValue(S("Using a fnCall that was not created properly."));
 			}
 
-			emitFnCall(dest, t->src(), t->dest(), t->type, false, currentBlock, used->at(line), params);
+			emitFnCall(to, t->src(), t->dest(), t->type, false, currentBlock, used->at(line), params);
 			params->clear();
 		}
 
-		void RemoveInvalid::fnCallRefTfm(Listing *dest, Instr *instr, Nat line) {
+		void RemoveInvalid::fnCallRefTfm(Listing *to, Instr *instr, Nat line) {
 			TypeInstr *t = as<TypeInstr>(instr);
 			if (!t) {
 				throw new (this) InvalidValue(S("Using a fnCall that was not created properly."));
 			}
 
-			emitFnCall(dest, t->src(), t->dest(), t->type, true, currentBlock, used->at(line), params);
+			emitFnCall(to, t->src(), t->dest(), t->type, true, currentBlock, used->at(line), params);
 			params->clear();
 		}
 
-		void RemoveInvalid::movTfm(Listing *dest, Instr *instr, Nat line) {
-			if (instr->src().type() == opConstant) {
-				if (instr->src().constant() > 0xFFFF) {
-					large->push(instr->src());
-					// TODO: Make sure that the destination is a register.
-					*dest << instr->alterSrc(xRel(large->last().size(), lblLarge, Offset::sWord*(large->count()-1)));
-					return;
+		void RemoveInvalid::movTfm(Listing *to, Instr *instr, Nat line) {
+			// We need to ensure that at most one operand is a memory operand. Large constants are
+			// count as a memory operand since they need to be loaded separately.
+
+			Operand src = instr->src();
+			switch (src.type()) {
+			case opRegister:
+				// No problem, we will be able to handle this instruction without issues.
+				*to << instr;
+				return;
+			case opConstant:
+				// If the constant is too large, we need to use a load instruction.
+				if (src.constant() > 0xFFFF) {
+					src = largeConstant(src);
+					instr = instr->alterSrc(src);
+					// Let execution continue in order to handle the case where destination is not a register.
+				}
+				break;
+			}
+
+			// If we get here, we need to try to make "dest" into a register if it is not already.
+			if (instr->dest().type() == opRegister) {
+				*to << instr;
+			} else {
+				Reg tmpReg = unusedReg(used->at(line), src.size());
+				*to << instr->alterDest(tmpReg);
+				*to << instr->alterSrc(tmpReg);
+			}
+		}
+
+		void RemoveInvalid::dataInstr12Tfm(Listing *to, Instr *instr, Nat line) {
+			// If "dest" is not a register, we need to surround this instruction with a load *and* a
+			// store. If "src" is not a register, we need to add a load before. If "src" is too
+			// large, we need to make it into a load.
+			Operand src = instr->src();
+			if (src.type() == opConstant) {
+				if (src.constant() > 0xFFF) {
+					src = largeConstant(src);
 				}
 			}
 
-			*dest << instr;
+			switch (src.type()) {
+			case opRegister:
+			case opConstant:
+				// TODO: More things to ignore here!
+				break;
+			default:
+				// Emit a load first.
+				Reg t = unusedReg(used->at(line), src.size());
+				used->at(line)->put(t);
+				*to << mov(t, src);
+				src = t;
+				break;
+			}
+
+			Operand dest = instr->dest();
+			if (dest.type() != opRegister) {
+				// Load and store the destination.
+				Reg t = unusedReg(used->at(line), dest.size());
+				*to << mov(t, dest);
+				*to << instr->alter(t, src);
+				*to << mov(dest, t);
+			} else {
+				*to << instr->alterSrc(src);
+			}
 		}
 
 	}

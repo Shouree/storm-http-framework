@@ -176,6 +176,10 @@ namespace code {
 			return r;
 		}
 
+		Reg unusedReg(RegSet *used, Size size) {
+			return asSize(unusedReg(used), size);
+		}
+
 		Reg unusedRegUnsafe(RegSet *used) {
 			static const Reg candidates[] = {
 				ptrr(0), ptrr(1), ptrr(2), ptrr(3), ptrr(4), ptrr(5), ptrr(6), ptrr(7), ptrr(8),
