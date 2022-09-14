@@ -18,6 +18,9 @@ extern "C" {
 // Invalidates the data cache to ensure writes has reached memory and are visible to other cores.
 inline void invalidateDCache(void *start, void *end);
 
+// Make sure any pending data operations are done executing on the current thread.
+inline void dataBarrier();
+
 // Invalidate the instruction cache for an individual word. This function assumes that this thread
 // has updated the instruction at "start", and that it needs to be flushed from the data cache
 // first. After execution, the changes are immediately visible to other CPUs, but all CPUs need to
@@ -45,6 +48,10 @@ inline void invalidateDCache(void *start, void *end) {
 	__asm__ volatile ("" : : : "memory");
 }
 
+inline void dataBarrier() {
+	__asm__ volatile ("" : : : "memory");
+}
+
 inline void invalidateSingleICache(void *start) {
 	__asm__ volatile ("" : : : "memory");
 }
@@ -67,8 +74,12 @@ inline void invalidateDCache(void *start, void *end) {
 	__builtin___clear_cache(start, end);
 }
 
+inline void dataBarrier() {
+	__asm__ volatile ("dsb ish\n\t" : : : "memory");
+}
+
 inline void clearLocalICache() {
-	__asm__ volatile ("isb" : : : "memory");
+	__asm__ volatile ("isb\n\t" : : : "memory");
 }
 
 inline void invalidateSingleICache(void *start) {

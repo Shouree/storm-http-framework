@@ -33,6 +33,7 @@ void mps_increase_scanned(mps_ss_t mps_ss, size_t increase) {
 
 void mps_before_resume() {
 	clearLocalICache();
+	dataBarrier();
 }
 
 void gc_panic_stacktrace(void);

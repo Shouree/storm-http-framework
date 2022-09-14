@@ -987,16 +987,6 @@ namespace storm {
 						// Scan the code segment.
 						GcCode *c = refsCode(o);
 
-						// Scan our self-pointer to make sure that this object will be scanned
-						// whenever it is moved.
-						r = fix12(s, &c->reserved);
-						if (r != Result())
-							return r;
-
-#ifdef SLOW_DEBUG
-						dbg_assert(c->reserved == at, L"Invalid self-pointer!");
-#endif
-
 						for (size_t i = 0; i < c->refCount; i++) {
 							GcCodeRef &ref = c->refs[i];
 #ifdef SLOW_DEBUG
@@ -1009,6 +999,21 @@ namespace storm {
 									return r;
 							}
 						}
+
+						// Scan our self-pointer to make sure that this object will be scanned
+						// whenever it is moved. We do this after the references to ensure that
+						// this will flush the data cache properly as a bonus.
+						if (s.fix1(c->reserved)) {
+							void *old = c->reserved;
+							if ((r = s.fix2(&c->reserved)) != Result())
+								return r;
+							if (old != c->reserved)
+								invalidateICache(at, next);
+						}
+
+#ifdef SLOW_DEBUG
+						dbg_assert(c->reserved == at, L"Invalid self-pointer!");
+#endif
 
 						// Update the pointers in the code blob as well.
 						gccode::updatePtrs(at, c);
