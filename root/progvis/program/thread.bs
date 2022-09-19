@@ -278,6 +278,7 @@ class ProgThread on Render {
 				barrierStep = false;
 				wait();
 			}
+			barrierStep = false;
 			paused = false;
 		}
 

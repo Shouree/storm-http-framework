@@ -284,29 +284,7 @@
     but also on high-refresh displays on Windows in some situations.
   - [ ] The program below does not behave correctly in Progvis, the call
     to "thread_main" is skipped, and Progvis seems generally confused about
-    what is happening:
-#+BEGIN_SRC c
-struct data {
-	int a;
-	int b;
-};
-
-void thread_main(struct data *d) {
-	int temp = d->a;
-	temp += d->b;
-	d->b = temp;
-}
-
-int main(void) {
-	struct data *d = malloc(sizeof(struct data));
-	d->a = 10;
-	d->b = 20;
-	thread_new(&thread_main, d);
-	// Note: This is skipped for some reason...
-	thread_main(d);
-	return 0;
-}
-#+END_SRC
+    what is happening: root/progvis_demo/test/step_error.c
 
 * C++ front-end (in Progvis) [7/14]
   - [ ] Ability to make const member functions.
