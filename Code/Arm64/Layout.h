@@ -76,6 +76,10 @@ namespace code {
 			void initBlock(Listing *dest, Block init);
 			void destroyBlock(Listing *dest, Block destroy, Bool preserveResult, Bool notifyTable);
 
+			// Save and restore the result when destroying blocks.
+			void saveResult(Listing *dest, Result *result);
+			void restoreResult(Listing *dest, Result *result);
+
 			// Transform table.
 			typedef void (Layout::*TransformFn)(Listing *dest, Instr *src);
 			static const OpEntry<TransformFn> transformMap[];

@@ -3,7 +3,7 @@
 
 namespace code {
 
-	static Offset addVar(Listing *src, Array<Offset> *db, Array<Bool> *valid, Var v) {
+	static Offset addVar(Listing *src, Array<Offset> *db, Array<Bool> *valid, Var v, const Size &minAlign) {
 		// Parameter?
 		if (src->isParam(v))
 			return Offset();
@@ -19,13 +19,13 @@ namespace code {
 			return db->at(id);
 
 		Var prevVar = src->prev(v);
-		Offset offset = addVar(src, db, valid, prevVar);
+		Offset offset = addVar(src, db, valid, prevVar, minAlign);
 
 		if (!src->isParam(prevVar))
 			offset += prevVar.size().aligned();
 
 		// Align 'prev' to something useful.
-		offset = offset.alignAs(v.size());
+		offset = offset.alignAs(minAlign).alignAs(v.size());
 
 		valid->at(id) = true;
 		db->at(id) = offset;
@@ -34,6 +34,10 @@ namespace code {
 	}
 
 	Array<Offset> *layout(Listing *src) {
+		return layout(src, Size::sByte);
+	}
+
+	Array<Offset> *layout(Listing *src, Size minAlign) {
 		Array<Var> *all = src->allVars();
 
 		Array<Offset> *result = new (src) Array<Offset>(all->count() + 1, Offset());
@@ -42,7 +46,7 @@ namespace code {
 		Offset worst;
 
 		for (nat i = 0; i < all->count(); i++) {
-			Offset o = addVar(src, result, populated, all->at(i));
+			Offset o = addVar(src, result, populated, all->at(i), minAlign);
 			o = (o + all->at(i).size());
 			// Align to the most restrictive of pointer alignment and the alignment of the type.
 			o = o.alignAs(Size::sPtr).alignAs(all->at(i).size());

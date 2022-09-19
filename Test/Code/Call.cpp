@@ -498,7 +498,7 @@ BEGIN_TEST(CallFromArray, Code) {
 
 	*l << fnRet(eax);
 
-	Binary *b = new (e) Binary(arena, l);
+	Binary *b = new (e) Binary(arena, l, true);
 	typedef Int (*Fn)(const Int **);
 	Fn fn = (Fn)b->address();
 
@@ -509,7 +509,7 @@ BEGIN_TEST(CallFromArray, Code) {
 } END_TEST
 
 static Int CODECALL complexIntFn(DbgVal a, DbgVal b, DbgVal c) {
-	return 100*a.v + 10*b.v + c.v;
+	return 100*a.get() + 10*b.get() + c.get();
 }
 
 BEGIN_TEST(CallComplexFromArray, Code) {
@@ -518,7 +518,7 @@ BEGIN_TEST(CallComplexFromArray, Code) {
 	Type *dbgVal = DbgVal::stormType(e);
 	ComplexDesc *valDesc = new (e) ComplexDesc(dbgVal->size(), dbgVal->copyCtor()->ref(), dbgVal->destructor()->ref());
 
-	Ref toCall = arena->external(S("intFn"), address(&complexIntFn));
+	Ref toCall = arena->external(S("complexIntFn"), address(&complexIntFn));
 
 	Listing *l = new (e) Listing(false, intDesc(e));
 	Var params = l->createParam(ptrDesc(e));

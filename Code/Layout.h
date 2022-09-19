@@ -15,4 +15,7 @@ namespace code {
 	 */
 	Array<Offset> *STORM_FN layout(Listing *src);
 
+	// Like "layout", but allows specifying a minimum alignment for individual variables.
+	Array<Offset> *STORM_FN layout(Listing *src, Size minAlign);
+
 }

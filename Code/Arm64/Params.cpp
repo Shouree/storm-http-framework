@@ -296,6 +296,7 @@ namespace code {
 
 		Result::Result(TypeDesc *result) {
 			regType = primitive::none;
+			twoReg = false;
 			memory = false;
 
 			if (PrimitiveDesc *p = as<PrimitiveDesc>(result)) {
@@ -332,11 +333,15 @@ namespace code {
 
 		void Result::add(SimpleDesc *desc) {
 			// The logic here is very similar to 'Params::addDesc'.
-			if (desc->size().size64() > 16) {
+			Nat sz = desc->size().size64();
+			if (sz > 16) {
 				// Too large. Pass it on the stack!
 				memory = true;
 				return;
 			}
+
+			if (sz > 8)
+				twoReg = true;
 
 			if (uniformFp(desc))
 				regType = primitive::real;

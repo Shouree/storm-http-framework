@@ -49,11 +49,20 @@ namespace code {
 				params->add(i, src->paramDesc(p->at(i)));
 			}
 
+			// If the result is stored in registers, we need to "spill" it to non-clobbered
+			// registers during cleanup. Make sure we have them.
+			if (result->regType != primitive::none) {
+				preserved->put(ptrr(19));
+				if (result->twoReg)
+					preserved->put(ptrr(20));
+			}
+
 			Nat preserveCount = preserved->count();
-			// If result is passed in memory, we need to spill it to the stack as well. We treat it
+			// If result is passed in memory, we need to spill x8 to the stack as well. We treat it
 			// as a regular clobbered register.
-			if (result->memory)
+			if (result->memory) {
 				preserveCount++;
+			}
 			layout = code::arm64::layout(src, params, preserveCount);
 
 			// Initialize our bookkeeping of active variables.
@@ -167,12 +176,40 @@ namespace code {
 			}
 		}
 
-		static void saveResult(Listing *dest, Result *result) {
-			TODO(L"Save result!");
+		void Layout::saveResult(Listing *dest, Result *result) {
+			if (result->memory)
+				return;
+
+			switch (result->regType) {
+			case primitive::integer:
+				*dest << mov(ptrr(19), ptrr(0));
+				if (result->twoReg)
+					*dest << mov(ptrr(20), ptrr(1));
+				break;
+			case primitive::real:
+				*dest << mov(xr(19), qr(0));
+				if (result->twoReg)
+					*dest << mov(xr(20), qr(1));
+				break;
+			}
 		}
 
-		static void restoreResult(Listing *dest, Result *result) {
-			TODO(L"Restore result!");
+		void Layout::restoreResult(Listing *dest, Result *result) {
+			if (result->memory || result->regType == primitive::none)
+				return;
+
+			switch (result->regType) {
+			case primitive::integer:
+				*dest << mov(ptrr(0), ptrr(19));
+				if (result->twoReg)
+					*dest << mov(ptrr(1), ptrr(20));
+				break;
+			case primitive::real:
+				*dest << mov(qr(0), xr(19));
+				if (result->twoReg)
+					*dest << mov(qr(1), xr(20));
+				break;
+			}
 		}
 
 		void Layout::destroyBlock(Listing *dest, Block destroy, Bool preserveResult, Bool table) {
@@ -353,7 +390,7 @@ namespace code {
 		}
 
 		Array<Offset> *layout(Listing *src, Params *params, Nat spilled) {
-			Array<Offset> *result = code::layout(src);
+			Array<Offset> *result = code::layout(src, Size::sPtr); // Specify minimum alignment.
 			Array<Var> *paramVars = src->allParams();
 
 			// A stack frame on Arm64 is as follows. Offsets are relative sp and x29 (frame

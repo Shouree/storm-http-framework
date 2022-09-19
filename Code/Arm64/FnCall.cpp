@@ -27,32 +27,117 @@ namespace code {
 			return false;
 		}
 
+		// Basic map of registers preserved in other registers.
+		class PreservedRegs {
+		public:
+			PreservedRegs() {
+				for (Nat i = 0; i < ARRAY_COUNT(preservedInt); i++)
+					preservedInt[i] = noReg;
+				for (Nat i = 0; i < ARRAY_COUNT(preservedFloat); i++)
+					preservedFloat[i] = noReg;
+			}
+
+			Reg &operator [](Reg r) {
+				if (isIntReg(r))
+					return preservedInt[intRegNumber(r)];
+				else
+					return preservedFloat[vectorRegNumber(r)];
+			}
+		private:
+			Reg preservedInt[32];
+			Reg preservedFloat[32];
+		};
+
+		// Preserve registers for complex parameters.
+		static void preserveComplex(Listing *dest, RegSet *used, Block block, Array<ParamInfo> *params) {
+			PreservedRegs preserved;
+			RegSet *dirtyRegs = code::arm64::dirtyRegs(dest->engine());
+
+			// First: Look for operands that use register-relative addressing and preserve them in
+			// registers. This means that we prioritize storing registers that might help us access
+			// multiple values over ones that are read directly.
+			Bool firstComplex = true;
+			for (Nat i = 0; i < params->count(); i++) {
+				ParamInfo &param = params->at(i);
+				if (as<ComplexDesc>(param.type) != null && firstComplex) {
+					// No need to worry about the first complex parameter!
+					firstComplex = false;
+					continue;
+				}
+
+				if (param.src.type() != opRelative)
+					continue;
+				Reg reg = param.src.reg();
+				if (!dirtyRegs->has(reg))
+					continue;
+
+				Reg &movedTo = preserved[reg];
+				if (movedTo == noReg)
+					movedTo = preserveRegInReg(reg, used, dest);
+
+				if (movedTo == noReg) {
+					// This means no more registers were available. In this case, revert to loading
+					// the value and storing it in a variable.
+					Reg tmpReg = ptrr(16); // Should be free.
+					Var v = dest->createVar(block, Size::sPtr);
+					if (param.ref) {
+						*dest << mov(tmpReg, param.src);
+						*dest << mov(v, tmpReg);
+					} else {
+						*dest << lea(tmpReg, param.src);
+						*dest << mov(v, tmpReg);
+						param.ref = true;
+					}
+					param.src = Operand(v);
+				} else {
+					// Success, update the parameter.
+					param.src = xRel(param.src.size(), movedTo, param.src.offset());
+				}
+			}
+
+			// Then: Look for operands that read registers directly. These are not as bad to spill
+			// to the stack, which is why we do this later.
+			firstComplex = true;
+			for (Nat i = 0; i < params->count(); i++) {
+				ParamInfo &param = params->at(i);
+				if (as<ComplexDesc>(param.type) != null && firstComplex) {
+					// No need to worry about the first complex parameter!
+					firstComplex = false;
+					continue;
+				}
+
+				if (param.src.type() != opRegister)
+					continue;
+				Reg reg = param.src.reg();
+				if (!dirtyRegs->has(reg))
+					continue;
+
+				Reg &movedTo = preserved[reg];
+				if (movedTo == noReg)
+					movedTo = preserveRegInReg(reg, used, dest);
+
+				if (movedTo == noReg) {
+					// No more registers available. Spill to stack.
+					Var v = dest->createVar(block, param.src.size());
+					*dest << mov(v, reg);
+					param.src = Operand(v);
+				} else {
+					// Success, update the parameter.
+					param.src = asSize(movedTo, param.src.size());
+				}
+			}
+		}
+
 		// Copy complex parameters to the stack. Return a new block if we copied parameters to the stack.
 		static Block copyComplex(Listing *dest, RegSet *used, Array<ParamInfo> *params, Block currentBlock) {
 			if (!hasComplex(params))
 				return Block();
 
-			TODO(L"Save dirty registers!");
-
 			Block block = dest->createBlock(currentBlock);
 			*dest << begin(block);
 
-			// Spill registers that get clobbered by function calls:
-			RegSet *dirtyRegs = code::arm64::dirtyRegs(dest->engine());
-			for (Nat i = 0; i < params->count(); i++) {
-				Operand &op = params->at(i).src;
-				if (!op.hasRegister())
-					continue;
-
-				Reg reg = op.reg();
-
-				// Need to preserve?
-				if (!dirtyRegs->has(reg))
-					continue;
-
-				// Note: Updates the list of params and 'used' as well.
-				op = preserveReg(reg, used, dest, block);
-			}
+			// Spill registers that get clobbered by function calls.
+			preserveComplex(dest, used, block, params);
 
 			// Make copies of objects. Note: We know that x0..x8 are not used now!
 			for (Nat i = 0; i < params->count(); i++) {
@@ -61,12 +146,15 @@ namespace code {
 				if (!c)
 					continue;
 
-				Var v = dest->createVar(block, c, freeDef | freeInactive);
-				*dest << lea(ptrr(0), v);
 				if (param.ref)
 					*dest << mov(ptrr(1), param.src);
 				else
 					*dest << lea(ptrr(1), param.src);
+
+				// This is after moving 'src' to x1, that way we never need to worry about
+				// preserving anything for the first complex parameter.
+				Var v = dest->createVar(block, c, freeDef | freeInactive);
+				*dest << lea(ptrr(0), v);
 
 				*dest << call(c->ctor, Size());
 				*dest << activate(v);
@@ -277,6 +365,15 @@ namespace code {
 			used = new (e) RegSet(*used);
 			params = new (e) Array<ParamInfo>(*params);
 
+			// Find a register to use for the result.
+			Reg resultTempReg = noReg;
+			for (Nat i = 19; i < 29; i++) {
+				if (!used->has(ptrr(i))) {
+					resultTempReg = ptrr(i);
+					break;
+				}
+			}
+
 			Params *paramLayout = new (e) Params();
 			for (Nat i = 0; i < params->count(); i++) {
 				paramLayout->add(i, params->at(i).type);
@@ -317,10 +414,10 @@ namespace code {
 			// Handle the result if required.
 			if (!resultLayout->memory && resultPos != Operand()) {
 				Reg srcReg1 = ptrr(0);
-				Reg srcReg2 = ptrr(0);
+				Reg srcReg2 = ptrr(1);
 				if (resultLayout->regType == primitive::real) {
 					srcReg1 = dr(0);
-					srcReg2 = dr(0);
+					srcReg2 = dr(1);
 				}
 
 				Operand store = resultPos;
@@ -337,8 +434,10 @@ namespace code {
 				} else {
 					// We need to copy the result to memory.
 					Nat resultSz = resultType->size().size64();
-					if (resultSz <= 8) {
-						*dest << mov(store, asSize(srcReg1, store.size()));
+					if (resultSz <= 1) {
+						*dest << mov(store, asSize(srcReg1, Size::sByte));
+					} else if (resultSz <= 8) {
+						*dest << mov(opOffset(Size::sInt, store, 0), asSize(srcReg1, Size::sInt));
 					} else {
 						*dest << mov(opPtrOffset(store, 0), srcReg1);
 						*dest << mov(opPtrOffset(store, 8), srcReg2);
@@ -349,11 +448,11 @@ namespace code {
 			// Disable the block if we used it.
 			if (block != Block()) {
 				if (resultPos.type() == opRegister) {
-					// x19 should be free now, it is not exposed outside of the backend.
-					Reg tmp = asSize(ptrr(19), resultPos.size());
-					*dest << mov(tmp, resultPos);
+					assert(resultTempReg != noReg, L"Failed to find a free register for storing function result.");
+					Reg src = asSize(resultPos.reg(), Size::sPtr);
+					*dest << mov(resultTempReg, src);
 					*dest << end(block);
-					*dest << mov(resultPos, tmp);
+					*dest << mov(src, resultTempReg);
 				} else {
 					*dest << end(block);
 				}

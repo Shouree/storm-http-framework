@@ -12,12 +12,19 @@ namespace code {
 #define DATA12(x) { op::x, &RemoveInvalid::dataInstr12Tfm }
 
 		const OpEntry<RemoveInvalid::TransformFn> RemoveInvalid::transformMap[] = {
+			TRANSFORM(prolog),
+			TRANSFORM(epilog),
+			TRANSFORM(beginBlock),
+			TRANSFORM(endBlock),
+
 			TRANSFORM(fnCall),
 			TRANSFORM(fnCallRef),
 			TRANSFORM(fnParam),
 			TRANSFORM(fnParamRef),
 			TRANSFORM(mov),
 			TRANSFORM(swap),
+			TRANSFORM(cmp),
+			TRANSFORM(setCond),
 
 			DATA12(add),
 			DATA12(sub),
@@ -41,6 +48,7 @@ namespace code {
 		}
 
 		void RemoveInvalid::before(Listing *dest, Listing *src) {
+			currentBlock = Block();
 			used = usedRegs(dest->arena, src).used;
 			params = new (this) Array<ParamInfo>();
 			large = new (this) Array<Operand>();
@@ -97,6 +105,11 @@ namespace code {
 			*to << instr;
 		}
 
+		void RemoveInvalid::epilogTfm(Listing *to, Instr *instr, Nat line) {
+			currentBlock = Block();
+			*to << instr;
+		}
+
 		void RemoveInvalid::beginBlockTfm(Listing *to, Instr *instr, Nat line) {
 			currentBlock = instr->src().block();
 			*to << instr;
@@ -131,7 +144,6 @@ namespace code {
 			if (!t) {
 				throw new (this) InvalidValue(S("Using a fnCall that was not created properly."));
 			}
-
 			emitFnCall(to, t->src(), t->dest(), t->type, false, currentBlock, used->at(line), params);
 			params->clear();
 		}
@@ -195,6 +207,56 @@ namespace code {
 				*to << mov(src, tmp2);
 			}
 			*to << mov(dest, tmp);
+		}
+
+		void RemoveInvalid::cmpTfm(Listing *to, Instr *instr, Nat line) {
+			// This is like "dataInstr12Tfm" below, but does not attempt to save the result back to
+			// memory.
+
+			// If "dest" is not a register, we need to surround this instruction with a load *and* a
+			// store. If "src" is not a register, we need to add a load before. If "src" is too
+			// large, we need to make it into a load.
+			Operand src = instr->src();
+			if (src.type() == opConstant) {
+				if (src.constant() > 0xFFF) {
+					src = largeConstant(src);
+				}
+			}
+
+			switch (src.type()) {
+			case opRegister:
+			case opConstant:
+				// TODO: More things to ignore here!
+				break;
+			default:
+				// Emit a load first.
+				Reg t = unusedReg(used->at(line), src.size());
+				used->at(line)->put(t);
+				*to << mov(t, src);
+				src = t;
+				break;
+			}
+
+			Operand dest = instr->dest();
+			if (dest.type() != opRegister) {
+				// Load and store the destination.
+				Reg t = unusedReg(used->at(line), dest.size());
+				*to << mov(t, dest);
+				*to << instr->alter(t, src);
+			} else {
+				*to << instr->alterSrc(src);
+			}
+		}
+
+		void RemoveInvalid::setCondTfm(Listing *to, Instr *instr, Nat line) {
+			Operand dest = instr->dest();
+			if (dest.type() != opRegister) {
+				*to << instr;
+			} else {
+				Reg tmp = unusedReg(used->at(line), Size::sByte);
+				*to << instr->alterDest(tmp);
+				*to << mov(dest, tmp);
+			}
 		}
 
 		void RemoveInvalid::dataInstr12Tfm(Listing *to, Instr *instr, Nat line) {

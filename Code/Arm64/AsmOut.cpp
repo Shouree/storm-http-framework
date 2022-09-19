@@ -481,6 +481,38 @@ namespace code {
 			data12Out(to, instr, 0x144, 0x258);
 		}
 
+		void cmpOut(Output *to, Instr *instr) {
+			assert(instr->dest().type() == opRegister,
+				L"Src and dest for cmp should have been transformed into registers.");
+			Nat dest = intRegZR(instr->dest().reg());
+
+			Nat opImm = 0x1C4;
+			Nat opReg = 0x358;
+
+			if (instr->src().size().size64() >= 8) {
+				opImm |= 0x200;
+				opReg |= 0x400;
+			}
+
+			switch (instr->src().type()) {
+			case opRegister:
+				putData(to, opReg, 31, intRegSP(instr->src().reg()), dest, 0);
+				break;
+			case opConstant:
+				putData(to, opImm, 31, dest, instr->src().constant());
+				break;
+			default:
+				assert(false, L"Unsupported source for data operation.");
+				break;
+			}
+		}
+
+		void setCondOut(Output *to, Instr *instr) {
+			Nat dest = intRegZR(instr->dest().reg());
+			Nat opCode = 0x1A9F07E0 | dest | (condArm64(inverse(instr->src().condFlag())) << 12);
+			to->putInt(opCode);
+		}
+
 		void preserveOut(Output *to, Instr *instr) {
 			TODO(L"Implement PRESERVE pseudo-op!");
 		}
@@ -529,6 +561,8 @@ namespace code {
 			OUTPUT(jmp),
 			OUTPUT(sub),
 			OUTPUT(add),
+			OUTPUT(cmp),
+			OUTPUT(setCond),
 
 			OUTPUT(preserve),
 

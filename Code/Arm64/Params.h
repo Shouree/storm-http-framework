@@ -196,6 +196,9 @@ namespace code {
 			// What types of registers to use for the result. They are always of the same type on Arm64.
 			primitive::PrimitiveKind regType;
 
+			// Using two registers?
+			Bool twoReg;
+
 			// Return in memory?
 			Bool memory;
 

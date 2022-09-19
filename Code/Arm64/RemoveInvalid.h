@@ -62,12 +62,15 @@ namespace code {
 
 			// Keep track of the current part.
 			void prologTfm(Listing *to, Instr *instr, Nat line);
+			void epilogTfm(Listing *to, Instr *instr, Nat line);
 			void beginBlockTfm(Listing *to, Instr *instr, Nat line);
 			void endBlockTfm(Listing *to, Instr *instr, Nat line);
 
 			// Fix constraints for specific operations.
 			void movTfm(Listing *to, Instr *instr, Nat line);
 			void swapTfm(Listing *to, Instr *instr, Nat line);
+			void cmpTfm(Listing *to, Instr *instr, Nat line);
+			void setCondTfm(Listing *to, Instr *instr, Nat line);
 
 			// Generic constraint fixing:
 			// Constraints for data operations with a 12 bit immediate or a (shifted) register.

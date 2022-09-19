@@ -2,6 +2,7 @@
 #include "Code/Reg.h"
 #include "Code/Output.h"
 #include "Code/Operand.h"
+#include "Code/CondFlag.h"
 
 namespace code {
 	class Listing;
@@ -37,8 +38,14 @@ namespace code {
 		// Arm integer register number for register. Returns "out-of-bounds" values for pc, etc.
 		Nat intRegNumber(Reg r);
 
+		// Arm register number for reals.
+		Nat vectorRegNumber(Reg r);
+
 		// Register name.
 		const wchar *nameArm64(Reg r);
+
+		// Condition code for ARM.
+		Nat condArm64(CondFlag flag);
 
 		// Registers clobbered by function calls.
 		extern const Reg *fnDirtyRegs;
@@ -58,6 +65,9 @@ namespace code {
 		// Note: The RegSet is *updated* to match new register allocation.
 		Operand preserveReg(Reg reg, RegSet *used, Listing *dest, Block block);
 
+		// As above, but attempts to preserve a register inside a new register. May fail.
+		Reg preserveRegInReg(Reg reg, RegSet *used, Listing *dest);
+
 		// Perform a memcpy operation of a fixed size. Uses the two specified registers as
 		// temporaries (ARM has load pair and store pair). Copies up to 7 bytes beyond the specified
 		// location (i.e., copies a multiple of 8 bytes).
@@ -65,6 +75,7 @@ namespace code {
 
 		// Get a pointer-sized offset into whatever "operand" represents.
 		Operand opPtrOffset(Operand op, Nat offset);
+		Operand opOffset(Size sz, Operand op, Nat offset);
 
 	}
 }

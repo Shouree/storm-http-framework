@@ -14,8 +14,8 @@ namespace code {
 		// ptrC (5) <-> x2
 		// 0x?30..0x?3F <-> x3..x18
 		// 0x?40..0x?4F <-> x19..x28,x30,xzr,pc
-		// 0x?50..0x?50 <-> q0..q15
-		// 0x?60..0x?60 <-> q16..q31
+		// 0x?50..0x?5F <-> q0..q15
+		// 0x?60..0x?6F <-> q16..q31
 
 		// Arm integer register to storm register.
 		Nat armIntToStorm(Nat arm) {
@@ -80,11 +80,11 @@ namespace code {
 		}
 
 		Reg qr(Nat id) {
-			return noReg;
+			return Reg(0x850 + id);
 		}
 
 		Reg dr(Nat id) {
-			return noReg;
+			return Reg(0x450 + id);
 		}
 
 		const Reg pc = Reg(0x04C);
@@ -105,6 +105,12 @@ namespace code {
 
 		Nat intRegNumber(Reg r) {
 			return stormToArmInt(r);
+		}
+
+		Nat vectorRegNumber(Reg r) {
+			Nat z = Nat(r) & 0xFF;
+			assert(z >= 0x50 && z <= 0x6F, L"Invalid ARM vector register.");
+			return z - 0x50;
 		}
 
 #define ARM_REG_SPECIAL(NR, NAME)				\
@@ -169,6 +175,55 @@ namespace code {
 			return null;
 		}
 
+		Nat condArm64(CondFlag flag) {
+			switch (flag) {
+			case ifAlways:
+				return 0xE;
+			case ifNever:
+				return 0xF;
+			case ifOverflow:
+				return 0x6;
+			case ifNoOverflow:
+				return 0x7;
+			case ifEqual:
+				return 0x0;
+			case ifNotEqual:
+				return 0x1;
+
+				// Unsigned compare:
+			case ifBelow:
+				return 0x3;
+			case ifBelowEqual:
+				return 0x9;
+			case ifAboveEqual:
+				return 0x2;
+			case ifAbove:
+				return 0x8;
+
+				// Singned comparision.
+			case ifLess:
+				return 0xB;
+			case ifLessEqual:
+				return 0xD;
+			case ifGreaterEqual:
+				return 0xA;
+			case ifGreater:
+				return 0xC;
+
+				// Float comparision.
+			case ifFBelow:
+				return 0x3;
+			case ifFBelowEqual:
+				return 0x9;
+			case ifFAboveEqual:
+				return 0xA;
+			case ifFAbove:
+				return 0xC;
+			}
+
+			return 0xE;
+		}
+
 		Reg unusedReg(RegSet *used) {
 			Reg r = unusedRegUnsafe(used);
 			if (r == noReg)
@@ -202,7 +257,7 @@ namespace code {
 		const size_t fnDirtyCount = ARRAY_COUNT(dirtyRegs);
 
 
-		Operand preserveReg(Reg reg, RegSet *used, Listing *dest, Block block) {
+		Reg preserveRegInReg(Reg reg, RegSet *used, Listing *dest) {
 			Reg targetReg = noReg;
 			if (isIntReg(reg)) {
 				for (Nat i = 19; i < 29; i++) {
@@ -231,6 +286,14 @@ namespace code {
 				return targetReg;
 			}
 
+			return noReg;
+		}
+
+		Operand preserveReg(Reg reg, RegSet *used, Listing *dest, Block block) {
+			Reg targetReg = preserveRegInReg(reg, used, dest);
+			if (targetReg != noReg)
+				return targetReg;
+
 			// Store on the stack.
 			Var to = dest->createVar(block, size(reg));
 			*dest << mov(to, reg);
@@ -239,13 +302,17 @@ namespace code {
 
 		// Get a pointer-sized offset into whatever "operand" represents.
 		Operand opPtrOffset(Operand op, Nat offset) {
+			return opOffset(Size::sPtr, op, offset);
+		}
+
+		Operand opOffset(Size sz, Operand op, Nat offset) {
 			switch (op.type()) {
 			case opRelative:
-				return ptrRel(op.reg(), op.offset() + Offset(offset));
+				return xRel(sz, op.reg(), op.offset() + Offset(offset));
 			case opVariable:
-				return ptrRel(op.var(), op.offset() + Offset(offset));
+				return xRel(sz, op.var(), op.offset() + Offset(offset));
 			default:
-				assert(false, L"Unsupported operand passed to 'opPtrOffset'!");
+				assert(false, L"Unsupported operand passed to 'opOffset'!");
 			}
 		}
 
