@@ -148,7 +148,7 @@ namespace gui {
 		case Surface::pSuccess:
 			// All is well. Remember that we presented the frame.
 			synchronizedPresent = false;
-			currentRepaint = repaintCounter;
+			atomicWrite(currentRepaint, atomicRead(repaintCounter));
 			break;
 		case Surface::pRecreate:
 			// We need to re-create the render target.
@@ -185,7 +185,7 @@ namespace gui {
 				return;
 
 			surface->repaint(params);
-			currentRepaint = repaintCounter;
+			atomicWrite(currentRepaint, atomicRead(repaintCounter));
 
 			// If we are in continuous mode, schedule drawing the next frame right now.
 			if (continuous) {
@@ -216,8 +216,8 @@ namespace gui {
 		} else {
 			// Wait until we have rendered a frame, so that Windows think we did it to satisfy the
 			// paint request.
-			Nat old = currentRepaint;
-			while (old == currentRepaint)
+			Nat old = atomicRead(currentRepaint);
+			while (old == atomicRead(currentRepaint))
 				os::UThread::leave();
 		}
 	}
