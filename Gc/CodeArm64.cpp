@@ -7,9 +7,9 @@
 namespace storm {
 	namespace arm64 {
 
-		static inline bool imm26(Nat value) {
-			const Int limit = Nat(1) << 25;
-			Int v = value;
+		static inline bool imm26(size_t value) {
+			const Long limit = Word(1) << 25;
+			Long v = value;
 			return v >= -limit && v < limit;
 		}
 
@@ -29,7 +29,7 @@ namespace storm {
 			const GcCodeRef &ref = refs->refs[id];
 			void *write;
 			Nat original = 0;
-			Nat delta = 0;
+			size_t delta = 0;
 
 			switch (ref.kind) {
 			case GcCodeRef::jump:
