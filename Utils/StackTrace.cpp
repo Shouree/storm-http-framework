@@ -239,6 +239,45 @@ void createStackTrace(TraceGen &gen, nat skip) {
 #ifdef POSIX
 #include <execinfo.h>
 
+#if defined(ARM64)
+
+// Note: Calling "backtrace()" on Arm64 sometimes crashes internally if there are functions without
+// unwind info on the stack. However, the calling convention requires storing stack- and base
+// pointers on the stack. That makes it very easy to traverse the stack anyway!
+void createStackTrace(TraceGen &gen, nat skip) {
+	void *framePointer = null;
+	__asm__ volatile ("mov %0, x29\n"
+					: "=r" (framePointer)
+					: : );
+
+	nat depth = 0;
+	for (void *fp = framePointer; fp; fp = *(void **)fp)
+		depth++;
+
+	if (depth >= skip)
+		depth -= skip;
+	else
+		skip = 0;
+
+	gen.init(depth);
+
+	StackInfoSet &s = stackInfo();
+	depth = 0;
+	while (framePointer) {
+		void *returnIp = ((void **)framePointer)[1];
+		framePointer = ((void **)framePointer)[0];
+
+		if (depth >= skip) {
+			StackFrame frame;
+			frame.id = s.translate(returnIp, frame.fnBase, frame.offset);
+			gen.put(frame);
+		}
+		depth++;
+	}
+}
+
+#else
+
 void createStackTrace(TraceGen &gen, nat skip) {
 	// Note: We could call _Unwind_Backtrace directly to avoid any size limitations.
 	const int MAX_DEPTH = 100;
@@ -262,6 +301,8 @@ void createStackTrace(TraceGen &gen, nat skip) {
 		gen.put(frame);
 	}
 }
+
+#endif
 
 #endif
 
