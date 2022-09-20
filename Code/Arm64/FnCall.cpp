@@ -292,18 +292,21 @@ namespace code {
 				*env.dest << mov(ptrr(17), src);
 				*env.dest << mov(asSize(target, s), xRel(s, ptrr(17), o));
 			} else {
-				// Use the register we're supposed to fill as a temporary.
-				if (src.type() == opRegister && src.reg() == target)
-					; // Already done!
+				// We need to ensure that the source is in a register. If it already is in a
+				// register, use that. Otherwise, use the register we shall fill as a temporary.
+				Reg tempReg = asSize(target, Size::sPtr);
+				if (src.type() == opRegister)
+					tempReg = src.reg();
 				else
-					*env.dest << mov(asSize(target, Size::sPtr), src);
+					*env.dest << mov(tempReg, src);
+
 				Reg to = asSize(target, s);
 				if (to == noReg) {
 					// Unsupported size, upgrade to the next larger supported one.
 					s += Size::sInt.alignment();
 					to = asSize(target, s);
 				}
-				*env.dest << mov(to, xRel(s, target, o));
+				*env.dest << mov(to, xRel(s, tempReg, o));
 			}
 		}
 
@@ -325,8 +328,8 @@ namespace code {
 			env.active[i] = true;
 			vacateRegister(env, target);
 			if (!env.active[i]) {
-				// Stored in tmp register, restore.
-				*env.dest << mov(asSize(target, p.src.size()), asSize(ptrr(16), p.src.size()));
+				// Stored in tmp register, update our knowledge of its source.
+				p.src = asSize(ptrr(16), p.src.size());
 			}
 			env.active[i] = false;
 

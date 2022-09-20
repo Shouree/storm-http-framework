@@ -3,6 +3,7 @@
 #include "Code/Listing.h"
 #include "Code/X64/Arena.h"
 #include "Code/X64/Asm.h"
+#include "Code/Arm64/Arena.h"
 #include "Compiler/Debug.h"
 
 using namespace code;
@@ -484,10 +485,12 @@ BEGIN_TEST(CallFromArray, Code) {
 
 	*l << prolog();
 
-	// Use a 'bad' register for the current backend.
+	// Use a 'bad' register for the current backend. ptrDi on X64, ptrA on ARM, no particular on x86.
 	Reg reg = ptrA;
 	if (as<code::x64::Arena>(arena))
 		reg = code::x64::ptrDi;
+	if (as<code::arm64::Arena>(arena))
+		reg = ptrA;
 
 	*l << mov(reg, params);
 	*l << fnParamRef(valDesc, ptrRel(reg, Offset()));
@@ -498,7 +501,7 @@ BEGIN_TEST(CallFromArray, Code) {
 
 	*l << fnRet(eax);
 
-	Binary *b = new (e) Binary(arena, l, true);
+	Binary *b = new (e) Binary(arena, l);
 	typedef Int (*Fn)(const Int **);
 	Fn fn = (Fn)b->address();
 

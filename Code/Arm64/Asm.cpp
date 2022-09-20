@@ -100,7 +100,7 @@ namespace code {
 
 		Bool isVectorReg(Reg r) {
 			Nat cat = r & 0x0F0;
-			return cat = 0x050 || cat == 0x060;
+			return cat == 0x050 || cat == 0x060;
 		}
 
 		Nat intRegNumber(Reg r) {
