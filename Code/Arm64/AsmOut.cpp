@@ -25,6 +25,11 @@ namespace code {
 			assert(false, L"Can not use this register with this op-code.");
 		}
 
+		// Get fp register number.
+		static Nat fpReg(Reg reg) {
+			return vectorRegNumber(reg);
+		}
+
 		// Good reference for instruction encoding:
 		// https://developer.arm.com/documentation/ddi0596/2021-12/Index-by-Encoding?lang=en
 
@@ -190,24 +195,29 @@ namespace code {
 			Reg dest1 = instr->dest().reg();
 			Reg dest2 = noReg;
 
+			Bool intReg = isIntReg(dest1);
+
 			// Bytes are special:
 			if (opSize == 1) {
-				putLoadStoreLarge(to, 0x0E5, intRegSP(baseReg), intRegZR(dest1), offset);
+				Nat op = intReg ? 0x0E5 : 0x0F5;
+				putLoadStoreLarge(to, op, intRegSP(baseReg), intRegZR(dest1), offset);
 				return false;
 			}
 
 			// Look at "next" to see if we can merge it with this instruction.
 			if (next && next->dest().type() == opRegister && next->src().type() == opRelative) {
 				if (same(next->src().reg(), baseReg) && Int(next->dest().size().size64()) == opSize) {
-					// Look at the offsets, if they are next to each other, we can merge them.
-					Int off = next->src().offset().v64();
-					if (off == offset + opSize && isImm7S(offset / opSize)) {
-						dest2 = next->dest().reg();
-					} else if (off == offset - opSize && isImm7S(off / opSize)) {
-						// Put the second one first.
-						dest2 = dest1;
-						dest1 = next->dest().reg();
-						offset = off;
+					if (isIntReg(next->dest().reg()) == intReg) {
+						// Look at the offsets, if they are next to each other, we can merge them.
+						Int off = next->src().offset().v64();
+						if (off == offset + opSize && isImm7S(offset / opSize)) {
+							dest2 = next->dest().reg();
+						} else if (off == offset - opSize && isImm7S(off / opSize)) {
+							// Put the second one first.
+							dest2 = dest1;
+							dest1 = next->dest().reg();
+							offset = off;
+						}
 					}
 				}
 			}
@@ -216,16 +226,19 @@ namespace code {
 				throw new (to) InvalidValue(S("Memory access on Arm must be aligned!"));
 			offset /= opSize;
 
-			// TODO: Handle fp registers!
 			if (dest2 != noReg) {
-				// Note: Should not happen if merging code above is correct.
-				if (!isImm7S(offset))
-					throw new (to) InvalidValue(S("Too large offset!"));
-
-				Nat op = opSize == 4 ? 0x0A5 : 0x2A5;
+				Nat op;
+				if (intReg)
+					op = opSize == 4 ? 0x0A5 : 0x2A5;
+				else
+					op = opSize == 4 ? 0x0B5 : 0x1B5;
 				putLoadStore(to, op, intRegSP(baseReg), intRegZR(dest1), intRegZR(dest2), offset);
 			} else {
-				Nat op = opSize == 4 ? 0x2E5 : 0x3E5;
+				Nat op = 0;
+				if (intReg)
+					op = opSize == 4 ? 0x2E5 : 0x3E5;
+				else
+					op = opSize == 4 ? 0x2F5 : 0x3E5;
 				putLoadStoreLarge(to, op, intRegSP(baseReg), intRegZR(dest1), offset);
 			}
 
@@ -239,24 +252,29 @@ namespace code {
 			Reg src1 = instr->src().reg();
 			Reg src2 = noReg;
 
+			Bool intReg = isIntReg(src1);
+
 			// Bytes are special:
 			if (opSize == 1) {
-				putLoadStoreLarge(to, 0x0E4, intRegSP(baseReg), intRegZR(src1), offset);
+				Nat op = intReg ? 0x0E4 : 0x0F4;
+				putLoadStoreLarge(to, op, intRegSP(baseReg), intRegZR(src1), offset);
 				return false;
 			}
 
 			// Look at "next" to see if we can merge it with this instruction.
 			if (next && next->src().type() == opRegister && next->dest().type() == opRelative) {
 				if (same(next->dest().reg(), baseReg) && Int(next->src().size().size64()) == opSize) {
-					// Look at the offsets, if they are next to each other, we can merge them.
-					Int off = next->dest().offset().v64();
-					if (off == offset + opSize && isImm7S(offset / opSize)) {
-						src2 = next->src().reg();
-					} else if (off == offset - opSize && isImm7S(off / opSize)) {
-						// Put the second one first.
-						src2 = src1;
-						src1 = next->src().reg();
-						offset = off;
+					if (isIntReg(next->src().reg()) == intReg) {
+						// Look at the offsets, if they are next to each other, we can merge them.
+						Int off = next->dest().offset().v64();
+						if (off == offset + opSize && isImm7S(offset / opSize)) {
+							src2 = next->src().reg();
+						} else if (off == offset - opSize && isImm7S(off / opSize)) {
+							// Put the second one first.
+							src2 = src1;
+							src1 = next->src().reg();
+							offset = off;
+						}
 					}
 				}
 			}
@@ -267,10 +285,18 @@ namespace code {
 
 			// TODO: Handle fp registers!
 			if (src2 != noReg) {
-				Nat op = opSize == 4 ? 0x0A4 : 0x2A4;
+				Nat op;
+				if (intReg)
+					op = opSize == 4 ? 0x0A4 : 0x2A4;
+				else
+					op = opSize == 4 ? 0x0B4 : 0x1B4;
 				putLoadStore(to, op, intRegSP(baseReg), intRegZR(src1), intRegZR(src2), offset);
 			} else {
-				Nat op = opSize == 4 ? 0x2E4 : 0x3E4;
+				Nat op;
+				if (intReg)
+					op = opSize == 4 ? 0x2E4 : 0x3E4;
+				else
+					op = opSize == 4 ? 0x2F4 : 0x3F4;
 				putLoadStoreLarge(to, op, intRegSP(baseReg), intRegZR(src1), offset);
 			}
 
@@ -285,8 +311,21 @@ namespace code {
 					putData(to, 0x550, intRegZR(dest), intRegZR(src), 31, 0);
 				else
 					putData(to, 0x150, intRegZR(dest), intRegZR(src), 31, 0);
-			} else {
-				assert(false, L"Mov to/from fp registers is not yet implemented!");
+			} else if (!intSrc && !intDst) {
+				if (size(src).size64() > 4)
+					to->putInt(0x1E602000 | (fpReg(src) << 5) | fpReg(dest));
+				else
+					to->putInt(0x1E202000 | (fpReg(src) << 5) | fpReg(dest));
+			} else if (intSrc) {
+				if (size(src).size64() > 4)
+					to->putInt(0x9E670000 | (intRegZR(src) << 5) | fpReg(dest));
+				else
+					to->putInt(0x1E270000 | (intRegZR(src) << 5) | fpReg(dest));
+			} else if (intDst) {
+				if (size(src).size64() > 4)
+					to->putInt(0x9E660000 | (fpReg(src) << 5) | intRegZR(dest));
+				else
+					to->putInt(0x1E260000 | (fpReg(src) << 5) | intRegZR(dest));
 			}
 		}
 

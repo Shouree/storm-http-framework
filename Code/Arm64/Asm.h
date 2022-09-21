@@ -20,8 +20,9 @@ namespace code {
 		Reg wr(Nat id);
 		Reg ptrr(Nat id);
 
-		Reg qr(Nat id);
-		Reg dr(Nat id);
+		Reg dr(Nat id); // Doubles
+		Reg sr(Nat id); // Singles
+		Reg br(Nat id); // Bytes
 
 		extern const Reg pc;  // Program counter (for addressing).
 		extern const Reg sp;  // Stack pointer (always 64-bit).

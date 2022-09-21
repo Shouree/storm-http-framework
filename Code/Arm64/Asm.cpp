@@ -79,12 +79,16 @@ namespace code {
 			return Reg(armIntToStorm(id) | 0x000);
 		}
 
-		Reg qr(Nat id) {
+		Reg dr(Nat id) {
 			return Reg(0x850 + id);
 		}
 
-		Reg dr(Nat id) {
+		Reg sr(Nat id) {
 			return Reg(0x450 + id);
+		}
+
+		Reg br(Nat id) {
+			return Reg(0x150 + id);
 		}
 
 		const Reg pc = Reg(0x04C);
@@ -109,7 +113,8 @@ namespace code {
 
 		Nat vectorRegNumber(Reg r) {
 			Nat z = Nat(r) & 0xFF;
-			assert(z >= 0x50 && z <= 0x6F, L"Invalid ARM vector register.");
+			if (z < 0x50 || z > 0x6F)
+				return -1;
 			return z - 0x50;
 		}
 
@@ -129,11 +134,24 @@ namespace code {
 #define ARM_REG_CASE(NR)						\
 		ARM_REG_SPECIAL(NR, #NR)
 
+#define ARM_VEC(NR)								\
+		if (number == NR) {						\
+			if (size == 1) {					\
+				return S("b" #NR);				\
+			} else if (size == 4) {				\
+				return S("s" #NR);				\
+			} else if (size == 8) {				\
+				return S("d" #NR);				\
+			} else {							\
+				return S("q" #NR "(invalid)");	\
+			}									\
+		}
+
 		const wchar *nameArm64(Reg r) {
-			Nat number = stormToArmInt(r);
 			Nat size = r >> 8;
 
 			if (isIntReg(r)) {
+				Nat number = stormToArmInt(r);
 				ARM_REG_CASE(0);
 				ARM_REG_CASE(1);
 				ARM_REG_CASE(2);
@@ -169,7 +187,39 @@ namespace code {
 				if (number == 33)
 					return S("pc");
 			} else if (isVectorReg(r)) {
-				return S("<vector,todo>");
+				Nat number = vectorRegNumber(r);
+				ARM_VEC(0);
+				ARM_VEC(1);
+				ARM_VEC(2);
+				ARM_VEC(3);
+				ARM_VEC(4);
+				ARM_VEC(5);
+				ARM_VEC(6);
+				ARM_VEC(7);
+				ARM_VEC(8);
+				ARM_VEC(9);
+				ARM_VEC(10);
+				ARM_VEC(11);
+				ARM_VEC(12);
+				ARM_VEC(13);
+				ARM_VEC(14);
+				ARM_VEC(15);
+				ARM_VEC(16);
+				ARM_VEC(17);
+				ARM_VEC(18);
+				ARM_VEC(19);
+				ARM_VEC(20);
+				ARM_VEC(21);
+				ARM_VEC(22);
+				ARM_VEC(23);
+				ARM_VEC(24);
+				ARM_VEC(25);
+				ARM_VEC(26);
+				ARM_VEC(27);
+				ARM_VEC(28);
+				ARM_VEC(29);
+				ARM_VEC(30);
+				ARM_VEC(31);
 			}
 
 			return null;
@@ -311,6 +361,11 @@ namespace code {
 				return xRel(sz, op.reg(), op.offset() + Offset(offset));
 			case opVariable:
 				return xRel(sz, op.var(), op.offset() + Offset(offset));
+			case opRegister:
+				if (offset == 0)
+					return asSize(op.reg(), sz);
+				assert(false, L"Offset in registers are not supported.");
+				break;
 			default:
 				assert(false, L"Unsupported operand passed to 'opOffset'!");
 			}

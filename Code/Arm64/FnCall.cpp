@@ -439,8 +439,10 @@ namespace code {
 					Nat resultSz = resultType->size().size64();
 					if (resultSz <= 1) {
 						*dest << mov(store, asSize(srcReg1, Size::sByte));
-					} else if (resultSz <= 8) {
+					} else if (resultSz <= 4) {
 						*dest << mov(opOffset(Size::sInt, store, 0), asSize(srcReg1, Size::sInt));
+					} else if (resultSz <= 8) {
+						*dest << mov(opOffset(Size::sWord, store, 0), asSize(srcReg1, Size::sWord));
 					} else {
 						*dest << mov(opPtrOffset(store, 0), srcReg1);
 						*dest << mov(opPtrOffset(store, 8), srcReg2);

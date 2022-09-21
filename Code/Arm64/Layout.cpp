@@ -187,9 +187,9 @@ namespace code {
 					*dest << mov(ptrr(20), ptrr(1));
 				break;
 			case primitive::real:
-				*dest << mov(xr(19), qr(0));
+				*dest << mov(xr(19), dr(0));
 				if (result->twoReg)
-					*dest << mov(xr(20), qr(1));
+					*dest << mov(xr(20), dr(1));
 				break;
 			}
 		}
@@ -205,9 +205,9 @@ namespace code {
 					*dest << mov(ptrr(1), ptrr(20));
 				break;
 			case primitive::real:
-				*dest << mov(qr(0), xr(19));
+				*dest << mov(dr(0), xr(19));
 				if (result->twoReg)
-					*dest << mov(qr(1), xr(20));
+					*dest << mov(dr(1), xr(20));
 				break;
 			}
 		}
@@ -377,14 +377,114 @@ namespace code {
 			}
 		}
 
+		static void returnSimple(Listing *dest, Result *result, Size size, Reg src) {
+			if (result->memory) {
+				// Memcpy using the mov instruction.
+				Reg destReg = ptrB;
+				if (src == ptrB)
+					destReg = ptrC;
+
+				inlineMemcpy(dest, destReg, src, ptrr(16), ptrr(17));
+
+			} else if (result->regType != primitive::none) {
+				// Just populate the relevant registers:
+				if (result->regType == primitive::real) {
+					if (size.size64() <= 1) {
+						*dest << mov(br(0), xRel(Size::sByte, src, Offset()));
+					} else if (size.size64() <= 4) {
+						*dest << mov(sr(0), xRel(Size::sInt, src, Offset()));
+					} else if (size.size64() <= 8) {
+						*dest << mov(dr(0), xRel(Size::sLong, src, Offset()));
+					} else {
+						*dest << mov(dr(0), xRel(Size::sLong, src, Offset()));
+						*dest << mov(dr(1), xRel(Size::sLong, src, Offset(Size::sLong)));
+					}
+				} else {
+					if (size.size64() <= 1) {
+						*dest << mov(al, xRel(Size::sByte, src, Offset()));
+					} else if (size.size64() <= 4) {
+						*dest << mov(eax, xRel(Size::sInt, src, Offset()));
+					} else if (size.size64() <= 8) {
+						*dest << mov(rax, xRel(Size::sLong, src, Offset()));
+					} else {
+						*dest << mov(rax, xRel(Size::sLong, src, Offset()));
+						*dest << mov(rbx, xRel(Size::sLong, src, Offset(Size::sLong)));
+					}
+				}
+			}
+		}
+
 		void Layout::fnRetTfm(Listing *dest, Instr *src) {
-			// TODO: Finish.
+			Operand value = resolve(dest, src->src());
+			assert(value.size() == dest->result->size(), L"Wrong size passed to fnRet!");
+
+			// Handle the return value.
+			if (as<PrimitiveDesc>(dest->result)) {
+				switch (result->regType) {
+				case primitive::none:
+					break;
+				case primitive::integer:
+				case primitive::pointer:
+					if (value.type() == opRegister && same(value.reg(), ptrA)) {
+						// Already where it is supposed to be!
+					} else {
+						// Just use a mov!
+						*dest << mov(asSize(ptrA, value.size()), value);
+					}
+					break;
+				case primitive::real:
+					*dest << mov(asSize(dr(0), value.size()), value);
+					break;
+				}
+			} else if (ComplexDesc *c = as<ComplexDesc>(dest->result)) {
+				// Call the copy constructor.
+				*dest << lea(ptrB, value);
+				*dest << lea(ptrA, resultLocation());
+				*dest << call(c->ctor, Size());
+			} else if (SimpleDesc *s = as<SimpleDesc>(dest->result)) {
+				*dest << lea(ptrA, value);
+				returnSimple(dest, result, s->size(), ptrA);
+			} else {
+				assert(false);
+			}
+
 			epilogTfm(dest, src);
 			*dest << ret(Size()); // We won't do register usage analysis, so this is OK.
 		}
 
 		void Layout::fnRetRefTfm(Listing *dest, Instr *src) {
-			// TODO: Finish.
+			Operand value = resolve(dest, src->src());
+			assert(value.size() == Size::sPtr, L"Wrong size passed to fnRetRef!");
+
+			// Handle the return value.
+			if (PrimitiveDesc *p = as<PrimitiveDesc>(dest->result)) {
+				if (result->regType != primitive::none) {
+					Reg target = result->regType == primitive::real ? dr(0) : ptrA;
+
+					if (value.type() == opRegister) {
+						*dest << mov(asSize(target, p->v.size()), xRel(p->v.size(), value.reg(), Offset()));
+					} else {
+						*dest << mov(ptrA, value);
+						*dest << mov(asSize(target, p->v.size()), xRel(p->v.size(), ptrA, Offset()));
+					}
+				}
+			} else if (ComplexDesc *c = as<ComplexDesc>(dest->result)) {
+				// Call the copy constructor.
+				*dest << lea(ptrB, value);
+				*dest << lea(ptrA, resultLocation());
+				*dest << call(c->ctor, Size());
+			} else if (SimpleDesc *s = as<SimpleDesc>(dest->result)) {
+				Reg reg = ptrA;
+				if (value.type() == opRegister) {
+					reg = value.reg();
+				} else {
+					*dest << mov(reg, value);
+				}
+				returnSimple(dest, result, s->size(), reg);
+			} else {
+				assert(false);
+			}
+
 			epilogTfm(dest, src);
 			*dest << ret(Size()); // We won't do register usage analysis, so this is OK.
 		}
