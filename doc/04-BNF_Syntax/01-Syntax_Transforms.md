@@ -204,7 +204,7 @@ class Subtraction extends Expr {
     Int transform() {
         Int a = this.a.transform();
 	Int b = this.b.transform();
-	Int me = +(a, b); // Equivalent to "a + b"
+	Int me = -(a, b); // Equivalent to "a - b"
 	return me;
     }
 }
