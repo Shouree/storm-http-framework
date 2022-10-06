@@ -17,7 +17,7 @@ Binary releases
 
 
 To run the compiler, simply unpack the archive file and run `Storm` (`Storm.exe` on Windows), and
-the top loop for Basic Storm should start. For more detaled instructions, see
+the top loop for Basic Storm should start. For more detailed instructions, see
 [Introduction](md://Introduction/).
 
 For Windows, no external libraries are required (except for `dbghelp.dll`, which is included with
@@ -47,7 +47,7 @@ currently in the experimental stage.
 
   These releases use the Storm Memory Manager for memory management, which is a homegrown garbage
   collector for Storm. The SMM generally performs worse compared to the Memory Pool System
-  (approximately 2-3x runtimes when using the MPS, and occationally longer pause times), and it is
+  (approximately 2-3x runtimes when using the MPS, and occasionally longer pause times), and it is
   not as mature as the MPS.
 
   This option is currently experimental, but seems to work well in many cases. It is slower than the

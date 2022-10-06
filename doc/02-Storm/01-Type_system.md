@@ -52,12 +52,12 @@ Function overriding
 ---------------------
 
 Storm supports function overriding in classes and actors. Overriding functions causes vtable-based
-dispatch to be used, but unlike eg. C++, Storm will keep track of where the vtable is required and
+dispatch to be used, but unlike e.g. C++, Storm will keep track of where the vtable is required and
 only use it if it is really necessary. Thus, you will not pay the cost of overriding functions
 unless you use it.
 
 A function in a derived class does not have to match a function in the parent class exactly. It is
-possible to accept wider types (ie. less specific) in the derived class. However, this means a
+possible to accept wider types (i.e. less specific) in the derived class. However, this means a
 function could override two functions in a parent class, which is not allowed. This happens if, for
 example, the parent class contains the functions `add(Str)` and `add(Url)`, and the derived class
 contains the function `add(Object)`. However, if the parent class would also contain an exact match,

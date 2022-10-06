@@ -51,8 +51,8 @@ The plugin also allows browsing the built-in documentation from Emacs. Run the c
 (bound to `C-c h` in buffers using `storm-mode`) and enter the name of the type or function you wish
 to see documentation for. You can use `<tab>` as usual while entering names to auto-complete the name
 and to see all available completions. Currently, it is not possible to view documentation for
-non-instantiated templates (eg. `core.Array`). Instead, you need to provide parameters for the
-instantiation you are interested in (eg. `core.Array(core.Int)`). The instantiations that are used
+non-instantiated templates (e.g. `core.Array`). Instead, you need to provide parameters for the
+instantiation you are interested in (e.g. `core.Array(core.Int)`). The instantiations that are used
 elsewhere in the system will show up in auto-completion just like other types.
 
 In the buffer that shows the documentation, it is possible to navigate to other parts of the documentation

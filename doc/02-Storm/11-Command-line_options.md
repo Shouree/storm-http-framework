@@ -30,7 +30,7 @@ imports the file into `mypkg` instead. Both `-i` and `-I` works with both files 
 directories. These flags do not alter the default behavior, so unless you specify something else, a
 REPL is still launched.
 
-Any options without a preceeding flag are treated the same as `-i` (i.e. as the names of files or
+Any options without a preceding flag are treated the same as `-i` (i.e. as the names of files or
 directories), with one important difference: Storm will try to execute the function `main` from
 these imports if they exist. So, to run the function `main` in the file `myprogram.bs`, one can type
 `Storm myprogram.bs`. To launch the REPL in this context, either type `storm -i myprogram.bs` or

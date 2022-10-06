@@ -17,7 +17,7 @@ synchronization errors. If enabled from the menu bar, the tool keeps track of re
 the data structure in order to highlight basic race conditions in addition to deadlocks.
 
 
-Starting progvis
+Starting Progvis
 ----------------
 
 To start the tool, [download Storm](md://Introduction/Downloads), and click the `Progvis` file

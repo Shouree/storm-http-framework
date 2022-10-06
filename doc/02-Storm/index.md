@@ -1,7 +1,7 @@
 Storm
 =======
 
-Storm is a language that focus on extensibility on many levels. To be extensible, the Storm compiler
+Storm is a language that focuses on extensibility on many levels. To be extensible, the Storm compiler
 itself is more of a framework for creating languages rather than a complete compiler. Of course, the
 compiler includes languages as well, but these are implemented apart from the core itself and could
 therefore be moved into external libraries in the future.

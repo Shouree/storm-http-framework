@@ -62,5 +62,5 @@ example `Public`, `TypePrivate`, `TypeProtected`, `PackagePrivate`, etc.
 
 The visibility is assessed during type lookup. Thus, it is necessary to provide a `Scope` that
 describes the caller's scope when calling `NameLookup.find()`. It is also possible to override the
-visibility system by providing an empty scope (ie. `Scope()`) to the `find` function. If a `Named`
+visibility system by providing an empty scope (i.e. `Scope()`) to the `find` function. If a `Named`
 object is not associated with a `Visibility` object, Storm considers it to be visible from everywhere.

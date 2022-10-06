@@ -124,7 +124,7 @@ using *thread switches*, just like for function calls. A small `read` function i
 the variable read on the appropriate thread with copying as appropriate. However, this solution
 means that accessing variables on other threads will not behave as regular accesses. In particular,
 due to the copying it is not possible to modify the variable in this manner. Basic Storm will detect
-this kind of situation if the variable is immediately assigned to (eg. `foo.x = 8`), but will not
+this kind of situation if the variable is immediately assigned to (e.g. `foo.x = 8`), but will not
 detect in more complex cases such as `foo.x++` or `foo.x.z = 10` (where `foo.x` is the access that
 requires a thread switch).
 

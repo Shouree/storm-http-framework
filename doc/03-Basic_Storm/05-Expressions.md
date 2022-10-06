@@ -73,7 +73,7 @@ Storm supports *interpolated strings* inside string literals. This means that it
 conveniently concatenate strings like this: `"Hello ${name}"`, where `name` is an expression that
 evaluates to a string. Because of this, it is necessary to escape the `$` character in addition
 to `"`, and `\`. Using this syntax is equivalent to using the string concatenation operator
-(ie. `#`, see below), which is in turn equivalent to creating a `StrBuf` to do the concatenation
+(i.e. `#`, see below), which is in turn equivalent to creating a `StrBuf` to do the concatenation
 (use the `dump{}` statement in `lang:bs:macro` to inspect the behaviour if you are interested). This
 means that even though it may not look like it, Basic Storm will type-check the interpolations for
 you, and will inform you if you are doing something ill-formed. Since a `StrBuf` is used for
@@ -212,11 +212,11 @@ Assignment
 Basic Storm allows creating member functions that simulate a member variable. This is useful in
 cases where get- and set functions are required but it is desirable to treat the concept as if it
 was a regular member variable. This mechanism also helps a smooth transition from an implementation
-using a member variable to an implementation that uses get- and set functions (eg. to invalidate
+using a member variable to an implementation that uses get- and set functions (e.g. to invalidate
 caches or to notify other systems about a change to the variable).
 
-Since Basic Storm does not differentiate between an empty list of actual parameters (ie. `foo()`)
-and no parameter list (ie. `foo`), implementing the get function is trivial. Simply provide a member
+Since Basic Storm does not differentiate between an empty list of actual parameters (i.e. `foo()`)
+and no parameter list (i.e. `foo`), implementing the get function is trivial. Simply provide a member
 function without any parameters, and the function can be used to read the value as if it was a
 regular variable. The set functionality, however, requires an additional mechanism, called
 *assignment functions* in Basic Storm. Assignment functions are regular function that are marked
@@ -586,7 +586,7 @@ therefore able to infer that the types of `a` and `b` need to be `Int`.
 Lambda functions automatically capture any variables from the surrounding scope that are used within
 the lambda expression. Captured variables are copied into the lambda function (in fact, they become
 member variables inside a anonymous object), which means that they behave as if they were passed to
-a function (eg. values are copies, classes and actors are references). This is illustrated in the
+a function (e.g. values are copies, classes and actors are references). This is illustrated in the
 example below, where the lambda function will remember the value of the variable `outside` even when
 it goes out of scope:
 
@@ -681,7 +681,7 @@ v = Str?();
 Note that this has no meaning:
 
 ```
-// 'v' vill have the type 'void' here. 'null' does not have 
+// 'v' will have the type 'void' here. 'null' does not have 
 // a type unless it can be automatically casted to something usable.
 var v = null;
 ```

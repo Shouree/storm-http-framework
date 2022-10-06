@@ -304,7 +304,7 @@ string `ac` is. Thus, `c` is only usable in the context of the rule `A`.
 
 While these requirements generally do not incur a great performance penalty, the parser in Storm is
 implemented based on the assumption that the number of unique rules used as requirements to
-productions (ie. appearing to the left of the dots) is fairly small. If many requirements and many
+productions (i.e. appearing to the left of the dots) is fairly small. If many requirements and many
 unique rules are used, parsing performance could suffer, even though it should not be much worse
 than parsing and resolving the ambiguities in the context free grammar created by removing all
 context sensitivity.

@@ -24,7 +24,7 @@ Int foo() {
 There are two possible ways of solving the problem: either declare `foo` to execute on the
 `Compiler` thread as well, or provide an accessor to the global variable that executes on
 `Compiler`. The reason for Storm being strict in this case is that global variables usually need
-some kind of synchronization (eg. initialize the first time only, keeping multiple variables up to
+some kind of synchronization (e.g. initialize the first time only, keeping multiple variables up to
 date). Enforcing access only from a single thread means that Storm encourages writing accessors that
 handle the synchronization properly, hopefully avoiding many cases of missing synchronization.
 
@@ -41,4 +41,4 @@ Int global on Compiler = 10;
 ```
 
 Initialization expressions are executed on the specified thread when the variables are inserted in
-the name tree (ie. when Storm first loads the code in the file), and may be arbitrarily complex.
+the name tree (i.e. when Storm first loads the code in the file), and may be arbitrarily complex.

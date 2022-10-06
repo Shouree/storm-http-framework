@@ -263,7 +263,7 @@ class Impl extends RemoveA {
 ```
 
 We can also rewrite the grammar to utilize recursion and parameters, to illustrate how that
-works. In this particular case, we also use a token without binding it to a variable, wich generates
+works. In this particular case, we also use a token without binding it to a variable, which generates
 a variable with the name `<anonX>`, where `X` is an integer:
 
 ```

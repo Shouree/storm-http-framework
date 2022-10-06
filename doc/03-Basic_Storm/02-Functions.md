@@ -50,7 +50,7 @@ declaration is a decorator, for example:
 Since this is common, this declaration may be present on its own, without a colon. However, this
 syntax disallows additional decorators.
 
-If all functions in a source file are suppoed to be executed by a specified thread, a single
+If all functions in a source file are supposed to be executed by a specified thread, a single
 top-level declaration can be used instead of adding `on T` to all functions and classes in the
 file. This is done by adding:
 
