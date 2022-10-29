@@ -43,9 +43,9 @@ BEGIN_TEST(JmpTest, Code) {
 
 static bool called = false;
 
-static Int addFive(Int v) {
+static Int addFive() {
 	called = true;
-	return v + 5;
+	return 512;
 }
 
 // Main reason for this test is to see that we properly compute the offset for static things. If we
@@ -55,22 +55,20 @@ BEGIN_TEST(CallTest, Code) {
 	Arena *arena = code::arena(e);
 
 	Listing *l = new (e) Listing();
-	Var p = l->createIntParam();
 
 	*l << prolog();
 
-	*l << push(p);
 	*l << call(arena->external(S("addFive"), address(&addFive)), Size::sInt);
 
 	*l << epilog();
 	*l << ret(Size::sInt);
 
 	Binary *b = new (e) Binary(arena, l);
-	typedef Int (*Fn)(Int);
+	typedef Int (*Fn)();
 	Fn fn = (Fn)b->address();
 
 	called = false;
-	CHECK_EQ((*fn)(1), 6);
+	CHECK_EQ((*fn)(), 512);
 	CHECK(called);
 
 } END_TEST
