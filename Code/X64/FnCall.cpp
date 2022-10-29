@@ -155,6 +155,8 @@ namespace code {
 			Bool active[16];
 			// Finished assigning a register?
 			Bool finished[16];
+			// Recursion depth.
+			Nat depth;
 		};
 
 		static void setRegister(RegEnv &env, Nat i);
@@ -170,10 +172,14 @@ namespace code {
 				if (src.hasRegister() && same(src.reg(), reg)) {
 					// We need to set this register now, otherwise it will be destroyed!
 					if (env.active[i]) {
-						// Cycle detected. Push the register we should vacate onto the stack and
-						// keep a note about that for later.
-						*env.dest << push(src);
-						env.active[i] = false;
+						// Cycle detected. If level is 1, then this just means that the data is
+						// already in the right location, so we don't need to do anything.
+						if (env.depth > 1) {
+							// Cycle detected. Push the register we should vacate onto the stack and
+							// keep a note about that for later.
+							*env.dest << push(src);
+							env.active[i] = false;
+						}
 					} else {
 						setRegister(env, i);
 					}
@@ -250,6 +256,8 @@ namespace code {
 			if (env.finished[i])
 				return;
 
+			env.depth++;
+
 			Reg target = env.layout->registerSrc(i);
 			ParamInfo &p = env.src->at(param.id());
 
@@ -273,6 +281,7 @@ namespace code {
 
 			// Note that we're done.
 			env.finished[i] = true;
+			env.depth--;
 		}
 
 		// Set all registers to their proper values for a function call.
@@ -283,6 +292,7 @@ namespace code {
 				layout,
 				{ false },
 				{ false },
+				0,
 			};
 
 			for (Nat i = 0; i < layout->registerCount(); i++) {

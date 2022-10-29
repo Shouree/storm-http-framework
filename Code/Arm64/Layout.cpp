@@ -295,6 +295,7 @@ namespace code {
 			}
 
 			// Preserve parameters.
+			TODO(L"Handle simple parameters that are too large to fit in registers!");
 			Array<Var> *paramVars = dest->allParams();
 			for (Nat i = 0; i < params->registerCount(); i++) {
 				Param p = params->registerAt(i);
@@ -550,7 +551,7 @@ namespace code {
 			for (Nat i = 0; i < params->stackCount(); i++) {
 				Offset off(params->stackOffset(i));
 				off += result->last(); // Increase w. size of entire stack frame.
-				result->at(paramVars->at(params->stackParam(i)).key()) = off;
+				result->at(paramVars->at(params->stackParam(i).id()).key()) = off;
 			}
 
 			// Finally: ensure that the size of the stack is rounded up to a multiple of 16 bytes.

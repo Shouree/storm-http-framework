@@ -11,43 +11,47 @@ namespace code {
 		}
 
 		Param::Param(Nat id, Primitive p) {
-			set(id, p.size().size64(), p.offset().v64(), false);
+			set(id, p.size(), p.offset().v64(), false);
 		}
 
-		Param::Param(Nat id, Nat size, Nat offset, Bool stack) {
-			set(id, size, offset, stack);
+		Param::Param(Nat id, Size size, Nat offset, Bool inMemory) {
+			set(id, size, offset, inMemory);
+		}
+
+		Bool Param::empty() {
+			return data == 0xFFFFFFFE;
 		}
 
 		void Param::clear() {
-			set(0xFF, 0, 0xFFFFFFFF, false);
+			set(0xFF, Size(), 0xFFFFFFFF, false);
 		}
 
-		void Param::set(Nat id, Nat size, Nat offset, Bool stack) {
-			data = size & 0xF;
-			data |= Nat(stack) << 4;
-			data |= (id & 0xFF) << 5;
-			data |= (offset & 0xFFFFFF) << 13;
+		void Param::set(Nat id, Size size, Nat offset, Bool inMemory) {
+			size64 = (size.size64() << 4) | size.align64();
+			data = Nat(inMemory);
+			data |= (id & 0xFF) << 1;
+			data |= (offset & 0x7FFFFF) << 9;
 		}
 
 		wostream &operator <<(wostream &to, Param p) {
-			if (p.id() == 0xFF) {
+			if (p.empty()) {
 				to << L"empty";
 			} else {
 				to << L"#" << p.id() << L"+" << p.offset() << L"," << p.size();
 			}
-			if (p.stack())
-				to << L"(stack)";
+			if (p.inMemory())
+				to << L"(in memory)";
 			return to;
 		}
 
 		StrBuf &operator <<(StrBuf &to, Param p) {
-			if (p.id() == 0xFF) {
+			if (p.empty()) {
 				to << S("empty");
 			} else {
 				to << S("#") << p.id() << S("+") << p.offset() << S(",") << p.size();
 			}
-			if (p.stack())
-				to << S("(stack)");
+			if (p.inMemory())
+				to << S("(in memory)");
 			return to;
 		}
 
@@ -56,16 +60,32 @@ namespace code {
 				array->v[i].clear();
 		}
 
+		static const GcType paramType = {
+			GcType::tArray,
+			null,
+			null,
+			sizeof(Param),
+			0,
+			{},
+		};
+
+		const GcType Params::stackParamType = {
+			GcType::tArray,
+			null,
+			null,
+			sizeof(StackParam),
+			0,
+			{}
+		};
 
 		Params::Params() {
-			integer = runtime::allocArray<Param>(engine(), &natArrayType, 8);
-			real = runtime::allocArray<Param>(engine(), &natArrayType, 8);
+			integer = runtime::allocArray<Param>(engine(), &paramType, 8);
+			real = runtime::allocArray<Param>(engine(), &paramType, 8);
 			integer->filled = 0;
 			real->filled = 0;
 			clear(integer);
 			clear(real);
-			stackPar = new (this) Array<Nat>();
-			stackOff = new (this) Array<Nat>();
+			stackPar = null;
 			stackSize = 0;
 		}
 
@@ -100,14 +120,14 @@ namespace code {
 
 		void Params::addDesc(Nat id, ComplexDesc *type) {
 			// The complex types are actually simple. We just add a pointer to our parameter list!
-			addParam(integer, Param(id, 8, 0, true));
+			addParam(integer, Param(id, Size::sPtr, 0, true));
 		}
 
 		void Params::addParam(GcArray<Param> *to, Param p) {
 			if (to->filled < to->count) {
 				to->v[to->filled++] = p;
 			} else {
-				addStack(p.id(), Size(p.size()));
+				addStack(p);
 			}
 		}
 
@@ -186,7 +206,7 @@ namespace code {
 		void Params::addDesc(Nat id, SimpleDesc *type) {
 			// Here, we need to check the type to see if we shall pass parts of it in registers.
 			// The rules are roughly:
-			// - If the struct is larger than 2 words, pass it on the stack.
+			// - If the struct is larger than 2 words, pass it on the stack, as if it was "complex".
 			// - If the parameter uses 2 registers: "pad" to the next even register.
 			// - If registers are full, pass it on the stack.
 			// - If all members are floats: pass in fp register. Otherwise, int register.
@@ -196,8 +216,8 @@ namespace code {
 
 			Nat size = type->size().size64();
 			if (size > 16) {
-				// Too large: pass on the stack!
-				addStack(id, type);
+				// Too large: pass on the stack, replace it with a pointer to the data.
+				addParam(integer, Param(id, Size::sPtr, 0, true));
 				return;
 			}
 
@@ -206,39 +226,46 @@ namespace code {
 
 			// Two registers?
 			if (size > 8) {
-				// Round up to the next even register.
-				regType->filled = min(roundUp(regType->filled, size_t(2)), regType->count);
+				// Round up to the next even register. Note: This is only needed if alignment
+				// is 16, which we do not currently support.
+				// regType->filled = min(roundUp(regType->filled, size_t(2)), regType->count);
 
 				// Check if enough space.
 				if (regType->filled + 2 <= regType->count) {
-					regType->v[regType->filled++] = Param(id, 8, 0, false);
-					regType->v[regType->filled++] = Param(id, 8, 8, false);
+					regType->v[regType->filled++] = Param(id, Size::sLong, 0, false);
+					regType->v[regType->filled++] = Param(id, Size::sLong, 8, false);
 					return;
 				}
 			} else {
 				if (regType->filled + 1 <= regType->count) {
-					regType->v[regType->filled++] = Param(id, size, 0, false);
+					regType->v[regType->filled++] = Param(id, type->size(), 0, false);
 					return;
 				}
 			}
 
 			// Fallback: Push it on the stack.
-			addStack(id, type);
+			addStack(Param(id, type->size(), 0, false));
 		}
 
-		void Params::addStack(Nat id, TypeDesc *desc) {
-			addStack(id, desc->size());
-		}
-
-		void Params::addStack(Nat id, Size size) {
+		void Params::addStack(Param param) {
 			// Align argument properly.
-			stackSize = roundUp(stackSize, size.align64());
+			stackSize = roundUp(stackSize, param.size().align64());
 
-			stackPar->push(id);
-			stackOff->push(stackSize);
+			if (!stackPar || stackPar->count == stackPar->filled) {
+				Nat newSize = stackPar ? stackPar->filled * 2 : 10;
+				GcArray<StackParam> *copy = runtime::allocArray<StackParam>(engine(), &stackParamType, newSize);
+				copy->filled = 0;
+				if (stackPar) {
+					memcpy(copy->v, stackPar->v, sizeof(StackParam) * stackPar->filled);
+					copy->filled = stackPar->filled;
+				}
+			}
+
+			stackPar->v[stackPar->filled].param = param;
+			stackPar->v[stackPar->filled].offset = stackSize;
 
 			// Update size. Minimum alignment is 8.
-			stackSize += roundUp(size.aligned().size64(), Nat(8));
+			stackSize += roundUp(param.size().aligned().size64(), Nat(8));
 		}
 
 		static void put(StrBuf *to, GcArray<Param> *p, const wchar **names) {
@@ -262,10 +289,6 @@ namespace code {
 			}
 		}
 
-		Nat Params::registerCount() const {
-			return integer->count + real->count;
-		}
-
 		Param Params::registerAt(Nat n) const {
 			if (n < integer->count)
 				return integer->v[n];
@@ -280,6 +303,19 @@ namespace code {
 				return ptrr(n);
 			else
 				return dr(n - integer->count);
+		}
+
+		Param Params::totalAt(Nat n) const {
+			if (n < integer->count)
+				return integer->v[n];
+			n -= integer->count;
+			if (n < real->count)
+				return real->v[n];
+			n -= real->count;
+			if (stackPar && n < stackPar->filled)
+				return stackPar->v[n].param;
+			assert(false, L"Out of bounds.");
+			return Param();
 		}
 
 		Params *layoutParams(Array<TypeDesc *> *types) {

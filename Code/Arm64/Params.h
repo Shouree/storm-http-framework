@@ -38,7 +38,7 @@ namespace code {
 		 */
 
 		/**
-		 * Describes what a single register is supposed to contain.
+		 * Describes what parameter is in a particular location.
 		 */
 		class Param {
 			STORM_VALUE;
@@ -46,26 +46,32 @@ namespace code {
 			// Create empty parameter.
 			STORM_CTOR Param();
 			STORM_CTOR Param(Nat id, Primitive p);
-			STORM_CTOR Param(Nat id, Nat size, Nat offset, Bool stack);
+			STORM_CTOR Param(Nat id, Size size, Nat offset, Bool inMemory);
+
+			// Any contents?
+			Bool any() { return !empty(); }
+			Bool empty();
 
 			// Reset.
 			void clear();
 
 			// Set to values.
-			void set(Nat id, Nat size, Nat offset, Bool stack);
+			void set(Nat id, Size size, Nat offset, Bool inMemory);
 
 			// Get the different fields stored in here:
-			inline Nat size() const {
-				return data & 0xF;
+			inline Size size() const {
+				Nat sz = size64 >> 4;
+				Nat align = size64 & 0xF;
+				return Size(sz, align, sz, align);
 			}
-			inline Bool stack() const {
-				return (data & 0x10) != 0;
+			inline Bool inMemory() const {
+				return (data & 0x1) != 0;
 			}
 			inline Nat id() const {
-				return (data >> 5) & 0xFF;
+				return (data >> 1) & 0xFF;
 			}
 			inline Nat offset() const {
-				return data >> 13;
+				return data >> 9;
 			}
 
 			// Compare for equality.
@@ -76,15 +82,18 @@ namespace code {
 				return data != o.data;
 			}
 
-			// ID usable for a hidden return parameter.
-			enum { returnId = 0xFF };
-
 		private:
 			// Stored as follows:
-			// Bits 0-3: Size of the register (in bytes).
-			// Bit  4: Pointer to stack parameter?
-			// Bits 5-12: Parameter number. 0xFF = unused.
-			// Bits 13-31: Offset into parameter (in bytes).
+
+			// Packed 64-bit size of the data (we strip 32-bit parts).
+			// Bits 0-3: offset
+			// Bits 4-31: size
+			Nat size64;
+
+			// Other fields:
+			// Bit  0: 'inMemory'?
+			// Bits 1-8: Parameter number.
+			// Bits 9-31: Offset into the parameter (bytes)
 			Nat data;
 		};
 
@@ -118,17 +127,17 @@ namespace code {
 
 			// Get the total number of elements on the stack.
 			Nat STORM_FN stackCount() const {
-				return stackPar->count();
+				return stackPar ? stackPar->filled : 0;
 			}
 
 			// Get stack element number 'n'.
-			Nat STORM_FN stackParam(Nat n) const {
-				return stackPar->at(n);
+			Param STORM_FN stackParam(Nat n) const {
+				return stackPar->v[n].param;
 			}
 
 			// Get stack element's offset relative to SP.
 			Nat STORM_FN stackOffset(Nat n) const {
-				return stackOff->at(n);
+				return stackPar->v[n].offset;
 			}
 
 			// Get total size of stack.
@@ -142,13 +151,28 @@ namespace code {
 			 */
 
 			// Total number of registers to examine.
-			Nat STORM_FN registerCount() const;
+			Nat STORM_FN registerCount() const {
+				return integer->count + real->count;
+			}
 
 			// Get a parameter. Might be empty.
 			Param STORM_FN registerAt(Nat n) const;
 
 			// Get the register containing the parameter.
 			Reg STORM_FN registerSrc(Nat n) const;
+
+
+			/**
+			 * Abstraction to iterate through all params.
+			 */
+
+			// Total number of things to examine. Some are "dummies".
+			Nat STORM_FN totalCount() const {
+				return registerCount() + stackCount();
+			}
+
+			// Get element at position. "id" is less than "totalCount".
+			Param STORM_FN totalAt(Nat id) const;
 
 		private:
 			// Available registers:
@@ -157,12 +181,17 @@ namespace code {
 			GcArray<Param> *integer;
 			// Real registers, for floating point parameters.
 			GcArray<Param> *real;
-			// Stores all parameters that are to be passed on the stack.
-			Array<Nat> *stackPar;
-			// Stores offsets of all stack parameters, relative to SP on function call entry.
-			Array<Nat> *stackOff;
+
+			struct StackParam {
+				Param param;
+				Nat offset;
+			};
+			// Stores all parameters passed on the stack (dynamic array, or null).
+			GcArray<StackParam> *stackPar;
 			// Total stack size.
 			Nat stackSize;
+
+			static const GcType stackParamType;
 
 			// Add complex and simple structs.
 			void addDesc(Nat id, ComplexDesc *type);
@@ -172,8 +201,7 @@ namespace code {
 			void addParam(GcArray<Param> *to, Param p);
 
 			// Push parameter onto stack. Assumes "desc" will be copied onto the stack.
-			void addStack(Nat id, TypeDesc *desc);
-			void addStack(Nat id, Size size);
+			void addStack(Param param);
 		};
 
 		// Create a 'params' object from a list of TypeDesc objects.

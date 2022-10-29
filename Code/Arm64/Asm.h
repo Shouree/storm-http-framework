@@ -74,6 +74,9 @@ namespace code {
 		// location (i.e., copies a multiple of 8 bytes).
 		void inlineMemcpy(Listing *dest, Operand to, Operand from, Reg tmpA, Reg tmpB);
 
+		// Slower version of the above, only able to use one register. Avoid if possible.
+		void inlineSlowMemcpy(Listing *dest, Operand to, Operand from, Reg tmpReg);
+
 		// Get a pointer-sized offset into whatever "operand" represents.
 		Operand opPtrOffset(Operand op, Nat offset);
 		Operand opOffset(Size sz, Operand op, Nat offset);

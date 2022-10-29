@@ -27,6 +27,14 @@ namespace code {
 			return false;
 		}
 
+		// Any parameters that need to be copied to memory?
+		static Bool hasMemory(Params *params) {
+			for (Nat i = 0; i < params->totalCount(); i++)
+				if (params->totalAt(i).inMemory())
+					return true;
+			return false;
+		}
+
 		// Basic map of registers preserved in other registers.
 		class PreservedRegs {
 		public:
@@ -49,7 +57,7 @@ namespace code {
 		};
 
 		// Preserve registers for complex parameters.
-		static void preserveComplex(Listing *dest, RegSet *used, Block block, Array<ParamInfo> *params) {
+		static void preserveComplex(Listing *dest, RegSet *used, Block block, Array<ParamInfo> *params, Params *layout) {
 			PreservedRegs preserved;
 			RegSet *dirtyRegs = code::arm64::dirtyRegs(dest->engine());
 
@@ -57,8 +65,12 @@ namespace code {
 			// registers. This means that we prioritize storing registers that might help us access
 			// multiple values over ones that are read directly.
 			Bool firstComplex = true;
-			for (Nat i = 0; i < params->count(); i++) {
-				ParamInfo &param = params->at(i);
+			for (Nat i = 0; i < layout->totalCount(); i++) {
+				Param p = layout->totalAt(i);
+				if (p.empty())
+					continue;
+
+				ParamInfo &param = params->at(p.id());
 				if (as<ComplexDesc>(param.type) != null && firstComplex) {
 					// No need to worry about the first complex parameter!
 					firstComplex = false;
@@ -98,8 +110,12 @@ namespace code {
 			// Then: Look for operands that read registers directly. These are not as bad to spill
 			// to the stack, which is why we do this later.
 			firstComplex = true;
-			for (Nat i = 0; i < params->count(); i++) {
-				ParamInfo &param = params->at(i);
+			for (Nat i = 0; i < layout->totalCount(); i++) {
+				Param p = layout->totalAt(i);
+				if (p.empty())
+					continue;
+
+				ParamInfo &param = params->at(p.id());
 				if (as<ComplexDesc>(param.type) != null && firstComplex) {
 					// No need to worry about the first complex parameter!
 					firstComplex = false;
@@ -128,51 +144,98 @@ namespace code {
 			}
 		}
 
-		// Copy complex parameters to the stack. Return a new block if we copied parameters to the stack.
-		static Block copyComplex(Listing *dest, RegSet *used, Array<ParamInfo> *params, Block currentBlock) {
-			if (!hasComplex(params))
+		// Copy parameters to memory as needed.
+		static Block copyToMemory(Listing *dest, RegSet *used, Array<ParamInfo> *params, Params *layout, Block currentBlock) {
+			if (!hasMemory(layout))
 				return Block();
+
+			// Temporary registers we can use:
+			Reg reg1 = ptrr(16);
+			Reg reg2 = ptrr(17);
 
 			Block block = dest->createBlock(currentBlock);
 			*dest << begin(block);
 
-			// Spill registers that get clobbered by function calls.
-			preserveComplex(dest, used, block, params);
-
-			// Make copies of objects. Note: We know that x0..x8 are not used now!
-			for (Nat i = 0; i < params->count(); i++) {
-				ParamInfo &param = params->at(i);
-				ComplexDesc *c = as<ComplexDesc>(param.type);
-				if (!c)
+			// First: copy simple parameters to the stack. This potentially frees up registers.
+			for (Nat i = 0; i < layout->totalCount(); i++) {
+				Param p = layout->totalAt(i);
+				// Only worry about parameters that need to be in memory for now.
+				if (p.empty() || !p.inMemory())
 					continue;
 
-				if (param.ref)
-					*dest << mov(ptrr(1), param.src);
+				ParamInfo &info = params->at(p.id());
+
+				// Note: We skip ComplexDesc for later. They require function calls!
+				if (as<ComplexDesc>(info.type))
+					continue;
+
+				Var v = dest->createVar(block, info.type->size());
+
+				if (info.ref) {
+					if (info.src.type() == opRegister) {
+						inlineMemcpy(dest, v, xRel(v.size(), info.src.reg(), Offset()), reg1, reg2);
+					} else {
+						*dest << mov(reg2, info.src);
+						// TODO: In many cases we can probably find another register for this part.
+						inlineSlowMemcpy(dest, v, xRel(v.size(), reg2, Offset()), reg1);
+					}
+				} else {
+					if (info.src.type() == opRegister) {
+						*dest << mov(v, info.src);
+					} else {
+						inlineMemcpy(dest, v, info.src, reg1, reg2);
+					}
+				}
+
+				// Modify the parameter so that we know how to handle it later on.
+				info.src = v;
+				info.ref = false;
+				info.lea = true;
+			}
+
+			// Now we can continue with the complex parameters! Start with preserving registers so
+			// that we can call copy-ctors!
+			preserveComplex(dest, used, currentBlock, params, layout);
+
+			// Then we can actually copy parameters.
+			for (Nat i = 0; i < layout->totalCount(); i++) {
+				Param p = layout->totalAt(i);
+				if (p.empty() || !p.inMemory())
+					continue;
+
+				ParamInfo &info = params->at(p.id());
+				ComplexDesc *desc = as<ComplexDesc>(info.type);
+				if (!desc)
+					continue;
+
+				if (info.ref)
+					*dest << mov(ptrr(1), info.src);
 				else
-					*dest << lea(ptrr(1), param.src);
+					*dest << lea(ptrr(1), info.src);
 
 				// This is after moving 'src' to x1, that way we never need to worry about
 				// preserving anything for the first complex parameter.
-				Var v = dest->createVar(block, c, freeDef | freeInactive);
+				Var v = dest->createVar(block, desc, freeDef | freeInactive);
 				*dest << lea(ptrr(0), v);
 
-				*dest << call(c->ctor, Size());
+				*dest << call(desc->ctor, Size());
 				*dest << activate(v);
 
 				// Modify the parameter accordingly.
-				param.src = v;
-				param.ref = false;
-				param.lea = true;
+				info.src = v;
+				info.ref = false;
+				info.lea = true;
 			}
 
 			return block;
 		}
 
-		static void pushParams(Listing *dest, Array<ParamInfo> *params, Params *layout) {
+		static Nat pushParams(Listing *dest, Array<ParamInfo> *params, Params *layout) {
 			if (layout->stackCount() == 0)
-				return;
+				return 0;
 
 			// Reserve space on the stack first.
+			TODO(L"We might need EH info for this!");
 			*dest << sub(ptrStack, ptrConst(layout->stackTotalSize()));
 
 			// Now we can copy parameters! We need to be careful to not emit memory-memory moves, as
@@ -182,7 +245,7 @@ namespace code {
 			Reg reg2 = ptrr(17);
 
 			for (Nat i = 0; i < layout->stackCount(); i++) {
-				ParamInfo &info = params->at(layout->stackParam(i));
+				ParamInfo &info = params->at(layout->stackParam(i).id());
 				Size sz = info.type->size();
 				if (info.lea == info.ref) {
 					Operand dst = xRel(sz, sp, Offset(layout->stackOffset(i)));
@@ -210,6 +273,8 @@ namespace code {
 					inlineMemcpy(dest, dst, src, reg1, reg2);
 				}
 			}
+
+			return layout->stackTotalSize();
 		}
 
 		// Parameters passed around while assigning contents to registers.
@@ -224,6 +289,8 @@ namespace code {
 			Bool active[17];
 			// Finished assigning to a register?
 			Bool finished[17];
+			// Recursion depth.
+			Nat depth;
 		};
 
 		static void setRegister(RegEnv &env, Nat i);
@@ -232,16 +299,20 @@ namespace code {
 		static void vacateRegister(RegEnv &env, Reg reg) {
 			for (Nat i = 0; i < env.layout->registerCount(); i++) {
 				Param p = env.layout->registerAt(i);
-				if (p == Param())
+				if (p.empty())
 					continue;
 
 				const Operand &src = env.src->at(p.id()).src;
 				if (src.hasRegister() && same(src.reg(), reg)) {
 					// We need to set this register now, otherwise it will be destroyed!
 					if (env.active[i]) {
-						// Cycle detected. Store it in x16 as a temporary and make a note of it.
-						*env.dest << mov(asSize(ptrr(16), src.size()), src);
-						env.active[i] = false;
+						// Cycle detected. If level is 1, then this just means that the data is
+						// already in the right location, so we don't need to do anything.
+						if (env.depth > 1) {
+							// Cycle detected. Store it in x16 as a temporary and make a note of it.
+							*env.dest << mov(asSize(ptrr(16), src.size()), src);
+							env.active[i] = false;
+						}
 					} else {
 						setRegister(env, i);
 					}
@@ -275,7 +346,7 @@ namespace code {
 
 		// Set a register to what it is supposed to be, assuming the address of 'src' shall be used.
 		static void setRegisterLea(RegEnv &env, Reg target, Param param, const Operand &src) {
-			assert(param.size() == 8);
+			assert(param.size().size64() == 8);
 			*env.dest << lea(asSize(target, Size::sPtr), src);
 		}
 
@@ -315,11 +386,13 @@ namespace code {
 		static void setRegister(RegEnv &env, Nat i) {
 			Param param = env.layout->registerAt(i);
 			// Empty?
-			if (param == Param())
+			if (param.empty())
 				return;
 			// Already done?
 			if (env.finished[i])
 				return;
+
+			env.depth++;
 
 			Reg target = env.layout->registerSrc(i);
 			ParamInfo &p = env.src->at(param.id());
@@ -343,6 +416,7 @@ namespace code {
 
 			// Done!
 			env.finished[i] = true;
+			env.depth--;
 		}
 
 		static void setRegisters(Listing *dest, Array<ParamInfo> *src, Params *layout) {
@@ -352,6 +426,7 @@ namespace code {
 				layout,
 				{ false },
 				{ false },
+				0,
 			};
 
 			for (Nat i = 0; i < layout->registerCount(); i++) {
@@ -390,14 +465,13 @@ namespace code {
 				}
 			}
 
-
 			Result *resultLayout = result(resultType);
 
-			// Start by making copies of complex parameters to the stack if necessary.
-			Block block = copyComplex(dest, used, params, currentBlock);
+			// Start by copying parameters to memory as needed.
+			Block block = copyToMemory(dest, used, params, paramLayout, currentBlock);
 
 			// Put parameters onto the stack (if required).
-			pushParams(dest, params, paramLayout);
+			Nat extraStack = pushParams(dest, params, paramLayout);
 
 			// Start copying parameters into registers.
 			setRegisters(dest, params, paramLayout);
@@ -413,6 +487,12 @@ namespace code {
 
 			// Call the function! (We don't need accurate information about registers, so it is OK to pass Size()).
 			*dest << call(toCall, Size());
+
+			// Restore stack if needed.
+			if (extraStack > 0) {
+				TODO(L"We might need EH info for this!");
+				*dest << add(ptrStack, ptrConst(extraStack));
+			}
 
 			// Handle the result if required.
 			if (!resultLayout->memory && resultPos != Operand()) {
@@ -452,7 +532,11 @@ namespace code {
 
 			// Disable the block if we used it.
 			if (block != Block()) {
-				if (resultPos.type() == opRegister) {
+				// If no complex parameters, then we know that the block will only consist of simple
+				// types that execute no destructors.
+				if (!hasComplex(params)) {
+					*dest << end(block);
+				} else if (resultPos.type() == opRegister) {
 					assert(resultTempReg != noReg, L"Failed to find a free register for storing function result.");
 					Reg src = asSize(resultPos.reg(), Size::sPtr);
 					*dest << mov(resultTempReg, src);

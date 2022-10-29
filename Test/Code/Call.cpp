@@ -244,7 +244,7 @@ BEGIN_TEST(CallMixedInt, Code) {
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
-	Ref intFn = arena->external(S("intFn"), address(&callMixedInt));
+	Ref intFn = arena->external(S("mixedIntFn"), address(&callMixedInt));
 	SimpleDesc *small = smallIntDesc(e);
 	SimpleDesc *large = largeIntDesc(e);
 
@@ -271,7 +271,6 @@ BEGIN_TEST(CallMixedInt, Code) {
 	Binary *bin = new (e) Binary(arena, l);
 	typedef Int (*Fn)();
 	Fn fn = (Fn)bin->address();
-
 	CHECK_EQ((*fn)(), 30);
 } END_TEST
 
@@ -600,4 +599,11 @@ BEGIN_TEST(CallBytes, Code) {
 	ByteStruct r = (*fn)(ByteStruct(2, 3));
 	CHECK_EQ(r.a, 33);
 	CHECK_EQ(r.b, 16);
+} END_TEST
+
+BEGIN_TEST(CallMore, Code) {
+	TODO(L"Implement more tests!");
+	// The following tests are needed:
+	// - Function call that has complex parameters, then uses value in eax (probably crashes x64 backend as well)
+	// - Receiving simple and complex parameters that get passed in memory.
 } END_TEST

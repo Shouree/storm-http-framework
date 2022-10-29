@@ -403,5 +403,24 @@ namespace code {
 			}
 		}
 
+		void inlineSlowMemcpy(Listing *dest, Operand to, Operand from, Reg tmpReg) {
+			Nat size = from.size().size64();
+			if (size <= 8) {
+				*dest << mov(asSize(tmpReg, from.size()), from);
+				*dest << mov(to, asSize(tmpReg, from.size()));
+				return;
+			}
+
+			tmpReg = asSize(tmpReg, Size::sPtr);
+
+			Nat offset = 0;
+			while (offset < size) {
+				*dest << mov(tmpReg, opPtrOffset(from, offset));
+				*dest << mov(opPtrOffset(to, offset), tmpReg);
+
+				offset += 8;
+			}
+		}
+
 	}
 }
