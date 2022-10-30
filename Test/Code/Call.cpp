@@ -4,6 +4,7 @@
 #include "Code/X64/Arena.h"
 #include "Code/X64/Asm.h"
 #include "Code/Arm64/Arena.h"
+#include "Code/Arm64/Asm.h"
 #include "Compiler/Debug.h"
 
 using namespace code;
@@ -62,8 +63,8 @@ BEGIN_TEST(CallPrimitiveRef, Code) {
 	CHECK_EQ((*fn)(), 102);
 } END_TEST
 
-Int CODECALL callIntManyFn(Int a, Int b, Int c, Int d, Int e, Int f, Int g, Int h) {
-	return a*10000000 + b*1000000 + c*100000 + d*10000 + e*1000 + f*100 + g*10 + h;
+Int CODECALL callIntManyFn(Int a, Int b, Int c, Int d, Int e, Int f, Int g, Int h, Int i) {
+	return a*100000000 + b*10000000 + c*1000000 + d*100000 + e*10000 + f*1000 + g*100 + h*10 + i;
 }
 
 BEGIN_TEST(CallPrimitiveMany, Code) {
@@ -72,7 +73,7 @@ BEGIN_TEST(CallPrimitiveMany, Code) {
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
-	Ref intFn = arena->external(S("intFn"), address(&callIntManyFn));
+	Ref intFn = arena->external(S("intManyFn"), address(&callIntManyFn));
 
 	Listing *l = new (e) Listing();
 	l->result = intDesc(e);
@@ -80,14 +81,16 @@ BEGIN_TEST(CallPrimitiveMany, Code) {
 
 	*l << mov(eax, intConst(1));
 	*l << mov(ecx, intConst(2));
+	*l << mov(ebx, intConst(3));
 	*l << fnParam(intDesc(e), intConst(3));
 	*l << fnParam(intDesc(e), intConst(4));
 	*l << fnParam(intDesc(e), intConst(5));
 	*l << fnParam(intDesc(e), intConst(6));
 	*l << fnParam(intDesc(e), intConst(7));
 	*l << fnParam(intDesc(e), ecx);
-	*l << fnParam(intDesc(e), intConst(8));
+	*l << fnParam(intDesc(e), intConst(8)); // Stack on X64
 	*l << fnParam(intDesc(e), eax);
+	*l << fnParam(intDesc(e), ebx); // Stack on ARM64
 	*l << fnCall(intFn, false, intDesc(e), ecx);
 
 	*l << fnRet(ecx);
@@ -96,10 +99,10 @@ BEGIN_TEST(CallPrimitiveMany, Code) {
 	typedef Int (*Fn)();
 	Fn fn = (Fn)b->address();
 
-	CHECK_EQ((*fn)(), 34567281);
+	CHECK_EQ((*fn)(), 345672813);
 } END_TEST
 
-#ifdef X64
+#if defined(X64)
 
 // Only usable on X86-64, as we rely on platform specific registers.
 BEGIN_TEST(CallPrimitiveMany64, Code) {
@@ -108,7 +111,7 @@ BEGIN_TEST(CallPrimitiveMany64, Code) {
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
-	Ref intFn = arena->external(S("intFn"), address(&callIntManyFn));
+	Ref intFn = arena->external(S("intManyFn"), address(&callIntManyFn));
 
 	Listing *l = new (e) Listing();
 	l->result = intDesc(e);
@@ -130,6 +133,7 @@ BEGIN_TEST(CallPrimitiveMany64, Code) {
 	*l << fnParam(intDesc(e), edi);
 	*l << fnParam(intDesc(e), intConst(0));
 	*l << fnParam(intDesc(e), intConst(0));
+	*l << fnParam(intDesc(e), intConst(0));
 	*l << fnCall(intFn, false, intDesc(e), ecx);
 
 	*l << fnRet(ecx);
@@ -138,7 +142,53 @@ BEGIN_TEST(CallPrimitiveMany64, Code) {
 	typedef Int (*Fn)();
 	Fn fn = (Fn)b->address();
 
-	CHECK_EQ((*fn)(), 23456100);
+	CHECK_EQ((*fn)(), 234561000);
+} END_TEST
+
+#elif defined(ARM64)
+
+// Only usable on ARM64, as we rely on platform specific registers.
+BEGIN_TEST(CallPrimitiveMany64, Code) {
+	// Call a function with parameters forming a cycle that the backend needs to break in order to
+	// properly assign the registers.
+	Engine &e = gEngine();
+	Arena *arena = code::arena(e);
+
+	Ref intFn = arena->external(S("intManyFn"), address(&callIntManyFn));
+
+	Listing *l = new (e) Listing();
+	l->result = intDesc(e);
+	*l << prolog();
+
+	using namespace code::arm64;
+	*l << mov(wr(0), intConst(1));
+	*l << mov(wr(1), intConst(2));
+	*l << mov(wr(2), intConst(3));
+	*l << mov(wr(3), intConst(4));
+	*l << mov(wr(4), intConst(5));
+	*l << mov(wr(5), intConst(6));
+	*l << mov(wr(6), intConst(7));
+	*l << mov(wr(7), intConst(8));
+	*l << mov(wr(8), intConst(9));
+
+	*l << fnParam(intDesc(e), wr(1));
+	*l << fnParam(intDesc(e), wr(2));
+	*l << fnParam(intDesc(e), wr(3));
+	*l << fnParam(intDesc(e), wr(4));
+	*l << fnParam(intDesc(e), wr(5));
+	*l << fnParam(intDesc(e), wr(6));
+	*l << fnParam(intDesc(e), wr(7));
+	*l << fnParam(intDesc(e), wr(0));
+	*l << fnParam(intDesc(e), wr(8)); // Passed on the stack.
+	*l << fnCall(intFn, false, intDesc(e), ecx);
+
+	*l << fnRet(ecx);
+
+	Binary *b = new (e) Binary(arena, l);
+	typedef Int (*Fn)();
+	Fn fn = (Fn)b->address();
+
+	CHECK_EQ((*fn)(), 234567819);
 } END_TEST
 
 #endif

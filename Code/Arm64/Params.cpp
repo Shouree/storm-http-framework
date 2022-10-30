@@ -259,10 +259,12 @@ namespace code {
 					memcpy(copy->v, stackPar->v, sizeof(StackParam) * stackPar->filled);
 					copy->filled = stackPar->filled;
 				}
+				stackPar = copy;
 			}
 
 			stackPar->v[stackPar->filled].param = param;
 			stackPar->v[stackPar->filled].offset = stackSize;
+			stackPar->filled++;
 
 			// Update size. Minimum alignment is 8.
 			stackSize += roundUp(param.size().aligned().size64(), Nat(8));
