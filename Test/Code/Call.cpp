@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "CallCommon.h"
 #include "Code/Binary.h"
 #include "Code/Listing.h"
 #include "Code/X64/Arena.h"
@@ -6,6 +7,12 @@
 #include "Code/Arm64/Arena.h"
 #include "Code/Arm64/Asm.h"
 #include "Compiler/Debug.h"
+
+/**
+ * File containing tests for calling conventions from the caller's perspective.
+ *
+ * Mirrors tests in Callee.cpp
+ */
 
 using namespace code;
 
@@ -193,23 +200,70 @@ BEGIN_TEST(CallPrimitiveMany64, Code) {
 
 #endif
 
-struct SmallIntParam {
-	size_t a;
-	size_t b;
-
-	// Make sure it is not a POD.
-	SmallIntParam(size_t a, size_t b) : a(a), b(b) {}
-};
-
-SimpleDesc *smallIntDesc(Engine &e) {
-	SimpleDesc *desc = new (e) SimpleDesc(Size::sPtr * 2, 2);
-	desc->at(0) = Primitive(primitive::integer, Size::sPtr, Offset());
-	desc->at(1) = Primitive(primitive::integer, Size::sPtr, Offset::sPtr);
-	return desc;
+Int CODECALL callTinyInt(TinyIntParam p) {
+	return p.a - p.b;
 }
 
+BEGIN_TEST(CallTinyInt, Code) {
+	Engine &e = gEngine();
+	Arena *arena = code::arena(e);
+
+	Ref intFn = arena->external(S("tinyIntFn"), address(&callTinyInt));
+	SimpleDesc *desc = tinyIntDesc(e);
+
+	Listing *l = new (e) Listing();
+	l->result = intDesc(e);
+	Var v = l->createVar(l->root(), desc->size());
+
+	*l << prolog();
+
+	*l << mov(intRel(v, Offset()), intConst(40));
+	*l << mov(intRel(v, Offset::sInt), intConst(10));
+
+	*l << fnParam(desc, v);
+	*l << fnCall(intFn, false, intDesc(e), eax);
+
+	*l << fnRet(eax);
+
+	Binary *b = new (e) Binary(arena, l);
+	typedef Int (*Fn)();
+	Fn fn = (Fn)b->address();
+
+	CHECK_EQ((*fn)(), 30);
+} END_TEST
+
+BEGIN_TEST(CallTinyIntRef, Code) {
+	Engine &e = gEngine();
+	Arena *arena = code::arena(e);
+
+	Ref intFn = arena->external(S("tinyIntFn"), address(&callTinyInt));
+	SimpleDesc *desc = tinyIntDesc(e);
+
+	Listing *l = new (e) Listing();
+	l->result = intDesc(e);
+	Var v = l->createVar(l->root(), desc->size());
+
+	*l << prolog();
+
+	*l << mov(intRel(v, Offset()), intConst(40));
+	*l << mov(intRel(v, Offset::sInt), intConst(10));
+
+	*l << lea(ptrA, v);
+	*l << fnParamRef(desc, ptrA);
+	*l << fnCall(intFn, false, intDesc(e), eax);
+
+	*l << fnRet(eax);
+
+	Binary *b = new (e) Binary(arena, l);
+	typedef Int (*Fn)();
+	Fn fn = (Fn)b->address();
+
+	CHECK_EQ((*fn)(), 30);
+} END_TEST
+
+
 Int CODECALL callSmallInt(SmallIntParam p) {
-	return Int(p.a + p.b);
+	return Int(p.a - p.b);
 }
 
 BEGIN_TEST(CallSmallInt, Code) {
@@ -225,8 +279,8 @@ BEGIN_TEST(CallSmallInt, Code) {
 
 	*l << prolog();
 
-	*l << mov(ptrRel(v, Offset()), ptrConst(10));
-	*l << mov(ptrRel(v, Offset::sPtr), ptrConst(40));
+	*l << mov(ptrRel(v, Offset()), ptrConst(40));
+	*l << mov(ptrRel(v, Offset::sPtr), ptrConst(10));
 
 	*l << fnParam(desc, v);
 	*l << fnCall(intFn, false, intDesc(e), eax);
@@ -237,7 +291,7 @@ BEGIN_TEST(CallSmallInt, Code) {
 	typedef Int (*Fn)();
 	Fn fn = (Fn)b->address();
 
-	CHECK_EQ((*fn)(), 50);
+	CHECK_EQ((*fn)(), 30);
 } END_TEST
 
 BEGIN_TEST(CallSmallIntRef, Code) {
@@ -253,8 +307,8 @@ BEGIN_TEST(CallSmallIntRef, Code) {
 
 	*l << prolog();
 
-	*l << mov(ptrRel(v, Offset()), ptrConst(10));
-	*l << mov(ptrRel(v, Offset::sPtr), ptrConst(40));
+	*l << mov(ptrRel(v, Offset()), ptrConst(40));
+	*l << mov(ptrRel(v, Offset::sPtr), ptrConst(10));
 
 	*l << lea(ptrA, v);
 	*l << fnParamRef(desc, ptrA);
@@ -266,25 +320,8 @@ BEGIN_TEST(CallSmallIntRef, Code) {
 	typedef Int (*Fn)();
 	Fn fn = (Fn)b->address();
 
-	CHECK_EQ((*fn)(), 50);
+	CHECK_EQ((*fn)(), 30);
 } END_TEST
-
-struct LargeIntParam {
-	size_t a;
-	size_t b;
-	size_t c;
-
-	// Make sure it is not a POD.
-	LargeIntParam(size_t a, size_t b, size_t c) : a(a), b(b), c(c) {}
-};
-
-SimpleDesc *largeIntDesc(Engine &e) {
-	SimpleDesc *desc = new (e) SimpleDesc(Size::sPtr * 3, 3);
-	desc->at(0) = Primitive(primitive::integer, Size::sPtr, Offset());
-	desc->at(1) = Primitive(primitive::integer, Size::sPtr, Offset::sPtr);
-	desc->at(2) = Primitive(primitive::integer, Size::sPtr, Offset::sPtr * 2);
-	return desc;
-}
 
 Int CODECALL callMixedInt(LargeIntParam a, SmallIntParam b) {
 	return Int(a.a + a.b - a.c + b.a - b.b);
@@ -361,23 +398,6 @@ BEGIN_TEST(CallMixedIntRef, Code) {
 
 	CHECK_EQ((*fn)(), 30);
 } END_TEST
-
-struct MixedParam {
-	size_t a;
-	Float b;
-	Float c;
-
-	// Make sure it is not a POD.
-	MixedParam(size_t a, Float b, Float c) : a(a), b(b), c(c) {}
-};
-
-SimpleDesc *mixedDesc(Engine &e) {
-	SimpleDesc *desc = new (e) SimpleDesc(Size::sPtr + Size::sFloat * 2, 3);
-	desc->at(0) = Primitive(primitive::integer, Size::sPtr, Offset());
-	desc->at(1) = Primitive(primitive::real, Size::sFloat, Offset::sPtr);
-	desc->at(2) = Primitive(primitive::real, Size::sFloat, Offset::sPtr + Offset::sFloat);
-	return desc;
-}
 
 Float CODECALL callMixed(MixedParam a) {
 	return Float(a.a) - a.b / a.c;
@@ -599,20 +619,6 @@ BEGIN_TEST(CallComplexFromArray, Code) {
 	CHECK(DbgVal::clear());
 
 } END_TEST
-
-struct ByteStruct {
-	Byte a;
-	Byte b;
-
-	ByteStruct(Byte a, Byte b) : a(a), b(b) {}
-};
-
-SimpleDesc *bytesDesc(Engine &e) {
-	SimpleDesc *desc = new (e) SimpleDesc(Size::sByte * 2, 2);
-	desc->at(0) = Primitive(primitive::integer, Size::sByte, Offset());
-	desc->at(1) = Primitive(primitive::integer, Size::sByte, Offset::sByte);
-	return desc;
-}
 
 ByteStruct CODECALL callBytes(ByteStruct p) {
 	return ByteStruct(p.a + 10, p.b - 5);

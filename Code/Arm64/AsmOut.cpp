@@ -119,6 +119,13 @@ namespace code {
 			to->putInt(instr);
 		}
 
+		// Put 3-reg data instructions. 4 registers, no immediate (modifier is labelled oO in the
+		// docs, unclear meaning).
+		static inline void putData4(Output *to, Nat op, Bool modifier, Nat rDest, Nat ra, Nat rb, Nat rc) {
+			Nat instr = (op << 21) | rDest | (ra << 16) | (rb << 5) | (rc << 10) | (Nat(modifier) << 15);
+			to->putInt(instr);
+		}
+
 		// Put instructions for loads and stores: 3 registers and a 7-bit signed immediate.
 		static inline void putLoadStore(Output *to, Nat op, Nat base, Nat r1, Nat r2, Int imm) {
 			checkImm7S(to, imm);
@@ -552,6 +559,21 @@ namespace code {
 			to->putInt(opCode);
 		}
 
+		void mulOut(Output *to, Instr *instr) {
+			// Everything has to be in registers here.
+			Operand src = instr->src();
+			Operand dest = instr->dest();
+			assert(src.type() == opRegister && dest.type() == opRegister,
+				L"Source and destinations for multiply instruction need to be registers.");
+
+			Nat op = 0x0D8;
+			if (src.size().size64() >= 8)
+				op |= 0x400;
+
+			Nat destReg = intRegZR(dest.reg());
+			putData4(to, op, false, destReg, destReg, intRegZR(src.reg()), 31);
+		}
+
 		void preserveOut(Output *to, Instr *instr) {
 			TODO(L"Implement PRESERVE pseudo-op!");
 		}
@@ -602,6 +624,7 @@ namespace code {
 			OUTPUT(add),
 			OUTPUT(cmp),
 			OUTPUT(setCond),
+			OUTPUT(mul),
 
 			OUTPUT(preserve),
 
@@ -646,6 +669,8 @@ namespace code {
 
 		void output(Listing *src, Output *to) {
 			static OpTable<OutputFn> t(outputMap, ARRAY_COUNT(outputMap));
+
+			// TODO: Combination of mov + add/sub would be nice to combine if possible.
 
 			for (Nat i = 0; i < src->count(); i++) {
 				to->mark(src->labels(i));

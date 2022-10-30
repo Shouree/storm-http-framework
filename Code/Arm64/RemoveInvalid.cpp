@@ -10,6 +10,7 @@ namespace code {
 
 #define TRANSFORM(x) { op::x, &RemoveInvalid::x ## Tfm }
 #define DATA12(x) { op::x, &RemoveInvalid::dataInstr12Tfm }
+#define DATA4REG(x) { op::x, &RemoveInvalid::dataInstr4RegTfm }
 
 		const OpEntry<RemoveInvalid::TransformFn> RemoveInvalid::transformMap[] = {
 			TRANSFORM(prolog),
@@ -28,6 +29,7 @@ namespace code {
 
 			DATA12(add),
 			DATA12(sub),
+			DATA4REG(mul),
 		};
 
 		RemoveInvalid::RemoveInvalid() {}
@@ -287,6 +289,26 @@ namespace code {
 			Operand dest = instr->dest();
 			if (dest.type() != opRegister) {
 				// Load and store the destination.
+				Reg t = unusedReg(used->at(line), dest.size());
+				*to << mov(t, dest);
+				*to << instr->alter(t, src);
+				*to << mov(dest, t);
+			} else {
+				*to << instr->alterSrc(src);
+			}
+		}
+
+		void RemoveInvalid::dataInstr4RegTfm(Listing *to, Instr *instr, Nat line) {
+			Operand src = instr->src();
+			if (src.type() != opRegister) {
+				Reg t = unusedReg(used->at(line), src.size());
+				used->at(line)->put(t);
+				*to << mov(t, src);
+				src = t;
+			}
+
+			Operand dest = instr->dest();
+			if (dest.type() != opRegister) {
 				Reg t = unusedReg(used->at(line), dest.size());
 				*to << mov(t, dest);
 				*to << instr->alter(t, src);

@@ -23,6 +23,9 @@ namespace code {
 			TRANSFORM(jmpBlock),
 			TRANSFORM(activate),
 
+			TRANSFORM(mov),
+			TRANSFORM(lea),
+
 			TRANSFORM(fnRet),
 			TRANSFORM(fnRetRef),
 		};
@@ -51,7 +54,9 @@ namespace code {
 
 			// If the result is stored in registers, we need to "spill" it to non-clobbered
 			// registers during cleanup. Make sure we have them.
-			if (result->regType != primitive::none) {
+			// Note: We don't always have to preserve register 19. We only need it if we
+			// need to run destructors in the epilog.
+			if (result->regType != primitive::none && usingEH) {
 				preserved->put(ptrr(19));
 				if (result->twoReg)
 					preserved->put(ptrr(20));
@@ -64,6 +69,27 @@ namespace code {
 				preserveCount++;
 			}
 			layout = code::arm64::layout(src, params, preserveCount);
+
+			// Keep track of which parameters are stored indirectly.
+			varIndirect = new (this) Array<Bool>(layout->count(), false);
+			for (Nat i = 0; i < params->totalCount(); i++) {
+				Param par = params->totalAt(i);
+				if (par.any()) {
+					Var v = p->at(par.id());
+					varIndirect->at(v.key()) = par.inMemory();
+
+					// If passed in memory, modify the EH data for the parameter. These parameters
+					// are freed by the caller, and should be freed by reference if we ever free
+					// them.
+					if (par.inMemory()) {
+						FreeOpt flags = dest->freeOpt(v);
+						flags &= ~freeOnException;
+						flags &= ~freeOnBlockExit;
+						flags |= freeIndirection;
+						dest->freeOpt(v, flags);
+					}
+				}
+			}
 
 			// Initialize our bookkeeping of active variables.
 			Array<Var> *vars = src->allVars();
@@ -83,11 +109,19 @@ namespace code {
 		void Layout::during(Listing *dest, Listing *src, Nat id) {
 			static OpTable<TransformFn> t(transformMap, ARRAY_COUNT(transformMap));
 
+			// Note: mov and lea are the only operands that may have references to memory.
 			Instr *i = src->at(id);
 			if (TransformFn f = t[i->op()]) {
 				(this->*f)(dest, i);
 			} else {
-				*dest << i->alter(resolve(src, i->dest()), resolve(src, i->src()));
+#ifdef DEBUG
+				// This should not happen, but we keep it for debugging.
+				if (i->src().type() == opVariable || i->dest().type() == opVariable) {
+					WARNING(L"Unexpected variable reference in: " << i);
+				}
+#endif
+
+				*dest << i;
 			}
 		}
 
@@ -302,7 +336,7 @@ namespace code {
 				if (p == Param())
 					continue;
 
-				Offset offset = layout->at(paramVars->at(p.id()).key());
+				Offset offset = layout->at(paramVars->at(p.id()).key()) + Offset(p.offset());
 				*dest << mov(longRel(ptrFrame, offset), asSize(params->registerSrc(i), Size::sLong));
 			}
 
@@ -490,6 +524,80 @@ namespace code {
 			*dest << ret(Size()); // We won't do register usage analysis, so this is OK.
 		}
 
+		void Layout::movTfm(Listing *out, Instr *instr) {
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+
+			// Note: We can assume that only one parameter is a variable (other has to be a register).
+
+			if (src.type() == opVariable) {
+				Nat varId = src.var().key();
+				Bool indirect = varIndirect->at(varId);
+				Offset stackOffset = layout->at(varId);
+				Offset varOffset = src.offset();
+
+				if (indirect) {
+					// We have: mov <reg>, <var>
+					// Can transform into:
+					// mov <reg>, <var>
+					// mov <reg>, [<reg>+<offset>]
+					Reg r = asSize(dst.reg(), Size::sPtr);
+					*out << mov(r, ptrRel(ptrFrame, stackOffset));
+					*out << mov(dst, xRel(src.size(), r, varOffset));
+				} else {
+					*out << instr->alterSrc(xRel(src.size(), ptrFrame, stackOffset + varOffset));
+				}
+			} else if (dst.type() == opVariable) {
+				Nat varId = dst.var().key();
+				Bool indirect = varIndirect->at(varId);
+				Offset stackOffset = layout->at(varId);
+				Offset varOffset = dst.offset();
+
+				if (indirect) {
+					// We have: mov <var>, <reg>
+					// Can transform into:
+					// mov x16, <var>
+					// mov [x16+<offset>], <reg>
+					// Note: It is a bit risky to use x16 or x17 without checking if we can trash it.
+					// However, direct writes to the variable like this are rare, and Storm almost
+					// never uses x16 and x17, so we should be fine.
+					Reg r = ptrr(16);
+					if (same(r, src.reg()))
+						r = ptrr(17);
+					*out << mov(r, ptrRel(ptrFrame, stackOffset));
+					*out << mov(xRel(dst.size(), r, varOffset), src);
+				} else {
+					*out << instr->alterDest(xRel(dst.size(), ptrFrame, stackOffset + varOffset));
+				}
+			} else {
+				// No changes needed.
+				*out << instr;
+			}
+		}
+
+		void Layout::leaTfm(Listing *dest, Instr *instr) {
+			// Note: We only need to consider 'src' here!
+			Operand src = instr->src();
+			if (src.type() != opVariable) {
+				*dest << instr;
+				return;
+			}
+
+			Nat varId = src.var().key();
+			Bool indirect = varIndirect->at(varId);
+			Offset stackOffset = layout->at(varId);
+			Offset varOffset = src.offset();
+
+			// Handle indirection if needed.
+			if (indirect) {
+				*dest << mov(instr->dest(), ptrRel(ptrFrame, stackOffset));
+				if (varOffset != Offset())
+					*dest << add(instr->dest(), ptrConst(varOffset));
+			} else {
+				*dest << instr->alterSrc(xRel(src.size(), ptrFrame, stackOffset + varOffset));
+			}
+		}
+
 		Array<Offset> *layout(Listing *src, Params *params, Nat spilled) {
 			Array<Offset> *result = code::layout(src, Size::sPtr); // Specify minimum alignment.
 			Array<Var> *paramVars = src->allParams();
@@ -540,23 +648,26 @@ namespace code {
 			for (Nat i = 0; i < params->registerCount(); i++) {
 				Param p = params->registerAt(i);
 				// Some params are "padding".
-				if (p == Param())
+				if (p.empty())
 					continue;
 
-				result->at(paramVars->at(p.id()).key()) = Offset(spillCount * 8);
+				// If multiple parts of the same parameter, then don't update the variable again.
+				if (p.offset() == 0)
+					result->at(paramVars->at(p.id()).key()) = Offset(spillCount * 8);
+
 				spillCount += 1;
 			}
 
-			// Fill in the offset of parameters passed on the stack.
+			// Ensure that the size of the stack is rounded up to a multiple of 16 bytes.
+			if (result->last().v64() & 0xF)
+				result->last() += Offset::sPtr;
+
+			// Now we can fill in the offset of parameters passed on the stack.
 			for (Nat i = 0; i < params->stackCount(); i++) {
 				Offset off(params->stackOffset(i));
 				off += result->last(); // Increase w. size of entire stack frame.
 				result->at(paramVars->at(params->stackParam(i).id()).key()) = off;
 			}
-
-			// Finally: ensure that the size of the stack is rounded up to a multiple of 16 bytes.
-			if (result->last().v64() & 0xF)
-				result->last() += Offset::sPtr;
 
 			return result;
 		}

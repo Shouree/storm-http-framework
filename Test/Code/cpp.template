@@ -8,15 +8,13 @@ BEGIN_TEST($file$Test, Code) {
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
-	Listing *l = new (e) Listing();
+	Listing *l = new (e) Listing(false, intDesc(e));
 
 	*l << prolog();
 
 	$$
 
-	*l << epilog();
-	l->result = intDesc(e);
-	*l << ret(eax);
+	*l << fnRet(eax);
 
 	Binary *b = new (e) Binary(arena, l);
 	typedef Int (*Fn)();

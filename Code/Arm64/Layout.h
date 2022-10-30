@@ -39,6 +39,9 @@ namespace code {
 			// Variable layout.
 			Array<Offset> *layout;
 
+			// Is some particular variable stored as a pointer to a memory location?
+			Array<Bool> *varIndirect;
+
 			// Parameters.
 			Params *params;
 
@@ -93,6 +96,11 @@ namespace code {
 			void activateTfm(Listing *dest, Instr *src);
 			void fnRetTfm(Listing *dest, Instr *src);
 			void fnRetRefTfm(Listing *dest, Instr *src);
+
+			// Move and lea. These are the only that may "access" memory, so they are the only ones
+			// we need to consider when transforming accesses to memory.
+			void movTfm(Listing *dest, Instr *src);
+			void leaTfm(Listing *dest, Instr *src);
 		};
 
 		// Compute the layout of variables, given a listing, parameters and the number of registers

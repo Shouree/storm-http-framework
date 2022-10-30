@@ -75,6 +75,8 @@ namespace code {
 			// Generic constraint fixing:
 			// Constraints for data operations with a 12 bit immediate or a (shifted) register.
 			void dataInstr12Tfm(Listing *to, Instr *instr, Nat line);
+			// Constraints for 4-reg data operations where all operands need to be in memory.
+			void dataInstr4RegTfm(Listing *to, Instr *instr, Nat line);
 		};
 
 	}
