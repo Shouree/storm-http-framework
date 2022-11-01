@@ -49,14 +49,10 @@
 ;; Mark errors in compilation-mode properly.
 (require 'compile)
 (require 'cl)
-(pushnew '(storm "^ *\\([0-9]+>\\)?@\\([^(\n\t]+\\)(\\([0-9]+\\)\\(-[0-9]+\\)?): [A-Za-z ]+ error:"
-		 2 ;; File
-		 (storm-compute-line-begin . storm-compute-line-end) ;; Lines
-		 storm-compute-col-begin ;; (storm-compute-col-begin . storm-compute-col-end) ;; Columns
-		 2 ;; Error type
-		 )
-	 compilation-error-regexp-alist-alist)
-(add-to-list 'compilation-error-regexp-alist 'storm)
+
+;; Compilation mode assumes that error messages are in screen columns. This is typically not the
+;; case (for C++ or Storm).
+(setq-default compilation-error-screen-columns nil)
 
 (defun storm-find-error-buffer (full-file)
   (let ((buffer (find-buffer-visiting full-file)))
@@ -64,41 +60,33 @@
 	buffer
       (find-file-noselect full-file))))
 
-(defun storm-compute-line (filename offset)
-  (with-current-buffer (storm-find-error-buffer (expand-file-name filename))
-    (line-number-at-pos (1+ (string-to-number offset)) t)))
+(setq storm-error-regexp "^ *\\(p?[0-9]+[>:] ?\\)?@\\([^(\n\t]+\\)(\\([0-9]+\\)\\(-[0-9]+\\)?): [A-Za-z ]+ error:")
 
+;; compile.el was updated in emacs 27. In the new version, the old way of adding custom hooks no
+;; longer work properly. Instead, it provides a documented way of adding hooks.
+(pushnew (if (> emacs-major-version 26)
+	     ;; For new emacs
+	     `(storm ,storm-error-regexp
+		     2 ;; File
+		     (storm-compute-line-begin . storm-compute-line-end) ;; Lines
+		     (storm-compute-col-begin . storm-compute-col-end) ;; Columns
+		     2 ;; Error type
+		     )
+	   ;; For old emacs
+	   `(storm ,storm-error-regexp
+		  2 ;; File
+		  storm-old-compute-line ;; Function to call (line)
+		  3 ;; Column (likely not used due to hook)
+		  nil ;; Type (likely not used due to hook)
+		  )
+	   )
+	 compilation-error-regexp-alist-alist)
+(add-to-list 'compilation-error-regexp-alist 'storm)
 
-(defun storm-compute-col (filename offset)
-  ;; Note: This does not work correctly, it returns a too low offset even if it is returning a correct offset.
-  (with-current-buffer (storm-find-error-buffer (expand-file-name filename))
-    (save-excursion
-      (setq offset (1+ (string-to-number offset)))
-      (goto-char offset)
-      (move-beginning-of-line nil)
-      (+ (- offset (point)) compilation-first-column))))
-
-(defun storm-compute-line-begin ()
-  (storm-compute-line (match-string-no-properties 2) (match-string-no-properties 3)))
-
-(defun storm-compute-line-end ()
-  (let ((end (match-string-no-properties 4)))
-    (if end
-	(storm-compute-line (match-string-no-properties 2) (substring end 1 nil))
-      (storm-compute-line (match-string-no-properties 2) (match-string-no-properties 3)))))
-
-(defun storm-compute-col-begin ()
-  (storm-compute-col (match-string-no-properties 2) (match-string-no-properties 3)))
-
-(defun storm-compute-col-end ()
-  (let ((end (match-string-no-properties 4)))
-    (if end
-	(storm-compute-col (match-string-no-properties 2) (substring end 1 nil))
-      (storm-compute-col (match-string-no-properties 2) (match-string-no-properties 3)))))
-
-
-(defun old-storm-compute-line (data col)
-  ;; This does not work on newer Emacs... Find the version that changed it by looking at documentation in compile.el.
+;; Old-style lookup function. Only works for emacs <= 25.
+;; Does not put a end-marker anywhere, as the undocumented hook does not support it.
+(defun storm-old-compute-line (data col)
+  ;; Only works on the old compile.el.
   (let* ((file (nth 0 data))
 	 (dir (nth 1 data))
 	 (args (nth 2 data))
@@ -111,6 +99,61 @@
 	(goto-char char)
 	(cons nil ; Should be a marker, but is ignored by compile.el
 	      (point-marker))))))
+
+
+;; New-style (documented) lookup functions. Works for emacs >= 26.
+;; It is a bit stupid that we have to convert from offset -> line + col so that compile.el
+;; can convert it back to a marker later on.
+
+;; An interesting side-effect of this (no idea why) is that compile.el puts the mark on the first
+;; Storm error, even if there are earlier errors from e.g. C++. It is unclear why this happens.
+
+;; Minimal cache for the buffer lookup. The functions are called alongside each other, so this will
+;; be a hit most of the times.
+(defvar storm-buffer-lookup-cache '("" . nil) "Cache for buffer lookups in the Storm compilation mode.")
+
+;; Find an element in the cace.
+(defun storm-cached-find-error-buffer (short-file)
+  (if (string= (car storm-buffer-lookup-cache) short-file)
+      (cdr storm-buffer-lookup-cache)
+    (let ((buffer (storm-find-error-buffer (expand-file-name short-file))))
+      (setq storm-buffer-lookup-cache (cons short-file buffer))
+      buffer)))
+
+;; Find line numbers.
+(defun storm-compute-line (filename offset)
+  (save-match-data
+    (with-current-buffer (storm-cached-find-error-buffer filename)
+      (line-number-at-pos (1+ (string-to-number offset)) t))))
+
+(defun storm-compute-line-begin ()
+  (storm-compute-line (match-string-no-properties 2) (match-string-no-properties 3)))
+
+(defun storm-compute-line-end ()
+  (let ((end (match-string-no-properties 4)))
+    (if end
+	(storm-compute-line (match-string-no-properties 2) (substring end 1 nil))
+      (storm-compute-line (match-string-no-properties 2) (match-string-no-properties 3)))))
+
+;; Find column numbers.
+(defun storm-compute-col (filename offset)
+  (save-match-data
+    (with-current-buffer (storm-cached-find-error-buffer filename)
+      (save-excursion
+	(setq offset (1+ (string-to-number offset)))
+	(goto-char offset)
+	(+ (- offset (line-beginning-position)) compilation-first-column)))))
+
+(defun storm-compute-col-begin ()
+  (storm-compute-col (match-string-no-properties 2) (match-string-no-properties 3)))
+
+(defun storm-compute-col-end ()
+  (let ((end (match-string-no-properties 4)))
+    (if end
+	(storm-compute-col (match-string-no-properties 2) (substring end 1 nil))
+      nil))) ;; nil means end of the line
+
+
 
 ;; Storm-mode for buffers.
 (defun global-storm-mode (enable)
