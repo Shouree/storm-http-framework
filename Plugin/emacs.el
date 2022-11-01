@@ -49,7 +49,12 @@
 ;; Mark errors in compilation-mode properly.
 (require 'compile)
 (require 'cl)
-(pushnew '(storm "^ *\\([0-9]+>\\)?@\\([^(\n\t]+\\)(\\([0-9]+\\)\\(-[0-9]+\\)?): [A-Za-z ]+ error:" 2 storm-compute-line 3 nil)
+(pushnew '(storm "^ *\\([0-9]+>\\)?@\\([^(\n\t]+\\)(\\([0-9]+\\)\\(-[0-9]+\\)?): [A-Za-z ]+ error:"
+		 2 ;; File
+		 (storm-compute-line-begin . storm-compute-line-end) ;; Lines
+		 storm-compute-col-begin ;; (storm-compute-col-begin . storm-compute-col-end) ;; Columns
+		 2 ;; Error type
+		 )
 	 compilation-error-regexp-alist-alist)
 (add-to-list 'compilation-error-regexp-alist 'storm)
 
@@ -59,7 +64,41 @@
 	buffer
       (find-file-noselect full-file))))
 
-(defun storm-compute-line (data col)
+(defun storm-compute-line (filename offset)
+  (with-current-buffer (storm-find-error-buffer (expand-file-name filename))
+    (line-number-at-pos (1+ (string-to-number offset)) t)))
+
+
+(defun storm-compute-col (filename offset)
+  ;; Note: This does not work correctly, it returns a too low offset even if it is returning a correct offset.
+  (with-current-buffer (storm-find-error-buffer (expand-file-name filename))
+    (save-excursion
+      (setq offset (1+ (string-to-number offset)))
+      (goto-char offset)
+      (move-beginning-of-line nil)
+      (+ (- offset (point)) compilation-first-column))))
+
+(defun storm-compute-line-begin ()
+  (storm-compute-line (match-string-no-properties 2) (match-string-no-properties 3)))
+
+(defun storm-compute-line-end ()
+  (let ((end (match-string-no-properties 4)))
+    (if end
+	(storm-compute-line (match-string-no-properties 2) (substring end 1 nil))
+      (storm-compute-line (match-string-no-properties 2) (match-string-no-properties 3)))))
+
+(defun storm-compute-col-begin ()
+  (storm-compute-col (match-string-no-properties 2) (match-string-no-properties 3)))
+
+(defun storm-compute-col-end ()
+  (let ((end (match-string-no-properties 4)))
+    (if end
+	(storm-compute-col (match-string-no-properties 2) (substring end 1 nil))
+      (storm-compute-col (match-string-no-properties 2) (match-string-no-properties 3)))))
+
+
+(defun old-storm-compute-line (data col)
+  ;; This does not work on newer Emacs... Find the version that changed it by looking at documentation in compile.el.
   (let* ((file (nth 0 data))
 	 (dir (nth 1 data))
 	 (args (nth 2 data))
