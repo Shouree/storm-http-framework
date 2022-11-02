@@ -397,7 +397,7 @@ class MainWin extends Frame {
 		var v = if (item == 0) {
 			data:MemoryChecks:sequential;
 		} else if (item == 1) {
-			data:MemoryChecks:statement;
+			data:MemoryChecks:statements;
 		} else {
 			data:MemoryChecks:barriers;
 		};

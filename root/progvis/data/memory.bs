@@ -56,7 +56,7 @@ enum MemoryChecks {
 	sequential,
 
 	// Only check individual statements.
-	statement,
+	statements,
 
 	// Check between barriers. This is very close, if not exactly, what the C/C++ standard requires.
 	barriers,
@@ -67,7 +67,7 @@ enum MemoryChecks {
 MemCheck create(MemoryChecks checks) {
 	if (checks == MemoryChecks:sequential)
 		NoMemCheck();
-	else if (checks == MemoryChecks:statement)
+	else if (checks == MemoryChecks:statements)
 		StmtMemCheck();
 	else
 		FullMemCheck();
