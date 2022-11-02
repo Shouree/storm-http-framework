@@ -7,6 +7,10 @@ use lang:bnf;
 
 // Load and highlight a source file into a Text object.
 Text highlightSource(Url file) on Render {
+	highlightSource(file, progvis:view:codeFont);
+}
+
+Text highlightSource(Url file, Font font) on Render {
 	Str text = file.readAllText();
 	TextColor[] colors;
 
@@ -16,7 +20,7 @@ Text highlightSource(Url file) on Render {
 		colors = highlightSource(file, reader, text);
 	}
 
-	Text result(file.readAllText(), progvis:view:codeFont);
+	Text result(file.readAllText(), font);
 	for (x in colors) {
 		result.color(x.begin, x.end, hlColor(x.color));
 	}

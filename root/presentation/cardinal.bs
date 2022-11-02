@@ -4,7 +4,7 @@ use core:geometry;
  * Cardinal directions.
  */
 class Cardinal {
-	// Place a rectangle at this edge.
+	// Place a rectangle at this edge of the supplied point.
 	Rect place(Point pt, Size size) : abstract;
 
 	// Pick this direction from a rectangle.

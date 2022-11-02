@@ -28,7 +28,7 @@ namespace gui {
 		virtual Bool STORM_FN render(Size size, Graphics *graphics);
 
 		// Called from Storm to repaint the window.
-		void STORM_FN repaint();
+		virtual void STORM_FN repaint();
 
 		// Background color. Updated on next redraw.
 		Color bgColor;

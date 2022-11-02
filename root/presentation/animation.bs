@@ -54,6 +54,54 @@ class Animation on Render {
 }
 
 /**
+ * An animation that acts like a trigger, i.e. it triggers once at the desired time and does
+ * something at that moment only. This class is intended to provide functionality to other embedded
+ * things, and has no real use in isolation as-is.
+ */
+class Trigger extends Animation {
+	// Last time triggered.
+	private Duration lastTime;
+
+	// Init.
+	init(Nat step) {
+		init(step) {}
+	}
+
+	// Called when the event is supposed to trigger.
+	void trigger(Element element) : abstract;
+
+	// Setup. Initialize 'lastTime'.
+	void setup(Presentation p, Element element) : override {
+		super:setup(p, element);
+		// Won't work properly with a zero animation time.
+		if (duration == 0 ms)
+			duration = 10 ms;
+		lastTime = duration;
+	}
+
+	// Look at timestamps to determine when to trigger.
+	Bool before(Element element, Graphics g, Nat cStep, Duration time) : override {
+		if (step == cStep) {
+			Bool fire = false;
+			if ((lastTime < offset) & (time > offset)) {
+				fire = true;
+			} else if ((lastTime > time) & (time >= offset)) {
+				fire = true;
+			}
+			lastTime = time;
+
+			if (fire)
+				trigger(element);
+		}
+		true;
+	}
+
+	// Need to implement since base is abstract.
+	void after(Element element, Graphics g, Nat cStep, Duration time) : override {}
+}
+
+
+/**
  * Simple "show" animation. Simply displays the item at the specified step.
  */
 class ShowAnimation extends Animation {

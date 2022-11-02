@@ -156,10 +156,9 @@ namespace gui {
 		virtual Bool STORM_FN onMouseVScroll(Point at, Int delta);
 		virtual Bool STORM_FN onMouseHScroll(Point at, Int delta);
 
-		// Mouse enter/mouse leave. Mouse enter always gets called, and is to return true if the
-		// 'leave' notification is required. The mouse is considered inside the window only as long
-		// as the mouse is directly on top of this window, i.e. not when the current window is
-		// obscured by a child window.
+		// Mouse enter/mouse leave. The mouse is considered inside the window only as long as the
+		// mouse is directly on top of this window, i.e. not when the current window is obscured by
+		// a child window.
 		virtual void STORM_FN onMouseEnter();
 		virtual void STORM_FN onMouseLeave();
 

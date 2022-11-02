@@ -57,6 +57,28 @@ class Presentation on Render {
 		myBackground.added(this);
 	}
 
+	// Make the presentation into 16:9 format.
+	void makeWide() {
+		size = Size(size.h * 16 / 9, size.h);
+	}
+
+	// Make the presentation into 4:3 format.
+	void makeNarrow() {
+		size = Size(size.h * 4 / 3, size.h);
+	}
+
+	// Perform any cleanup necessary.
+	void cleanup() {
+		for (slide in slides)
+			slide.cleanup();
+	}
+
+	// Attach a repaint callback if any elements require the ability.
+	void setupRepaint(Fn<void> callback) {
+		for (slide in slides)
+			slide.setupRepaint(callback);
+	}
+
 
 	/**
 	 * A cursor to a position inside a presentation, excluding the timecode of any current
@@ -219,6 +241,16 @@ class Presentation on Render {
 				r = max(r, intro.duration);
 
 		r;
+	}
+
+	// Get an element from the current slide at a particular position. Does not examine the
+	// background slide.
+	Element? elementAt(Cursor pos, Point pt) {
+		Nat slide = pos.slide;
+		if (slide >= slides.count)
+			return null;
+
+		return slides[slide].elementAt(pt);
 	}
 }
 

@@ -33,6 +33,12 @@ class Slide on Render {
 		layout.findAll(&this.addElement);
 	}
 
+	// Cleanup. Called before the presentation is done being displayed.
+	void cleanup() {
+		for (element in elements)
+			element.cleanup();
+	}
+
 	// Called when we're added to the presentation so that we get a chance to perform layout.
 	package void added(Presentation to) {
 		layout.pos(Rect(to.size));
@@ -49,6 +55,12 @@ class Slide on Render {
 				addAnimation(a);
 			}
 		}
+	}
+
+	// Called when a new repaint callback is known. Only called when shown interactively.
+	package void setupRepaint(Fn<void> callback) {
+		for (e in elements)
+			e.setupRepaint(callback);
 	}
 
 	// Draw this slide. 'step' is the animation number currently being played and 'time' determines
@@ -70,6 +82,18 @@ class Slide on Render {
 			animationTimes[step];
 		else
 			0 ms;
+	}
+
+	// Get visible element at a particular coordinate.
+	Element? elementAt(Point pos) {
+		for (Nat i = elements.count; i > 0; i--) {
+			Element elem = elements[i - 1];
+			if (elem.visible)
+				if (elem.pos.contains(pos))
+					return elem;
+		}
+
+		return null;
 	}
 
 private:

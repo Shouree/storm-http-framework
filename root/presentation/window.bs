@@ -13,9 +13,6 @@ class Presenter extends Frame {
 	// Key mappings.
 	private Map<Key, fn()->void> keymap;
 
-	// Mouse button pressed?
-	private Bool showPointer;
-
 	// Any digits entered?
 	private Bool anyDigits;
 
@@ -56,32 +53,29 @@ class Presenter extends Frame {
 
 	// Handle mouse clicks.
 	Bool onClick(Bool pressed, Point pos, MouseButton button) {
-		if (button != MouseButton:left)
-			return false;
-
-		showPointer = pressed;
-		if (pressed) {
-			render.showPointer(pos);
-		} else {
-			render.hidePointer();
-		}
-		repaint();
-		true;
+		render.onClick(pos, pressed, button);
 	}
 
 	// Mouse movement.
 	Bool onMouseMove(Point pos) {
-		if (showPointer) {
-			render.showPointer(pos);
-			repaint();
-		}
-		true;
+		render.onMouseMove(pos);
+	}
+
+	// Mouse leave.
+	void onMouseLeave() {
+		render.onMouseLeave();
 	}
 
 	// Go to a specific slide.
 	void goTo(Nat slide) {
 		render.goTo(slide);
 		repaint();
+	}
+
+	// Cleanup the presentation on close.
+	void close() {
+		render.cleanup();
+		super:close();
 	}
 
 private:
@@ -211,33 +205,65 @@ class PresentPainter extends Painter {
 	// Our cursor.
 	private Presentation:Cursor cursor;
 
-	// Show a pointer at some location?
-	private Bool showPointer;
+	// Last size rendered. For interaction with the mouse.
+	private Size lastSize;
 
-	// Show the pointer at this location (screen coordinates).
+	// Type of pointer to show.
+	enum PointerType {
+		none,
+		highlight,
+		arrow,
+	}
+
+	// Pointer to show.
+	private PointerType pointer;
+
+	// Position of the pointer.
 	private Point pointerPos;
 
-	// Pointer brush.
-	private Brush pointerBrush;
+	// Brush for the highlight pointer.
+	private Brush highlightBrush;
 
-	// Size of the pointer.
-	private Float pointerSize;
+	// Brush for the arrow pointer.
+	private Brush arrowBrush;
+
+	// Geometry for the arrow.
+	private Path arrowPath;
+
+	// Size of the highlight pointer.
+	private Float highlightSize;
+
+	// Mouse pressed?
+	private Bool mouseDown;
 
 	// Create.
 	init(Presentation p) {
 		init() {
 			p = p;
 			cursor = p.begin;
-			pointerBrush = SolidBrush(Color(1, 0, 0, 0.7));
-			pointerSize = 10;
+			highlightBrush = SolidBrush(Color(1, 0, 0, 0.7));
+			highlightSize = 10;
+			arrowBrush = SolidBrush(Color(0, 0, 0, 0.7));
 		}
 
+		arrowPath.start(Point(0, 0));
+		arrowPath.line(Point(12, 13));
+		arrowPath.line(Point(5, 13));
+		arrowPath.line(Point(0, 18));
+		arrowPath.close();
+
 		bgColor = black;
+
+		// Notify the presentation that it can repaint things!
+		p.setupRepaint(&this.repaint());
+
 		animate();
 	}
 
 	// Draw things!
 	Bool render(Size size, Graphics g) {
+		lastSize = size;
+
 		// How is the animation going?
 		Float aniPos = 1.0;
 		if (inAnimation) {
@@ -259,23 +285,90 @@ class PresentPainter extends Painter {
 
 		g.pop();
 
-		if (showPointer) {
-			g.transform = Transform();
-			var s = scale * pointerSize;
-			g.fillOval(Rect(pointerPos - Size(s), Size(s*2)), pointerBrush);
+		if (pointer == PointerType:highlight) {
+			g.fillOval(Rect(pointerPos - Size(highlightSize), Size(highlightSize*2)), highlightBrush);
+		} else if (pointer == PointerType:arrow) {
+			g.push();
+			g.transform = translate(pointerPos);
+			g.fill(arrowPath, arrowBrush);
+			g.pop();
 		}
 
 		inAnimation;
 	}
 
-	// Manage the pointer.
-	void showPointer(Point at) {
-		showPointer = true;
-		pointerPos = at;
+	// Translate from screen coordinates into presentation coordinates.
+	private Point fromScreen(Point pt) {
+		Size size = lastSize;
+		Size content = p.size;
+		Float scale = min(size.w / content.w, size.h / content.h);
+		Point move = (size - content*scale) / 2;
+		return (pt - move) / scale;
 	}
 
-	void hidePointer() {
-		showPointer = false;
+	// Handle mouse clicks.
+	Bool onClick(Point pos, Bool pressed, MouseButton button) {
+		pos = fromScreen(pos);
+
+		Bool doRepaint = false;
+		if (button == MouseButton:left) {
+			doRepaint |= mouseDown != pressed;
+			mouseDown = pressed;
+			if (mouseDown) {
+				pointer = PointerType:highlight;
+				pointerPos = pos;
+			} else {
+				pointer = PointerType:none;
+			}
+		}
+
+		if (element = p.elementAt(cursor, pos)) {
+			if (interactive = element.interactive()) {
+				doRepaint = interactive.mouseClicked(pos, pressed, button);
+				pointer = PointerType:arrow;
+			}
+		}
+
+		if (doRepaint)
+			repaint();
+
+		true;
+	}
+
+	// Mouse movement.
+	Bool onMouseMove(Point pos) {
+		pos = fromScreen(pos);
+
+		Bool needRepaint = pointer != PointerType:none;
+		if (mouseDown) {
+			pointer = PointerType:highlight;
+			pointerPos = pos;
+			needRepaint = true;
+		} else {
+			pointer = PointerType:none;
+		}
+
+		if (element = p.elementAt(cursor, pos)) {
+			if (interactive = element.interactive()) {
+				needRepaint |= interactive.mouseMoved(pos);
+				pointer = PointerType:arrow;
+				pointerPos = pos;
+				needRepaint = true;
+			}
+		}
+
+		if (needRepaint)
+			repaint();
+		true;
+	}
+
+	// Mouse leave.
+	void onMouseLeave() {
+		Bool needRepaint = pointer != PointerType:none;
+		pointer = PointerType:none;
+		if (needRepaint)
+			repaint();
+		true;
 	}
 
 	// Advance the animation.
@@ -305,7 +398,14 @@ class PresentPainter extends Painter {
 
 	// Set the presentation.
 	assign presentation(Presentation pr) {
+		p.cleanup();
 		p = pr;
+		p.setupRepaint(&this.repaint());
+	}
+
+	// Cleanup the current presentation.
+	void cleanup() {
+		p.cleanup();
 	}
 
 	// Set the cursor to a new location.

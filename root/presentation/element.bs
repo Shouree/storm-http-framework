@@ -11,6 +11,9 @@ class Element on Render {
 	// Animations.
 	private Animation[] myAni;
 
+	// Visible at the last repaint?
+	private Bool visibleLastRepaint;
+
 	// Get/set the position.
 	Rect pos() : final { myPos; }
 	assign pos(Rect p) { myPos = p; }
@@ -23,6 +26,17 @@ class Element on Render {
 		for (a in animations) {
 			a.setup(p, this);
 		}
+	}
+
+	// Setup repaint notifications.
+	void setupRepaint(Fn<void> callback) {}
+
+	// Cleanup anything that needs to be cleaned up after the presentation is closed.
+	void cleanup() {}
+
+	// Quick check if this element is interactive.
+	InteractiveElement? interactive() {
+		null;
 	}
 
 	// Extract the animations from this element. Expected to be called once on slide setup, so might
@@ -53,6 +67,7 @@ class Element on Render {
 		for (Nat i = 0; i < count; i++) {
 			show &= myAni[i].before(this, g, step, time);
 		}
+		visibleLastRepaint = show;
 		show;
 	}
 
@@ -60,6 +75,29 @@ class Element on Render {
 		for (Nat i = myAni.count; i > 0; i--) {
 			myAni[i - 1].after(this, g, step, time);
 		}
+	}
+
+	// Was this item visible at the last repaint?
+	// Used mainly for hit-tests for mouse coordinates.
+	Bool visible() : final {
+		visibleLastRepaint;
+	}
+}
+
+
+/**
+ * Element that the user can interact with.
+ */
+class InteractiveElement extends Element {
+	// Called when the cursor is above the element. Return true if a repaint is needed.
+	Bool mouseMoved(Point pt) { false; }
+
+	// Called when the mouse was clicked above the element. Return true if a repaint is needed.
+	Bool mouseClicked(Point pt, Bool down, MouseButton button) { false; }
+
+	// Quick check if the element is interactive.
+	InteractiveElement? interactive() : override {
+		this;
 	}
 }
 
