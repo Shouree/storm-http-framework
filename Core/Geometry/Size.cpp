@@ -59,5 +59,13 @@ namespace storm {
 			return Size(::fabs(a.w), ::fabs(a.h));
 		}
 
+		Float STORM_FN max(Size x) {
+			return max(x.w, x.h);
+		}
+
+		Float STORM_FN min(Size x) {
+			return min(x.w, x.h);
+		}
+
 	}
 }

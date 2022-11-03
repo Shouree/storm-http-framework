@@ -52,13 +52,18 @@ class Presenter extends Frame {
 	}
 
 	// Handle mouse clicks.
-	Bool onClick(Bool pressed, Point pos, MouseButton button) {
-		render.onClick(pos, pressed, button);
+	Bool onClick(Bool pressed, Point mousePos, MouseButton button) : override {
+		render.onClick(pos.size, mousePos, pressed, button);
+	}
+
+	// Double clicks.
+	Bool onDblClick(Point mousePos, MouseButton button) : override {
+		render.onDblClick(pos.size, mousePos, button);
 	}
 
 	// Mouse movement.
-	Bool onMouseMove(Point pos) {
-		render.onMouseMove(pos);
+	Bool onMouseMove(Point mousePos) : override {
+		render.onMouseMove(pos.size, mousePos);
 	}
 
 	// Mouse leave.
@@ -166,7 +171,6 @@ private:
 		doReload(source);
 		if (fn = lang:pointer(source) as Fn<Presentation>) {
 			render.presentation = fn.call();
-			repaint();
 		}
 	}
 }
@@ -204,9 +208,6 @@ class PresentPainter extends Painter {
 
 	// Our cursor.
 	private Presentation:Cursor cursor;
-
-	// Last size rendered. For interaction with the mouse.
-	private Size lastSize;
 
 	// Type of pointer to show.
 	enum PointerType {
@@ -262,8 +263,6 @@ class PresentPainter extends Painter {
 
 	// Draw things!
 	Bool render(Size size, Graphics g) {
-		lastSize = size;
-
 		// How is the animation going?
 		Float aniPos = 1.0;
 		if (inAnimation) {
@@ -298,8 +297,7 @@ class PresentPainter extends Painter {
 	}
 
 	// Translate from screen coordinates into presentation coordinates.
-	private Point fromScreen(Point pt) {
-		Size size = lastSize;
+	private Point fromScreen(Size size, Point pt) {
 		Size content = p.size;
 		Float scale = min(size.w / content.w, size.h / content.h);
 		Point move = (size - content*scale) / 2;
@@ -307,8 +305,8 @@ class PresentPainter extends Painter {
 	}
 
 	// Handle mouse clicks.
-	Bool onClick(Point pos, Bool pressed, MouseButton button) {
-		pos = fromScreen(pos);
+	Bool onClick(Size windowSize, Point pos, Bool pressed, MouseButton button) {
+		pos = fromScreen(windowSize, pos);
 
 		Bool doRepaint = false;
 		if (button == MouseButton:left) {
@@ -335,9 +333,23 @@ class PresentPainter extends Painter {
 		true;
 	}
 
+	// Handle double clicks.
+	Bool onDblClick(Size windowSize, Point pos, MouseButton button) {
+		pos = fromScreen(windowSize, pos);
+
+		if (element = p.elementAt(cursor, pos)) {
+			if (interactive = element.interactive()) {
+				if (interactive.mouseDblClicked(pos, button))
+					repaint();
+			}
+		}
+
+		true;
+	}
+
 	// Mouse movement.
-	Bool onMouseMove(Point pos) {
-		pos = fromScreen(pos);
+	Bool onMouseMove(Size windowSize, Point pos) {
+		pos = fromScreen(windowSize, pos);
 
 		Bool needRepaint = pointer != PointerType:none;
 		if (mouseDown) {
@@ -365,6 +377,7 @@ class PresentPainter extends Painter {
 	// Mouse leave.
 	void onMouseLeave() {
 		Bool needRepaint = pointer != PointerType:none;
+		mouseDown = false;
 		pointer = PointerType:none;
 		if (needRepaint)
 			repaint();
@@ -401,6 +414,7 @@ class PresentPainter extends Painter {
 		p.cleanup();
 		p = pr;
 		p.setupRepaint(&this.repaint());
+		repaint();
 	}
 
 	// Cleanup the current presentation.

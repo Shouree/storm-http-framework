@@ -42,6 +42,15 @@ namespace storm {
 
 		Size STORM_FN abs(Size a);
 
+		using std::min;
+		using std::max;
+
+		// Get the maximum of the two components.
+		Float STORM_FN max(Size x);
+
+		// Get the minimum of the two components.
+		Float STORM_FN min(Size x);
+
 		wostream &operator <<(wostream &to, const Size &s);
 		StrBuf &STORM_FN operator <<(StrBuf &to, Size s);
 	}

@@ -95,6 +95,9 @@ class InteractiveElement extends Element {
 	// Called when the mouse was clicked above the element. Return true if a repaint is needed.
 	Bool mouseClicked(Point pt, Bool down, MouseButton button) { false; }
 
+	// Called when the mouse was double-clicked above the element. Return true if a repaint is needed.
+	Bool mouseDblClicked(Point pt, MouseButton button) { false; }
+
 	// Quick check if the element is interactive.
 	InteractiveElement? interactive() : override {
 		this;

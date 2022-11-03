@@ -131,6 +131,13 @@ class MainPainter extends Painter {
 	// Apply an action. These are the same that we produce to the Behavior.
 	// Will only apply the action if all threads are paused, returns false if this is not the case.
 	Bool applyAction(Str action) {
+		applyAction(action, true);
+	}
+
+	// Apply an action. These are the same that we produce to the Behavior.
+	// Will only apply the action if all threads are paused, returns false if this is not the case.
+	// "animate" indicates if barrier steps shall be animated.
+	Bool applyAction(Str action, Bool animate) {
 		unless (world)
 			return false;
 
@@ -151,10 +158,14 @@ class MainPainter extends Painter {
 			Nat thread = action.toNat;
 			for (v in world.program.threads) {
 				if (v.threadId == thread) {
-					if (barrier & v.barriersAvailable)
-						v.resumeBarrier(100 ms);
-					else
+					if (barrier & v.barriersAvailable) {
+						if (animate)
+							v.resumeBarrier(100 ms);
+						else
+							v.resumeBarrier();
+					} else {
 						v.resume();
+					}
 				}
 			}
 		}
@@ -332,6 +343,23 @@ class MainPainter extends Painter {
 			workspace.markNext(action.toNat, barrier);
 	}
 
+	// Get a summary of the program's current state.
+	Str programSummary() {
+		if (world)
+			world.summary();
+		else
+			"";
+	}
+
+	// Get active threads in the program.
+	Nat[] programActiveThreads() {
+		Nat[] result;
+		if (world) {
+			for (k, v in world.program.threads)
+				result << v.threadId;
+		}
+		result;
+	}
 
 	// Called when the mouse is moved.
 	void mouseMoved(Point pt) {
