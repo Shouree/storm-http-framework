@@ -9,9 +9,16 @@ use progvis:data;
  */
 class Workspace on Render {
 	init() {
-		init() {}
-
+		init() {
+			outputWidth = 300;
+		}
 	}
+
+	// Override default width of threads? (if positive)
+	Size threadSize;
+
+	// Override the default width of the output panel?
+	Float outputWidth;
 
 	// Enable stepping the threads?
 	private Bool enableStep;
@@ -156,7 +163,7 @@ class Workspace on Render {
 		if (output)
 			return output;
 
-		OutputText created;
+		OutputText created(outputWidth);
 		Element elem(null, Dockable(created, "Output"));
 		elem.output = true;
 		elem.topmost = true;
@@ -224,6 +231,14 @@ class Workspace on Render {
 		while (to < elements.count) {
 			elements.pop();
 		}
+	}
+
+	// Resize thread if needed.
+	void resizeThread(ThreadView thread) {
+		unless (min(threadSize) > 1.0)
+			return;
+
+		thread.resize(threadSize);
 	}
 
 	/**
@@ -312,6 +327,8 @@ class Workspace on Render {
 		Drawable create(Data data) {
 			for (h in world.hints) {
 				if (c = h.createView(world, data)) {
+					if (c as ThreadView)
+						owner.resizeThread(c);
 					return c;
 				}
 			}

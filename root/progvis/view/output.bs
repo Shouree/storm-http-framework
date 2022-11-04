@@ -8,9 +8,9 @@ use progvis:data;
  * A panel containing output from a running program.
  */
 class OutputText extends Drawable {
-	init() {
+	init(Float width) {
 		init() {
-			width = 300;
+			width = width;
 			history = 10;
 			lineHeight = codeFont.height;
 		}

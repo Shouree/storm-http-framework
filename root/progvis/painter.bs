@@ -26,6 +26,9 @@ class MainPainter extends Painter {
 	// Lock for traversals.
 	private core:sync:Lock traverseLock;
 
+	// Stop threads when an error occurred?
+	private Bool stopOnError;
+
 	// Left mouse button pressed?
 	private Bool mouseDown;
 
@@ -48,7 +51,7 @@ class MainPainter extends Painter {
 	private BehaviorMark? mark;
 
 	init() {
-		init() { scale = 1.0; }
+		init() { scale = 1.0; stopOnError = true; }
 		bgColor = Color(0.8, 0.8, 0.8);
 	}
 
@@ -68,6 +71,23 @@ class MainPainter extends Painter {
 			offset = Point();
 			scale = zoom;
 		}
+	}
+
+	// Stop program execution when an error occurs? This is good as it halts the program state a bit
+	// earlier when an error occurrs. However, if the goal is to use the visualization alongside a
+	// model-checker where determinism is important, this feature has to be turned off.
+	void stopOnError(Bool value) {
+		stopOnError = value;
+	}
+
+	// Override default size of threads.
+	void defaultThreadSize(Size size) {
+		workspace.threadSize = size;
+	}
+
+	// Override the output size.
+	void defaultOutputWidth(Float width) {
+		workspace.outputWidth = width;
 	}
 
 	// Do we have an open "program" instance?
@@ -177,7 +197,8 @@ class MainPainter extends Painter {
 		unless (behavior)
 			return;
 
-		stopThreads();
+		if (stopOnError)
+			stopThreads();
 		behavior.onProgramError(error);
 	}
 
@@ -302,7 +323,7 @@ class MainPainter extends Painter {
 
 			// We need to stop threads before the repaint to catch them before an implicit yield in
 			// repaint. We also do it before any other things that could yield.
-			if (error.any)
+			if (error.any & stopOnError)
 				stopThreads();
 
 			if (waitForThreads) {
@@ -345,18 +366,23 @@ class MainPainter extends Painter {
 
 	// Get a summary of the program's current state.
 	Str programSummary() {
-		if (world)
+		if (world) {
+			core:sync:Lock:Guard z(traverseLock);
 			world.summary();
-		else
+		} else {
 			"";
+		}
 	}
 
 	// Get active threads in the program.
 	Nat[] programActiveThreads() {
 		Nat[] result;
 		if (world) {
-			for (k, v in world.program.threads)
-				result << v.threadId;
+			core:sync:Lock:Guard z(traverseLock);
+			for (k, v in world.program.threads) {
+				if (!v.sleeping)
+					result << v.threadId;
+			}
 		}
 		result;
 	}
