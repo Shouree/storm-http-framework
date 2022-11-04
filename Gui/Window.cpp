@@ -223,6 +223,7 @@ namespace gui {
 				return msgResult(0);
 			break;
 		case WM_LBUTTONDBLCLK:
+			onClick(true, dpiFromPx(currentDpi(), mousePos(msg)), mouse::left);
 			if (onDblClick(dpiFromPx(currentDpi(), mousePos(msg)), mouse::left))
 				return msgResult(0);
 			break;
@@ -235,6 +236,7 @@ namespace gui {
 				return msgResult(0);
 			break;
 		case WM_MBUTTONDBLCLK:
+			onClick(true, dpiFromPx(currentDpi(), mousePos(msg)), mouse::middle);
 			if (onDblClick(dpiFromPx(currentDpi(), mousePos(msg)), mouse::middle))
 				return msgResult(0);
 			break;
@@ -247,6 +249,7 @@ namespace gui {
 				return msgResult(0);
 			break;
 		case WM_RBUTTONDBLCLK:
+			onClick(true, dpiFromPx(currentDpi(), mousePos(msg)), mouse::right);
 			if (onDblClick(dpiFromPx(currentDpi(), mousePos(msg)), mouse::right))
 				return msgResult(0);
 			break;
