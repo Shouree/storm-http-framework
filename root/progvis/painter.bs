@@ -90,6 +90,13 @@ class MainPainter extends Painter {
 		workspace.outputWidth = width;
 	}
 
+	// Set current offset. Useful for scripting the behavior of the visualization. The offset is the
+	// screen-coordinates where coordinate 0, 0 appears.
+	void setOffset(Point off) {
+		offset = -off;
+		repaint();
+	}
+
 	// Do we have an open "program" instance?
 	Bool hasProgram() {
 		world.any;
