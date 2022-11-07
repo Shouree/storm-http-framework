@@ -155,6 +155,14 @@ class MainPainter extends Painter {
 		null;
 	}
 
+	// Are all threads currently waiting?
+	Bool threadsWaiting() {
+		unless (world)
+			return false;
+
+		world.program.threadsWaiting();
+	}
+
 	// Apply an action. These are the same that we produce to the Behavior.
 	// Will only apply the action if all threads are paused, returns false if this is not the case.
 	Bool applyAction(Str action) {
