@@ -683,7 +683,7 @@
 	   (path  (car first))
 	   (pkg   (cdr first)))
       (append
-       (list "-i" pkg (expand-file-name path))
+       (list "-I" pkg (expand-file-name path))
        (storm-include-params-i (rest list))))))
 
 (defun storm-start-compiler ()
