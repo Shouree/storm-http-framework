@@ -166,6 +166,9 @@ namespace os {
 
 		// Anything read?
 		nat resultRead;
+
+		// Warn about errors from detached threads.
+		void warnDetachedError();
 	};
 
 	/**

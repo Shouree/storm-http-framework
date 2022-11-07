@@ -14,16 +14,16 @@ namespace os {
 				try {
 					throwError();
 				} catch (const ::Exception &e) {
-					PLN(L"Unhandled exception from abandoned future: " << e);
+					PLN(L"Unhandled exception from abandoned future:\n" << e);
 				} catch (const PtrThrowable *e) {
-					PLN(L"Unhandled exception from abandoned future: " << e->toCStr());
+					PLN(L"Unhandled exception from abandoned future:\n" << e->toCStr());
 				} catch (...) {
 					PLN(L"Unknown unhandled exception from abandoned future.");
 				}
 				break;
 			case resultErrorPtr:
 				if (ptrException) {
-					PLN(L"Unhandled exception from abandoned future: " << ptrException->toCStr());
+					PLN(L"Unhandled exception from abandoned future:\n" << ptrException->toCStr());
 				} else {
 					PLN(L"Unhandled exception from abandoned future.");
 				}
@@ -55,8 +55,37 @@ namespace os {
 		}
 	}
 
+	void FutureBase::warnDetachedError() {
+		switch (atomicRead(resultPosted)) {
+		case resultError:
+			try {
+				throwError();
+			} catch (const ::Exception &e) {
+				PLN(L"Unhandled exception from detached future:\n" << e);
+			} catch (const PtrThrowable *e) {
+				PLN(L"Unhandled exception from detached future:\n" << e->toCStr());
+			} catch (...) {
+				PLN(L"Unknown unhandled exception from detached future.");
+			}
+			break;
+		case resultErrorPtr:
+			if (ptrException) {
+				PLN(L"Unhandled exception from detached future:\n" << ptrException->toCStr());
+			} else {
+				PLN(L"Unhandled exception from detached future.");
+			}
+			break;
+		}
+	}
+
 	void FutureBase::detach() {
-		atomicWrite(resultRead, readDetached);
+		nat oldRead = atomicCAS(resultRead, readNone, readDetached);
+		if (oldRead == readNone) {
+			// Note: Since we don't check 'resultRead' and 'resultPosted' as a unit, this might give
+			// us two warnings in rare cases. As this is not very harmful, it is not really worth
+			// the effort to ensure atomicity here.
+			warnDetachedError();
+		}
 	}
 
 	bool FutureBase::anyPosted() {
@@ -91,6 +120,11 @@ namespace os {
 			saveError();
 		}
 		notify();
+
+		if (atomicRead(resultRead) == readDetached) {
+			// Not really atomic, worst case is that we get the warning twice. See comment in "detach".
+			warnDetachedError();
+		}
 	}
 
 #ifdef CUSTOM_EXCEPTION_PTR
