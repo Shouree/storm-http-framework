@@ -52,20 +52,25 @@ value MemAccess {
  * Memory model to use.
  */
 enum MemoryChecks {
-	// No checks at all. Essentially sequential consistency.
+	// Don't use memory accesses at all in the visualization, not even for highlighting.
+	none,
+
+	// No checks at all, but visualizes accesses. Essentially sequential consistency.
 	sequential,
 
 	// Only check individual statements.
 	statements,
 
-	// Check between barriers. This is very close, if not exactly, what the C/C++ standard requires.
+	// Check between barriers. This is what the C/C++ standard requires (except for relaxed atomics)
 	barriers,
 }
 
 
 // Create a memory check.
 MemCheck create(MemoryChecks checks) {
-	if (checks == MemoryChecks:sequential)
+	if (checks == MemoryChecks:none)
+		ZeroMemCheck();
+	else if (checks == MemoryChecks:sequential)
 		NoMemCheck();
 	else if (checks == MemoryChecks:statements)
 		StmtMemCheck();
@@ -108,7 +113,19 @@ class MemCheck {
 
 
 /**
- * Mem check implementation without checks, for sequential.
+ * Mem check implementation that does not highlight anything. Mostly for programmatical use of
+ * Progvis, where the highlights would be confusing.
+ */
+class ZeroMemCheck extends MemCheck {
+	// Query the memory access for some data.
+	MemAccess query(MemAccess old, unsafe:RawPtr object, Nat offset, Nat size) : override {
+		return MemAccess();
+	}
+}
+
+
+/**
+ * Mem check implementation without checks, for sequential. Highlights reads and writes for clarity.
  */
 class NoMemCheck extends MemCheck {
 	// Query the memory access for some data.
