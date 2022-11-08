@@ -502,3 +502,39 @@ class HLine extends Element {
 		g.pop();
 	}
 }
+
+/**
+ * Line, good for using together with Grid to make tables.
+ */
+class VLine extends Element {
+	init(Brush draw) {
+		init() { draw = draw; width = 1.0; }
+	}
+
+	init(Color draw) {
+		init() { draw = SolidBrush(draw); width = 1.0; }
+	}
+
+	// Color.
+	Brush draw;
+
+	// Line width.
+	Float width;
+
+	// Minimum length of the line.
+	Float minLength;
+
+	// Minimum size.
+	Size minSize() : override {
+		Size(width, minLength);
+	}
+
+	// Draw.
+	void draw(Graphics g) : override {
+		Rect p = pos;
+		g.push();
+		g.lineWidth = width;
+		g.line(p.p0, p.p0 + Size(0, p.size.h), draw);
+		g.pop();
+	}
+}
