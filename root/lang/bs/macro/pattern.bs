@@ -81,7 +81,11 @@ private:
 	}
 
 	void addExpr(Str member, LocalVarAccess exprs, Expr insert) {
-		add(namedExpr(this, SStr(member), exprs, Actuals(insert)));
+		var insertExpr = namedExpr(this, SStr(member), exprs, Actuals(insert));
+		if (insertExpr as UnresolvedName) {
+			throw SyntaxError(insert.pos, "The expression " + insert.toS + " in the pattern does not evaluate to an Expr or Array<Expr> as expected.");
+		}
+		add(insertExpr);
 	}
 }
 
