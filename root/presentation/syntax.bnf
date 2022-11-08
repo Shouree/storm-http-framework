@@ -18,6 +18,8 @@ Expr SPresStmt(Block block);
 SPresStmt => e : SStmt(block) e;
 SPresStmt => slideLayout(block, layout, name, intro)
 	: (SName name, "=", )? "slide" #keyword ~ SIntro(block) intro, SLayoutRoot(block) layout;
+SPresStmt => slidePlainLayout(block, layout, name, intro)
+        : (SName name, "=", )? "borderless" #keyword ~ "slide" #keyword ~ SIntro(block) intro, SLayoutRoot(block) layout;
 SPresStmt => slideBackground(block, layout)
 	: "background" #keyword ~ SLayoutRoot(block) layout;
 

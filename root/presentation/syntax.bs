@@ -103,7 +103,7 @@ Expr slideLayout(Block inside, LayoutRoot layout, SStr? name, Expr? intro) {
 			slide;
 		};
 	} else {
-		var create = pattern (inside) {
+		pattern (inside) {
 			presentation:SlideBorder layout(this);
 			layout.add(layout:Component:toAdd(${layout.block}));
 
@@ -118,6 +118,30 @@ Expr slideLayout(Block inside, LayoutRoot layout, SStr? name, Expr? intro) {
 		Var(inside, name, create);
 	} else {
 		// Otherwise, we just execute the statements.
+		create;
+	}
+}
+
+// Apply the slide layout, but don't add a border.
+Expr slidePlainLayout(Block inside, LayoutRoot layout, SStr? name, Expr? intro) {
+	var create = if (intro) {
+		pattern (inside) {
+			presentation:Slide slide(${layout.block});
+			slide.intro = ${intro};
+			this.add(slide);
+			slide;
+		};
+	} else {
+		pattern (inside) {
+			presentation:Slide slide(${layout.block});
+			this.add(slide);
+			slide;
+		};
+	};
+
+	if (name) {
+		Var(inside, name, create);
+	} else {
 		create;
 	}
 }
