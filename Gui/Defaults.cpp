@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Defaults.h"
+#include "Win32Dpi.h"
 
 namespace gui {
 
@@ -9,6 +10,8 @@ namespace gui {
 		NONCLIENTMETRICS ncm;
 		ncm.cbSize = sizeof(ncm) - sizeof(ncm.iPaddedBorderWidth);
 		SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
+		// dpiSystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0, defaultDpi);
+		TODO(L"Respect DPI properly.");
 		return new (e.v) Font(ncm.lfMessageFont);
 	}
 

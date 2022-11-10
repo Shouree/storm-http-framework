@@ -50,6 +50,8 @@ namespace gui {
 	GetDpiForWindow getDpiForWindow;
 	typedef int (WINAPI *GetSystemMetricsForDpi)(int, UINT);
 	GetSystemMetricsForDpi getSystemMetricsForDpi;
+	typedef BOOL (WINAPI *SystemParametersInfoDpi)(UINT, UINT, LPVOID, UINT, UINT);
+	SystemParametersInfoDpi systemParametersInfoDpi;
 	typedef BOOL (WINAPI *AdjustWindowRectExForDpi)(LPRECT, DWORD, BOOL, DWORD, UINT);
 	AdjustWindowRectExForDpi adjustWindowRectExForDpi;
 
@@ -62,6 +64,7 @@ namespace gui {
 		getDpiForSystem = (GetDpiForSystem)GetProcAddress(user32, "GetDpiForSystem");
 		getDpiForWindow = (GetDpiForWindow)GetProcAddress(user32, "GetDpiForWindow");
 		getSystemMetricsForDpi = (GetSystemMetricsForDpi)GetProcAddress(user32, "GetSystemMetricsForDpi");
+		systemParametersInfoDpi = (SystemParametersInfoDpi)GetProcAddress(user32, "SystemParametersInfoForDpi");
 		adjustWindowRectExForDpi = (AdjustWindowRectExForDpi)GetProcAddress(user32, "AdjustWindowRectExForDpi");
 
 		// Windows 10 and onwards (per monitor v2)
@@ -122,6 +125,13 @@ namespace gui {
 			return getSystemMetricsForDpi(index, dpi);
 		else
 			return GetSystemMetrics(index);
+	}
+
+	BOOL dpiSystemParametersInfo(UINT action, UINT param, void *data, UINT winIni, UINT dpi) {
+		if (systemParametersInfoDpi)
+			return systemParametersInfoDpi(action, param, data, winIni, dpi);
+		else
+			return SystemParametersInfo(action, param, data, winIni);
 	}
 
 	BOOL dpiAdjustWindowRectEx(RECT *rect, DWORD style, bool menu, DWORD exStyle, Nat dpi) {

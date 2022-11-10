@@ -30,6 +30,9 @@ namespace gui {
 	// Get system metrics for DPI.
 	int dpiSystemMetrics(int index, Nat dpi);
 
+	// Get system parameters for DPI.
+	BOOL dpiSystemParametersInfo(UINT action, UINT param, void *data, UINT winIni, UINT dpi);
+
 	// AdjustWindowRectEx
 	BOOL dpiAdjustWindowRectEx(RECT *rect, DWORD style, bool menu, DWORD exStyle, Nat dpi);
 
