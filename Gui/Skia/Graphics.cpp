@@ -183,9 +183,6 @@ namespace gui {
 	 */
 
 	SkPaint *SkiaGraphics::paint(Brush *style, Bool stroke) {
-		if (!rendering)
-			return;
-
 		SkPaint *paint = (SkPaint *)style->forGraphicsRaw(this);
 		paint->setStroke(stroke);
 		paint->setStrokeWidth(lineW);
