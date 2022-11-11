@@ -9,6 +9,8 @@ namespace gui {
 
 	SkiaGraphics::SkiaGraphics(SkiaSurface &surface, Nat id) : surface(surface) {
 		identifier = id;
+		rendering = false;
+
 		states = new (this) Array<State>();
 
 #ifdef GUI_ENABLE_SKIA
@@ -42,6 +44,8 @@ namespace gui {
 	void SkiaGraphics::beforeRender(Color bgColor) {
 		surface.makeCurrent();
 
+		rendering = true;
+
 		State state(SkMatrix::Scale(surface.scale, surface.scale), 1.0f);
 		surface.canvas->setMatrix(state.matrix());
 		states->last() = state;
@@ -60,6 +64,8 @@ namespace gui {
 		// Flush operations so that it is safe to present the contents of the texture.
 		surface.surface->flushAndSubmit();
 
+		rendering = false;
+
 		return true;
 	}
 
@@ -69,18 +75,27 @@ namespace gui {
 	 */
 
 	void SkiaGraphics::reset() {
+		if (!rendering)
+			return;
+
 		// Clear any remaining states from the stack.
 		while (pop())
 			;
 	}
 
 	void SkiaGraphics::pushState() {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 
 		states->push(State(surface.canvas->getTotalMatrix(), lineW));
 	}
 
 	void SkiaGraphics::push() {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 
 		surface.canvas->save();
@@ -88,6 +103,9 @@ namespace gui {
 	}
 
 	void SkiaGraphics::push(Float opacity) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 
 		if (opacity >= 1.0f) {
@@ -103,6 +121,9 @@ namespace gui {
 	}
 
 	void SkiaGraphics::push(Rect clip) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 
 		surface.canvas->save();
@@ -112,6 +133,9 @@ namespace gui {
 	}
 
 	void SkiaGraphics::push(Rect clip, Float opacity) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 
 		// TODO: Is the layer size suggestion in device units (I guess so) or in transformed units?
@@ -126,6 +150,9 @@ namespace gui {
 	}
 
 	Bool SkiaGraphics::pop() {
+		if (!rendering)
+			return false;
+
 		surface.makeCurrent();
 
 		if (states->count() <= 1)
@@ -138,6 +165,9 @@ namespace gui {
 	}
 
 	void SkiaGraphics::transform(Transform *tfm) {
+		if (!rendering)
+			return;
+
 		SkMatrix m = states->last().matrix();
 		m.preConcat(skia(tfm));
 		surface.canvas->setMatrix(m);
@@ -153,6 +183,9 @@ namespace gui {
 	 */
 
 	SkPaint *SkiaGraphics::paint(Brush *style, Bool stroke) {
+		if (!rendering)
+			return;
+
 		SkPaint *paint = (SkPaint *)style->forGraphicsRaw(this);
 		paint->setStroke(stroke);
 		paint->setStrokeWidth(lineW);
@@ -160,58 +193,91 @@ namespace gui {
 	}
 
 	void SkiaGraphics::line(Point from, Point to, Brush *style) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 		surface.canvas->drawLine(skia(from), skia(to), *paint(style, true));
 	}
 
 	void SkiaGraphics::draw(Rect rect, Brush *style) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 		surface.canvas->drawRect(skia(rect), *paint(style, true));
 	}
 
 	void SkiaGraphics::draw(Rect rect, Size edges, Brush *style) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 		surface.canvas->drawRRect(SkRRect::MakeRectXY(skia(rect), edges.w, edges.h), *paint(style, true));
 	}
 
 	void SkiaGraphics::oval(Rect rect, Brush *style) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 		surface.canvas->drawOval(skia(rect), *paint(style, true));
 	}
 
 	void SkiaGraphics::draw(Path *path, Brush *style) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 		SkPath *p = (SkPath *)path->forGraphicsRaw(this);
 		surface.canvas->drawPath(*p, *paint(style, true));
 	}
 
 	void SkiaGraphics::fill(Rect rect, Brush *style) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 		surface.canvas->drawRect(skia(rect), *paint(style, false));
 	}
 
 	void SkiaGraphics::fill(Rect rect, Size edges, Brush *style) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 		surface.canvas->drawRRect(SkRRect::MakeRectXY(skia(rect), edges.w, edges.h), *paint(style, false));
 	}
 
 	void SkiaGraphics::fill(Brush *style) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 		surface.canvas->drawPaint(*paint(style, false));
 	}
 
 	void SkiaGraphics::fillOval(Rect rect, Brush *style) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 		surface.canvas->drawOval(skia(rect), *paint(style, false));
 	}
 
 	void SkiaGraphics::fill(Path *path, Brush *style) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 		SkPath *p = (SkPath *)path->forGraphicsRaw(this);
 		surface.canvas->drawPath(*p, *paint(style, false));
 	}
 
 	void SkiaGraphics::draw(Bitmap *bitmap, Rect rect, Float opacity) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 		SkPaint paint;
 		paint.setAntiAlias(true);
@@ -223,6 +289,9 @@ namespace gui {
 	}
 
 	void SkiaGraphics::draw(Bitmap *bitmap, Rect src, Rect dest, Float opacity) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 		SkPaint paint;
 		paint.setAntiAlias(true);
@@ -234,6 +303,9 @@ namespace gui {
 	}
 
 	void SkiaGraphics::text(Str *text, Font *font, Brush *style, Rect rect) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 		// We're creating some extra pressure on the GC here, but we don't want to re-implement all
 		// the logic in the backend here.
@@ -242,6 +314,9 @@ namespace gui {
 	}
 
 	void SkiaGraphics::draw(Text *text, Brush *style, Point origin) {
+		if (!rendering)
+			return;
+
 		surface.makeCurrent();
 		SkiaText *p = (SkiaText *)text->backendLayout(this);
 		p->draw(*surface.canvas, *paint(style, false), origin);

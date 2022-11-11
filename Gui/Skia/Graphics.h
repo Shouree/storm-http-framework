@@ -185,6 +185,9 @@ namespace gui {
 		// Current line width.
 		Float lineW;
 
+		// Currently rendering?
+		Bool rendering;
+
 		// Push the current state from the Skia device.
 		void pushState();
 	};

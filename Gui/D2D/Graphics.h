@@ -229,6 +229,10 @@ namespace gui {
 		ID2D1Layer *layer();
 #endif
 
+		// Currently rendering? If not rendering, we don't call D2D because it might trigger a debug
+		// break.
+		Bool rendering;
+
 		// Prepare rendering a new frame.
 		void prepare();
 	};

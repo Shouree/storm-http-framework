@@ -12,6 +12,7 @@ namespace gui {
 
 	CairoGraphics::CairoGraphics(CairoSurface &surface, Nat id, Bool flipY) : surface(surface), flipY(flipY) {
 		identifier = id;
+		rendering = false;
 
 #ifdef GUI_GTK
 		manager(new (this) CairoManager(this, &surface));
@@ -41,6 +42,8 @@ namespace gui {
 	 */
 
 	void CairoGraphics::beforeRender(Color bgColor) {
+		rendering = true;
+
 		// Make sure the cairo context is in a reasonable state.
 		cairo_surface_mark_dirty(surface.surface);
 
@@ -72,6 +75,7 @@ namespace gui {
 		reset();
 
 		cairo_surface_flush(surface.surface);
+		rendering = false;
 
 		return true;
 	}
@@ -88,11 +92,17 @@ namespace gui {
 	}
 
 	void CairoGraphics::push() {
+		if (!rendering)
+			return;
+
 		oldStates->push(state);
 		state.type = LayerKind::none;
 	}
 
 	void CairoGraphics::push(Float opacity) {
+		if (!rendering)
+			return;
+
 		oldStates->push(state);
 		state.type = LayerKind::group;
 		state.opacity = opacity;
@@ -100,6 +110,9 @@ namespace gui {
 	}
 
 	void CairoGraphics::push(Rect clip) {
+		if (!rendering)
+			return;
+
 		oldStates->push(state);
 		state.type = LayerKind::save;
 		cairo_save(surface.device);
@@ -110,6 +123,9 @@ namespace gui {
 	}
 
 	void CairoGraphics::push(Rect clip, Float opacity) {
+		if (!rendering)
+			return;
+
 		oldStates->push(state);
 		state.type = LayerKind::group;
 		state.opacity = opacity;
@@ -121,6 +137,9 @@ namespace gui {
 	}
 
 	Bool CairoGraphics::pop() {
+		if (!rendering)
+			return false;
+
 		switch (state.type) {
 		case LayerKind::none:
 			break;
@@ -145,18 +164,27 @@ namespace gui {
 	}
 
 	void CairoGraphics::transform(Transform *tfm) {
+		if (!rendering)
+			return;
+
 		cairo_matrix_t m = cairoMultiply(cairo(tfm), oldStates->last().transform());
 		state.transform(m);
 		cairo_set_matrix(surface.device, &m);
 	}
 
 	void CairoGraphics::lineWidth(Float w) {
+		if (!rendering)
+			return;
+
 		// TODO: How is the width of lines affected by scaling etc.? How do we want it to behave?
 		state.lineWidth = oldStates->last().lineWidth *w;
 		cairo_set_line_width(surface.device, state.lineWidth);
 	}
 
 	void CairoGraphics::prepare() {
+		if (!rendering)
+			return;
+
 		cairo_matrix_t tfm = state.transform();
 		cairo_set_matrix(surface.device, &tfm);
 		cairo_set_line_width(surface.device, state.lineWidth);
@@ -171,6 +199,9 @@ namespace gui {
 #define GET_BITMAP(bitmap) ((cairo_surface_t *)(bitmap)->forGraphicsRaw(this))
 
 	void CairoGraphics::line(Point from, Point to, Brush *style) {
+		if (!rendering)
+			return;
+
 		cairo_new_path(surface.device);
 		cairo_move_to(surface.device, from.x, from.y);
 		cairo_line_to(surface.device, to.x, to.y);
@@ -181,6 +212,9 @@ namespace gui {
 	}
 
 	void CairoGraphics::draw(Rect rect, Brush *style) {
+		if (!rendering)
+			return;
+
 		Size sz = rect.size();
 		cairo_rectangle(surface.device, rect.p0.x, rect.p0.y, sz.w, sz.h);
 		SET_BRUSH(style);
@@ -212,6 +246,9 @@ namespace gui {
 	}
 
 	void CairoGraphics::draw(Rect rect, Size edges, Brush *style) {
+		if (!rendering)
+			return;
+
 		rounded_rect(surface.device, rect, edges);
 
 		SET_BRUSH(style);
@@ -233,6 +270,9 @@ namespace gui {
 	}
 
 	void CairoGraphics::oval(Rect rect, Brush *style) {
+		if (!rendering)
+			return;
+
 		cairo_oval(surface.device, rect);
 
 		SET_BRUSH(style);
@@ -284,18 +324,27 @@ namespace gui {
 	}
 
 	void CairoGraphics::draw(Path *path, Brush *style) {
+		if (!rendering)
+			return;
+
 		draw_path(surface.device, path);
 		SET_BRUSH(style);
 		cairo_stroke(surface.device);
 	}
 
 	void CairoGraphics::fill(Rect rect, Brush *style) {
+		if (!rendering)
+			return;
+
 		rectangle(surface.device, rect);
 		SET_BRUSH(style);
 		cairo_fill(surface.device);
 	}
 
 	void CairoGraphics::fill(Rect rect, Size edges, Brush *style) {
+		if (!rendering)
+			return;
+
 		rounded_rect(surface.device, rect, edges);
 
 		SET_BRUSH(style);
@@ -303,6 +352,9 @@ namespace gui {
 	}
 
 	void CairoGraphics::fill(Brush *style) {
+		if (!rendering)
+			return;
+
 		cairo_matrix_t tfm;
 		cairo_matrix_init_identity(&tfm);
 		cairo_set_matrix(surface.device, &tfm);
@@ -315,6 +367,9 @@ namespace gui {
 	}
 
 	void CairoGraphics::fillOval(Rect rect, Brush *style) {
+		if (!rendering)
+			return;
+
 		cairo_oval(surface.device, rect);
 
 		SET_BRUSH(style);
@@ -322,12 +377,18 @@ namespace gui {
 	}
 
 	void CairoGraphics::fill(Path *path, Brush *style) {
+		if (!rendering)
+			return;
+
 		draw_path(surface.device, path);
 		SET_BRUSH(style);
 		cairo_fill(surface.device);
 	}
 
 	void CairoGraphics::draw(Bitmap *bitmap, Rect rect, Float opacity) {
+		if (!rendering)
+			return;
+
 		cairo_pattern_t *pattern = cairo_pattern_create_for_surface(GET_BITMAP(bitmap));
 		cairo_matrix_t tfm;
 		Size original = bitmap->size();
@@ -344,6 +405,9 @@ namespace gui {
 	}
 
 	void CairoGraphics::draw(Bitmap *bitmap, Rect src, Rect dest, Float opacity) {
+		if (!rendering)
+			return;
+
 		cairo_save(surface.device);
 
 		rectangle(surface.device, dest);
@@ -368,6 +432,9 @@ namespace gui {
 	}
 
 	void CairoGraphics::text(Str *text, Font *font, Brush *style, Rect rect) {
+		if (!rendering)
+			return;
+
 		// We're creating some extra pressure on the GC here, but we don't want to re-implement all
 		// the logic in the backend here.
 		Text *t = new (this) Text(text, font, rect.size());
@@ -375,6 +442,9 @@ namespace gui {
 	}
 
 	void CairoGraphics::draw(Text *text, Brush *style, Point origin) {
+		if (!rendering)
+			return;
+
 		SET_BRUSH(style);
 
 		cairo_move_to(surface.device, origin.x, origin.y);

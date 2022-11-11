@@ -11,6 +11,7 @@ namespace gui {
 
 	D2DGraphics::D2DGraphics(D2DSurface &surface, Nat id) : surface(surface) {
 		identifier = id;
+		rendering = false;
 
 #ifdef GUI_WIN32
 		manager(new (this) D2DManager(this, surface));
@@ -66,6 +67,8 @@ namespace gui {
 		surface.target()->SetTransform(D2D1::Matrix3x2F::Identity());
 		surface.target()->Clear(dx(bgColor));
 
+		rendering = true;
+
 		// Keep track of free layers so we can remove them if we have too many.
 		minFreeLayers = layers->count();
 
@@ -101,12 +104,16 @@ namespace gui {
 		}
 
 		HRESULT result = surface.target()->EndDraw();
+		rendering = false;
 		// Check if we need to re-create the device.
 		return !(result == D2DERR_RECREATE_TARGET || result == DXGI_ERROR_DEVICE_RESET);
 	}
 
 
 	void D2DGraphics::reset() {
+		if (!rendering)
+			return;
+
 		// Do any PopLayer calls required.
 		while (oldStates->count() > 1) {
 			if (state.layer) {
@@ -129,6 +136,9 @@ namespace gui {
 	}
 
 	Bool D2DGraphics::pop() {
+		if (!rendering)
+			return false;
+
 		if (state.layer) {
 			if (state.layer == Layer::dummy()) {
 				surface.target()->PopAxisAlignedClip();
@@ -175,11 +185,17 @@ namespace gui {
 	}
 
 	void D2DGraphics::push() {
+		if (!rendering)
+			return;
+
 		oldStates->push(state);
 		state.layer = Layer();
 	}
 
 	void D2DGraphics::push(Float opacity) {
+		if (!rendering)
+			return;
+
 		// Optimization for cases when opacity >= 1.
 		if (opacity >= 1.0f) {
 			push();
@@ -195,6 +211,9 @@ namespace gui {
 	}
 
 	void D2DGraphics::push(Rect clip) {
+		if (!rendering)
+			return;
+
 		oldStates->push(state);
 		state.layer = Layer::dummy();
 
@@ -202,6 +221,9 @@ namespace gui {
 	}
 
 	void D2DGraphics::push(Rect clip, Float opacity) {
+		if (!rendering)
+			return;
+
 		// Optimization for cases when opacity >= 1.
 		if (opacity >= 1.0f) {
 			push(clip);
@@ -218,6 +240,9 @@ namespace gui {
 	}
 
 	void D2DGraphics::transform(Transform *tfm) {
+		if (!rendering)
+			return;
+
 		*state.transform() = dxMultiply(dx(tfm), *oldStates->last().transform());
 		surface.target()->SetTransform(*state.transform());
 	}
@@ -233,38 +258,62 @@ namespace gui {
 	 */
 
 	void D2DGraphics::line(Point from, Point to, Brush *style) {
+		if (!rendering)
+			return;
+
 		surface.target()->DrawLine(dx(from), dx(to), BRUSH(style), state.lineWidth);
 	}
 
 	void D2DGraphics::draw(Rect rect, Brush *style) {
+		if (!rendering)
+			return;
+
 		surface.target()->DrawRectangle(dx(rect), BRUSH(style), state.lineWidth);
 	}
 
 	void D2DGraphics::draw(Rect rect, Size edges, Brush *style) {
+		if (!rendering)
+			return;
+
 		D2D1_ROUNDED_RECT r = { dx(rect), edges.w, edges.h };
 		surface.target()->DrawRoundedRectangle(r, BRUSH(style), state.lineWidth);
 	}
 
 	void D2DGraphics::oval(Rect rect, Brush *style) {
+		if (!rendering)
+			return;
+
 		Size s = rect.size() / 2;
 		D2D1_ELLIPSE e = { dx(rect.center()), s.w, s.h };
 		surface.target()->DrawEllipse(e, BRUSH(style), state.lineWidth);
 	}
 
 	void D2DGraphics::draw(Path *path, Brush *style) {
+		if (!rendering)
+			return;
+
 		surface.target()->DrawGeometry(PATH(path), BRUSH(style), state.lineWidth);
 	}
 
 	void D2DGraphics::fill(Rect rect, Brush *style) {
+		if (!rendering)
+			return;
+
 		surface.target()->FillRectangle(dx(rect), BRUSH(style));
 	}
 
 	void D2DGraphics::fill(Rect rect, Size edges, Brush *style) {
+		if (!rendering)
+			return;
+
 		D2D1_ROUNDED_RECT r = { dx(rect), edges.w, edges.h };
 		surface.target()->FillRoundedRectangle(r, BRUSH(style));
 	}
 
 	void D2DGraphics::fill(Brush *style) {
+		if (!rendering)
+			return;
+
 		Rect s(Point(), surface.size / surface.scale);
 		surface.target()->SetTransform(D2D1::Matrix3x2F::Identity());
 		surface.target()->FillRectangle(dx(s), BRUSH(style));
@@ -272,28 +321,46 @@ namespace gui {
 	}
 
 	void D2DGraphics::fillOval(Rect rect, Brush *style) {
+		if (!rendering)
+			return;
+
 		Size s = rect.size() / 2;
 		D2D1_ELLIPSE e = { dx(rect.center()), s.w, s.h };
 		surface.target()->FillEllipse(e, BRUSH(style));
 	}
 
 	void D2DGraphics::fill(Path *path, Brush *style) {
+		if (!rendering)
+			return;
+
 		surface.target()->FillGeometry(PATH(path), BRUSH(style));
 	}
 
 	void D2DGraphics::draw(Bitmap *bitmap, Rect rect, Float opacity) {
+		if (!rendering)
+			return;
+
 		surface.target()->DrawBitmap(BITMAP(bitmap), &dx(rect), opacity, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, NULL);
 	}
 
 	void D2DGraphics::draw(Bitmap *bitmap, Rect src, Rect dest, Float opacity) {
+		if (!rendering)
+			return;
+
 		surface.target()->DrawBitmap(BITMAP(bitmap), &dx(dest), opacity, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, &dx(src));
 	}
 
 	void D2DGraphics::text(Str *text, Font *font, Brush *style, Rect rect) {
+		if (!rendering)
+			return;
+
 		surface.target()->DrawText(text->c_str(), text->peekLength(), FONT(font), dx(rect), BRUSH(style));
 	}
 
 	void D2DGraphics::draw(Text *text, Brush *style, Point origin) {
+		if (!rendering)
+			return;
+
 		surface.target()->DrawTextLayout(dx(origin), LAYOUT(text), BRUSH(style));
 	}
 

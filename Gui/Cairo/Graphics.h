@@ -209,6 +209,9 @@ namespace gui {
 		// Flip the Y axis?
 		Bool flipY;
 
+		// Currently rendering?
+		Bool rendering;
+
 		// Prepare rendering.
 		void prepare();
 	};
