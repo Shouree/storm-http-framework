@@ -11,11 +11,21 @@ namespace gui {
 namespace gui {
 
 	// From the MSDN documentation.
+#ifndef DPI_AWARENESS_CONTEXT_UNAWARE
 #define DPI_AWARENESS_CONTEXT_UNAWARE              ((DWORD)-1)
+#endif
+#ifndef DPI_AWARENESS_CONTEXT_SYSTEM_AWARE
 #define DPI_AWARENESS_CONTEXT_SYSTEM_AWARE         ((DWORD)-2)
+#endif
+#ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE
 #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE    ((DWORD)-3)
+#endif
+#ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
 #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 ((DWORD)-4)
+#endif
+#ifndef DPI_AWARENESS_CONTEXT_UNAWARE_GDISCALED
 #define DPI_AWARENESS_CONTEXT_UNAWARE_GDISCALED    ((DWORD)-5)
+#endif
 
 	enum PROCESS_DPI_AWARENESS {
 		PROCESS_DPI_UNAWARE,
@@ -70,7 +80,7 @@ namespace gui {
 		// Windows 10 and onwards (per monitor v2)
 		typedef BOOL (WINAPI *SetDpiContext)(DWORD);
 		SetDpiContext dpiContext = (SetDpiContext)GetProcAddress(user32, "SetProcessDpiAwarenessContext");
-		if (dpiContext && dpiContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
+		if (dpiContext && dpiContext(DWORD(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2))) {
 			dpiMode = dpiMonitor;
 			return;
 		}

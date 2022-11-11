@@ -8,10 +8,33 @@ namespace gui {
 
 	static Font *defaultFont(EnginePtr e) {
 		NONCLIENTMETRICS ncm;
-		ncm.cbSize = sizeof(ncm) - sizeof(ncm.iPaddedBorderWidth);
-		SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
-		// dpiSystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0, defaultDpi);
-		TODO(L"Respect DPI properly.");
+		ncm.cbSize = sizeof(ncm);
+
+		BOOL ok = dpiSystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0, defaultDpi);
+		if (!ok) {
+			// If it failed, try without the iPaddedBorderWidth, as that seems to be new for some
+			// versions of the API.
+			ncm.cbSize = sizeof(ncm) - sizeof(ncm.iPaddedBorderWidth);
+			ok = dpiSystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0, defaultDpi);
+		}
+
+		if (!ok) {
+			// Fall back to the plain version of the system call in case the DPI aware version does
+			// not work as we expect for some reason.
+			ncm.cbSize = sizeof(ncm) - sizeof(ncm.iPaddedBorderWidth);
+			ok = SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0);
+		}
+
+		if (!ok) {
+			WARNING(L"Failed to get the default system font.");
+			LOGFONT &f = ncm.lfMessageFont;
+			zeroMem(f);
+			// These defaults are based on some sane defaults for Windows XP.
+			f.lfHeight = -12;
+			f.lfWeight = 400;
+			wcscpy_s(f.lfFaceName, LF_FACESIZE, L"Segoe UI");
+		}
+
 		return new (e.v) Font(ncm.lfMessageFont);
 	}
 
