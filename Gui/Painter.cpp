@@ -6,7 +6,7 @@
 namespace gui {
 
 	Painter::Painter()
-		: continuous(false), uiContinuous(false), synchronizedPresent(false), resized(false),
+		: continuous(false), uiContinuous(false), synchronizedPresent(false), resized(false), currentRendering(false),
 		  repaintCounter(0), currentRepaint(0), tickCallbackId(0), surface(null) {
 
 		attachedTo = Window::invalid;
@@ -127,6 +127,13 @@ namespace gui {
 		// Make sure we're not presenting while drawing.
 		Lock::Guard z(lock);
 
+		// If we're currently rendering in the same thread, don't do it since rendering is not
+		// reentrant. We do this inside the lock so that it protects the 'currentRendering' variable
+		// as well.
+		if (currentRendering)
+			return false;
+		currentRendering = true;
+
 		bool more = false;
 		bool ok = false;
 
@@ -136,8 +143,13 @@ namespace gui {
 			ok = graphics->afterRender();
 		} catch (...) {
 			graphics->afterRender();
+			currentRendering = false;
 			throw;
 		}
+
+		// It is OK to re-set the variable here already since the remainder of the function does not
+		// call in to user code, and since we are protected by a lock.
+		currentRendering = false;
 
 		// Don't try to present if something failed.
 		if (!ok)

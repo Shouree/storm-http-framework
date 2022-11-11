@@ -91,6 +91,9 @@ namespace gui {
 		// Were we resized recently? If so, we don't have any frame available.
 		Bool resized;
 
+		// Are we currently rendering? Used to prevent recursive entries to rendering on the same thread.
+		Bool currentRendering;
+
 		// Are we attached to anything? If we get detached while waiting to render the screen, we
 		// need to be able to detect that.
 		inline bool attached() const { return graphics != null; }
