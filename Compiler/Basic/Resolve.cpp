@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Resolve.h"
 #include "Named.h"
+#include "Core/Join.h"
 #include "Compiler/Engine.h"
 #include "Compiler/Type.h"
 #include "Compiler/Exception.h"
@@ -173,9 +174,21 @@ namespace storm {
 				if (!n)
 					n = candidate;
 
-				Str *msg = TO_S(block, n << S(" is a ") << runtime::typeOf(n)->identifier()
-								<< S(". Only functions, variables and constructors are supported."));
-				throw new (block) TypeError(pos, msg);
+				StrBuf *msg = new (block) StrBuf();
+				if (Type *t = as<Type>(n)) {
+					*msg << n->identifier() << S(" refers to a type, but no suitable constructor was found.\n");
+					*msg << S("  Available constructors:\n");
+					for (NameSet::Iter b = t->begin(), e = t->end(); b != e; b++) {
+						Named *v = b.v();
+						if (*v->name == Type::CTOR)
+							*msg << S("  ") << v << S("\n");
+					}
+				} else {
+					*msg << n->identifier() << S(" is a ") << runtime::typeOf(n)->identifier()
+						 << S(". Only functions, variables and constructors can be used in this way.");
+				}
+
+				throw new (block) TypeError(pos, msg->toS());
 
 			} catch (CodeError *error) {
 				// Add position information if it is available.
