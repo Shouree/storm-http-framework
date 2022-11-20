@@ -80,6 +80,8 @@ class DefaultBehavior extends Behavior {
 			showMessage(window, "Data race found", "You found data races:\n" + error.message);
 		} else if (error as DeadlockError) {
 			showMessage(window, "Deadlock found", error.message);
+		} else if (error as LivelockError) {
+			showMessage(window, "Livelock found", error.message);
 		} else if (error as NoError) {
 			// Nothing needed, we just don't want to show "program error".
 		} else {

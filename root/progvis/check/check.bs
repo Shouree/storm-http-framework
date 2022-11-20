@@ -28,6 +28,7 @@ class Checker on Render {
 			current = n;
 			pathDepth = 10;
 			exhaustive = false;
+			checkTermination = true;
 		}
 
 		// Don't do sticky threads.
@@ -73,6 +74,9 @@ class Checker on Render {
 	// Should we make an exhaustive search?
 	private Bool exhaustive;
 
+	// Check so that the program always terminates?
+	private Bool checkTermination;
+
 	// Check the loaded program.
 	void check() {
 		try {
@@ -90,8 +94,22 @@ class Checker on Render {
 		}
 	}
 
-	// Find an error. Simply run a BFS until we find an edge with an error.
+	// Find an error.
 	Result? result() {
+		if (r = findErrorResult())
+			return r;
+
+		if (checkTermination) {
+			if (r = ensureTermination())
+				return r;
+		}
+
+		return null;
+	}
+
+	// Find if any interleaving caused an error. Simply run a BFS until we find an edge with an
+	// error, and verifies that the program terminates.
+	private Result? findErrorResult() {
 		unless (edge = findError())
 			return null;
 
@@ -156,6 +174,7 @@ class Checker on Render {
 		Queue<Node> work;
 		Set<Node> traversed;
 
+		traversed.put(root);
 		work.push(root);
 		while (work.any) {
 			Node c = work.top; work.pop();
@@ -233,6 +252,7 @@ class Checker on Render {
 		Queue<Node> work;
 		Set<Node> traversed;
 
+		traversed.put(root);
 		work.push(root);
 		while (work.any) {
 			Node c = work.top; work.pop();
@@ -307,6 +327,134 @@ class Checker on Render {
 		// Only store the first error.
 		if (this.error.empty)
 			this.error = error;
+	}
+
+	// Ensure that the program always terminates eventually.
+	//
+	// What we need to do is essentially to ensure that all states eventually end up in a state
+	// where no threads are alive (we call these notes "final"). This represents a state where all
+	// threads have terminated properly. Note that this is distinct from deadlocks, which are
+	// detected elsewhere (i.e. are all threads waiting).
+	//
+	// We do this by "flipping" the graph and then starting to search from all final nodes. We then
+	// pick one of the non-visited nodes with the lowest depth. We then traverse that in the
+	// direction of some non-traversed node until we find a cycle.
+	private Result? ensureTermination() {
+		// Clear out any lingering back-edges (to be sure).
+		// Also find final nodes.
+		for (n in lookup)
+			n.backEdges.clear();
+
+		// Add all edges from all nodes.
+		for (n in lookup) {
+			for (e in n.edges) {
+				e.child.backEdges << e.child;
+			}
+		}
+
+		// Now, we can simply traverse the graph along the back edges.
+		Queue<Node> work;
+		Set<Node> traversed;
+
+		// Find the final nodes that act as the starting point.
+		for (n in lookup) {
+			if (n.edges.empty) {
+				traversed.put(n);
+				work.push(n);
+			}
+		}
+
+		while (work.any) {
+			Node c = work.top; work.pop();
+			for (e in c.backEdges) {
+				if (!traversed.has(e)) {
+					traversed.put(e);
+					work.push(e);
+				}
+			}
+		}
+
+		// Finally: find a node that was not traversed.
+		Nat leastDepth = lookup.count;
+		Node? leastNode;
+		for (n in lookup) {
+			if (n.depth < leastDepth) {
+				if (!traversed.has(n)) {
+					leastDepth = n.depth;
+					leastNode = n;
+				}
+			}
+		}
+
+		if (leastNode) {
+			Node longest = leastNode;
+			do {
+				Node? next;
+				Nat depth = longest.depth;
+				for (e in longest.edges) {
+					if (!traversed.has(e.child)) {
+						if (e.child.depth > depth) {
+							next = e.child;
+							break;
+						}
+					}
+				}
+
+				if (next) {
+					longest = next;
+				} else {
+					break;
+				}
+			}
+
+			Nat[] sequence = longest.path;
+			// See if we can add the final step to complete the cycle.
+			for (e in longest.edges) {
+				if (e.child is leastNode) {
+					sequence << e.action;
+					break;
+				}
+			}
+
+			Action[] actions = translateSequence(sequence);
+			return Result(LivelockError(), actions);
+		}
+
+		return null;
+	}
+
+
+	// Convert thread-id:s for the livelock case.
+	private Action[] translateSequence(Nat[] path) {
+		try {
+			Action[] actions;
+
+			world.clear();
+			toStart(program);
+
+			for (thread in path) {
+				var t = findSeqThread(program, thread);
+				if (t.barriersAvailable) {
+					actions << Action(t.threadId, true);
+					t.resumeBarrier();
+				} else {
+					actions << Action(t.threadId, false);
+					t.resume();
+				}
+
+				wait(program);
+			}
+
+			program.terminate();
+			world.clear();
+
+			return actions;
+
+		} catch (Exception e) {
+			program.terminate();
+			world.clear();
+			throw e;
+		}
 	}
 }
 

@@ -47,6 +47,9 @@ package class Node on Render {
 	// added an edge for them).
 	Queue<Nat> unexplored;
 
+	// Back-edges. Only used during certain steps.
+	Node[] backEdges;
+
 	// Get the depth.
 	Nat depth() { myDepth; }
 

@@ -507,7 +507,8 @@ void debug() on Compiler {
 		// win.open(url / "concurrency" / "lock_sema.c");
 		// win.open(url / "test" / "error.c");
 		// win.open(url / "test" / "multi_locks.c");
-		win.open(url / "test" / "step_error.c");
+		// win.open(url / "test" / "step_error.c");
+		win.open(url / "test" / "livelock.c");
 		win.waitForClose();
 	}
 }

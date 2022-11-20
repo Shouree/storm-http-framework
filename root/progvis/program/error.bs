@@ -58,6 +58,14 @@ class DeadlockError extends ProgramError {
 }
 
 /**
+ * A livelock.
+ */
+class LivelockError extends ProgramError {
+	Str type() { "livelock"; }
+	Str message() { "The program does not always terminate. The loop in the visualization never ends."; }
+}
+
+/**
  * A "no error" for convenienve.
  */
 class NoError extends ProgramError {
