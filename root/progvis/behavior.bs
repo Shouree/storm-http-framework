@@ -31,24 +31,21 @@ class Behavior on Ui {
 	// Allow spawning another thread?
 	Str? allowSpawnThread() { null; }
 
-	// Allow the user to step at their own pace.
-	Bool allowStep() { true; }
-
 	// Allow changing "track reads/writes". If this returns "false", track memory is forced on.
 	Bool allowTrackMemory() { true; }
 
 	// Get the panel to show during rendering.
 	ProblemPanel? panel() { null; }
 
-	// Data to mark.
-	BehaviorMark mark;
+	// Data used by the painter. In a separate object to avoid thread switches.
+	BehaviorConfig config;
 }
 
 
 /**
- * Behavior mark. Communicates with the painter efficiently.
+ * Behavior config. Communicates with the painter efficiently.
  */
-class BehaviorMark on Render {
+class BehaviorConfig on Render {
 	// Return an action to mark.
 	Str? mark() { data; }
 
@@ -56,8 +53,17 @@ class BehaviorMark on Render {
 	assign mark(Str m) { data = m; }
 	assign mark(Str? m) { data = m; }
 
+	// Allow single-stepping threads?
+	Bool allowStep() { step; }
+
+	// Set allow step.
+	assign allowStep(Bool v) { step = v; }
+
 	// The data.
 	private Str? data;
+
+	// Data.
+	private Bool step;
 }
 
 
@@ -123,7 +129,7 @@ class ReplayBehavior extends DefaultBehavior {
 			last = next + 1;
 		}
 
-		updateMark();
+		updateConfig();
 	}
 
 	init(MainWin window, check:Action[] steps) {
@@ -134,7 +140,7 @@ class ReplayBehavior extends DefaultBehavior {
 		for (x in steps)
 			this.steps << x.toS;
 
-		updateMark();
+		updateConfig();
 	}
 
 	void onProgramError(ProgramError error) : override {
@@ -145,7 +151,7 @@ class ReplayBehavior extends DefaultBehavior {
 	void onRestart() : override {
 		stop();
 		pos = 0;
-		updateMark();
+		updateConfig();
 	}
 
 	void onDispose() : override {
@@ -178,17 +184,17 @@ class ReplayBehavior extends DefaultBehavior {
 
 	private void applyStep() {
 		if (pos >= steps.count) {
-			(spawn showMessage(window, "End", "No more steps are available. Press \"Restart\" to see it again.")).detach();
+			(spawn showMessage(window, "End", "No more steps are available. Press \"Restart\" to see it again, or explore more on your own.")).detach();
 			return;
 		}
 
 		// Must update the mark first, otherwise we might show the wrong thing.
 		pos++;
-		updateMark();
+		updateConfig();
 		if (!window.applyAction(steps[pos - 1])) {
 			// Something was running, restore.
 			pos--;
-			updateMark();
+			updateConfig();
 		}
 	}
 
@@ -199,11 +205,14 @@ class ReplayBehavior extends DefaultBehavior {
 	}
 
 	// Update the mark.
-	private void updateMark() {
-		if (pos < steps.count)
-			mark.mark = steps[pos];
-		else
-			mark.mark = null;
+	private void updateConfig() {
+		if (pos < steps.count) {
+			config.mark = steps[pos];
+			config.allowStep = false;
+		} else {
+			config.mark = null;
+			config.allowStep = true;
+		}
 	}
 
 	// Function running in another UThread.
@@ -231,7 +240,6 @@ class ReplayBehavior extends DefaultBehavior {
 		autoStep = false;
 	}
 
-	Bool allowStep() : override { false; }
 	Bool allowTrackMemory() : override { false; }
 	Str? allowReload() : override { "You can not reload problems while showing a solution. Open another program instead."; }
 	Str? allowSpawnThread() { "You can not spawn new threads now. Please open a new program first."; }

@@ -11,6 +11,7 @@ class Workspace on Render {
 	init() {
 		init() {
 			outputWidth = 300;
+			enableStepFn = &alwaysTrue;
 		}
 	}
 
@@ -20,15 +21,15 @@ class Workspace on Render {
 	// Override the default width of the output panel?
 	Float outputWidth;
 
-	// Enable stepping the threads?
-	private Bool enableStep;
+	// Check if stepping of threads should be enabled.
+	private Fn<Bool> enableStepFn;
 
 	// Set stepping.
-	assign enableStep(Bool v) {
-		enableStep = v;
+	assign enableStep(Fn<Bool> v) {
+		enableStepFn = v;
 		for (e in elements)
 			if (x = e.visual.contained as ThreadView)
-				x.enableStep = v;
+				x.enableStepFn = v;
 	}
 
 	// Clear all marks.
@@ -305,7 +306,7 @@ class Workspace on Render {
 
 			// Set stepping enabled for any new threads.
 			if (x = created.contained as ThreadView)
-				x.enableStep = owner.enableStep;
+				x.enableStepFn = owner.enableStepFn;
 
 			var elem = if (alloc.data as progvis:data:Thread) {
 				Element e(alloc, Dockable(created, alloc.data.title(world)).allowResize);
@@ -544,4 +545,8 @@ private:
 
 	// Active drawable.
 	Drawable? active;
+}
+
+package Bool alwaysTrue() {
+	true;
 }

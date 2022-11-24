@@ -47,12 +47,21 @@ class MainPainter extends Painter {
 	// Behavior to use in the painter.
 	private Behavior? behavior;
 
-	// Mark from the behavior, if any.
-	private BehaviorMark? mark;
+	// Config from the behavior, if any.
+	private BehaviorConfig? config;
 
 	init() {
 		init() { scale = 1.0; stopOnError = true; }
 		bgColor = Color(0.8, 0.8, 0.8);
+		workspace.enableStep = &this.allowStep;
+	}
+
+	// Check if we should allow stepping?
+	private Bool allowStep() {
+		if (config)
+			config.allowStep;
+		else
+			true;
 	}
 
 	// Set the memory model.
@@ -105,13 +114,12 @@ class MainPainter extends Painter {
 	// Update the behavior without re-loading a program.
 	void updateBehavior(Behavior b) {
 		behavior = b;
-		mark = b.mark;
+		config = b.config;
 		panel = b.panel;
-		workspace.enableStep = b.allowStep;
 
-		if (mark) {
+		if (config) {
 			workspace.clearNext();
-			if (m = mark.mark)
+			if (m = config.mark)
 				markAction(m);
 		}
 	}
@@ -232,7 +240,7 @@ class MainPainter extends Painter {
 	void cleanup() {
 		// Don't call any behavior during termination.
 		behavior = null;
-		mark = null;
+		config = null;
 		panel = null;
 
 		if (world) {
@@ -251,14 +259,14 @@ class MainPainter extends Painter {
 			// Don't call behavior during restart.
 			var tmp = behavior;
 			behavior = null;
-			mark = null;
+			config = null;
 
 			world.clear();
 			workspace.clear();
 
 			behavior = tmp;
 			if (behavior) {
-				mark = behavior.mark;
+				config = behavior.config;
 				behavior.onRestart();
 			}
 			world.program.spawn(world.program.main);
@@ -350,9 +358,9 @@ class MainPainter extends Painter {
 			}
 		}
 
-		if (mark) {
+		if (config) {
 			workspace.clearNext();
-			if (m = mark.mark)
+			if (m = config.mark)
 				markAction(m);
 		}
 

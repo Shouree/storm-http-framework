@@ -12,7 +12,7 @@ class ThreadView extends DataView {
 	init(progvis:data:Thread thread) {
 		init {
 			thread = thread;
-			enableStep = true;
+			enableStepFn = &alwaysTrue;
 			source(thread.src.owner);
 			step(stepDecoration, SolidBrush(yellow*0.5 + red), buttonSize);
 			bigStep(bigStepDecoration, SolidBrush(yellow*0.5 + red), buttonSize);
@@ -45,7 +45,7 @@ class ThreadView extends DataView {
 	Bool removeMe;
 
 	// Enable stepping.
-	Bool enableStep;
+	Fn<Bool> enableStepFn;
 
 	// Buttons.
 	private SmallButton step;
@@ -255,32 +255,32 @@ class ThreadView extends DataView {
 	}
 
 	private void onStep() {
-		if (enableStep)
+		if (enableStepFn.call())
 			thread.src.resume();
 	}
 
 	private void onBigStep() {
-		if (enableStep)
+		if (enableStepFn.call())
 			thread.src.resumeBarrier();
 	}
 
 	private void onPause() {
-		if (enableStep)
+		if (enableStepFn.call())
 			thread.src.pause();
 	}
 
 	private void onRunSlow() {
-		if (enableStep)
+		if (enableStepFn.call())
 			thread.src.resume(1 s);
 	}
 
 	private void onRunFast() {
-		if (enableStep)
+		if (enableStepFn.call())
 			thread.src.resume(500 ms);
 	}
 
 	private void onRunVeryFast() {
-		if (enableStep)
+		if (enableStepFn.call())
 			thread.src.resume(100 ms);
 	}
 

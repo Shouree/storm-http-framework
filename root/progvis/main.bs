@@ -499,6 +499,9 @@ void debug() on Compiler {
 	named{progvis}.compile();
 
 	if (url = examplesDir()) {
+		// progvis:check:check([url / "test" / "livelock.c"]);
+		// return;
+
 		MainWin win;
 		// win.open(url / "assert.c");
 		// win.open(url / "atomics.c");
