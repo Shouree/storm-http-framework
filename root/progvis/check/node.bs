@@ -32,6 +32,7 @@ package class Node on Render {
 				id++;
 			}
 		}
+		myAlive = id;
 	}
 
 	// Parent node.
@@ -39,6 +40,9 @@ package class Node on Render {
 
 	// Current depth of this node.
 	private Nat myDepth;
+
+	// Number of threads that were alive.
+	private Nat myAlive;
 
 	// Children to this node. Contains one element for each child to this node.
 	Edge[] edges;
@@ -52,6 +56,9 @@ package class Node on Render {
 
 	// Get the depth.
 	Nat depth() { myDepth; }
+
+	// Get the number of threads that were alive. Including sleeping threads.
+	Nat threadsAlive() { myAlive; }
 
 	// Get the parent.
 	Node? parent() { myParent; }

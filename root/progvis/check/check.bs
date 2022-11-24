@@ -348,7 +348,7 @@ class Checker on Render {
 		// Add all edges from all nodes.
 		for (n in lookup) {
 			for (e in n.edges) {
-				e.child.backEdges << e.child;
+				e.child.backEdges << n;
 			}
 		}
 
@@ -374,48 +374,24 @@ class Checker on Render {
 			}
 		}
 
-		// Finally: find a node that was not traversed.
-		Nat leastDepth = lookup.count;
+		// Finally: find a node that was not traversed. If multiple nodes exist, pick the one with
+		// the lowest depth to generate a short example.
 		Node? leastNode;
 		for (n in lookup) {
-			if (n.depth < leastDepth) {
-				if (!traversed.has(n)) {
-					leastDepth = n.depth;
+			if (!traversed.has(n)) {
+				if (l = leastNode) {
+					if (betterCandidate(n, l)) {
+						leastNode = n;
+					}
+				} else {
 					leastNode = n;
 				}
 			}
 		}
 
+		// If we found one, then report an error.
 		if (leastNode) {
-			Node longest = leastNode;
-			do {
-				Node? next;
-				Nat depth = longest.depth;
-				for (e in longest.edges) {
-					if (!traversed.has(e.child)) {
-						if (e.child.depth > depth) {
-							next = e.child;
-							break;
-						}
-					}
-				}
-
-				if (next) {
-					longest = next;
-				} else {
-					break;
-				}
-			}
-
-			Nat[] sequence = longest.path;
-			// See if we can add the final step to complete the cycle.
-			for (e in longest.edges) {
-				if (e.child is leastNode) {
-					sequence << e.action;
-					break;
-				}
-			}
-
+			Nat[] sequence = findLivelockExample(leastNode, traversed);
 			Action[] actions = translateSequence(sequence);
 			return Result(LivelockError(), actions);
 		}
@@ -423,6 +399,99 @@ class Checker on Render {
 		return null;
 	}
 
+	// Compute if 'candidate' is a better match than 'prev' as the start of a potential cycle.
+	// This is a heuristic that aims to provide a good example that illustrates issues with livelocks.
+	// For this reason, we prioritize states where there are few threads alive, and then a lower depth.
+	private Bool betterCandidate(Node candidate, Node prev) : static {
+		if (candidate.threadsAlive != prev.threadsAlive)
+			return candidate.threadsAlive < prev.threadsAlive;
+		return candidate.depth < prev.depth;
+	}
+
+	// Generate a suitable sequence of actions to illustrate that some state loops forever.
+	// 'forbidden' is a set of nodes that shall not be considered. Technically, should not
+	// be necessary, but good for debugging/ensuring correctness.
+	private Nat[] findLivelockExample(Node start, Set<Node> forbidden) {
+		print("TODO: This does not work if the selected node is not near the 'top' of the cycle.\nFind a better algorithm.");
+
+		// We find a cycle simply by traversing from 'start' until we reach a visited node once again.
+		Node->Node previous;
+		Queue<Node> work;
+
+		Node? cycleStart;
+
+		previous.put(start, start);
+		work.push(start);
+		while (work.any & cycleStart.empty) {
+			Node c = work.top; work.pop();
+			for (e in c.edges) {
+				Node d = e.child;
+				if (forbidden.has(d)) {
+					print("Edge to forbidden node should not be possible!");
+					continue;
+				}
+
+				if (previous.has(d)) {
+					if (makesCycle(previous, c, d)) {
+						// Complete the cycle!
+						previous.put(d, c);
+						cycleStart = d;
+						break;
+					}
+				} else {
+					previous.put(d, c);
+					work.push(d);
+				}
+			}
+		}
+
+		unless (cycleStart) {
+			print("Warning: Detected a non-terminating state, but failed to find a cycle!");
+			// Fall back to just returning the path to the start node.
+			return start.path;
+		}
+
+		Nat[] sequence = cycleStart.path;
+		Nat[] cycle;
+
+		Node current = cycleStart;
+		do {
+			Node p = previous.get(current);
+			for (e in p.edges) {
+				if (e.child is current) {
+					cycle << e.action;
+					break;
+				}
+			}
+
+			current = p;
+		} while (current !is cycleStart);
+
+		cycle.reverse();
+
+		// Show the cycle twice to make it clearer.
+		sequence.append(cycle);
+		sequence.append(cycle);
+
+		return sequence;
+	}
+
+	// Check if adding the edge 'from', 'to' makes a cycle in 'previous'. Equivalent to asking
+	// if the path from 'to' in 'previous' has 'from' anywhere on its way.
+	private Bool makesCycle(Node->Node previous, Node from, Node to) {
+		Node curr = from;
+		while (curr !is to) {
+			Node prev = previous.get(curr);
+
+			// To the start?
+			if (prev is curr)
+				return false;
+
+			curr = prev;
+		}
+
+		return true;
+	}
 
 	// Convert thread-id:s for the livelock case.
 	private Action[] translateSequence(Nat[] path) {
