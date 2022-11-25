@@ -409,89 +409,112 @@ class Checker on Render {
 	}
 
 	// Generate a suitable sequence of actions to illustrate that some state loops forever.
-	// 'forbidden' is a set of nodes that shall not be considered. Technically, should not
-	// be necessary, but good for debugging/ensuring correctness.
+	// That is, finds a cycle in the graph from 'start'. 'forbidden' is the set of states
+	// that should not be considered. All states from 'start' should not be in this set,
+	// so it should strictly speaking not be necessary, but good for debugging/ensuring correctness.
 	private Nat[] findLivelockExample(Node start, Set<Node> forbidden) {
-		print("TODO: This does not work if the selected node is not near the 'top' of the cycle.\nFind a better algorithm.");
-
-		// We find a cycle simply by traversing from 'start' until we reach a visited node once again.
-		Node->Node previous;
-		Queue<Node> work;
-
-		Node? cycleStart;
-
-		previous.put(start, start);
-		work.push(start);
-		while (work.any & cycleStart.empty) {
-			Node c = work.top; work.pop();
-			for (e in c.edges) {
-				Node d = e.child;
-				if (forbidden.has(d)) {
-					print("Edge to forbidden node should not be possible!");
-					continue;
-				}
-
-				if (previous.has(d)) {
-					if (makesCycle(previous, c, d)) {
-						// Complete the cycle!
-						previous.put(d, c);
-						cycleStart = d;
-						break;
-					}
-				} else {
-					previous.put(d, c);
-					work.push(d);
-				}
-			}
-		}
-
-		unless (cycleStart) {
-			print("Warning: Detected a non-terminating state, but failed to find a cycle!");
-			// Fall back to just returning the path to the start node.
+		unless (cycle = findCycle(start, forbidden)) {
+			// This should not happen. It indicates a bug earlier.
+			print("Warning: did not find a cycle for a non-terminating state.");
 			return start.path;
 		}
 
-		Nat[] sequence = cycleStart.path;
-		Nat[] cycle;
-
-		Node current = cycleStart;
-		do {
-			Node p = previous.get(current);
-			for (e in p.edges) {
-				if (e.child is current) {
-					cycle << e.action;
-					break;
-				}
-			}
-
-			current = p;
-		} while (current !is cycleStart);
-
-		cycle.reverse();
+		Nat[] sequence = cycle.start.path;
 
 		// Show the cycle twice to make it clearer.
-		sequence.append(cycle);
-		sequence.append(cycle);
+		sequence.append(cycle.path);
+		sequence.append(cycle.path);
 
 		return sequence;
 	}
 
-	// Check if adding the edge 'from', 'to' makes a cycle in 'previous'. Equivalent to asking
-	// if the path from 'to' in 'previous' has 'from' anywhere on its way.
-	private Bool makesCycle(Node->Node previous, Node from, Node to) {
-		Node curr = from;
-		while (curr !is to) {
-			Node prev = previous.get(curr);
+	// Results from finding a cycle.
+	private value CycleInfo {
+		// Start of the cycle.
+		Node start;
 
-			// To the start?
-			if (prev is curr)
-				return false;
+		// Path that describes the cycle.
+		Nat[] path;
 
-			curr = prev;
+		// Init.
+		init(Node start, Nat[] path) {
+			init {
+				start = start;
+				path = path;
+			}
+		}
+	}
+
+	// Find cycles using a DFS. Returns the 'first' node in the cycle.
+	// Implemented using explicit stacks to avoid stack overflows.
+	private CycleInfo? findCycle(Node start, Set<Node> forbidden) {
+		// Visited nodes (maybe not finished visiting) and finished nodes.
+		Set<Node> visited;
+		Set<Node> finished;
+
+		// Execution stack. The first contains the current node, and the second contains the index
+		// of the next index to visit (i.e. the state of that stack frame).
+		Node[] currentNode;
+		Nat[] currentState;
+
+		currentNode << start;
+		currentState << 0;
+
+		while (currentNode.any) {
+			Node node = currentNode.last;
+			Nat state = currentState.last;
+
+			// Done?
+			if (state >= node.edges.count) {
+				finished.put(node);
+				currentNode.pop();
+				currentState.pop();
+				continue;
+			}
+
+			Node to = node.edges[state].child;
+			if (forbidden.has(to)) {
+				print("Warning: Forbidden nodes should not be reachable.");
+				continue;
+			}
+
+			// Start of new recursion step:
+
+			// Avoid duplicate work:
+			if (finished.has(to))
+				continue;
+
+			// Did we find a cycle?
+			if (visited.has(to)) {
+				// Done: collect the path.
+				Nat[] path;
+				Node next = to;
+				while (currentNode.any) {
+					Node n = currentNode.last;
+					if (x = n.actionTo(next))
+						path << x;
+					next = n;
+					currentNode.pop();
+
+					// Exit if we reached the cycle. Could be earlier than the entire stack.
+					if (next is to)
+						break;
+				}
+
+				path.reverse();
+
+				return CycleInfo(to, path);
+			}
+
+			// Push to the stack.
+			visited.put(to);
+			currentNode << to;
+			currentState << 0;
 		}
 
-		return true;
+		return null;
 	}
+
 
 	// Convert thread-id:s for the livelock case.
 	private Action[] translateSequence(Nat[] path) {
