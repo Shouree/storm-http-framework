@@ -25,6 +25,8 @@ namespace code {
 
 			TRANSFORM(mov),
 			TRANSFORM(lea),
+			TRANSFORM(icast),
+			TRANSFORM(ucast),
 
 			TRANSFORM(fnRet),
 			TRANSFORM(fnRetRef),
@@ -596,6 +598,39 @@ namespace code {
 			} else {
 				*dest << instr->alterSrc(xRel(src.size(), ptrFrame, stackOffset + varOffset));
 			}
+		}
+
+		void Layout::icastTfm(Listing *out, Instr *instr) {
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+
+			// Note: We can assume that only one parameter is a variable (other has to be a register).
+
+			if (src.type() == opVariable) {
+				Nat varId = src.var().key();
+				Bool indirect = varIndirect->at(varId);
+				Offset stackOffset = layout->at(varId);
+				Offset varOffset = src.offset();
+
+				if (indirect) {
+					// We have: mov <reg>, <var>
+					// Can transform into:
+					// mov <reg>, <var>
+					// xcast <reg>, [<reg>+<offset>]
+					Reg r = asSize(dst.reg(), Size::sPtr);
+					*out << mov(r, ptrRel(ptrFrame, stackOffset));
+					*out << instr->alter(dst, xRel(src.size(), r, varOffset));
+				} else {
+					*out << instr->alterSrc(xRel(src.size(), ptrFrame, stackOffset + varOffset));
+				}
+			} else {
+				*out << instr;
+			}
+		}
+
+		void Layout::ucastTfm(Listing *dest, Instr *instr) {
+			// Works the same.
+			icastTfm(dest, instr);
 		}
 
 		Array<Offset> *layout(Listing *src, Params *params, Nat spilled) {

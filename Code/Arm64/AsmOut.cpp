@@ -488,7 +488,6 @@ namespace code {
 				to->putInt(0xD61F0220);
 				break;
 			default:
-				PVAR(target);
 				assert(false, L"Unsupported jump target!");
 				break;
 			}
@@ -574,6 +573,100 @@ namespace code {
 			putData4(to, op, false, destReg, destReg, intRegZR(src.reg()), 31);
 		}
 
+		static void clampSize(Output *to, Reg reg, Nat size) {
+			if (size == 1) {
+				// This is AND with an encoded bitmask.
+				to->putInt(0x92401C00 | (intRegSP(reg) << 5) | intRegZR(reg));
+			} else if (size == 4) {
+				// This is AND with an encoded bitmask.
+				to->putInt(0x92407C00 | (intRegSP(reg) << 5) | intRegZR(reg));
+			} else {
+				// No need to clamp larger values.
+			}
+		}
+
+		void icastOut(Output *to, Instr *instr) {
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+			Nat srcSize = src.size().size64();
+			Nat dstSize = dst.size().size64();
+
+			if (!isIntReg(dst.reg()))
+				throw new (to) InvalidValue(S("Can not sign extend floating point registers."));
+
+			// Source is either register or memory reference.
+			if (src.type() == opRelative) {
+				// Use a suitable load instruction.
+				Int offset = instr->src().offset().v64();
+
+				if (srcSize == 1) {
+					Nat op = 0x0E7;
+					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset);
+				} else if (srcSize == 4) {
+					Nat op = 0x2E6;
+					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset / 4);
+				} else {
+					// This is a regular load.
+					Nat op = 0x2A5;
+					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset / 8);
+				}
+
+				// Maybe clamp to smaller size.
+				if (srcSize > dstSize)
+					clampSize(to, dst.reg(), dstSize);
+			} else if (src.type() == opRegister) {
+				// Sign extend to 64 bits:
+				if (srcSize == 1) {
+					// Insn: sxtb
+					Nat op = 0x93401C00 | (intRegZR(src.reg()) << 5) | intRegZR(dst.reg());
+					to->putInt(op);
+				} else if (srcSize == 4) {
+					Nat op = 0x93407C00 | (intRegZR(src.reg()) << 5) | intRegZR(dst.reg());
+					to->putInt(op);
+				}
+
+				clampSize(to, dst.reg(), dstSize);
+			}
+		}
+
+		void ucastOut(Output *to, Instr *instr) {
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+			Nat srcSize = src.size().size64();
+			Nat dstSize = dst.size().size64();
+
+			Bool intDst = isIntReg(dst.reg());
+
+			// Source is either register or memory reference.
+			if (src.type() == opRelative) {
+				// Use a suitable load instruction.
+				Int offset = instr->src().offset().v64();
+
+				if (srcSize == 1) {
+					Nat op = intDst ? 0x0E5 : 0x0F5;
+					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset);
+				} else if (srcSize == 4) {
+					Nat op = intDst ? 0x0A5 : 0x0B5;
+					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset / 4);
+				} else {
+					Nat op = intDst ? 0x2A5 : 0x2B5;
+					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset / 8);
+				}
+
+				// Maybe clamp to smaller size.
+				if (srcSize > dstSize)
+					clampSize(to, dst.reg(), dstSize);
+			} else if (src.type() == opRegister) {
+				// Make sure that the upper bits are zero. Just move the register if needed, then
+				// clamp as necessary.
+				if (!same(src.reg(), dst.reg())) {
+					regRegMove(to, dst.reg(), src.reg());
+				}
+
+				clampSize(to, dst.reg(), dstSize);
+			}
+		}
+
 		void preserveOut(Output *to, Instr *instr) {
 			TODO(L"Implement PRESERVE pseudo-op!");
 		}
@@ -625,6 +718,8 @@ namespace code {
 			OUTPUT(cmp),
 			OUTPUT(setCond),
 			OUTPUT(mul),
+			OUTPUT(icast),
+			OUTPUT(ucast),
 
 			OUTPUT(preserve),
 

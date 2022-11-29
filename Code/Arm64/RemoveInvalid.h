@@ -71,6 +71,8 @@ namespace code {
 			void swapTfm(Listing *to, Instr *instr, Nat line);
 			void cmpTfm(Listing *to, Instr *instr, Nat line);
 			void setCondTfm(Listing *to, Instr *instr, Nat line);
+			void icastTfm(Listing *to, Instr *instr, Nat line);
+			void ucastTfm(Listing *to, Instr *instr, Nat line);
 
 			// Generic constraint fixing:
 			// Constraints for data operations with a 12 bit immediate or a (shifted) register.

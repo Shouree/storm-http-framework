@@ -26,6 +26,8 @@ namespace code {
 			TRANSFORM(swap),
 			TRANSFORM(cmp),
 			TRANSFORM(setCond),
+			TRANSFORM(icast),
+			TRANSFORM(ucast),
 
 			DATA12(add),
 			DATA12(sub),
@@ -258,6 +260,36 @@ namespace code {
 				Reg tmp = unusedReg(used->at(line), Size::sByte);
 				*to << instr->alterDest(tmp);
 				*to << mov(dest, tmp);
+			}
+		}
+
+		void RemoveInvalid::icastTfm(Listing *to, Instr *instr, Nat line) {
+			// These work the same.
+			ucastTfm(to, instr, line);
+		}
+
+		void RemoveInvalid::ucastTfm(Listing *to, Instr *instr, Nat line) {
+			// For icast and ucast we allow source operands in memory since there are special
+			// instructions that load from memory. Offsets are the same size as for regular loads
+			// and stores, so we don't handle them in a special way.
+
+			Operand src = instr->src();
+			if (!src.hasRegister()) {
+				// Add a separate move operation to load the source: we don't support loading
+				// arbitrary things. Note: We don't need to update 'used', it is fine if we use the
+				// same register for both src and dest!
+				Reg r = unusedReg(used->at(line), src.size());
+				*to << mov(r, src);
+				instr = instr->alterSrc(src);
+			}
+
+			Operand dst = instr->dest();
+			if (dst.type() != opRegister) {
+				Reg t = unusedReg(used->at(line), dst.size());
+				*to << instr->alterDest(t);
+				*to << mov(dst, t);
+			} else {
+				*to << instr;
 			}
 		}
 

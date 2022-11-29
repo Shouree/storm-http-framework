@@ -98,9 +98,12 @@ namespace code {
 			void fnRetRefTfm(Listing *dest, Instr *src);
 
 			// Move and lea. These are the only that may "access" memory, so they are the only ones
-			// we need to consider when transforming accesses to memory.
+			// we need to consider when transforming accesses to memory. Also, icast and ucast may
+			// have sources in memory.
 			void movTfm(Listing *dest, Instr *src);
 			void leaTfm(Listing *dest, Instr *src);
+			void icastTfm(Listing *dest, Instr *src);
+			void ucastTfm(Listing *dest, Instr *src);
 		};
 
 		// Compute the layout of variables, given a listing, parameters and the number of registers
