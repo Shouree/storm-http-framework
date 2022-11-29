@@ -274,13 +274,20 @@ namespace code {
 			// and stores, so we don't handle them in a special way.
 
 			Operand src = instr->src();
-			if (!src.hasRegister()) {
+			switch (src.type()) {
+			case opRegister:
+			case opRelative:
+			case opVariable:
+				// Supported!
+				break;
+			default:
 				// Add a separate move operation to load the source: we don't support loading
 				// arbitrary things. Note: We don't need to update 'used', it is fine if we use the
 				// same register for both src and dest!
 				Reg r = unusedReg(used->at(line), src.size());
 				*to << mov(r, src);
-				instr = instr->alterSrc(src);
+				instr = instr->alterSrc(r);
+				break;
 			}
 
 			Operand dst = instr->dest();

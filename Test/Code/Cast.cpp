@@ -147,11 +147,11 @@ BEGIN_TEST(CastIntChar, Code) {
 	*l << fnRet(al);
 
 	Binary *b = new (e) Binary(arena, l);
-	typedef char (*Fn)(Int);
+	typedef signed char (*Fn)(Int);
 	Fn fn = (Fn)b->address();
 
-	CHECK_EQ((*fn)(2), 2);
-	CHECK_EQ((*fn)(-2), -2);
+	CHECK_EQ(int((*fn)(2)), 2);
+	CHECK_EQ(int((*fn)(-2)), -2);
 
 } END_TEST
 
@@ -172,11 +172,11 @@ BEGIN_TEST(CastLongChar, Code) {
 	*l << fnRet(al);
 
 	Binary *b = new (e) Binary(arena, l);
-	typedef char (*Fn)(Long);
+	typedef signed char (*Fn)(Long);
 	Fn fn = (Fn)b->address();
 
-	CHECK_EQ((*fn)(2), 2);
-	CHECK_EQ((*fn)(-2), -2);
+	CHECK_EQ(int((*fn)(2)), 2);
+	CHECK_EQ(int((*fn)(-2)), -2);
 
 } END_TEST
 

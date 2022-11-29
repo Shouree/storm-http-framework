@@ -245,7 +245,7 @@ namespace code {
 				if (intReg)
 					op = opSize == 4 ? 0x2E5 : 0x3E5;
 				else
-					op = opSize == 4 ? 0x2F5 : 0x3E5;
+					op = opSize == 4 ? 0x2F5 : 0x3F5;
 				putLoadStoreLarge(to, op, intRegSP(baseReg), intRegZR(dest1), offset);
 			}
 
@@ -600,14 +600,14 @@ namespace code {
 				Int offset = instr->src().offset().v64();
 
 				if (srcSize == 1) {
-					Nat op = 0x0E7;
+					Nat op = 0x0E6;
 					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset);
 				} else if (srcSize == 4) {
 					Nat op = 0x2E6;
 					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset / 4);
 				} else {
 					// This is a regular load.
-					Nat op = 0x2A5;
+					Nat op = 0x3E5;
 					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset / 8);
 				}
 
@@ -646,10 +646,10 @@ namespace code {
 					Nat op = intDst ? 0x0E5 : 0x0F5;
 					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset);
 				} else if (srcSize == 4) {
-					Nat op = intDst ? 0x0A5 : 0x0B5;
+					Nat op = intDst ? 0x2E5 : 0x2F5;
 					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset / 4);
 				} else {
-					Nat op = intDst ? 0x2A5 : 0x2B5;
+					Nat op = intDst ? 0x3E5 : 0x3F5;
 					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset / 8);
 				}
 
