@@ -422,5 +422,52 @@ namespace code {
 			}
 		}
 
+		Nat encodeBitmask(Word bitmask, bool use64) {
+			if (!use64) {
+				// Pretend that the bitmask was 64-bit by mirroring the existing data. That makes
+				// the algorithm the same for both cases (until we encode the result).
+				bitmask = (bitmask & 0xFFFFFFFF) | (bitmask << 32);
+			}
+
+			// If it is all ones or all zeroes, we can't encode it (that value is reserved).
+			if (bitmask == 0 || ~bitmask == 0)
+				return 0;
+
+			// Shift it to the right until we have a one in the least significant position, and a
+			// zero in the most significant position.
+			Nat shift = 0;
+			while ((bitmask & 0x1) != 1 || (bitmask >> 63) != 0) {
+				// This is a rotate right operation.
+				bitmask = ((bitmask & 0x1) << 63) | (bitmask >> 1);
+				shift++;
+			}
+
+			// Count the number of ones in the sequence.
+			Nat ones = 0;
+			for (Word mask = bitmask; mask & 0x1; mask >>= 1)
+				ones++;
+
+			// Try different possible pattern lengths.
+			for (Nat length = 2; length <= 64; length *= 2) {
+				if (length <= ones)
+					continue;
+
+				Word pattern = (Word(1) << ones) - 1;
+				for (Nat offset = length; offset < 64; offset *= 2)
+					pattern |= pattern << offset;
+
+				if (pattern == bitmask) {
+					// Found it! Encode its representation.
+					Nat immr = shift;
+					Nat imms = (Nat(0x80) - (length * 2)) | (ones - 1);
+					imms ^= 0x40; // the N bit is inverted. Note: due to our setup in the start, the
+								  // N bit will never be set when we are in 32-bit mode.
+					return ((imms & 0x40) << 6) | (immr << 6) | (imms & 0x3F);
+				}
+			}
+
+			return 0;
+		}
+
 	}
 }

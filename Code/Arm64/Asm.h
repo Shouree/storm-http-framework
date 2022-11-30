@@ -81,5 +81,9 @@ namespace code {
 		Operand opPtrOffset(Operand op, Nat offset);
 		Operand opOffset(Size sz, Operand op, Nat offset);
 
+		// Encode a bitmask. Returns 12-bits N, immr, imms (in that order) if possible. Otherwise,
+		// returns 0 (which is not a valid encoding). 'n' is only used if 64-bit bitmask is required.
+		Nat encodeBitmask(Word bitmask, bool use64);
+
 	}
 }
