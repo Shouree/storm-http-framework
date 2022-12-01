@@ -37,7 +37,7 @@ namespace code {
 			BITMASK(band),
 			BITMASK(bor),
 			BITMASK(bxor),
-			// not?
+			BITMASK(bnot),
 		};
 
 		RemoveInvalid::RemoveInvalid() {}
@@ -306,20 +306,13 @@ namespace code {
 			}
 		}
 
-		void RemoveInvalid::dataInstr12Tfm(Listing *to, Instr *instr, Nat line) {
-			// If "dest" is not a register, we need to surround this instruction with a load *and* a
-			// store. If "src" is not a register, we need to add a load before. If "src" is too
-			// large, we need to make it into a load.
+		void RemoveInvalid::removeMemoryRefs(Listing *to, Instr *instr, Nat line) {
 			Operand src = instr->src();
-			if (src.type() == opConstant) {
-				if (src.constant() > 0xFFF) {
-					src = largeConstant(src);
-				}
-			}
 
 			switch (src.type()) {
 			case opRegister:
 			case opConstant:
+			case opNone:
 				// TODO: More things to ignore here!
 				break;
 			default:
@@ -343,6 +336,20 @@ namespace code {
 			}
 		}
 
+		void RemoveInvalid::dataInstr12Tfm(Listing *to, Instr *instr, Nat line) {
+			// If "dest" is not a register, we need to surround this instruction with a load *and* a
+			// store. If "src" is not a register, we need to add a load before. If "src" is too
+			// large, we need to make it into a load.
+			Operand src = instr->src();
+			if (src.type() == opConstant) {
+				if (src.constant() > 0xFFF) {
+					instr = instr->alterSrc(largeConstant(src));
+				}
+			}
+
+			removeMemoryRefs(to, instr, line);
+		}
+
 		void RemoveInvalid::bitmaskInstrTfm(Listing *to, Instr *instr, Nat line) {
 			// If "dest" is not a register, we need to surround this instruction with a load *and* a
 			// store. If "src" is not a register, we need to add a load before. If "src" is too
@@ -351,35 +358,19 @@ namespace code {
 			Operand src = instr->src();
 			if (src.type() == opConstant) {
 				bool large = src.size().size64() > 4;
-				if (encodeBitmask(src.constant(), large) == 0) {
-					src = largeConstant(src);
+				Word value = src.constant();
+
+				if (value == 0) {
+					// Supported through special case.
+				} else if (allOnes(value, large)) {
+					// Supported through special case.
+				} else if (encodeBitmask(src.constant(), large) == 0) {
+					// Not supported, spill to memory.
+					instr = instr->alterSrc(largeConstant(src));
 				}
 			}
 
-			switch (src.type()) {
-			case opRegister:
-			case opConstant:
-				// TODO: More things to ignore here!
-				break;
-			default:
-				// Emit a load first.
-				Reg t = unusedReg(used->at(line), src.size());
-				used->at(line)->put(t);
-				*to << mov(t, src);
-				src = t;
-				break;
-			}
-
-			Operand dest = instr->dest();
-			if (dest.type() != opRegister) {
-				// Load and store the destination.
-				Reg t = unusedReg(used->at(line), dest.size());
-				*to << mov(t, dest);
-				*to << instr->alter(t, src);
-				*to << mov(dest, t);
-			} else {
-				*to << instr->alterSrc(src);
-			}
+			removeMemoryRefs(to, instr, line);
 		}
 
 		void RemoveInvalid::dataInstr4RegTfm(Listing *to, Instr *instr, Nat line) {

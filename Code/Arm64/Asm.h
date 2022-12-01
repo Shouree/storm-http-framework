@@ -85,5 +85,8 @@ namespace code {
 		// returns 0 (which is not a valid encoding). 'n' is only used if 64-bit bitmask is required.
 		Nat encodeBitmask(Word bitmask, bool use64);
 
+		// Check if the word is all ones, taking into account if the value is 64-bit or not.
+		Bool allOnes(Word mask, bool use64);
+
 	}
 }

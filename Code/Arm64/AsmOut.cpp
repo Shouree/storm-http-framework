@@ -105,24 +105,40 @@ namespace code {
 				throw new (e) InvalidValue(TO_S(e, S("Too large unsigned 19-bit immediate value: ") << value));
 		}
 
-		// Put data instructions. 3 registers, and a 6-bit unsigned immediate.
-		static inline void putData(Output *to, Nat op, Nat rDest, Nat ra, Nat rb, Nat imm) {
-			checkImm6U(to, imm);
-			Nat instr = (op << 21) | rDest | (ra << 16) | (rb << 5) | ((imm & 0x3F) << 10);
-			to->putInt(instr);
-		}
-
 		// Put data instructions. 2 registers, 12-bit unsigned immediate.
-		static inline void putData(Output *to, Nat op, nat rDest, Nat rSrc, Nat imm) {
+		static inline void putData2(Output *to, Nat op, Nat rDest, Nat rSrc, Nat imm) {
 			checkImm12U(to, imm);
 			Nat instr = (op << 22) | rDest | (rSrc << 5) | ((imm & 0xFFF) << 10);
 			to->putInt(instr);
 		}
 
-		// Put 3-reg data instructions. 4 registers, no immediate (modifier is labelled oO in the
+		// Put data instructions. 3 registers, and a 6-bit unsigned immediate. Some instructions allow 'rb' to be shifted.
+		static inline void putData3(Output *to, Nat op, Nat rDest, Nat ra, Nat rb, Nat imm) {
+			checkImm6U(to, imm);
+			Nat instr = (op << 21) | rDest | (rb << 16) | (ra << 5) | ((imm & 0x3F) << 10);
+			to->putInt(instr);
+		}
+
+		// Put 3-input data instructions. 4 registers, no immediate (modifier is labelled oO in the
 		// docs, unclear meaning).
 		static inline void putData4(Output *to, Nat op, Bool modifier, Nat rDest, Nat ra, Nat rb, Nat rc) {
 			Nat instr = (op << 21) | rDest | (ra << 16) | (rb << 5) | (rc << 10) | (Nat(modifier) << 15);
+			to->putInt(instr);
+		}
+
+		// Put a bitmask operation (those that have N, immr, imms in them). The bitmask will be
+		// encoded, and size will be added if needed.
+		static inline void putBitmask(Output *to, Nat op, Nat rSrc, Nat rDest, Bool is64, Word bitmask) {
+			Nat encBitmask = encodeBitmask(bitmask, is64);
+			if (encBitmask == 0) {
+				StrBuf *msg = new (to) StrBuf();
+				*msg << S("It is not possible to encode the value ") << hex(bitmask)
+					 << S(" as a bitmask. It should have been removed by an earlier pass.");
+				throw new (to) InvalidValue(msg->toS());
+			}
+			Nat instr = (op << 23) | rDest | (rSrc << 5) | (encBitmask << 10);
+			if (is64)
+				instr |= Nat(1) << 31;
 			to->putInt(instr);
 		}
 
@@ -171,7 +187,7 @@ namespace code {
 			// - stp x29, x30, [sp, -stackSize]!
 			putLoadStore(to, 0x2A6, 31, 29, 30, -scaled);
 			// - mov x29, sp   # create stack frame
-			putData(to, 0x244, 29, 31, 0);
+			putData2(to, 0x244, 29, 31, 0);
 
 			// TODO: Output DWARF metadata as well.
 		}
@@ -315,9 +331,9 @@ namespace code {
 			Bool intDst = isIntReg(dest);
 			if (intSrc && intDst) {
 				if (size(src).size64() > 4)
-					putData(to, 0x550, intRegZR(dest), intRegZR(src), 31, 0);
+					putData3(to, 0x550, intRegZR(dest), 31, intRegZR(src), 0);
 				else
-					putData(to, 0x150, intRegZR(dest), intRegZR(src), 31, 0);
+					putData3(to, 0x150, intRegZR(dest), 31, intRegZR(src), 0);
 			} else if (!intSrc && !intDst) {
 				if (size(src).size64() > 4)
 					to->putInt(0x1E602000 | (fpReg(src) << 5) | fpReg(dest));
@@ -402,10 +418,10 @@ namespace code {
 				// Note: These are not sign-extended, so we need to be careful about the sign.
 				if (src.offset().v64() > 0) {
 					// add:
-					putData(to, 0x244, dest, intRegZR(src.reg()), src.offset().v64());
+					putData2(to, 0x244, dest, intRegZR(src.reg()), src.offset().v64());
 				} else {
 					// sub:
-					putData(to, 0x344, dest, intRegZR(src.reg()), -src.offset().v64());
+					putData2(to, 0x344, dest, intRegZR(src.reg()), -src.offset().v64());
 				}
 				break;
 			default:
@@ -507,10 +523,10 @@ namespace code {
 
 			switch (instr->src().type()) {
 			case opRegister:
-				putData(to, opReg, dest, intRegSP(instr->src().reg()), dest, 0);
+				putData3(to, opReg, dest, dest, intRegSP(instr->src().reg()), 0);
 				break;
 			case opConstant:
-				putData(to, opImm, dest, dest, instr->src().constant());
+				putData2(to, opImm, dest, dest, instr->src().constant());
 				break;
 			default:
 				assert(false, L"Unsupported source for data operation.");
@@ -541,10 +557,10 @@ namespace code {
 
 			switch (instr->src().type()) {
 			case opRegister:
-				putData(to, opReg, 31, intRegSP(instr->src().reg()), dest, 0);
+				putData3(to, opReg, 31, dest, intRegSP(instr->src().reg()), 0);
 				break;
 			case opConstant:
-				putData(to, opImm, 31, dest, instr->src().constant());
+				putData2(to, opImm, 31, dest, instr->src().constant());
 				break;
 			default:
 				assert(false, L"Unsupported source for data operation.");
@@ -667,6 +683,78 @@ namespace code {
 			}
 		}
 
+		void borOut(Output *to, Instr *instr) {
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+			Nat dstReg = intRegZR(dst.reg());
+			bool is64 = dst.size().size64() > 4;
+			if (src.type() == opConstant) {
+				Word op = src.constant();
+				if (op == 0) {
+					// Or with zero is a no-op. Don't do anything.
+				} else if (allOnes(op, is64)) {
+					// Fill target with all ones. We use ORN <dst>, zr, zr for this.
+					putData3(to, is64 ? 0x551 : 0x151, dstReg, 31, 31, 0);
+				} else {
+					putBitmask(to, 0x64, dstReg, dstReg, is64, op);
+				}
+			} else {
+				Nat opCode = is64 ? 0x550 : 0x150;
+				putData3(to, opCode, dstReg, dstReg, intRegZR(src.reg()), 0);
+			}
+		}
+
+		void bandOut(Output *to, Instr *instr) {
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+			Nat dstReg = intRegZR(dst.reg());
+			bool is64 = dst.size().size64() > 4;
+			if (src.type() == opConstant) {
+				Word op = src.constant();
+				if (op == 0) {
+					// And with zero always gives a zero. Simply emit a mov instruction instead
+					// (technically a orr <dst>, zr, zr).
+					putData3(to, 0x550, dstReg, 31, 31, 0);
+				} else if (allOnes(op, is64)) {
+					// And with 0xFF is a no-op. Don't emit any code.
+				} else {
+					putBitmask(to, 0x24, dstReg, dstReg, is64, op);
+				}
+			} else {
+				Nat opCode = is64 ? 0x450 : 0x050;
+				putData3(to, opCode, dstReg, dstReg, intRegZR(src.reg()), 0);
+			}
+		}
+
+		void bxorOut(Output *to, Instr *instr) {
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+			Nat dstReg = intRegZR(dst.reg());
+			bool is64 = dst.size().size64() > 4;
+			if (src.type() == opConstant) {
+				Word op = src.constant();
+				if (op == 0) {
+					// XOR with a zero is a no-op.
+				} else if (allOnes(op, is64)) {
+					// XOR with all ones is simply a negate. Use orn <dst>, zr, <dst> instead.
+					putData3(to, is64 ? 0x551 : 0x151, dstReg, 31, dstReg, 0);
+				} else {
+					putBitmask(to, 0xA8, dstReg, dstReg, is64, op);
+				}
+			} else {
+				Nat opCode = is64 ? 0x650 : 0x250;
+				putData3(to, opCode, dstReg, dstReg, intRegZR(src.reg()), 0);
+			}
+		}
+
+		void bnotOut(Output *to, Instr *instr) {
+			Operand dst = instr->dest();
+			Nat dstReg = intRegZR(dst.reg());
+			bool is64 = dst.size().size64() > 4;
+			// This is ORN <dst>, zr, <dst>
+			putData3(to, is64 ? 0x551 : 0x151, dstReg, 31, dstReg, 0);
+		}
+
 		void preserveOut(Output *to, Instr *instr) {
 			TODO(L"Implement PRESERVE pseudo-op!");
 		}
@@ -720,6 +808,10 @@ namespace code {
 			OUTPUT(mul),
 			OUTPUT(icast),
 			OUTPUT(ucast),
+			OUTPUT(band),
+			OUTPUT(bor),
+			OUTPUT(bxor),
+			OUTPUT(bnot),
 
 			OUTPUT(preserve),
 

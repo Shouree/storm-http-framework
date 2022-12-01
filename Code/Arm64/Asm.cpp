@@ -458,7 +458,7 @@ namespace code {
 
 				if (pattern == bitmask) {
 					// Found it! Encode its representation.
-					Nat immr = shift;
+					Nat immr = length - shift;
 					Nat imms = (Nat(0x80) - (length * 2)) | (ones - 1);
 					imms ^= 0x40; // the N bit is inverted. Note: due to our setup in the start, the
 								  // N bit will never be set when we are in 32-bit mode.
@@ -467,6 +467,12 @@ namespace code {
 			}
 
 			return 0;
+		}
+
+		Bool allOnes(Word mask, bool use64) {
+			if (!use64)
+				mask |= mask << 32;
+			return ~mask == 0;
 		}
 
 	}

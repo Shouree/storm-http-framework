@@ -81,6 +81,9 @@ namespace code {
 			void bitmaskInstrTfm(Listing *to, Instr *instr, Nat line);
 			// Constraints for 4-reg data operations where all operands need to be in memory.
 			void dataInstr4RegTfm(Listing *to, Instr *instr, Nat line);
+
+			// Generic function for wrapping an instruction between loads and stores.
+			void removeMemoryRefs(Listing *to, Instr *instr, Nat line);
 		};
 
 	}
