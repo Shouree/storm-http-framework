@@ -265,7 +265,7 @@ namespace code {
 
 		void RemoveInvalid::setCondTfm(Listing *to, Instr *instr, Nat line) {
 			Operand dest = instr->dest();
-			if (dest.type() != opRegister) {
+			if (dest.type() == opRegister) {
 				*to << instr;
 			} else {
 				Reg tmp = unusedReg(used->at(line), Size::sByte);

@@ -105,6 +105,15 @@ namespace code {
 				throw new (e) InvalidValue(TO_S(e, S("Too large unsigned 19-bit immediate value: ") << value));
 		}
 
+		// Check if value fits in 26-bit signed.
+		static Bool isImm26S(Int value) {
+			return value >= -0x02000000 && value <= 0x03FFFFFF;
+		}
+		static void checkImm26S(RootObject *e, Int value) {
+			if (!isImm26S(value))
+				throw new (e) InvalidValue(TO_S(e, S("Too large signed 26-bit immediate value: ") << value));
+		}
+
 		// Put data instructions. 2 registers, 12-bit unsigned immediate.
 		static inline void putData2(Output *to, Nat op, Nat rDest, Nat rSrc, Nat imm) {
 			checkImm12U(to, imm);
@@ -463,14 +472,25 @@ namespace code {
 		}
 
 		void jmpCondOut(Output *to, CondFlag cond, const Operand &target) {
-			// Note: Conditional jumps are limited on Arm to only use imm19.
-			assert(false, L"Implement me!");
+			Int offset;
+
+			switch (target.type()) {
+			case opLabel:
+				offset = Int(to->offset(target.label())) - Int(to->tell());
+				offset /= 4;
+				checkImm19S(to, offset);
+				to->putInt(0x54000000 | ((Nat(offset) & 0x7FFFF) << 5) | condArm64(cond));
+				break;
+			default:
+				assert(false, L"Unsupported target for conditional branches.");
+				break;
+			}
 		}
 
 		void jmpOut(Output *to, Instr *instr) {
 			CondFlag cond = instr->src().condFlag();
 			Operand target = instr->dest();
-			Nat offset;
+			Int offset;
 
 			if (cond == ifNever)
 				return;
@@ -502,6 +522,12 @@ namespace code {
 				putLoadStoreLarge(to, 0x3E5, intRegZR(target.reg()), 17, offset);
 				// br x17
 				to->putInt(0xD61F0220);
+				break;
+			case opLabel:
+				offset = Int(to->offset(target.label())) - Int(to->tell());
+				offset /= 4;
+				checkImm26S(to, offset);
+				to->putInt(0x14000000 | (Nat(offset) & 0x03FFFFFF));
 				break;
 			default:
 				assert(false, L"Unsupported jump target!");
@@ -570,8 +596,16 @@ namespace code {
 
 		void setCondOut(Output *to, Instr *instr) {
 			Nat dest = intRegZR(instr->dest().reg());
-			Nat opCode = 0x1A9F07E0 | dest | (condArm64(inverse(instr->src().condFlag())) << 12);
-			to->putInt(opCode);
+			CondFlag cond = instr->src().condFlag();
+			// Note: There is no "if never" condition, so we need a special case for that. Since we
+			// need to invert the condition, we just special-case both always and never.
+			if (cond == ifAlways) {
+				to->putInt(0xD2800020 | dest);
+			} else if (cond == ifNever) {
+				to->putInt(0xD2800000 | dest);
+			} else {
+				to->putInt(0x1A9F07E0 | dest | (condArm64(inverse(instr->src().condFlag())) << 12));
+			}
 		}
 
 		void mulOut(Output *to, Instr *instr) {
