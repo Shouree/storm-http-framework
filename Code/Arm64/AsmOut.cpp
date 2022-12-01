@@ -755,6 +755,93 @@ namespace code {
 			putData3(to, is64 ? 0x551 : 0x151, dstReg, 31, dstReg, 0);
 		}
 
+		void shlOut(Output *to, Instr *instr) {
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+			Nat dstReg = intRegZR(dst.reg());
+			bool is64 = dst.size().size64() > 4;
+			if (src.type() == opConstant) {
+				Nat shift = src.constant();
+				if (shift == 0) {
+					// Nothing to do.
+				} else if (shift >= (is64 ? 64 : 32)) {
+					// Saturated shift. Simply move 0 to the register.
+					putData3(to, 0x550, dstReg, 31, 31, 0);
+				} else {
+					Nat opCode = 0x53000000 | dstReg | (dstReg << 5);
+					if (is64)
+						opCode |= 0x80400000;
+
+					// immr
+					opCode |= ((~shift + 1) & (is64 ? 0x3F : 0x1F)) << 16;
+					// imms
+					opCode |= (((is64 ? 63 : 31) - shift) & 0x3F) << 10;
+
+					to->putInt(opCode);
+				}
+			} else {
+				putData3(to, is64 ? 0x4D6 : 0x0D6, dstReg, dstReg, intRegZR(src.reg()), 0x08);
+			}
+		}
+
+		void shrOut(Output *to, Instr *instr) {
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+			Nat dstReg = intRegZR(dst.reg());
+			bool is64 = dst.size().size64() > 4;
+			if (src.type() == opConstant) {
+				Nat shift = src.constant();
+				if (shift == 0) {
+					// Nothing to do.
+				} else if (shift >= (is64 ? 64 : 32)) {
+					// Saturated shift. Simply move 0 to the register.
+					putData3(to, 0x550, dstReg, 31, 31, 0);
+				} else {
+					Nat opCode = 0x53000000 | dstReg | (dstReg << 5);
+					if (is64)
+						opCode |= 0x80400000;
+
+					// immr
+					opCode |= shift << 16;
+					// imms
+					opCode |= (is64 ? 63 : 31) << 10;
+
+					to->putInt(opCode);
+				}
+			} else {
+				putData3(to, is64 ? 0x4D6 : 0x0D6, dstReg, dstReg, intRegZR(src.reg()), 0x09);
+			}
+		}
+
+		void sarOut(Output *to, Instr *instr) {
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+			Nat dstReg = intRegZR(dst.reg());
+			bool is64 = dst.size().size64() > 4;
+			if (src.type() == opConstant) {
+				Nat bits = is64 ? 64 : 32;
+				Nat shift = src.constant();
+				if (shift > bits - 1)
+					shift = bits - 1;
+				if (shift == 0) {
+					// Nothing to do.
+				} else {
+					Nat opCode = 0x13000000 | dstReg | (dstReg << 5);
+					if (is64)
+						opCode |= 0x80400000;
+
+					// immr
+					opCode |= shift << 16;
+					// imms
+					opCode |= bits << 10;
+
+					to->putInt(opCode);
+				}
+			} else {
+				putData3(to, is64 ? 0x4D6 : 0x0D6, dstReg, dstReg, intRegZR(src.reg()), 0x0A);
+			}
+		}
+
 		void preserveOut(Output *to, Instr *instr) {
 			TODO(L"Implement PRESERVE pseudo-op!");
 		}
@@ -812,6 +899,9 @@ namespace code {
 			OUTPUT(bor),
 			OUTPUT(bxor),
 			OUTPUT(bnot),
+			OUTPUT(shl),
+			OUTPUT(shr),
+			OUTPUT(sar),
 
 			OUTPUT(preserve),
 

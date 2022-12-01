@@ -63,7 +63,7 @@ static Word useBitmask64(Word bitmask) {
 
 	*l << fnRet(rax);
 
-	Binary *b = new (e) Binary(arena, l, true);
+	Binary *b = new (e) Binary(arena, l);
 	typedef Word (*Fn)();
 	Fn fn = (Fn)b->address();
 	return (*fn)();

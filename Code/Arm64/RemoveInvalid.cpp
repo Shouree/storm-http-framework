@@ -12,6 +12,7 @@ namespace code {
 #define DATA12(x) { op::x, &RemoveInvalid::dataInstr12Tfm }
 #define BITMASK(x) { op::x, &RemoveInvalid::bitmaskInstrTfm }
 #define DATA4REG(x) { op::x, &RemoveInvalid::dataInstr4RegTfm }
+#define SHIFT(x) { op::x, &RemoveInvalid::shiftInstrTfm }
 
 		const OpEntry<RemoveInvalid::TransformFn> RemoveInvalid::transformMap[] = {
 			TRANSFORM(prolog),
@@ -38,6 +39,10 @@ namespace code {
 			BITMASK(bor),
 			BITMASK(bxor),
 			BITMASK(bnot),
+
+			SHIFT(shl),
+			SHIFT(shr),
+			SHIFT(sar),
 		};
 
 		RemoveInvalid::RemoveInvalid() {}
@@ -367,6 +372,22 @@ namespace code {
 				} else if (encodeBitmask(src.constant(), large) == 0) {
 					// Not supported, spill to memory.
 					instr = instr->alterSrc(largeConstant(src));
+				}
+			}
+
+			removeMemoryRefs(to, instr, line);
+		}
+
+		void RemoveInvalid::shiftInstrTfm(Listing *to, Instr *instr, Nat line) {
+			Operand src = instr->src();
+			if (src.type() == opConstant) {
+				Word value = src.constant();
+				if (instr->dest().size().size64() > 4) {
+					if (value > 64)
+						instr = instr->alterSrc(byteConst(64));
+				} else {
+					if (value > 32)
+						instr = instr->alterSrc(byteConst(32));
 				}
 			}
 
