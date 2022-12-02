@@ -84,6 +84,10 @@ namespace code {
 			// For shift operations, where 'src' is either an immediate (that needs to be small), or a register.
 			void shiftInstrTfm(Listing *to, Instr *instr, Nat line);
 
+			// Transform mod into div + multiply as needed. No mod operation on ARM!
+			void imodTfm(Listing *to, Instr *instr, Nat line);
+			void umodTfm(Listing *to, Instr *instr, Nat line);
+
 			// Generic function for wrapping an instruction between loads and stores.
 			void removeMemoryRefs(Listing *to, Instr *instr, Nat line);
 		};

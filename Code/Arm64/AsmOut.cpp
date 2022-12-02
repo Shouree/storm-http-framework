@@ -129,9 +129,15 @@ namespace code {
 		}
 
 		// Put 3-input data instructions. 4 registers, no immediate (modifier is labelled oO in the
-		// docs, unclear meaning).
-		static inline void putData4(Output *to, Nat op, Bool modifier, Nat rDest, Nat ra, Nat rb, Nat rc) {
-			Nat instr = (op << 21) | rDest | (ra << 16) | (rb << 5) | (rc << 10) | (Nat(modifier) << 15);
+		// docs, part of OP-code for some instructions it seems).
+		static inline void putData4a(Output *to, Nat op, Bool modifier, Nat rDest, Nat ra, Nat rb, Nat rc) {
+			Nat instr = (op << 21) | rDest | (rc << 10) | (rb << 16) | (ra << 5) | (Nat(modifier) << 15);
+			to->putInt(instr);
+		}
+
+		// Same as putData4a, except that the 'modifier' is in another place. Labelled o1 in the docs.
+		static inline void putData4b(Output *to, Nat op, Bool modifier, Nat rDest, Nat ra, Nat rb, Nat rc) {
+			Nat instr = (op << 21) | rDest | (rc << 16) | (rb << 11) | (ra << 5) | (Nat(modifier) << 10);
 			to->putInt(instr);
 		}
 
@@ -612,15 +618,32 @@ namespace code {
 			// Everything has to be in registers here.
 			Operand src = instr->src();
 			Operand dest = instr->dest();
-			assert(src.type() == opRegister && dest.type() == opRegister,
-				L"Source and destinations for multiply instruction need to be registers.");
 
 			Nat op = 0x0D8;
 			if (src.size().size64() >= 8)
 				op |= 0x400;
 
 			Nat destReg = intRegZR(dest.reg());
-			putData4(to, op, false, destReg, destReg, intRegZR(src.reg()), 31);
+			putData4a(to, op, false, destReg, destReg, intRegZR(src.reg()), 31);
+		}
+
+		static void divOut(Output *to, Instr *instr, Bool sign) {
+			Operand src = instr->src();
+			Operand dest = instr->dest();
+
+			Nat op = 0x0D6;
+			if (src.size().size64() >= 8)
+				op |= 0x400;
+			Nat destReg = intRegZR(dest.reg());
+			putData4b(to, op, sign, destReg, destReg, 0x1, intRegZR(src.reg()));
+		}
+
+		void idivOut(Output *to, Instr *instr) {
+			divOut(to, instr, true);
+		}
+
+		void udivOut(Output *to, Instr *instr) {
+			divOut(to, instr, false);
 		}
 
 		static void clampSize(Output *to, Reg reg, Nat size) {
@@ -927,6 +950,8 @@ namespace code {
 			OUTPUT(cmp),
 			OUTPUT(setCond),
 			OUTPUT(mul),
+			OUTPUT(idiv),
+			OUTPUT(udiv),
 			OUTPUT(icast),
 			OUTPUT(ucast),
 			OUTPUT(band),

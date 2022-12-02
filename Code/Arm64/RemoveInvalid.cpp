@@ -31,9 +31,17 @@ namespace code {
 			TRANSFORM(icast),
 			TRANSFORM(ucast),
 
+			// TODO: We need a special case for byte-sized inputs here. We need to 'sign extend'
+			// them to 32-bits, otherwise weird things might happen. This is true for arithmetic
+			// operations and for right shifts.
+
 			DATA12(add),
 			DATA12(sub),
 			DATA4REG(mul),
+			DATA4REG(idiv),
+			DATA4REG(udiv),
+			TRANSFORM(umod),
+			TRANSFORM(imod),
 
 			BITMASK(band),
 			BITMASK(bor),
@@ -412,6 +420,55 @@ namespace code {
 			} else {
 				*to << instr->alterSrc(src);
 			}
+		}
+
+		void RemoveInvalid::imodTfm(Listing *to, Instr *instr, Nat line) {
+			umodTfm(to, instr, line);
+		}
+
+		void RemoveInvalid::umodTfm(Listing *to, Instr *instr, Nat line) {
+			// GCC generates the following code for mod:
+			// div <t>, <a>, <b>
+			// mul <t>, <t>, <b>
+			// sub <out>, <a>, <t>
+
+			// Load src if needed.
+			Operand src = instr->src();
+			if (src.type() != opRegister) {
+				Reg t = unusedReg(used->at(line), src.size());
+				used->at(line)->put(t);
+				*to << mov(t, src);
+				src = t;
+			}
+
+			// Load dest if needed.
+			Operand dest = instr->dest();
+			if (dest.type() != opRegister) {
+				Reg t = unusedReg(used->at(line), dest.size());
+				used->at(line)->put(t);
+				*to << mov(t, dest);
+				dest = t;
+			}
+
+			// The modulo code. Since we can't use 3-op codes here, we generate:
+			// mov <t>, <a>
+			// div <t>, <b>
+			// mul <t>, <b>
+			// sub <a>, <t>
+
+			Reg t = unusedReg(used->at(line), dest.size());
+			*to << mov(t, dest);
+			if (instr->op() == op::imod)
+				*to << idiv(t, src);
+			else
+				*to << udiv(t, src);
+			*to << mul(t, src);
+			*to << sub(dest, t);
+
+			// Store dest if needed.
+			if (dest != instr->dest())
+				*to << mov(instr->dest(), dest);
+
 		}
 
 	}

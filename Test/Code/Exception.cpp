@@ -31,6 +31,9 @@ static Int throwError(Int point) {
 }
 
 BEGIN_TEST(CodeExceptionTest, Code) {
+	TODO(L"ENABLE");
+	break;
+
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -88,6 +91,9 @@ BEGIN_TEST(CodeExceptionTest, Code) {
 
 
 BEGIN_TEST(CodeCleanupTest, Code) {
+	TODO(L"ENABLE");
+	break;
+
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -159,6 +165,9 @@ BEGIN_TEST(CodeCleanupTest, Code) {
 
 
 BEGIN_TEST(ExceptionRefTest, Code) {
+	TODO(L"ENABLE");
+	break;
+
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -277,6 +286,9 @@ static void copyLarge(Large *dest, Large *src) {
 }
 
 BEGIN_TEST(ExceptionLargeTest, Code) {
+	TODO(L"ENABLE");
+	break;
+
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -324,6 +336,9 @@ BEGIN_TEST(ExceptionLargeTest, Code) {
 
 
 BEGIN_TEST(ExceptionLayers, Code) {
+	TODO(L"ENABLE");
+	break;
+
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -380,6 +395,9 @@ static StrBuf *CODECALL addBuf(StrBuf *to) {
 }
 
 BEGIN_TEST(ExceptionCatch, Code) {
+	TODO(L"ENABLE");
+	break;
+
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
