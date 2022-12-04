@@ -1,12 +1,17 @@
 #include "stdafx.h"
 #include "RemoveInvalid.h"
 #include "Asm.h"
+#include "Utils/Bitmask.h"
 #include "../Listing.h"
 #include "../UsedRegs.h"
 #include "../Exception.h"
 
 namespace code {
 	namespace arm64 {
+
+		/**
+		 * Table of operations to transform individual instructions.
+		 */
 
 #define TRANSFORM(x) { op::x, &RemoveInvalid::x ## Tfm }
 #define DATA12(x) { op::x, &RemoveInvalid::dataInstr12Tfm }
@@ -53,6 +58,37 @@ namespace code {
 			SHIFT(sar),
 		};
 
+
+		/**
+		 * Table with information on how to handle byte-sized operands for instructions.
+		 *
+		 * ARM only has 32- and 64-bit variants of certain operations. So we need to compensate in
+		 * certain cases when working with bytes to ensure that garbage in the upper-parts of the
+		 * 32-bit register will not be visible.
+		 */
+
+		enum ByteTransform {
+			none = 0x00,
+			extendSrc = 0x01,
+			signedSrc = 0x02,
+			extendDest = 0x10,
+			signedDest = 0x20,
+		};
+
+		BITMASK_OPERATORS(ByteTransform);
+
+		static const OpEntry<ByteTransform> byteTransformMap[] = {
+			{ op::cmp, extendSrc | extendDest }, // Bytes are always unsigned in Storm (correct
+												 // impl. would need to know sign...)
+			{ op::udiv, extendSrc | extendDest },
+			{ op::umod, extendSrc | extendDest },
+			{ op::idiv, extendSrc | extendDest | signedSrc | signedDest },
+			{ op::idiv, extendSrc | extendDest | signedSrc | signedDest },
+			{ op::shr, extendDest },
+			{ op::shl, extendDest | signedDest },
+		};
+
+
 		RemoveInvalid::RemoveInvalid() {}
 
 		static bool isComplexParam(Listing *l, Var v) {
@@ -95,15 +131,20 @@ namespace code {
 		void RemoveInvalid::during(Listing *dest, Listing *src, Nat line) {
 			static OpTable<TransformFn> t(transformMap, ARRAY_COUNT(transformMap));
 
-			Instr *i = src->at(line);
+			Instr *original = src->at(line);
 
-			// TODO: Check if we need to alter the insn further.
+			Instr *i = modifyByte(dest, original, line);
 
 			TransformFn f = t[i->op()];
 			if (f) {
 				(this->*f)(dest, i, line);
 			} else {
 				*dest << i;
+			}
+
+			// If the byte transform had to modify the destination, make sure to store it back where it belongs.
+			if (i != original && i->dest() != original->dest()) {
+				*dest << mov(i->dest(), original->dest());
 			}
 		}
 
@@ -116,12 +157,172 @@ namespace code {
 			}
 		}
 
+		/**
+		 * Byte operands.
+		 */
+
+		Instr *RemoveInvalid::modifyByte(Listing *to, Instr *instr, Nat line) {
+			static OpTable<ByteTransform> t(byteTransformMap, ARRAY_COUNT(byteTransformMap));
+
+			ByteTransform tfm = t[instr->op()];
+
+			if (tfm & extendSrc) {
+				Operand src = instr->src();
+				if (src.size() == Size::sByte) {
+					instr = instr->alterSrc(modifyByte(to, src, line, (tfm & signedSrc) != 0));
+				}
+			}
+
+			if (tfm & extendDest) {
+				Operand dest = instr->dest();
+				if (dest.size() == Size::sByte) {
+					instr = instr->alterDest(modifyByte(to, dest, line, (tfm & signedDest) != 0));
+				}
+			}
+
+			return instr;
+		}
+
+		Operand RemoveInvalid::modifyByte(Listing *to, const Operand &op, Nat line, Bool opSigned) {
+			if (op.type() == opRegister) {
+				// If it was already in a register, we need to insert a suitable cast to a 32-bit register first.
+				Reg r = op.reg();
+				if (opSigned) {
+					*to << icast(asSize(r, Size::sInt), r);
+				} else {
+					*to << ucast(asSize(r, Size::sInt), r);
+				}
+				return op;
+
+			} else if (opSigned) {
+				// In other cases, we only need to worry if signed operations are used. For
+				// unsigned, we can simply load bytes from memory with the proper semantics. For
+				// signed, we need to sign-extend.
+				Reg r = unusedReg(used->at(line), op.size());
+				used->at(line)->put(r);
+
+				// Note: icast supports these addressing modes!
+				*to << icast(r, op);
+
+				return Operand(r);
+			} else {
+				return op;
+			}
+		}
+
+
+		/**
+		 * Helpers.
+		 */
+
 		Operand RemoveInvalid::largeConstant(const Operand &data) {
 			Nat offset = large->count();
 			large->push(data);
 			return xRel(data.size(), lblLarge, Offset::sWord * offset);
 		}
 
+		Operand RemoveInvalid::limitImm(Listing *to, const Operand &op, Nat line, Nat immBits, Bool immSigned) {
+			if (op.type() != opConstant)
+				return op;
+
+			Bool ok = false;
+			if (immSigned) {
+				Long v = op.constant();
+				Long maxVal = Long(1) << (immBits - 1);
+				ok = (v >= -maxVal) & (v < maxVal);
+			} else {
+				Word maxVal = Word(1) << immBits;
+				ok = op.constant() < maxVal;
+			}
+
+			if (ok)
+				return op;
+
+			Reg r = unusedReg(used->at(line), op.size());
+			used->at(line)->put(r);
+			loadRegister(to, r, op);
+			return Operand(r);
+		}
+
+		Instr *RemoveInvalid::limitImmSrc(Listing *to, Instr *instr, Nat line, Nat immBits, Bool immSigned) {
+			Operand src = limitImm(to, instr->src(), line, immBits, immSigned);
+			if (src != instr->src())
+				return instr->alterSrc(src);
+			else
+				return instr;
+		}
+
+		Operand RemoveInvalid::regOrImm(Listing *to, const Operand &op, Nat line, Nat immBits, Bool immSigned) {
+			if (op.type() == opRegister)
+				return op;
+
+			if (op.type() == opConstant)
+				return limitImm(to, op, line, immBits, immSigned);
+
+			// TODO: Maybe exclude other types here as well?
+
+			// Otherwise, try to load it into a register.
+			Reg r = unusedReg(used->at(line), op.size());
+			used->at(line)->put(r);
+			loadRegister(to, r, op);
+			return Operand(r);
+		}
+
+		void RemoveInvalid::loadRegister(Listing *to, Reg reg, const Operand &load) {
+			switch (load.type()) {
+			case opConstant:
+				if (load.constant() <= 0xFFFF)
+					*to << mov(reg, load);
+				else
+					*to << mov(reg, largeConstant(load));
+				break;
+
+			case opRegister:
+				if (!same(reg, load.reg()))
+					*to << mov(reg, load);
+				break;
+
+				// TODO: Maybe others?
+			default:
+				*to << mov(reg, load);
+				break;
+			}
+		}
+
+		void RemoveInvalid::removeMemoryRefs(Listing *to, Instr *instr, Nat line) {
+			Operand src = instr->src();
+
+			switch (src.type()) {
+			case opRegister:
+			case opConstant:
+			case opNone:
+				// TODO: More things to ignore here!
+				break;
+			default:
+				// Emit a load first.
+				Reg t = unusedReg(used->at(line), src.size());
+				used->at(line)->put(t);
+				loadRegister(to, t, src);
+				src = t;
+				break;
+			}
+
+			Operand dest = instr->dest();
+			if (dest.type() != opRegister) {
+				// Load and store the destination.
+				Reg t = unusedReg(used->at(line), dest.size());
+				loadRegister(to, t, dest);
+				*to << instr->alter(t, src);
+				*to << mov(dest, t);
+			} else {
+				*to << instr->alterSrc(src);
+			}
+		}
+
+
+		/**
+		 * Bookkeeping
+		 */
 
 		void RemoveInvalid::prologTfm(Listing *to, Instr *instr, Nat line) {
 			currentBlock = to->root();
@@ -143,6 +344,11 @@ namespace code {
 			currentBlock = to->parent(ended);
 			*to << instr;
 		}
+
+
+		/**
+		 * Function calls.
+		 */
 
 		void RemoveInvalid::fnParamTfm(Listing *to, Instr *instr, Nat line) {
 			TypeInstr *i = as<TypeInstr>(instr);
@@ -181,34 +387,33 @@ namespace code {
 			params->clear();
 		}
 
+
+		/**
+		 * Other instructions.
+		 */
+
 		void RemoveInvalid::movTfm(Listing *to, Instr *instr, Nat line) {
 			// We need to ensure that at most one operand is a memory operand. Large constants are
-			// count as a memory operand since they need to be loaded separately.
+			// counted as a memory operand since they need to be loaded separately.
 
+			Operand dest = instr->dest();
+			// If dest is a register, we can just load that register.
+			if (dest.type() == opRegister) {
+				loadRegister(to, dest.reg(), instr->src());
+				return;
+			}
+
+			// If the source is a register, we can just emit a single store operation regardless.
 			Operand src = instr->src();
-			switch (src.type()) {
-			case opRegister:
-				// No problem, we will be able to handle this instruction without issues.
+			if (src.type() == opRegister) {
 				*to << instr;
 				return;
-			case opConstant:
-				// If the constant is too large, we need to use a load instruction.
-				if (src.constant() > 0xFFFF) {
-					src = largeConstant(src);
-					instr = instr->alterSrc(src);
-					// Let execution continue in order to handle the case where destination is not a register.
-				}
-				break;
 			}
 
-			// If we get here, we need to try to make "dest" into a register if it is not already.
-			if (instr->dest().type() == opRegister) {
-				*to << instr;
-			} else {
-				Reg tmpReg = unusedReg(used->at(line), src.size());
-				*to << instr->alterDest(tmpReg);
-				*to << instr->alterSrc(tmpReg);
-			}
+			// Otherwise, we need to break the instruction into two pieces.
+			Reg tmpReg = unusedReg(used->at(line), src.size());
+			loadRegister(to, tmpReg, src);
+			*to << mov(dest, tmpReg);
 		}
 
 		void RemoveInvalid::swapTfm(Listing *to, Instr *instr, Nat line) {
@@ -236,35 +441,12 @@ namespace code {
 			// This is like "dataInstr12Tfm" below, but does not attempt to save the result back to
 			// memory.
 
-			// If "dest" is not a register, we need to surround this instruction with a load *and* a
-			// store. If "src" is not a register, we need to add a load before. If "src" is too
-			// large, we need to make it into a load.
-			Operand src = instr->src();
-			if (src.type() == opConstant) {
-				if (src.constant() > 0xFFF) {
-					src = largeConstant(src);
-				}
-			}
-
-			switch (src.type()) {
-			case opRegister:
-			case opConstant:
-				// TODO: More things to ignore here!
-				break;
-			default:
-				// Emit a load first.
-				Reg t = unusedReg(used->at(line), src.size());
-				used->at(line)->put(t);
-				*to << mov(t, src);
-				src = t;
-				break;
-			}
-
+			Operand src = regOrImm(to, instr->src(), line, 12, false);
 			Operand dest = instr->dest();
 			if (dest.type() != opRegister) {
-				// Load and store the destination.
+				// Load the destination.
 				Reg t = unusedReg(used->at(line), dest.size());
-				*to << mov(t, dest);
+				loadRegister(to, t, dest);
 				*to << instr->alter(t, src);
 			} else {
 				*to << instr->alterSrc(src);
@@ -304,7 +486,7 @@ namespace code {
 				// arbitrary things. Note: We don't need to update 'used', it is fine if we use the
 				// same register for both src and dest!
 				Reg r = unusedReg(used->at(line), src.size());
-				*to << mov(r, src);
+				loadRegister(to, r, src);
 				instr = instr->alterSrc(r);
 				break;
 			}
@@ -319,47 +501,11 @@ namespace code {
 			}
 		}
 
-		void RemoveInvalid::removeMemoryRefs(Listing *to, Instr *instr, Nat line) {
-			Operand src = instr->src();
-
-			switch (src.type()) {
-			case opRegister:
-			case opConstant:
-			case opNone:
-				// TODO: More things to ignore here!
-				break;
-			default:
-				// Emit a load first.
-				Reg t = unusedReg(used->at(line), src.size());
-				used->at(line)->put(t);
-				*to << mov(t, src);
-				src = t;
-				break;
-			}
-
-			Operand dest = instr->dest();
-			if (dest.type() != opRegister) {
-				// Load and store the destination.
-				Reg t = unusedReg(used->at(line), dest.size());
-				*to << mov(t, dest);
-				*to << instr->alter(t, src);
-				*to << mov(dest, t);
-			} else {
-				*to << instr->alterSrc(src);
-			}
-		}
-
 		void RemoveInvalid::dataInstr12Tfm(Listing *to, Instr *instr, Nat line) {
 			// If "dest" is not a register, we need to surround this instruction with a load *and* a
 			// store. If "src" is not a register, we need to add a load before. If "src" is too
 			// large, we need to make it into a load.
-			Operand src = instr->src();
-			if (src.type() == opConstant) {
-				if (src.constant() > 0xFFF) {
-					instr = instr->alterSrc(largeConstant(src));
-				}
-			}
-
+			instr = limitImmSrc(to, instr, line, 12, false);
 			removeMemoryRefs(to, instr, line);
 		}
 
@@ -407,14 +553,14 @@ namespace code {
 			if (src.type() != opRegister) {
 				Reg t = unusedReg(used->at(line), src.size());
 				used->at(line)->put(t);
-				*to << mov(t, src);
+				loadRegister(to, t, src);
 				src = t;
 			}
 
 			Operand dest = instr->dest();
 			if (dest.type() != opRegister) {
 				Reg t = unusedReg(used->at(line), dest.size());
-				*to << mov(t, dest);
+				loadRegister(to, t, dest);
 				*to << instr->alter(t, src);
 				*to << mov(dest, t);
 			} else {
@@ -437,7 +583,7 @@ namespace code {
 			if (src.type() != opRegister) {
 				Reg t = unusedReg(used->at(line), src.size());
 				used->at(line)->put(t);
-				*to << mov(t, src);
+				loadRegister(to, t, src);
 				src = t;
 			}
 
@@ -446,7 +592,7 @@ namespace code {
 			if (dest.type() != opRegister) {
 				Reg t = unusedReg(used->at(line), dest.size());
 				used->at(line)->put(t);
-				*to << mov(t, dest);
+				loadRegister(to, t, dest);
 				dest = t;
 			}
 

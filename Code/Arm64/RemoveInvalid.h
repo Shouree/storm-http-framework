@@ -51,8 +51,30 @@ namespace code {
 			// Transform table.
 			static const OpEntry<TransformFn> transformMap[];
 
+			// Generic function for wrapping an instruction between loads and stores.
+			void removeMemoryRefs(Listing *to, Instr *instr, Nat line);
+
+			// Generic function for loading data into a register. Handles cases that a plain mov
+			// instruction does not handle without transformation.
+			void loadRegister(Listing *to, Reg reg, const Operand &load);
+
+			// Limit operands with large constants to the desired length. Otherwise replaces it with
+			// code to load the constant into a suitable register.
+			Operand limitImm(Listing *to, const Operand &op, Nat line, Nat immBits, Bool immSigned);
+
+			// Same as 'limitImm', but only affects the source of the instruction.
+			Instr *limitImmSrc(Listing *to, Instr *instr, Nat line, Nat immBits, Bool immSigned);
+
+			// Generate code that ensures that 'op' is either a constant of a particular size, or a
+			// register.
+			Operand regOrImm(Listing *to, const Operand &op, Nat line, Nat immBits, Bool immSigned);
+
 			// Helper function to create a constant for a large integer.
 			Operand largeConstant(const Operand &constant);
+
+			// Modify instructions for byte-sized operands.
+			Instr *modifyByte(Listing *to, Instr *instr, Nat line);
+			Operand modifyByte(Listing *to, const Operand &op, Nat line, Bool opSigned);
 
 			// Function calls.
 			void fnParamTfm(Listing *to, Instr *instr, Nat line);
@@ -88,8 +110,6 @@ namespace code {
 			void imodTfm(Listing *to, Instr *instr, Nat line);
 			void umodTfm(Listing *to, Instr *instr, Nat line);
 
-			// Generic function for wrapping an instruction between loads and stores.
-			void removeMemoryRefs(Listing *to, Instr *instr, Nat line);
 		};
 
 	}
