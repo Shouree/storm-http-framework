@@ -12,12 +12,12 @@ static Nat bitmask(Nat n, Nat imms, Nat immr) {
 
 BEGIN_TEST(Arm64BitmaskGenerator, Code) {
 	// Some basic tests of the bitmask generator.
-	CHECK_EQ(code::arm64::encodeBitmask(0x00FFFF00, false), bitmask(0, 0x0F, 0x8));
-	CHECK_EQ(code::arm64::encodeBitmask(0xEEEEEEEE, false), bitmask(0, 0x3A, 0x1));
-	CHECK_EQ(code::arm64::encodeBitmask(0x0000FFFFFFFF0000, true), bitmask(1, 0x1F, 0x10));
-	CHECK_EQ(code::arm64::encodeBitmask(0xEEEEEEEEEEEEEEEE, true), bitmask(0, 0x3A, 0x1));
-	CHECK_EQ(code::arm64::encodeBitmask(0xE1E1E1E1E1E1E1E1, true), bitmask(0, 0x33, 0x5));
-	CHECK_EQ(code::arm64::encodeBitmask(0x0000000000100000, true), bitmask(1, 0x00, 0x14));
+	CHECK_EQ(code::arm64::encodeBitmask(0x00FFFF00, false), bitmask(0, 0x0F, 0x18));
+	CHECK_EQ(code::arm64::encodeBitmask(0xEEEEEEEE, false), bitmask(0, 0x3A, 0x3));
+	CHECK_EQ(code::arm64::encodeBitmask(0x0000FFFFFFFF0000, true), bitmask(1, 0x1F, 0x30));
+	CHECK_EQ(code::arm64::encodeBitmask(0xEEEEEEEEEEEEEEEE, true), bitmask(0, 0x3A, 0x3));
+	CHECK_EQ(code::arm64::encodeBitmask(0xE1E1E1E1E1E1E1E1, true), bitmask(0, 0x33, 0x3));
+	CHECK_EQ(code::arm64::encodeBitmask(0x0000000000100000, true), bitmask(1, 0x00, 0x2C));
 
 	// These are not possible to encode:
 	CHECK_EQ(code::arm64::encodeBitmask(0x0010001000001000, true), 0);
