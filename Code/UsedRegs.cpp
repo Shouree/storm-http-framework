@@ -28,12 +28,16 @@ namespace code {
 
 	static void processInstr(const Arena *arena, Instr *instr, RegSet *all, RegSet *used) {
 		switch (instr->op()) {
-		case op::jmp:
 		case op::endBlock:
 		case op::jmpBlock:
 		case op::prolog:
 			// These do not preserve any registers.
 			used->clear();
+			break;
+		case op::jmp:
+			// If it is an unconditional jump, don't preserve registers. Otherwise, might preserve.
+			if (instr->src().condFlag() == ifAlways)
+				used->clear();
 			break;
 		case op::beginBlock:
 			// Does not preserve 'rax'.
@@ -77,6 +81,8 @@ namespace code {
 	}
 
 	UsedRegs usedRegs(const Arena *arena, const Listing *src) {
+		TODO(L"Fix the implementation!");
+
 		Array<RegSet *> *used = new (src) Array<RegSet *>(src->count(), null);
 
 		RegSet *all = new (src) RegSet();

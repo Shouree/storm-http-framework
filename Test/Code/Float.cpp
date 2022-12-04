@@ -5,6 +5,9 @@
 using namespace code;
 
 BEGIN_TEST(FloatTest, Code) {
+	TODO(L"ENABLE");
+	break;
+
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
