@@ -261,7 +261,7 @@ namespace code {
 		return *this;
 	}
 
-	MAYBE(Array<Label> *) Listing::labels(Nat id) {
+	MAYBE(Array<Label> *) Listing::labels(Nat id) const {
 		if (id == count())
 			return nextLabels;
 		else
@@ -274,6 +274,10 @@ namespace code {
 
 	Label Listing::label() {
 		return Label(nextLabel++);
+	}
+
+	Nat Listing::labelCount() const {
+		return nextLabel;
 	}
 
 	Block Listing::root() const {

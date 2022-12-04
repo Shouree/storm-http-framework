@@ -14,7 +14,7 @@ namespace storm {
 			return ((d >> (bit % CHAR_BIT)) & 0x1) != 0;
 		}
 
-		inline void set(nat bit, nat to) {
+		inline void set(nat bit, bool to) {
 			byte &d = v[bit / CHAR_BIT];
 			byte mask = 1 << (bit % CHAR_BIT);
 			if (to)

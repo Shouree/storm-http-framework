@@ -121,6 +121,13 @@ namespace code {
 		numSet = o.numSet;
 	}
 
+	void RegSet::set(const RegSet *o) {
+		index = o->index;
+		for (nat i = 0; i < banks; i++)
+			(&data0)[i] = (&o->data0)[i];
+		numSet = o->numSet;
+	}
+
 	RegSet::RegSet(Reg r) {
 		put(r);
 	}
@@ -128,6 +135,18 @@ namespace code {
 	RegSet::RegSet(Array<Reg> *regs) {
 		for (nat i = 0; i < regs->count(); i++)
 			put(regs->at(i));
+	}
+
+	Bool RegSet::operator ==(const RegSet &o) const {
+		Bool eq = index == o.index;
+		eq &= numSet == o.numSet;
+		for (nat i = 0; i < banks; i++)
+			eq &= (&data0)[i] == (&o.data0)[i];
+		return eq;
+	}
+
+	Bool RegSet::operator !=(const RegSet &o) const {
+		return !(*this == o);
 	}
 
 	void RegSet::deepCopy(CloneEnv *env) {

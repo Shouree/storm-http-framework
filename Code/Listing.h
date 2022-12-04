@@ -117,7 +117,7 @@ namespace code {
 		inline Instr *at(Nat id) const { return code->at(id).instr; }
 
 		// Give 'id = count()' to access any labels after the last instruction.
-		MAYBE(Array<Label> *) STORM_FN labels(Nat id);
+		MAYBE(Array<Label> *) STORM_FN labels(Nat id) const;
 
 		// Create a shell, ie. a Listing containing only the scope information from this listing,
 		// thus making variables, blocks from this listing are valid in the shell as well.
@@ -133,6 +133,9 @@ namespace code {
 
 		// Create a new label.
 		Label STORM_FN label();
+
+		// Get the number of labels allocated (i.e., id:s 0 to labelCount - 1 are used).
+		Nat STORM_FN labelCount() const;
 
 		/**
 		 * Additional source-level information about variables. Front-ends may tag variables in this

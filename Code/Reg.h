@@ -110,6 +110,9 @@ namespace code {
 		// Contains a specific register?
 		Bool STORM_FN has(Reg r) const;
 
+		// Set contents to that of another RegSet.
+		void STORM_FN set(const RegSet *src);
+
 		// Add registers.
 		void STORM_FN put(Reg r);
 		void STORM_FN put(const RegSet *r);
@@ -125,6 +128,10 @@ namespace code {
 
 		// Clear.
 		void STORM_FN clear();
+
+		// Equal to another regset?
+		Bool STORM_FN operator ==(const RegSet &o) const;
+		Bool STORM_FN operator !=(const RegSet &o) const;
 
 		// Get all registers in here.
 		// Array<Reg> *STORM_FN all() const;
