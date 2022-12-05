@@ -4,6 +4,13 @@
 
 namespace code {
 
+	using impl::WorkItem;
+
+	impl::WorkItem::WorkItem(Nat line) : line(line), inWork(false), nextDep(null), nextWork(null) {}
+
+	impl::WorkItem::WorkItem(Nat line, WorkItem *nextDep) : line(line), inWork(false), nextDep(nextDep), nextWork(null) {}
+
+
 	UsedRegs::UsedRegs(Array<RegSet *> *used, RegSet *all) : used(used), all(all) {}
 
 	static void operator +=(RegSet &to, const Operand &op) {
@@ -72,75 +79,181 @@ namespace code {
 		}
 	}
 
-	struct RegState {
+	class RegState {
+	public:
+		RegState(const Arena *arena, const Listing *src)
+			: arena(arena), src(src), work(null), workEnd(null) {
+
+			Engine &e = src->engine();
+			usedNow = new (e) RegSet();
+			used = new (e) Array<RegSet *>(src->count(), null);
+			for (Nat i = 0; i < src->count(); i++)
+				used->at(i) = new (e) RegSet();
+
+			labelSrc = runtime::allocArray<Nat>(e, &natArrayType, src->labelCount());
+			labelDeps = runtime::allocArray<WorkItem *>(e, StormInfo<WorkItem *>::handle(e).gcArrayType, src->labelCount());
+		}
+
+
 		// Arena.
 		const Arena *arena;
 
 		// Listing.
 		const Listing *src;
 
+		// Variable for 'usedNow', so we don't have to re-allocate it many times.
+		RegSet *usedNow;
+
 		// Set of registers used for all lines in the code.
 		Array<RegSet *> *used;
 
-		// Location of all labels encountered so far.
-		Array<Nat> *labelSrc;
+		// Source line for labels.
+		GcArray<Nat> *labelSrc;
+
+		// Dependencies for all labels encountered so far.
+		GcArray<WorkItem *> *labelDeps;
+
+		// List of work to perform.
+		WorkItem *work;
+
+		// End of the list of work.
+		WorkItem *workEnd;
+
+		// Add work to the work-list.
+		void addWork(WorkItem *item) {
+			if (!item)
+				return;
+
+			// Add them in reverse order to make sure the highest line is processed first.
+			// This list will never be very long, so a recursive add is fine.
+			if (item->nextDep)
+				addWork(item->nextDep);
+
+			if (item->inWork)
+				return;
+
+			item->inWork = true;
+			if (workEnd) {
+				workEnd->nextWork = item;
+				workEnd = item;
+			} else {
+				work = workEnd = item;
+			}
+		}
+
+		// Pop an item from the work queue.
+		WorkItem *popWork() {
+			WorkItem *result = work;
+			if (result)
+				work = result->nextWork;
+			if (!work)
+				workEnd = null;
+			return result;
+		}
 	};
 
-	// If 'all' is true, then we assume that this is the first pass and collect all used
-	// registers. Otherwise, we assume it is a subsequent pass, where we don't need to update
-	// 'labelSrc' either.
-	// Returns true if we need more traversals.
-	static Bool traverse(RegState &state, RegSet *all) {
-		RegSet *usedNow = new (state.src) RegSet();
-		Bool more = false;
+	static Bool isLabelJump(Instr *instr) {
+		return instr->op() == op::jmp & instr->dest().type() == opLabel;
+	}
+
+	static Bool processJump(RegState &state, Instr *instr, Nat target, RegSet *usedNow) {
+		Nat targetLine = state.labelSrc->v[target];
+		switch (instr->src().condFlag()) {
+		case ifAlways:
+			// Only use the target.
+			usedNow->set(state.used->at(targetLine));
+			return true;
+		case ifNever:
+			// Nothing special to do.
+			return false;
+		default:
+			usedNow->put(state.used->at(targetLine));
+			return true;
+		}
+	}
+
+	// First-time traversal. Always traverses all instructions in the listing.
+	static void traverseFirst(RegState &state, RegSet *all) {
+		RegSet *usedNow = state.usedNow;
+		usedNow->clear();
 
 		for (Nat i = state.src->count(); i > 0; i--) {
-			Nat id = i - 1;
-			Instr *instr = state.src->at(id);
+			Nat line = i - 1;
+			Instr *instr = state.src->at(line);
 
-			// Handle this instruction, save the result.
-			if (instr->op() == op::jmp && instr->dest().type() == opLabel) {
-				// For a jump, we should set 'usedNow' to the 'usedNow' of the target
-				// instruction of the jump. If it is conditional, then we set it to the union of
-				// what we have now and the target of the label.
+			if (isLabelJump(instr)) {
 				Nat target = instr->dest().label().key();
-				Nat targetLine = state.labelSrc->at(target);
-				if (instr->src().condFlag() == ifAlways) {
-					// Unconditional: always pick target line's used.
-					usedNow->set(state.used->at(targetLine));
-				} else if (instr->src().condFlag() != ifNever) {
-					// Either, make it the union.
-					usedNow->put(state.used->at(targetLine));
+				if (processJump(state, instr, target, usedNow)) {
+					// Record the dependency
+					state.labelDeps->v[target] = new (state.src) WorkItem(line, state.labelDeps->v[target]);
 				}
-
-				if (targetLine < i) {
-					// This involves a back-edge, we might need another pass (always if this is the
-					// first time).
-					if (all || *usedNow != *state.used->at(id))
-						more = true;
-				}
-
 			} else {
 				processInstruction(state.arena, instr, usedNow);
 			}
 
-			state.used->at(id)->set(usedNow);
+			state.used->at(line)->set(usedNow);
 
-			if (all) {
-				// Keep 'all' up to date.
-				if (instr->mode() & destWrite)
-					*all += instr->dest();
+			// Keep 'all' up to date.
+			if (instr->mode() & destWrite)
+				*all += instr->dest();
 
-				// Add labels, if any.
-				if (Array<Label> *lbls = state.src->labels(id)) {
-					for (Nat i = 0; i < lbls->count(); i++) {
-						state.labelSrc->at(lbls->at(i).key()) = id;
-					}
+			// If there are labels, we always post them to the work-list. Since we work backwards,
+			// this means that only back-edges will be added to the work-list, which happens to be
+			// exactly what we want.
+			// Also: record line numbers for labels so that we can use them in 'processJump'.
+			if (Array<Label> *labels = state.src->labels(line)) {
+				for (Nat i = 0; i < labels->count(); i++) {
+					Nat lbl = labels->at(i).key();
+					state.labelSrc->v[lbl] = line;
+					state.addWork(state.labelDeps->v[lbl]);
 				}
 			}
 		}
+	}
 
-		return more;
+	// Subsequent traversals. Processes rows from the starting line until the state no longer
+	// changes. Triggers items on the work-list as needed.
+	// Note: if we happen to process "too far" on one iteration, any remaining work items
+	// that we happened to process "early" will simply terminate almost immediately when
+	// they are processed.
+	static void traverseNext(RegState &state, Nat start) {
+		RegSet *usedNow = state.usedNow;
+		if (start + 1 < state.src->count())
+			usedNow->set(state.used->at(start + 1));
+		else
+			usedNow->clear();
+
+		for (Nat i = start + 1; i > 0; i--) {
+			Nat line = i - 1;
+			Instr *instr = state.src->at(line);
+
+			if (isLabelJump(instr)) {
+				processJump(state, instr, instr->dest().label().key(), usedNow);
+				// No need to record dependencies!
+
+				// TODO: With slightly better data structures we could remove this node from the
+				// work-list at this point if it is there. This means that we will avoid some calls
+				// to the 'traverseNext' function that would be unneccessary. Our check below would
+				// still make it terminate quickly, so it is not too expensive.
+			} else {
+				processInstruction(state.arena, instr, usedNow);
+			}
+
+			Bool changed = *usedNow != *state.used->at(line);
+			// Since we have our work-list, we can just exit whenever the state stops changing.
+			if (!changed)
+				return;
+
+			state.used->at(line)->set(usedNow);
+
+			// Post new items to the work queue.
+			if (Array<Label> *labels = state.src->labels(line)) {
+				for (Nat i = 0; i < labels->count(); i++) {
+					Nat lbl = labels->at(i).key();
+					state.addWork(state.labelDeps->v[lbl]);
+				}
+			}
+		}
 	}
 
 	UsedRegs usedRegs(const Arena *arena, const Listing *src) {
@@ -151,26 +264,17 @@ namespace code {
 		// a later pass. This might need to be repeated a number of times until the
 		// computation converges.
 
-		RegState state = {
-			arena,
-			src,
-			new (src) Array<RegSet *>(src->count(), null),
-			new (src) Array<Nat>(src->labelCount(), 0)
-		};
+		RegState state(arena, src);
 
-		// All registers?
+		// All registers.
 		RegSet *all = new (src) RegSet();
 
-		// Fill 'used'.
-		for (Nat i = 0; i < state.used->count(); i++)
-			state.used->at(i) = new (src) RegSet();
-
 		// First pass. Simply go through the code from the end and update the state as necessary.
-		if (traverse(state, all)) {
-			// Then, traverse until no more changes.
-			TODO(L"This can be done in a more efficient manner: we don't need to traverse the entire thing.");
-			while (traverse(state, null))
-				;
+		traverseFirst(state, all);
+
+		// Process items on the work-list as necessary.
+		while (WorkItem *work = state.popWork()) {
+			traverseNext(state, work->line);
 		}
 
 		return UsedRegs(state.used, all);

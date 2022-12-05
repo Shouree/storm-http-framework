@@ -29,4 +29,31 @@ namespace code {
 
 	// Computes all used registers, without bothering about per-line representations.
 	RegSet *STORM_FN allUsedRegs(const Listing *src);
+
+
+	namespace impl {
+
+		/**
+		 * Work-list used internally when computing used registers.
+		 */
+		class WorkItem : public Object {
+			STORM_CLASS;
+		public:
+			WorkItem(Nat line);
+			WorkItem(Nat line, WorkItem *nextDep);
+
+			// Line to start at.
+			Nat line;
+
+			// Inside the work-list?
+			Bool inWork;
+
+			// Next item in the dependency list.
+			WorkItem *nextDep;
+
+			// Next item in the work list.
+			WorkItem *nextWork;
+		};
+
+	}
 }
