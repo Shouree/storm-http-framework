@@ -265,19 +265,15 @@ namespace code {
 			offset /= opSize;
 
 			if (dest2 != noReg) {
-				Nat op;
 				if (intReg)
-					op = opSize == 4 ? 0x0A5 : 0x2A5;
+					putLoadStore(to, opSize == 4 ? 0x0A5 : 0x2A5, intRegSP(baseReg), intRegZR(dest1), intRegZR(dest2), offset);
 				else
-					op = opSize == 4 ? 0x0B5 : 0x1B5;
-				putLoadStore(to, op, intRegSP(baseReg), intRegZR(dest1), intRegZR(dest2), offset);
+					putLoadStore(to, opSize == 4 ? 0x0B5 : 0x1B5, intRegSP(baseReg), fpReg(dest1), fpReg(dest2), offset);
 			} else {
-				Nat op = 0;
 				if (intReg)
-					op = opSize == 4 ? 0x2E5 : 0x3E5;
+					putLoadStoreLarge(to, opSize == 4 ? 0x2E5 : 0x3E5, intRegSP(baseReg), intRegZR(dest1), offset);
 				else
-					op = opSize == 4 ? 0x2F5 : 0x3F5;
-				putLoadStoreLarge(to, op, intRegSP(baseReg), intRegZR(dest1), offset);
+					putLoadStoreLarge(to, opSize == 4 ? 0x2F5 : 0x3F5, intRegSP(baseReg), fpReg(dest1), offset);
 			}
 
 			return dest2 != noReg;
@@ -323,19 +319,15 @@ namespace code {
 
 			// TODO: Handle fp registers!
 			if (src2 != noReg) {
-				Nat op;
 				if (intReg)
-					op = opSize == 4 ? 0x0A4 : 0x2A4;
+					putLoadStore(to, opSize == 4 ? 0x0A4 : 0x2A4, intRegSP(baseReg), intRegZR(src1), intRegZR(src2), offset);
 				else
-					op = opSize == 4 ? 0x0B4 : 0x1B4;
-				putLoadStore(to, op, intRegSP(baseReg), intRegZR(src1), intRegZR(src2), offset);
+					putLoadStore(to, opSize == 4 ? 0x0B4 : 0x1B4, intRegSP(baseReg), fpReg(src1), fpReg(src2), offset);
 			} else {
-				Nat op;
 				if (intReg)
-					op = opSize == 4 ? 0x2E4 : 0x3E4;
+					putLoadStoreLarge(to, opSize == 4 ? 0x2E4 : 0x3E4, intRegSP(baseReg), intRegZR(src1), offset);
 				else
-					op = opSize == 4 ? 0x2F4 : 0x3F4;
-				putLoadStoreLarge(to, op, intRegSP(baseReg), intRegZR(src1), offset);
+					putLoadStoreLarge(to, opSize == 4 ? 0x2F4 : 0x3F4, intRegSP(baseReg), fpReg(src1), offset);
 			}
 
 			return src2 != noReg;

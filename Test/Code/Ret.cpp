@@ -608,9 +608,6 @@ BEGIN_TEST(RetCallLargeSimpleMember, Code) {
  */
 
 BEGIN_TEST(RetDouble, Code) {
-	TODO(L"ENABLE");
-	break;
-
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -630,9 +627,6 @@ BEGIN_TEST(RetDouble, Code) {
 } END_TEST
 
 BEGIN_TEST(RetDoubleRef, Code) {
-	TODO(L"ENABLE");
-	break;
-
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
