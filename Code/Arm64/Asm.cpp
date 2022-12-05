@@ -298,6 +298,20 @@ namespace code {
 			return noReg;
 		}
 
+		Reg unusedVectorReg(RegSet *used) {
+			for (Nat i = 0; i < 32; i++) {
+				Reg r = sr(i);
+				if (!used->has(r))
+					return r;
+			}
+
+			throw new (used) InvalidValue(S("Out of vector registers!"));
+		}
+
+		Reg unusedVectorReg(RegSet *used, Size size) {
+			return asSize(unusedVectorReg(used), size);
+		}
+
 		static const Reg dirtyRegs[] = {
 			ptrr(0), ptrr(1), ptrr(2), ptrr(3), ptrr(4), ptrr(5), ptrr(6), ptrr(7), ptrr(8),
 			ptrr(9), ptrr(10), ptrr(11), ptrr(12), ptrr(13), ptrr(14), ptrr(15), ptrr(16), ptrr(17),

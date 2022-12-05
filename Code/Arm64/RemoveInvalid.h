@@ -58,6 +58,9 @@ namespace code {
 			// instruction does not handle without transformation.
 			void loadRegister(Listing *to, Reg reg, const Operand &load);
 
+			// Load value into fp register.
+			Reg loadFpRegister(Listing *to, const Operand &load, Nat line);
+
 			// Limit operands with large constants to the desired length. Otherwise replaces it with
 			// code to load the constant into a suitable register.
 			Operand limitImm(Listing *to, const Operand &op, Nat line, Nat immBits, Bool immSigned);
@@ -95,6 +98,15 @@ namespace code {
 			void setCondTfm(Listing *to, Instr *instr, Nat line);
 			void icastTfm(Listing *to, Instr *instr, Nat line);
 			void ucastTfm(Listing *to, Instr *instr, Nat line);
+			void fcastTfm(Listing *to, Instr *instr, Nat line);
+			void fcastiTfm(Listing *to, Instr *instr, Nat line);
+			void fcastuTfm(Listing *to, Instr *instr, Nat line);
+			void icastfTfm(Listing *to, Instr *instr, Nat line);
+			void ucastfTfm(Listing *to, Instr *instr, Nat line);
+
+			// Transform mod into div + multiply as needed. No mod operation on ARM!
+			void imodTfm(Listing *to, Instr *instr, Nat line);
+			void umodTfm(Listing *to, Instr *instr, Nat line);
 
 			// Generic constraint fixing:
 			// Constraints for data operations with a 12 bit immediate or a (shifted) register.
@@ -105,10 +117,8 @@ namespace code {
 			void dataInstr4RegTfm(Listing *to, Instr *instr, Nat line);
 			// For shift operations, where 'src' is either an immediate (that needs to be small), or a register.
 			void shiftInstrTfm(Listing *to, Instr *instr, Nat line);
-
-			// Transform mod into div + multiply as needed. No mod operation on ARM!
-			void imodTfm(Listing *to, Instr *instr, Nat line);
-			void umodTfm(Listing *to, Instr *instr, Nat line);
+			// For floating-point arithmetic operations.
+			void fpInstrTfm(Listing *to, Instr *instr, Nat line);
 
 		};
 

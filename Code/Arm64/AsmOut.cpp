@@ -895,6 +895,71 @@ namespace code {
 			TODO(L"Implement PRESERVE pseudo-op!");
 		}
 
+		void fmulOut(Output *to, Instr *instr) {
+			Bool is64 = instr->dest().size().size64() > 4;
+			Nat destReg = fpReg(instr->dest().reg());
+			putData3(to, is64 ? 0x0F3 : 0x0F1,
+					destReg, destReg,
+					fpReg(instr->src().reg()),
+					0x02);
+		}
+
+		void fcastiOut(Output *to, Instr *instr) {
+			Bool in64 = instr->dest().size().size64() > 4;
+			Bool out64 = instr->dest().size().size64() > 4;
+
+			Nat op = 0x1E380000;
+			if (in64)
+				op |= Nat(1) << 22;
+			if (out64)
+				op |= Nat(1) << 31;
+			op |= intRegZR(instr->dest().reg());
+			op |= fpReg(instr->src().reg()) << 5;
+			to->putInt(op);
+		}
+
+		void fcastuOut(Output *to, Instr *instr) {
+			Bool in64 = instr->dest().size().size64() > 4;
+			Bool out64 = instr->dest().size().size64() > 4;
+
+			Nat op = 0x1E390000;
+			if (in64)
+				op |= Nat(1) << 22;
+			if (out64)
+				op |= Nat(1) << 31;
+			op |= intRegZR(instr->dest().reg());
+			op |= fpReg(instr->src().reg()) << 5;
+			to->putInt(op);
+		}
+
+		void icastfOut(Output *to, Instr *instr) {
+			Bool in64 = instr->dest().size().size64() > 4;
+			Bool out64 = instr->dest().size().size64() > 4;
+
+			Nat op = 0x1E220000;
+			if (out64)
+				op |= Nat(1) << 22;
+			if (in64)
+				op |= Nat(1) << 31;
+			op |= fpReg(instr->dest().reg());
+			op |= intRegZR(instr->src().reg()) << 5;
+			to->putInt(op);
+		}
+
+		void ucastfOut(Output *to, Instr *instr) {
+			Bool in64 = instr->dest().size().size64() > 4;
+			Bool out64 = instr->dest().size().size64() > 4;
+
+			Nat op = 0x1E030000;
+			if (out64)
+				op |= Nat(1) << 22;
+			if (in64)
+				op |= Nat(1) << 31;
+			op |= fpReg(instr->dest().reg());
+			op |= intRegZR(instr->src().reg()) << 5;
+			to->putInt(op);
+		}
+
 		void datOut(Output *to, Instr *instr) {
 			Operand src = instr->src();
 			switch (src.type()) {
@@ -953,6 +1018,18 @@ namespace code {
 			OUTPUT(shl),
 			OUTPUT(shr),
 			OUTPUT(sar),
+
+			// OUTPUT(fadd),
+			// OUTPUT(fsub),
+			// OUTPUT(fneg),
+			OUTPUT(fmul),
+			// OUTPUT(fdiv),
+			// OUTPUT(fcmp),
+			// OUTPUT(fcast),
+			OUTPUT(fcasti),
+			OUTPUT(fcastu),
+			OUTPUT(icastf),
+			OUTPUT(ucastf),
 
 			OUTPUT(preserve),
 

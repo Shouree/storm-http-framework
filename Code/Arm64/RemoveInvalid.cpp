@@ -18,6 +18,7 @@ namespace code {
 #define BITMASK(x) { op::x, &RemoveInvalid::bitmaskInstrTfm }
 #define DATA4REG(x) { op::x, &RemoveInvalid::dataInstr4RegTfm }
 #define SHIFT(x) { op::x, &RemoveInvalid::shiftInstrTfm }
+#define FP_OP(x) { op::x, &RemoveInvalid::fpInstrTfm }
 
 		const OpEntry<RemoveInvalid::TransformFn> RemoveInvalid::transformMap[] = {
 			TRANSFORM(prolog),
@@ -36,10 +37,6 @@ namespace code {
 			TRANSFORM(icast),
 			TRANSFORM(ucast),
 
-			// TODO: We need a special case for byte-sized inputs here. We need to 'sign extend'
-			// them to 32-bits, otherwise weird things might happen. This is true for arithmetic
-			// operations and for right shifts.
-
 			DATA12(add),
 			DATA12(sub),
 			DATA4REG(mul),
@@ -56,6 +53,19 @@ namespace code {
 			SHIFT(shl),
 			SHIFT(shr),
 			SHIFT(sar),
+
+			FP_OP(fadd),
+			FP_OP(fsub),
+			FP_OP(fneg),
+			FP_OP(fmul),
+			FP_OP(fdiv),
+			FP_OP(fcmp),
+
+			TRANSFORM(fcast),
+			TRANSFORM(fcasti),
+			TRANSFORM(fcastu),
+			TRANSFORM(icastf),
+			TRANSFORM(ucastf),
 		};
 
 
@@ -501,6 +511,62 @@ namespace code {
 			}
 		}
 
+		void RemoveInvalid::fcastTfm(Listing *to, Instr *instr, Nat line) {
+			// All operands need to be in fp registers.
+			Reg src = loadFpRegister(to, instr->src(), line);
+
+			Operand dest = instr->dest();
+			if (dest.type() == opRegister && isVectorReg(dest.reg())) {
+				*to << fcast(dest, src);
+			} else {
+				Reg destReg = unusedVectorReg(used->at(line), dest.size());
+				*to << fcast(destReg, src);
+				*to << mov(dest, destReg);
+			}
+		}
+
+		void RemoveInvalid::fcastiTfm(Listing *to, Instr *instr, Nat line) {
+			Reg src = loadFpRegister(to, instr->src(), line);
+
+			Operand dest = instr->dest();
+			if (dest.type() == opRegister && isIntReg(dest.reg())) {
+				*to << instr->alterSrc(src);
+			} else {
+				Reg destReg = unusedReg(used->at(line), dest.size());
+				*to << instr->alter(destReg, src);
+				*to << mov(dest, destReg);
+			}
+		}
+
+		void RemoveInvalid::fcastuTfm(Listing *to, Instr *instr, Nat line) {
+			fcastiTfm(to, instr, line);
+		}
+
+		void RemoveInvalid::icastfTfm(Listing *to, Instr *instr, Nat line) {
+			Operand src = instr->src();
+			Reg srcReg = noReg;
+			if (src.type() == opRegister && isIntReg(src.reg())) {
+				srcReg = src.reg();
+			} else {
+				srcReg = unusedReg(used->at(line), src.size());
+				used->at(line)->put(srcReg);
+				loadRegister(to, srcReg, src);
+			}
+
+			Operand dest = instr->dest();
+			if (dest.type() == opRegister && isVectorReg(dest.reg())) {
+				*to << instr->alterSrc(srcReg);
+			} else {
+				Reg destReg = unusedVectorReg(used->at(line), dest.size());
+				*to << instr->alter(destReg, srcReg);
+				*to << mov(dest, destReg);
+			}
+		}
+
+		void RemoveInvalid::ucastfTfm(Listing *to, Instr *instr, Nat line) {
+			icastfTfm(to, instr, line);
+		}
+
 		void RemoveInvalid::dataInstr12Tfm(Listing *to, Instr *instr, Nat line) {
 			// If "dest" is not a register, we need to surround this instruction with a load *and* a
 			// store. If "src" is not a register, we need to add a load before. If "src" is too
@@ -565,6 +631,32 @@ namespace code {
 				*to << mov(dest, t);
 			} else {
 				*to << instr->alterSrc(src);
+			}
+		}
+
+		Reg RemoveInvalid::loadFpRegister(Listing *to, const Operand &op, Nat line) {
+			// Operands need to be in vector registers!
+			if (op.type() == opRegister)
+				if (isVectorReg(op.reg()))
+					return op.reg();
+
+			// Just load it into a free vector register.
+			Reg r = unusedVectorReg(used->at(line), op.size());
+			used->at(line)->put(r);
+			*to << mov(r, op);
+			return r;
+		}
+
+		void RemoveInvalid::fpInstrTfm(Listing *to, Instr *instr, Nat line) {
+			Operand dest = instr->dest();
+			Reg srcReg = loadFpRegister(to, instr->src(), line);
+			Reg dstReg = loadFpRegister(to, dest, line);
+
+			*to << instr->alter(dstReg, srcReg);
+
+			if (destMode(instr->op()) & destWrite) {
+				if (dest.type() != opRegister || dest.reg() != dstReg)
+					*to << mov(dest, dstReg);
 			}
 		}
 
