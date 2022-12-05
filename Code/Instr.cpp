@@ -367,19 +367,75 @@ namespace code {
 		return instrLoose(e, op::ucast, dest, src);
 	}
 
+	static void fpSize(Engine &e, Operand op) {
+		Size sz = op.size();
+		if (sz != Size::sFloat && sz != Size::sDouble)
+			throw new (e) InvalidValue(S("Invalid size of floating point operand."));
+	}
+
+	Instr *fadd(EnginePtr e, Operand dest, Operand src) {
+		fpSize(e.v, dest);
+		return instrDestSrc(e, op::fadd, dest, src);
+	}
+
+	Instr *fsub(EnginePtr e, Operand dest, Operand src) {
+		fpSize(e.v, dest);
+		return instrDestSrc(e, op::fsub, dest, src);
+	}
+
+	Instr *fneg(EnginePtr e, Operand dest, Operand src) {
+		fpSize(e.v, dest);
+		return instrDestSrc(e, op::fneg, dest, src);
+	}
+
+	Instr *fmul(EnginePtr e, Operand dest, Operand src) {
+		fpSize(e.v, dest);
+		return instrDestSrc(e, op::fmul, dest, src);
+	}
+
+	Instr *fdiv(EnginePtr e, Operand dest, Operand src) {
+		fpSize(e.v, dest);
+		return instrDestSrc(e, op::fdiv, dest, src);
+	}
+
+	Instr *fcmp(EnginePtr e, Operand dest, Operand src) {
+		fpSize(e.v, dest);
+		return instrDestSrc(e, op::fcmp, dest, src);
+	}
+
+	Instr *fcast(EnginePtr e, Operand dest, Operand src) {
+		fpSize(e.v, src);
+		fpSize(e.v, dest);
+		return instrLoose(e, op::fcast, dest, src);
+	}
+
+	Instr *fcasti(EnginePtr e, Operand dest, Operand src) {
+		fpSize(e.v, src);
+		return instrLoose(e, op::fcasti, dest, src);
+	}
+
+	Instr *fcastu(EnginePtr e, Operand dest, Operand src) {
+		fpSize(e.v, src);
+		return instrLoose(e, op::fcastu, dest, src);
+	}
+
+	Instr *icastf(EnginePtr e, Operand dest, Operand src) {
+		fpSize(e.v, dest);
+		return instrLoose(e, op::icastf, dest, src);
+	}
+
+	Instr *ucastf(EnginePtr e, Operand dest, Operand src) {
+		fpSize(e.v, dest);
+		return instrLoose(e, op::ucastf, dest, src);
+	}
+
 	Instr *fstp(EnginePtr e, Operand dest) {
 		if (dest.type() == opRegister)
 			throw new (e.v) InvalidValue(S("Can not store to register."));
 		if (dest.size() != Size::sFloat && dest.size() != Size::sDouble)
 			throw new (e.v) InvalidValue(S("Invalid size."));
 		return instrDest(e, op::fstp, dest);
-	}
-
-	Instr *fistp(EnginePtr e, Operand dest) {
-		if (dest.size() != Size::sInt && dest.size() != Size::sLong)
-			throw new (e.v) InvalidValue(S("Invalid size."));
-		return instrDest(e, op::fistp, dest);
-	}
+ 	}
 
 	Instr *fld(EnginePtr e, Operand src) {
 		if (src.type() == opRegister)
@@ -389,44 +445,6 @@ namespace code {
 		if (src.size() != Size::sFloat && src.size() != Size::sDouble)
 			throw new (e.v) InvalidValue(S("Invalid size."));
 		return instrSrc(e, op::fld, src);
-	}
-
-	Instr *fild(EnginePtr e, Operand src) {
-		if (src.type() == opRegister)
-			throw new (e.v) InvalidValue(S("Can not load from register."));
-		if (src.type() == opConstant)
-			throw new (e.v) InvalidValue(S("Can not load from a constant."));
-		if (src.size() != Size::sInt && src.size() != Size::sLong)
-			throw new (e.v) InvalidValue(S("Invalid size."));
-		return instrSrc(e, op::fild, src);
-	}
-
-	Instr *fldz(EnginePtr e) {
-		return instr(e, op::fldz);
-	}
-
-	Instr *faddp(EnginePtr e) {
-		return instr(e, op::faddp);
-	}
-
-	Instr *fsubp(EnginePtr e) {
-		return instr(e, op::fsubp);
-	}
-
-	Instr *fmulp(EnginePtr e) {
-		return instr(e, op::fmulp);
-	}
-
-	Instr *fdivp(EnginePtr e) {
-		return instr(e, op::fdivp);
-	}
-
-	Instr *fcompp(EnginePtr e) {
-		return instr(e, op::fcompp);
-	}
-
-	Instr *fwait(EnginePtr e) {
-		return instr(e, op::fwait);
 	}
 
 	Instr *dat(EnginePtr e, Operand v) {

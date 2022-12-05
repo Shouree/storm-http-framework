@@ -20,8 +20,7 @@ namespace storm {
 		if (!p.result->needed())
 			return;
 
-		*p.state->l << fild(p.param(0));
-		*p.state->l << fstp(p.result->location(p.state));
+		*p.state->l << icastf(p.result->location(p.state), p.param(0));
 	}
 
 	static void castLong(InlineParams p) {
@@ -128,6 +127,13 @@ namespace storm {
 		*p.state->l << ucast(longRel(p.regParam(0), Offset()), p.param(1));
 	}
 
+	static void wordToFloat(InlineParams p) {
+		if (!p.result->needed())
+			return;
+
+		*p.state->l << ucastf(p.result->location(p.state), p.param(0));
+	}
+
 	static Word wordRead(IStream *from) {
 		return from->readWord();
 	}
@@ -209,6 +215,8 @@ namespace storm {
 		add(inlinedFunction(engine, Value(StormInfo<Nat>::type(engine)), S("nat"), v, fnPtr(engine, &ucast))->makePure());
 		add(inlinedFunction(engine, Value(StormInfo<Byte>::type(engine)), S("byte"), v, fnPtr(engine, &ucast))->makePure());
 		add(inlinedFunction(engine, Value(StormInfo<Long>::type(engine)), S("long"), v, fnPtr(engine, &ucast))->makePure());
+		add(inlinedFunction(engine, Value(StormInfo<Float>::type(engine)), S("float"), v, fnPtr(engine, &wordToFloat))->makePure());
+		add(inlinedFunction(engine, Value(StormInfo<Double>::type(engine)), S("double"), v, fnPtr(engine, &wordToFloat))->makePure());
 
 		Value n(StormInfo<Nat>::type(engine));
 		add(nativeFunction(engine, n, S("hash"), v, address(&wordHash))->makePure());

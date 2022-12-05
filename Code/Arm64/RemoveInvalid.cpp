@@ -271,7 +271,7 @@ namespace code {
 		void RemoveInvalid::loadRegister(Listing *to, Reg reg, const Operand &load) {
 			switch (load.type()) {
 			case opConstant:
-				if (load.constant() <= 0xFFFF)
+				if (load.constant() <= 0xFFFF && isIntReg(reg)) // No load literal for fp registers.
 					*to << mov(reg, load);
 				else
 					*to << mov(reg, largeConstant(load));

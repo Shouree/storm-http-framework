@@ -178,17 +178,21 @@ namespace code {
 	Instr *STORM_FN ucast(EnginePtr e, Operand dest, Operand src);
 
 	// Floating point math.
+	Instr *STORM_FN fadd(EnginePtr e, Operand dest, Operand src);
+	Instr *STORM_FN fsub(EnginePtr e, Operand dest, Operand src);
+	Instr *STORM_FN fneg(EnginePtr e, Operand dest, Operand src);
+	Instr *STORM_FN fmul(EnginePtr e, Operand dest, Operand src);
+	Instr *STORM_FN fdiv(EnginePtr e, Operand dest, Operand src);
+	Instr *STORM_FN fcmp(EnginePtr e, Operand dest, Operand src);
+	Instr *STORM_FN fcast(EnginePtr e, Operand dest, Operand src);  // float -> float
+	Instr *STORM_FN fcasti(EnginePtr e, Operand dest, Operand src); // float -> signed
+	Instr *STORM_FN fcastu(EnginePtr e, Operand dest, Operand src); // float -> unsigned
+	Instr *STORM_FN icastf(EnginePtr e, Operand dest, Operand src); // signed -> float
+	Instr *STORM_FN ucastf(EnginePtr e, Operand dest, Operand src); // unsigned -> float
+
+	// Compatibility with x86 in 32-bit mode.
 	Instr *STORM_FN fstp(EnginePtr e, Operand dest);
-	Instr *STORM_FN fistp(EnginePtr e, Operand dest); // Truncates results.
 	Instr *STORM_FN fld(EnginePtr e, Operand src);
-	Instr *STORM_FN fild(EnginePtr e, Operand src);
-	Instr *STORM_FN fldz(EnginePtr e);
-	Instr *STORM_FN faddp(EnginePtr e);
-	Instr *STORM_FN fsubp(EnginePtr e);
-	Instr *STORM_FN fmulp(EnginePtr e);
-	Instr *STORM_FN fdivp(EnginePtr e);
-	Instr *STORM_FN fcompp(EnginePtr e);
-	Instr *STORM_FN fwait(EnginePtr e);
 
 	// Data.
 	Instr *STORM_FN dat(EnginePtr e, Operand v);

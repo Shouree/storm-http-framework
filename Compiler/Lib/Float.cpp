@@ -19,51 +19,40 @@ namespace storm {
 
 	static void floatAdd(InlineParams p) {
 		if (p.result->needed()) {
-			*p.state->l << fld(p.param(0));
-			*p.state->l << fld(p.param(1));
-			*p.state->l << faddp();
-			*p.state->l << fstp(p.result->location(p.state));
-			*p.state->l << fwait();
+			Operand result = p.result->location(p.state);
+			*p.state->l << mov(result, p.param(0));
+			*p.state->l << fadd(result, p.param(1));
 		}
 	}
 
 	static void floatSub(InlineParams p) {
 		if (p.result->needed()) {
-			*p.state->l << fld(p.param(0));
-			*p.state->l << fld(p.param(1));
-			*p.state->l << fsubp();
-			*p.state->l << fstp(p.result->location(p.state));
-			*p.state->l << fwait();
+			Operand result = p.result->location(p.state);
+			*p.state->l << mov(result, p.param(0));
+			*p.state->l << fsub(result, p.param(1));
 		}
 	}
 
 	static void floatNeg(InlineParams p) {
 		if (p.result->needed()) {
-			*p.state->l << fldz();
-			*p.state->l << fld(p.param(0));
-			*p.state->l << fsubp();
-			*p.state->l << fstp(p.result->location(p.state));
-			*p.state->l << fwait();
+			Operand result = p.result->location(p.state);
+			*p.state->l << fneg(result, p.param(0));
 		}
 	}
 
 	static void floatMul(InlineParams p) {
 		if (p.result->needed()) {
-			*p.state->l << fld(p.param(0));
-			*p.state->l << fld(p.param(1));
-			*p.state->l << fmulp();
-			*p.state->l << fstp(p.result->location(p.state));
-			*p.state->l << fwait();
+			Operand result = p.result->location(p.state);
+			*p.state->l << mov(result, p.param(0));
+			*p.state->l << fmul(result, p.param(1));
 		}
 	}
 
 	static void floatDiv(InlineParams p) {
 		if (p.result->needed()) {
-			*p.state->l << fld(p.param(0));
-			*p.state->l << fld(p.param(1));
-			*p.state->l << fdivp();
-			*p.state->l << fstp(p.result->location(p.state));
-			*p.state->l << fwait();
+			Operand result = p.result->location(p.state);
+			*p.state->l << mov(result, p.param(0));
+			*p.state->l << fdiv(result, p.param(1));
 		}
 	}
 
@@ -81,25 +70,27 @@ namespace storm {
 	static void floatToInt(InlineParams p) {
 		if (!p.result->needed())
 			return;
-		*p.state->l << fld(p.param(0));
-		*p.state->l << fistp(p.result->location(p.state));
+		*p.state->l << fcasti(p.result->location(p.state), p.param(0));
+	}
+
+	static void floatToNat(InlineParams p) {
+		if (!p.result->needed())
+			return;
+		*p.state->l << fcastu(p.result->location(p.state), p.param(0));
 	}
 
 	// Note: Can be used for both 'double' and 'float'.
 	static void floatToFloat(InlineParams p) {
 		if (!p.result->needed())
 			return;
-		*p.state->l << fld(p.param(0));
-		*p.state->l << fstp(p.result->location(p.state));
+		*p.state->l << fcast(p.result->location(p.state), p.param(0));
 	}
 
 	template <CondFlag f>
 	static void floatCmp(InlineParams p) {
 		if (p.result->needed()) {
 			Operand result = p.result->location(p.state);
-			*p.state->l << fld(p.param(1));
-			*p.state->l << fld(p.param(0));
-			*p.state->l << fcompp();
+			*p.state->l << fcmp(p.param(0), p.param(1));
 			*p.state->l << setCond(result, f);
 		}
 	}
@@ -159,6 +150,7 @@ namespace storm {
 		add(inlinedFunction(engine, vInt, S("int"), v, fnPtr(engine, &floatToInt))->makePure());
 		Value vLong = Value(StormInfo<Long>::type(engine));
 		add(inlinedFunction(engine, vLong, S("long"), v, fnPtr(engine, &floatToInt))->makePure());
+		TODO(L"Add conversions to nat and word as well.");
 		Value vDouble = Value(StormInfo<Double>::type(engine));
 		add(inlinedFunction(engine, vDouble, S("double"), v, fnPtr(engine, &floatToFloat))->makePure());
 
@@ -192,56 +184,6 @@ namespace storm {
 		*p.state->l << mov(doubleRel(p.regParam(0), Offset()), doubleRel(p.regParam(1), Offset()));
 	}
 
-	static void doubleAdd(InlineParams p) {
-		if (p.result->needed()) {
-			*p.state->l << fld(p.param(0));
-			*p.state->l << fld(p.param(1));
-			*p.state->l << faddp();
-			*p.state->l << fstp(p.result->location(p.state));
-			*p.state->l << fwait();
-		}
-	}
-
-	static void doubleSub(InlineParams p) {
-		if (p.result->needed()) {
-			*p.state->l << fld(p.param(0));
-			*p.state->l << fld(p.param(1));
-			*p.state->l << fsubp();
-			*p.state->l << fstp(p.result->location(p.state));
-			*p.state->l << fwait();
-		}
-	}
-
-	static void doubleNeg(InlineParams p) {
-		if (p.result->needed()) {
-			*p.state->l << fldz();
-			*p.state->l << fld(p.param(0));
-			*p.state->l << fsubp();
-			*p.state->l << fstp(p.result->location(p.state));
-			*p.state->l << fwait();
-		}
-	}
-
-	static void doubleMul(InlineParams p) {
-		if (p.result->needed()) {
-			*p.state->l << fld(p.param(0));
-			*p.state->l << fld(p.param(1));
-			*p.state->l << fmulp();
-			*p.state->l << fstp(p.result->location(p.state));
-			*p.state->l << fwait();
-		}
-	}
-
-	static void doubleDiv(InlineParams p) {
-		if (p.result->needed()) {
-			*p.state->l << fld(p.param(0));
-			*p.state->l << fld(p.param(1));
-			*p.state->l << fdivp();
-			*p.state->l << fstp(p.result->location(p.state));
-			*p.state->l << fwait();
-		}
-	}
-
 	static void doubleAssign(InlineParams p) {
 		p.allocRegs(0);
 		Reg dest = p.regParam(0);
@@ -251,17 +193,6 @@ namespace storm {
 			if (!p.result->suggest(p.state, p.originalParam(0))) {
 				*p.state->l << mov(p.result->location(p.state), dest);
 			}
-	}
-
-	template <CondFlag f>
-	static void doubleCmp(InlineParams p) {
-		if (p.result->needed()) {
-			Operand result = p.result->location(p.state);
-			*p.state->l << fld(p.param(1));
-			*p.state->l << fld(p.param(0));
-			*p.state->l << fcompp();
-			*p.state->l << setCond(result, f);
-		}
 	}
 
 	static Double doubleMin(Double a, Double b) {
@@ -307,19 +238,19 @@ namespace storm {
 		add(inlinedFunction(engine, Value(), Type::CTOR, rr, fnPtr(engine, &doubleCopyCtor))->makePure());
 		add(inlinedFunction(engine, Value(this, true), S("="), rv, fnPtr(engine, &doubleAssign))->makePure());
 
-		add(inlinedFunction(engine, Value(this), S("+"), vv, fnPtr(engine, &doubleAdd))->makePure());
-		add(inlinedFunction(engine, Value(this), S("-"), vv, fnPtr(engine, &doubleSub))->makePure());
-		add(inlinedFunction(engine, Value(this), S("*"), vv, fnPtr(engine, &doubleMul))->makePure());
-		add(inlinedFunction(engine, Value(this), S("/"), vv, fnPtr(engine, &doubleDiv))->makePure());
-		add(inlinedFunction(engine, Value(this), S("-"), v, fnPtr(engine, &doubleNeg))->makePure());
+		add(inlinedFunction(engine, Value(this), S("+"), vv, fnPtr(engine, &floatAdd))->makePure());
+		add(inlinedFunction(engine, Value(this), S("-"), vv, fnPtr(engine, &floatSub))->makePure());
+		add(inlinedFunction(engine, Value(this), S("*"), vv, fnPtr(engine, &floatMul))->makePure());
+		add(inlinedFunction(engine, Value(this), S("/"), vv, fnPtr(engine, &floatDiv))->makePure());
+		add(inlinedFunction(engine, Value(this), S("-"), v, fnPtr(engine, &floatNeg))->makePure());
 
 		Value vBool = Value(StormInfo<Bool>::type(engine));
-		add(inlinedFunction(engine, vBool, S(">"), vv, fnPtr(engine, &doubleCmp<ifFAbove>))->makePure());
-		add(inlinedFunction(engine, vBool, S(">="), vv, fnPtr(engine, &doubleCmp<ifFAboveEqual>))->makePure());
-		add(inlinedFunction(engine, vBool, S("<"), vv, fnPtr(engine, &doubleCmp<ifFBelow>))->makePure());
-		add(inlinedFunction(engine, vBool, S("<="), vv, fnPtr(engine, &doubleCmp<ifFBelowEqual>))->makePure());
-		add(inlinedFunction(engine, vBool, S("=="), vv, fnPtr(engine, &doubleCmp<ifEqual>))->makePure());
-		add(inlinedFunction(engine, vBool, S("!="), vv, fnPtr(engine, &doubleCmp<ifNotEqual>))->makePure());
+		add(inlinedFunction(engine, vBool, S(">"), vv, fnPtr(engine, &floatCmp<ifFAbove>))->makePure());
+		add(inlinedFunction(engine, vBool, S(">="), vv, fnPtr(engine, &floatCmp<ifFAboveEqual>))->makePure());
+		add(inlinedFunction(engine, vBool, S("<"), vv, fnPtr(engine, &floatCmp<ifFBelow>))->makePure());
+		add(inlinedFunction(engine, vBool, S("<="), vv, fnPtr(engine, &floatCmp<ifFBelowEqual>))->makePure());
+		add(inlinedFunction(engine, vBool, S("=="), vv, fnPtr(engine, &floatCmp<ifEqual>))->makePure());
+		add(inlinedFunction(engine, vBool, S("!="), vv, fnPtr(engine, &floatCmp<ifNotEqual>))->makePure());
 
 		Array<Value> *rf = valList(engine, 2, Value(this, true), Value(StormInfo<Float>::type(engine)));
 		add(inlinedFunction(engine, Value(), Type::CTOR, rf, fnPtr(engine, &castDouble))->makeAutoCast()->makePure());

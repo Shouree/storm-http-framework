@@ -20,8 +20,7 @@ namespace storm {
 		if (!p.result->needed())
 			return;
 
-		*p.state->l << fild(p.param(0));
-		*p.state->l << fstp(p.result->location(p.state));
+		*p.state->l << icastf(p.result->location(p.state), p.param(0));
 	}
 
 	static Int intRead(IStream *from) {
@@ -120,6 +119,13 @@ namespace storm {
 		*p.state->l << ucast(intRel(p.regParam(0), Offset()), p.param(1));
 	}
 
+	static void natToFloat(InlineParams p) {
+		if (!p.result->needed())
+			return;
+
+		*p.state->l << ucastf(p.result->location(p.state), p.param(0));
+	}
+
 	static Nat natRead(IStream *from) {
 		return from->readNat();
 	}
@@ -201,6 +207,8 @@ namespace storm {
 		add(inlinedFunction(engine, Value(StormInfo<Byte>::type(engine)), S("byte"), v, fnPtr(engine, &ucast))->makePure());
 		add(inlinedFunction(engine, Value(StormInfo<Long>::type(engine)), S("long"), v, fnPtr(engine, &ucast))->makePure());
 		add(inlinedFunction(engine, Value(StormInfo<Word>::type(engine)), S("word"), v, fnPtr(engine, &ucast))->makePure());
+		add(inlinedFunction(engine, Value(StormInfo<Float>::type(engine)), S("float"), v, fnPtr(engine, &natToFloat))->makePure());
+		add(inlinedFunction(engine, Value(StormInfo<Double>::type(engine)), S("double"), v, fnPtr(engine, &natToFloat))->makePure());
 
 		add(nativeFunction(engine, Value(this), S("hash"), v, address(&natHash))->makePure());
 		add(inlinedFunction(engine, Value(this), S("min"), vv, fnPtr(engine, &numMin<Nat>))->makePure());

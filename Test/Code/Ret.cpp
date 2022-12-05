@@ -651,9 +651,6 @@ static double CODECALL createDouble() {
 }
 
 BEGIN_TEST(RetCallDouble, Code) {
-	TODO(L"ENABLE");
-	break;
-
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 	Ref toCall = arena->external(S("create"), address(&createDouble));
@@ -664,8 +661,7 @@ BEGIN_TEST(RetCallDouble, Code) {
 	*l << prolog();
 
 	*l << fnCall(toCall, false, doubleDesc(e), v);
-	*l << fld(v);
-	*l << fistp(v);
+	*l << fcasti(v, v);
 
 	*l << fnRet(v);
 
@@ -677,9 +673,6 @@ BEGIN_TEST(RetCallDouble, Code) {
 } END_TEST
 
 BEGIN_TEST(RetCallRefDouble, Code) {
-	TODO(L"ENABLE");
-	break;
-
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 	Ref toCall = arena->external(S("create"), address(&createDouble));
@@ -691,8 +684,7 @@ BEGIN_TEST(RetCallRefDouble, Code) {
 
 	*l << lea(ptrA, v);
 	*l << fnCallRef(toCall, false, doubleDesc(e), ptrA);
-	*l << fld(v);
-	*l << fistp(v);
+	*l << fcasti(v, v);
 
 	*l << fnRet(v);
 

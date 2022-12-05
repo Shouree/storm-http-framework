@@ -5,9 +5,6 @@
 using namespace code;
 
 BEGIN_TEST(FloatTest, Code) {
-	TODO(L"ENABLE");
-	break;
-
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -18,14 +15,12 @@ BEGIN_TEST(FloatTest, Code) {
 
 	*l << prolog();
 
-	*l << fld(p1);
-	*l << fld(p2);
-	*l << fmulp();
+	*l << mov(eax, p1);
+	*l << fmul(eax, p2);
 	*l << mov(v1, intConst(10));
-	*l << fild(v1);
-	*l << fmulp();
-	*l << fistp(v1);
-	*l << mov(eax, v1);
+	*l << icastf(ebx, v1);
+	*l << fmul(Operand(eax), ebx);
+	*l << fcasti(eax, eax);
 
 	l->result = intDesc(e);
 	*l << fnRet(eax);

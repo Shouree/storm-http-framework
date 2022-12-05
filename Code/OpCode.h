@@ -50,17 +50,23 @@ namespace code {
 			ucast,
 
 			// Floating point.
+			fadd,
+			fsub,
+			fneg,
+			fmul,
+			fdiv,
+			fcmp,
+			ftoi,
+			ftou,
+			fcast,  // float -> float
+			fcasti, // float -> int
+			fcastu, // float -> unsigned
+			icastf, // int -> float
+			ucastf, // unsigned -> float
+
+			// FP stack (to support calling convention on x86 in 32-bit mode).
 			fstp,
-			fistp,
 			fld,
-			fild,
-			fldz,
-			faddp,
-			fsubp,
-			fmulp,
-			fdivp,
-			fcompp,
-			fwait,
 
 			// Data
 			dat,
