@@ -434,6 +434,24 @@ namespace code {
 			}
 		}
 
+		static Operand preserveResultReg(Listing *to, Operand resultPos, Reg resultTempReg, RegSet *used) {
+			Reg resultReg = resultPos.reg();
+			if (isIntReg(resultReg) && intRegNumber(resultReg) >= 19) {
+				// No need to preserve. Already safe.
+				return resultPos;
+			} else {
+				used->remove(resultReg);
+				used->put(resultTempReg);
+				*to << mov(resultTempReg, resultReg);
+
+				if (resultPos.type() == opRegister) {
+					return Operand(resultTempReg);
+				} else {
+					return xRel(resultPos.size(), resultTempReg, resultPos.offset());
+				}
+			}
+		}
+
 		// Actual entry-point.
 		void emitFnCall(Listing *dest, Operand toCall, Operand resultPos, TypeDesc *resultType,
 						Bool resultRef, Block currentBlock, RegSet *used, Array<ParamInfo> *params) {
@@ -452,6 +470,16 @@ namespace code {
 				}
 			}
 
+			// If we are asked to store the result in memory as indicated by a register, then we
+			// need to preserve the register. We can store it in 'resultTempReg' if that is the
+			// case. We must also ensure that the register is preserved when we emit parameter code.
+			if (resultPos.type() == opRelative) {
+				resultPos = preserveResultReg(dest, resultPos, resultTempReg, used);
+			} else if (resultRef && resultPos.type() == opRegister) {
+				resultPos = preserveResultReg(dest, resultPos, resultTempReg, used);
+			}
+
+			// Figure out parameter layout.
 			Params *paramLayout = new (e) Params();
 			for (Nat i = 0; i < params->count(); i++) {
 				paramLayout->add(i, params->at(i).type);

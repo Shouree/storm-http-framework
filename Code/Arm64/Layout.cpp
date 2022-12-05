@@ -414,14 +414,15 @@ namespace code {
 			}
 		}
 
-		static void returnSimple(Listing *dest, Result *result, Size size, Reg src) {
+		static void returnSimple(Listing *dest, Result *result, Size size, Reg src, Operand resultLocation) {
 			if (result->memory) {
 				// Memcpy using the mov instruction.
 				Reg destReg = ptrB;
 				if (src == ptrB)
 					destReg = ptrC;
+				*dest << mov(destReg, resultLocation);
 
-				inlineMemcpy(dest, destReg, src, ptrr(16), ptrr(17));
+				inlineMemcpy(dest, xRel(size, destReg, Offset()), xRel(size, src, Offset()), ptrr(16), ptrr(17));
 
 			} else if (result->regType != primitive::none) {
 				// Just populate the relevant registers:
@@ -476,11 +477,11 @@ namespace code {
 			} else if (ComplexDesc *c = as<ComplexDesc>(dest->result)) {
 				// Call the copy constructor.
 				*dest << lea(ptrB, value);
-				*dest << lea(ptrA, resultLocation());
+				*dest << mov(ptrA, resultLocation());
 				*dest << call(c->ctor, Size());
 			} else if (SimpleDesc *s = as<SimpleDesc>(dest->result)) {
 				*dest << lea(ptrA, value);
-				returnSimple(dest, result, s->size(), ptrA);
+				returnSimple(dest, result, s->size(), ptrA, resultLocation());
 			} else {
 				assert(false);
 			}
@@ -507,8 +508,8 @@ namespace code {
 				}
 			} else if (ComplexDesc *c = as<ComplexDesc>(dest->result)) {
 				// Call the copy constructor.
-				*dest << lea(ptrB, value);
-				*dest << lea(ptrA, resultLocation());
+				*dest << mov(ptrB, value);
+				*dest << mov(ptrA, resultLocation());
 				*dest << call(c->ctor, Size());
 			} else if (SimpleDesc *s = as<SimpleDesc>(dest->result)) {
 				Reg reg = ptrA;
@@ -517,7 +518,7 @@ namespace code {
 				} else {
 					*dest << mov(reg, value);
 				}
-				returnSimple(dest, result, s->size(), reg);
+				returnSimple(dest, result, s->size(), reg, resultLocation());
 			} else {
 				assert(false);
 			}

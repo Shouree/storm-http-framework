@@ -5,7 +5,7 @@
 
 using namespace code;
 
-BEGIN_TEST_(JmpTest, Code) {
+BEGIN_TEST(JmpTest, Code) {
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -32,7 +32,7 @@ BEGIN_TEST_(JmpTest, Code) {
 	*l << epilog();
 	*l << ret(Size::sInt);
 
-	PVAR(l);
+	// PVAR(l);
 
 	Binary *b = new (e) Binary(arena, l);
 	typedef Int (*Fn)(Int);
@@ -44,7 +44,7 @@ BEGIN_TEST_(JmpTest, Code) {
 
 } END_TEST
 
-BEGIN_TEST_(UsedTest, Code) {
+BEGIN_TEST(UsedTest, Code) {
 	// This is to test that the used registers logics works properly in code that contains jumps.
 	// In this code, the registers eax and ebx are dirty throughout the loop. This would not be
 	// caught by the old logic.
@@ -76,7 +76,7 @@ BEGIN_TEST_(UsedTest, Code) {
 	*l << end;
 	*l << fnRet(eax);
 
-	PVAR(l);
+	// PVAR(l);
 
 	UsedRegs used = code::usedRegs(null, l);
 	CHECK(used.used->at(8)->has(eax));

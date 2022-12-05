@@ -229,7 +229,6 @@ namespace code {
 
 			if (isLabelJump(instr)) {
 				processJump(state, instr, instr->dest().label().key(), usedNow);
-				// No need to record dependencies!
 
 				// TODO: With slightly better data structures we could remove this node from the
 				// work-list at this point if it is there. This means that we will avoid some calls
