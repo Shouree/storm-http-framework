@@ -168,8 +168,12 @@ BEGIN_TEST(CalleeMixed, Code) {
 
 	*l << prolog();
 
+	// Implements: Float(a.a) - a.b / a.c
 	*l << mov(ebx, intRel(p1, Offset()));
-	TODO(L"Implement when we have floating point support on ARM.");
+	*l << icastf(ebx, ebx);
+	*l << mov(eax, floatRel(p1, Offset::sPtr));
+	*l << fdiv(eax, floatRel(p1, Offset::sPtr + Offset::sFloat));
+	*l << code::fsub(ebx, eax);
 
 	*l << fnRet(ebx);
 
@@ -177,7 +181,7 @@ BEGIN_TEST(CalleeMixed, Code) {
 	typedef Float (*Fn)(MixedParam);
 	Fn fn = (Fn)b->address();
 
-	CHECK_EQ((*fn)(MixedParam(100, 40.0f, 10.0f)), 30);
+	CHECK_EQ((*fn)(MixedParam(100, 40.0f, 10.0f)), 96.0f);
 
 } END_TEST
 

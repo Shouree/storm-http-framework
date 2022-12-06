@@ -895,20 +895,78 @@ namespace code {
 			TODO(L"Implement PRESERVE pseudo-op!");
 		}
 
-		void fmulOut(Output *to, Instr *instr) {
-			Bool is64 = instr->dest().size().size64() > 4;
-			Nat destReg = fpReg(instr->dest().reg());
-			putData3(to, is64 ? 0x0F3 : 0x0F1,
-					destReg, destReg,
-					fpReg(instr->src().reg()),
-					0x02);
+		static void fpOut(Output *to, Instr *instr, Nat op) {
+			Operand dest = instr->dest();
+			Bool is64 = dest.size().size64() > 4;
+			Nat baseOp = 0x0F1;
+			if (is64)
+				baseOp |= 0x2; // sets ftype to 0x1
+			Nat destReg = fpReg(dest.reg());
+			putData3(to, baseOp, destReg, destReg, fpReg(instr->src().reg()), op);
 		}
 
-		void fcastiOut(Output *to, Instr *instr) {
+		void faddOut(Output *to, Instr *instr) {
+			fpOut(to, instr, 0x0A);
+		}
+
+		void fsubOut(Output *to, Instr *instr) {
+			fpOut(to, instr, 0x0E);
+		}
+
+		void fnegOut(Output *to, Instr *instr) {
+			Operand dest = instr->dest();
+			Bool is64 = dest.size().size64() > 4;
+			Nat op = 0x1E214000;
+			if (is64)
+				op |= Nat(1) << 22;
+			op |= fpReg(dest.reg());
+			op |= fpReg(instr->src().reg()) << 5;
+			to->putInt(op);
+		}
+
+		void fmulOut(Output *to, Instr *instr) {
+			fpOut(to, instr, 0x02);
+		}
+
+		void fdivOut(Output *to, Instr *instr) {
+			fpOut(to, instr, 0x06);
+		}
+
+		void fcmpOut(Output *to, Instr *instr) {
+			// Note: This op-code supports comparing to the literal zero. We don't emit that op-code though...
+			Operand src = instr->src();
+			Operand dest = instr->dest();
+			Bool is64 = dest.size().size64() > 4;
+			Nat baseOp = 0x0F1;
+			if (is64)
+				baseOp |= Nat(1) << 22;
+			putData3(to, baseOp, 0x0, fpReg(dest.reg()), fpReg(src.reg()), 0x08);
+		}
+
+		void fcastOut(Output *to, Instr *instr) {
 			Bool in64 = instr->dest().size().size64() > 4;
 			Bool out64 = instr->dest().size().size64() > 4;
 
-			Nat op = 0x1E380000;
+			if (in64 == out64) {
+				// Just emit a mov instruction:
+				regRegMove(to, instr->dest().reg(), instr->src().reg());
+				return;
+			}
+
+			Nat op = 0x1E224000;
+			if (in64)
+				op |= Nat(1) << 22;
+			if (out64)
+				op |= Nat(1) << 15;
+			op |= intRegZR(instr->dest().reg());
+			op |= fpReg(instr->src().reg()) << 5;
+			to->putInt(op);
+		}
+
+		static void fromFloat(Output *to, Instr *instr, Nat op) {
+			Bool in64 = instr->dest().size().size64() > 4;
+			Bool out64 = instr->dest().size().size64() > 4;
+
 			if (in64)
 				op |= Nat(1) << 22;
 			if (out64)
@@ -918,46 +976,33 @@ namespace code {
 			to->putInt(op);
 		}
 
+		void fcastiOut(Output *to, Instr *instr) {
+			fromFloat(to, instr, 0x1E380000);
+		}
+
 		void fcastuOut(Output *to, Instr *instr) {
+			fromFloat(to, instr, 0x1E390000);
+		}
+
+		static void toFloat(Output *to, Instr *instr, Nat op) {
 			Bool in64 = instr->dest().size().size64() > 4;
 			Bool out64 = instr->dest().size().size64() > 4;
 
-			Nat op = 0x1E390000;
-			if (in64)
-				op |= Nat(1) << 22;
 			if (out64)
+				op |= Nat(1) << 22;
+			if (in64)
 				op |= Nat(1) << 31;
-			op |= intRegZR(instr->dest().reg());
-			op |= fpReg(instr->src().reg()) << 5;
+			op |= fpReg(instr->dest().reg());
+			op |= intRegZR(instr->src().reg()) << 5;
 			to->putInt(op);
 		}
 
 		void icastfOut(Output *to, Instr *instr) {
-			Bool in64 = instr->dest().size().size64() > 4;
-			Bool out64 = instr->dest().size().size64() > 4;
-
-			Nat op = 0x1E220000;
-			if (out64)
-				op |= Nat(1) << 22;
-			if (in64)
-				op |= Nat(1) << 31;
-			op |= fpReg(instr->dest().reg());
-			op |= intRegZR(instr->src().reg()) << 5;
-			to->putInt(op);
+			toFloat(to, instr, 0x1E220000);
 		}
 
 		void ucastfOut(Output *to, Instr *instr) {
-			Bool in64 = instr->dest().size().size64() > 4;
-			Bool out64 = instr->dest().size().size64() > 4;
-
-			Nat op = 0x1E030000;
-			if (out64)
-				op |= Nat(1) << 22;
-			if (in64)
-				op |= Nat(1) << 31;
-			op |= fpReg(instr->dest().reg());
-			op |= intRegZR(instr->src().reg()) << 5;
-			to->putInt(op);
+			toFloat(to, instr, 0x1E230000);
 		}
 
 		void datOut(Output *to, Instr *instr) {
@@ -1019,13 +1064,13 @@ namespace code {
 			OUTPUT(shr),
 			OUTPUT(sar),
 
-			// OUTPUT(fadd),
-			// OUTPUT(fsub),
-			// OUTPUT(fneg),
+			OUTPUT(fadd),
+			OUTPUT(fsub),
+			OUTPUT(fneg),
 			OUTPUT(fmul),
-			// OUTPUT(fdiv),
-			// OUTPUT(fcmp),
-			// OUTPUT(fcast),
+			OUTPUT(fdiv),
+			OUTPUT(fcmp),
+			OUTPUT(fcast),
 			OUTPUT(fcasti),
 			OUTPUT(fcastu),
 			OUTPUT(icastf),
