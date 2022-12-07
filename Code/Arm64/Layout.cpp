@@ -41,7 +41,7 @@ namespace code {
 
 			// Find registers that need to be preserved.
 			preserved = allUsedRegs(src);
-			for (Nat i = 0; i < fnDirtyCount; i++)
+			for (size_t i = 0; i < fnDirtyCount; i++)
 				preserved->remove(fnDirtyRegs[i]);
 
 			// Figure out result.

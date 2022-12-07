@@ -112,8 +112,9 @@ namespace code {
 		// Find an unused fp register given a set of used registers.
 		Reg unusedFpReg(RegSet *in);
 
-		// Get the set of registers that can be left dirty through a function call.
-		RegSet *STORM_FN fnDirtyRegs(EnginePtr e);
+		// Registers clobbered by function calls.
+		extern const Reg *fnDirtyRegs;
+		extern const size_t fnDirtyCount;
 
 		// Save/restore the registers (on the stack) required to store 'result' as a return value.
 		// Typically some combination of 'rax', 'rdx', 'xmm0' and 'xmm1' are used.

@@ -237,7 +237,10 @@ namespace code {
 
 		void RemoveInvalid::beginBlockTfm(Listing *dest, Instr *instr, Nat line) {
 			currentBlock = instr->src().block();
-			*dest << instr;
+
+			// We need to tell the next step what register(s) are free.
+			Reg r = asSize(unusedReg(used->at(line)), Size::sLong);
+			*dest << instr->alterDest(r);
 		}
 
 		void RemoveInvalid::endBlockTfm(Listing *dest, Instr *instr, Nat line) {

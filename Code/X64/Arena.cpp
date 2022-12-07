@@ -41,9 +41,8 @@ namespace code {
 		}
 
 		void Arena::removeFnRegs(RegSet *from) const {
-			RegSet *r = fnDirtyRegs(engine());
-			for (RegSet::Iter i = r->begin(); i != r->end(); ++i)
-				from->remove(i.v());
+			for (size_t i = 0; i < fnDirtyCount; i++)
+				from->remove(fnDirtyRegs[i]);
 		}
 
 		Listing *Arena::redirect(Bool member, TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand param) {

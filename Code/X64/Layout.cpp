@@ -50,16 +50,9 @@ namespace code {
 			}
 
 			// Figure out which registers we need to spill.
-			{
-				toPreserve = new (this) RegSet();
-				RegSet *notPreserved = fnDirtyRegs(engine());
-				RegSet *used = allUsedRegs(src);
-
-				for (RegSet::Iter i = used->begin(); i != used->end(); ++i) {
-					if (!notPreserved->has(i.v()))
-						toPreserve->put(i.v());
-				}
-			}
+			toPreserve = allUsedRegs(src);
+			for (size_t i = 0; i < fnDirtyCount; i++)
+				toPreserve->remove(fnDirtyRegs[i]);
 
 			// Compute the layout.
 			Nat spilled = toPreserve->count();
@@ -204,7 +197,7 @@ namespace code {
 			spillParams(dest);
 
 			// Initialize the root block.
-			initBlock(dest, dest->root());
+			initBlock(dest, dest->root(), rax);
 		}
 
 		void Layout::epilogTfm(Listing *dest, Listing *src, Nat line) {
@@ -232,7 +225,9 @@ namespace code {
 		}
 
 		void Layout::beginBlockTfm(Listing *dest, Listing *src, Nat line) {
-			initBlock(dest, src->at(line)->src().block());
+			Instr *instr = src->at(line);
+			// Note: register is added in the previous pass.
+			initBlock(dest, instr->src().block(), instr->dest().reg());
 		}
 
 		void Layout::endBlockTfm(Listing *dest, Listing *src, Nat line) {
@@ -282,17 +277,19 @@ namespace code {
 			return -(Offset::sPtr * count);
 		}
 
-		// Zero the memory of a variable. 'initEax' should be true if we need to set eax to 0 before
-		// using it as our zero. 'initRax' will be set to false, so that it is easy to use zeroVar
-		// in a loop, causing only the first invocation to emit 'rax := 0'.
-		static void zeroVar(Listing *dest, Offset start, Size size, Bool &initRax) {
+		// Zero the memory of a variable. 'initReg' should be true if we need to set <reg> to 0
+		// before using it as our zero. 'initReg' will be set to false, so that it is easy to use
+		// zeroVar in a loop, causing only the first invocation to emit '<reg> := 0'.
+		static void zeroVar(Listing *dest, Offset start, Size size, Reg reg, Bool &initReg) {
 			nat s64 = size.size64();
 			if (s64 == 0)
 				return;
 
-			if (initRax) {
-				*dest << bxor(rax, rax);
-				initRax = false;
+			reg = asSize(reg, Size::sLong);
+
+			if (initReg) {
+				*dest << bxor(reg, reg);
+				initReg = false;
 			}
 
 			// Note: We need to be careful not to overshoot too much. We might have a stack of
@@ -301,19 +298,19 @@ namespace code {
 			nat pos = 0;
 			while (pos < s64) {
 				if (s64 - pos >= 8) {
-					*dest << mov(longRel(ptrFrame, start + Offset(pos)), rax);
+					*dest << mov(longRel(ptrFrame, start + Offset(pos)), reg);
 					pos += 8;
 				} else if (s64 - pos >= 4) {
-					*dest << mov(intRel(ptrFrame, start + Offset(pos)), eax);
+					*dest << mov(intRel(ptrFrame, start + Offset(pos)), asSize(reg, Size::sInt));
 					pos += 4;
 				} else {
-					*dest << mov(byteRel(ptrFrame, start + Offset(pos)), al);
+					*dest << mov(byteRel(ptrFrame, start + Offset(pos)), asSize(reg, Size::sByte));
 					pos += 1;
 				}
 			}
 		}
 
-		void Layout::initBlock(Listing *dest, Block init) {
+		void Layout::initBlock(Listing *dest, Block init, Reg reg) {
 			if (block != dest->parent(init)) {
 				Str *msg = TO_S(engine(), S("Can not begin ") << init << S(" unless the current is ")
 								<< dest->parent(init) << S(". Current is ") << block);
@@ -322,14 +319,14 @@ namespace code {
 
 			block = init;
 
-			Bool initEax = true;
+			Bool initReg = true;
 			Array<Var> *vars = dest->allVars(init);
 			// Go in reverse to make linear accesses in memory when we're using big variables.
 			for (Nat i = vars->count(); i > 0; i--) {
 				Var v = vars->at(i - 1);
 
 				if (!dest->isParam(v))
-					zeroVar(dest, layout->at(v.key()), v.size(), initEax);
+					zeroVar(dest, layout->at(v.key()), v.size(), reg, initReg);
 			}
 
 			if (usingEH) {

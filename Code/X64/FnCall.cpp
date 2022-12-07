@@ -383,31 +383,31 @@ namespace code {
 		 * Complex parameters.
 		 */
 
-		// Find registers we need to preserve while calling constructors.
+		// Find registers we need to preserve while calling constructors. We assume that 'used' contains
+		// all registers in the parameters. Modifies 'used'.
 		static void preserveComplex(Listing *dest, RegSet *used, Block block, Array<ParamInfo> *params) {
-			RegSet *regs = new (used) RegSet(*used);
-
-			Bool firstComplex = true;
+			// Remove 'used' for the first parameter.
 			for (Nat i = 0; i < params->count(); i++) {
 				ParamInfo &param = params->at(i);
 
-				if (as<ComplexDesc>(param.type) != null && firstComplex) {
+				if (as<ComplexDesc>(param.type) != null) {
 					// We do not need to preserve anything required by the first complex
 					// parameter. It will manage anyway!
-					firstComplex = false;
-					continue;
+					if (param.src.hasRegister())
+						used->remove(param.src.reg());
+					break;
 				}
+			}
 
-				if (param.src.type() == opRegister)
-					regs->put(param.src.reg());
+			// Add the dirty registers to the mix.
+			RegSet *dirty = new (dest) RegSet();
+			for (size_t i = 0; i < fnDirtyCount; i++) {
+				dirty->put(fnDirtyRegs[i]);
+				used->put(fnDirtyRegs[i]);
 			}
 
 			// Move things around!
-			RegSet *dirty = fnDirtyRegs(dest->engine());
-			used = new (dirty) RegSet(*dirty);
-			used->put(regs);
-
-			firstComplex = true;
+			Bool firstComplex = true;
 			for (Nat i = 0; i < params->count(); i++) {
 				ParamInfo &param = params->at(i);
 
@@ -445,15 +445,16 @@ namespace code {
 		static Block copyComplex(Listing *dest, RegSet *used, Array<ParamInfo> *params, Block currentBlock) {
 			Block block = dest->createBlock(currentBlock);
 
-			TODO(L"We need to add the registers used by parameters as well, otherwise 'used' is too narrow.");
-			if (used->has(ptrA)) {
-				Reg r = unusedReg(used);
-				*dest << mov(r, ptrA);
-				*dest << begin(block);
-				*dest << mov(ptrA, r);
-			} else {
-				*dest << begin(block);
+			// Add registers from parameters to 'used'.
+			used = new (used) RegSet(*used);
+			for (Nat i = 0; i < params->count(); i++) {
+				ParamInfo &param = params->at(i);
+				if (param.src.hasRegister())
+					used->put(param.src.reg());
 			}
+
+			// We need to tell the next stage what register is free to use!
+			*dest << begin(dest->engine(), block)->alterDest(asSize(unusedReg(used), Size::sLong));
 
 			// Find registers we need to preserve while calling constructors.
 			preserveComplex(dest, used, block, params);
@@ -523,13 +524,27 @@ namespace code {
 
 			// Is the result parameter in a register that needs to be preserved?
 			if (resultRef && resultPos.type() == opRegister) {
-				RegSet *clobbered = fnDirtyRegs(e);
-				if (clobbered->has(resultPos.reg())) {
-					// We need to preserve it somewhere.
-					clobbered->put(used);
-					Reg to = asSize(unusedReg(clobbered), Size::sPtr);
-					used->put(to);
+				Bool resultDirty = false;
+				for (size_t i = 0; i < fnDirtyCount; i++) {
+					if (same(fnDirtyRegs[i], resultPos.reg())) {
+						resultDirty = true;
+						break;
+					}
+				}
 
+				if (resultDirty) {
+					// We need to preserve it somewhere. Pick any of the registers that need to be
+					// preserved separately.
+					static const Reg alternatives[] = { ptrB, ptr12, ptr14, ptr15 };
+					Reg to = noReg;
+					for (Nat i = 0; i < ARRAY_COUNT(alternatives); i++) {
+						if (!used->has(alternatives[i])) {
+							to = asSize(alternatives[i], Size::sPtr);
+							break;
+						}
+					}
+
+					used->put(to);
 					*dest << mov(to, resultPos);
 					resultPos = to;
 				}

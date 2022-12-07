@@ -93,7 +93,7 @@ namespace code {
 			Operand resolve(Listing *src, const Operand &op, const Size &size);
 
 			// Create and destroy blocks.
-			void initBlock(Listing *dest, Block init);
+			void initBlock(Listing *dest, Block init, Reg reg);
 			void destroyBlock(Listing *dest, Block destroy, Bool preserveRax, Bool notifyTable);
 
 			// Spill parameters to the stack.

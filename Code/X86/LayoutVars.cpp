@@ -217,6 +217,7 @@ namespace code {
 
 			block = init;
 
+			TODO(L"We can't assume that eax is free at this point.");
 			bool initEax = true;
 
 			Array<Var> *vars = dest->allVars(init);
