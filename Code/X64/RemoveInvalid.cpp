@@ -51,15 +51,15 @@ namespace code {
 
 			FP_OP(fadd),
 			FP_OP(fsub),
-			FP_OP(fneg),
+			TRANSFORM(fneg),
 			FP_OP(fmul),
 			FP_OP(fdiv),
 			FP_OP(fcmp),
 			FP_OP(fcast),
-			FP_OP(fcasti),
-			FP_OP(fcastu),
-			FP_OP(icastf),
-			FP_OP(ucastf),
+			TRANSFORM(fcasti),
+			TRANSFORM(fcastu),
+			TRANSFORM(icastf),
+			TRANSFORM(ucastf),
 		};
 
 		static bool isComplexParam(Listing *l, Var v) {
@@ -476,9 +476,11 @@ namespace code {
 				dstReg = loadFpRegister(dest, dst, line);
 			} else {
 				// Just pick a register if the specified one is not good enough.
-				if (!fpRegister(dst)) {
+				if (fpRegister(dst)) {
+					dstReg = dst.reg();
+				} else {
 					dstReg = asSize(unusedFpReg(used->at(line)), dst.size());
-					used->at(line)->put(dstReg);
+					// We don't need to update the register in the used set either, usage will not overlap.
 					// No need to load it, it is not read.
 				}
 			}
@@ -492,6 +494,52 @@ namespace code {
 				if (dst.type() != opRegister || dst.reg() != dstReg)
 					*dest << mov(dst, dstReg);
 			}
+		}
+
+		void RemoveInvalid::fnegTfm(Listing *dest, Instr *instr, Nat line) {
+			Operand src = loadFpRegisterOrMemory(dest, instr->src(), line);
+			Operand dst = instr->dest();
+
+			// Just pick a register if the specified one is not good enough.
+			if (!fpRegister(dst)) {
+				Reg dstReg = asSize(unusedFpReg(used->at(line)), dst.size());
+				*dest << instr->alter(dstReg, src);
+				*dest << mov(dst, dstReg);
+			} else {
+				*dest << instr->alterSrc(src);
+			}
+		}
+
+		void RemoveInvalid::fcastiTfm(Listing *dest, Instr *instr, Nat line) {
+			Operand src = loadFpRegisterOrMemory(dest, instr->src(), line);
+
+			Operand dst = instr->dest();
+			if (dst.type() != opRegister) {
+				Reg r = asSize(unusedReg(used->at(line)), dst.size());
+				*dest << instr->alter(r, src);
+				*dest << mov(dst, r);
+			} else {
+				*dest << instr->alterSrc(src);
+			}
+		}
+
+		void RemoveInvalid::fcastuTfm(Listing *dest, Instr *instr, Nat line) {
+			fcastiTfm(dest, instr, line);
+		}
+
+		void RemoveInvalid::icastfTfm(Listing *dest, Instr *instr, Nat line) {
+			Operand dst = instr->dest();
+			if (fpRegister(dst)) {
+				*dest << instr;
+			} else {
+				Reg r = asSize(unusedFpReg(used->at(line)), dst.size());
+				*dest << instr->alterDest(r);
+				*dest << mov(dst, r);
+			}
+		}
+
+		void RemoveInvalid::ucastfTfm(Listing *dest, Instr *instr, Nat line) {
+			icastfTfm(dest, instr, line);
 		}
 
 	}

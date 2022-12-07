@@ -576,16 +576,6 @@ namespace code {
 			}
 		}
 
-		void fistpOut(Output *to, Instr *instr) {
-			// We're actually using the FISTTP instruction, since that fixes proper truncation for us!
-			// It does, however, require SSE3. But that seems fair.
-			if (instr->size() == Size::sLong) {
-				modRm(to, opCode(0xDD), rmNone, 1, instr->dest());
-			} else {
-				modRm(to, opCode(0xDB), rmNone, 1, instr->dest());
-			}
-		}
-
 		void fldOut(Output *to, Instr *instr) {
 			if (instr->size() == Size::sDouble) {
 				modRm(to, opCode(0xDD), rmNone, 0, instr->src());
@@ -594,52 +584,78 @@ namespace code {
 			}
 		}
 
-		void fildOut(Output *to, Instr *instr) {
-			if (instr->size() == Size::sLong) {
-				modRm(to, opCode(0xDF), rmNone, 5, instr->src());
-			} else {
-				modRm(to, opCode(0xDB), rmNone, 0, instr->src());
+		static void fpOp(Output *to, Instr *instr, OpCode op) {
+			if (instr->size() == Size::sDouble)
+				op.prefix = 0xF2;
+			else
+				op.prefix = 0xF3;
+			modRm(to, op, rmNone, instr->dest(), instr->src());
+		}
+
+		void faddOut(Output *to, Instr *instr) {
+			fpOp(to, instr, opCode(0x0F, 0x58));
+		}
+
+		void fsubOut(Output *to, Instr *instr) {
+			fpOp(to, instr, opCode(0x0F, 0x5C));
+		}
+
+		void fmulOut(Output *to, Instr *instr) {
+			fpOp(to, instr, opCode(0x0F, 0x59));
+		}
+
+		void fdivOut(Output *to, Instr *instr) {
+			fpOp(to, instr, opCode(0x0F, 0x5E));
+		}
+
+		void fcmpOut(Output *to, Instr *instr) {
+			// Note: this is COMISS/COMISD, not CMPSS/CMPSD
+			OpCode op = instr->size() == Size::sDouble
+				? prefixOpCode(0x66, 0x0F, 0x2F)
+				: opCode(0x0F, 0x2F);
+			modRm(to, op, rmNone, instr->dest(), instr->src());
+		}
+
+		void fcastOut(Output *to, Instr *instr) {
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+
+			if (src.size() == dst.size()) {
+				// Just a mov operation!
+				movOut(to, instr);
+				return;
 			}
+
+			if (src.size() == Size::sDouble)
+				modRm(to, prefixOpCode(0xF2, 0x0F, 0x5A), rmNone, instr->dest(), instr->src());
+			else
+				modRm(to, prefixOpCode(0xF3, 0x0F, 0x5A), rmNone, instr->dest(), instr->src());
 		}
 
-		void fldzOut(Output *to, Instr *instr) {
-			to->putByte(0xD9);
-			to->putByte(0xEE);
+		void fcastiOut(Output *to, Instr *instr) {
+			byte prefix = instr->src().size() == Size::sDouble
+				? 0xF2 : 0xF3;
+			modRm(to, prefixOpCode(prefix, 0x0F, 0x2C), wide(instr->dest()), instr->dest(), instr->src());
 		}
 
-		void faddpOut(Output *to, Instr *instr) {
-			to->putByte(0xDE);
-			to->putByte(0xC1);
+		void fcastuOut(Output *to, Instr *instr) {
+			// TODO: Do something sensible!
+			fcastiOut(to, instr);
 		}
 
-		void fsubpOut(Output *to, Instr *instr) {
-			to->putByte(0xDE);
-			to->putByte(0xE9);
+		void icastfOut(Output *to, Instr *instr) {
+			// TODO: Need to clear target register first? (use PXOR, 66 0f ef XX)
+
+			byte prefix = instr->dest().size() == Size::sDouble
+				? 0xF2 : 0xF3;
+			modRm(to, prefixOpCode(prefix, 0x0F, 0x2A), wide(instr->src()), instr->dest(), instr->src());
 		}
 
-		void fmulpOut(Output *to, Instr *instr) {
-			to->putByte(0xDE);
-			to->putByte(0xC9);
+		void ucastfOut(Output *to, Instr *instr) {
+			// TODO: Do something sensible!
+			icastfOut(to, instr);
 		}
 
-		void fdivpOut(Output *to, Instr *instr) {
-			to->putByte(0xDE);
-			to->putByte(0xF9);
-		}
-
-		void fcomppOut(Output *to, Instr *instr) {
-			// fcomip ST1 (sets EFLAGS)
-			to->putByte(0xDF);
-			to->putByte(0xF0 + 1);
-
-			// fstp ST0 (effectively only a pop)
-			to->putByte(0xDD);
-			to->putByte(0xD8 + 0);
-		}
-
-		void fwaitOut(Output *to, Instr *instr) {
-			to->putByte(0x9B);
-		}
 
 		void datOut(Output *to, Instr *instr) {
 			Operand src = instr->src();
@@ -714,15 +730,16 @@ namespace code {
 			// Floating point.
 			OUTPUT(fstp),
 			OUTPUT(fld),
-			// OUTPUT(fistp),
-			// OUTPUT(fild),
-			// OUTPUT(fldz),
-			// OUTPUT(faddp),
-			// OUTPUT(fsubp),
-			// OUTPUT(fmulp),
-			// OUTPUT(fdivp),
-			// OUTPUT(fcompp),
-			// OUTPUT(fwait),
+			OUTPUT(fadd),
+			OUTPUT(fsub),
+			OUTPUT(fmul),
+			OUTPUT(fdiv),
+			OUTPUT(fcmp),
+			OUTPUT(fcast),
+			OUTPUT(fcasti),
+			OUTPUT(fcastu),
+			OUTPUT(icastf),
+			OUTPUT(ucastf),
 
 			OUTPUT(dat),
 			OUTPUT(lblOffset),

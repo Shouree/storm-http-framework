@@ -649,8 +649,22 @@ namespace code {
 
 		void RemoveInvalid::fpInstrTfm(Listing *to, Instr *instr, Nat line) {
 			Operand dest = instr->dest();
+			DestMode mode = destMode(instr->op());
+
 			Reg srcReg = loadFpRegister(to, instr->src(), line);
-			Reg dstReg = loadFpRegister(to, dest, line);
+
+			Reg dstReg;
+			if (mode & destRead) {
+				dstReg = loadFpRegister(to, dest, line);
+			} else {
+				if (dest.type() == opRegister) {
+					dstReg = dest.reg();
+				} else {
+					dstReg = unusedReg(used->at(line), dest.size());
+					// We don't need to update the register in the used set either, usage will not overlap.
+					// Don't need to load!
+				}
+			}
 
 			*to << instr->alter(dstReg, srcReg);
 

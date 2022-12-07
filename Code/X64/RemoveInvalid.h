@@ -92,6 +92,11 @@ namespace code {
 			void imodTfm(Listing *dest, Instr *instr, Nat line);
 			void udivTfm(Listing *dest, Instr *instr, Nat line);
 			void umodTfm(Listing *dest, Instr *instr, Nat line);
+			void fnegTfm(Listing *dest, Instr *instr, Nat line);
+			void fcastiTfm(Listing *dest, Instr *instr, Nat line);
+			void fcastuTfm(Listing *dest, Instr *instr, Nat line);
+			void icastfTfm(Listing *dest, Instr *instr, Nat line);
+			void ucastfTfm(Listing *dest, Instr *instr, Nat line);
 		};
 
 	}
