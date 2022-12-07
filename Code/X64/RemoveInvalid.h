@@ -47,6 +47,10 @@ namespace code {
 			// Remove any references to complex parameters.
 			Instr *extractComplex(Listing *dest, Instr *i, Nat line);
 
+			// Load floating-point register.
+			Reg loadFpRegister(Listing *dest, const Operand &op, Nat line);
+			Operand loadFpRegisterOrMemory(Listing *dest, const Operand &op, Nat line);
+
 			// Parameters for an upcoming 'fnCall' instruction.
 			Array<ParamInfo> *params;
 
@@ -65,6 +69,9 @@ namespace code {
 			// Generic transform for instructions requiring their dest operand to be a register.
 			void destRegWTfm(Listing *dest, Instr *instr, Nat line);
 			void destRegRwTfm(Listing *dest, Instr *instr, Nat line);
+
+			// Generic transform for floating point operations.
+			void fpInstrTfm(Listing *dest, Instr *instr, Nat line);
 
 			// Function calls.
 			void fnParamTfm(Listing *dest, Instr *instr, Nat line);

@@ -109,6 +109,9 @@ namespace code {
 		// As above, but returns 'noReg' instead of throwing if no registers are available.
 		Reg unusedRegUnsafe(RegSet *in);
 
+		// Find an unused fp register given a set of used registers.
+		Reg unusedFpReg(RegSet *in);
+
 		// Get the set of registers that can be left dirty through a function call.
 		RegSet *STORM_FN fnDirtyRegs(EnginePtr e);
 

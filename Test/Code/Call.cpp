@@ -606,7 +606,9 @@ BEGIN_TEST(CallComplexFromArray, Code) {
 
 	*l << fnRet(eax);
 
-	Binary *b = new (e) Binary(arena, l);
+	PVAR(l);
+
+	Binary *b = new (e) Binary(arena, l, true);
 	typedef Int (*Fn)(const DbgVal **);
 	Fn fn = (Fn)b->address();
 

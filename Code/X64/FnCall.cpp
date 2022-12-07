@@ -445,6 +445,7 @@ namespace code {
 		static Block copyComplex(Listing *dest, RegSet *used, Array<ParamInfo> *params, Block currentBlock) {
 			Block block = dest->createBlock(currentBlock);
 
+			TODO(L"We need to add the registers used by parameters as well, otherwise 'used' is too narrow.");
 			if (used->has(ptrA)) {
 				Reg r = unusedReg(used);
 				*dest << mov(r, ptrA);

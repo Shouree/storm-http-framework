@@ -13,6 +13,7 @@ namespace code {
 #define IMM_REG(x) { op::x, &RemoveInvalid::immRegTfm }
 #define DEST_W_REG(x) { op::x, &RemoveInvalid::destRegWTfm }
 #define DEST_RW_REG(x) { op::x, &RemoveInvalid::destRegRwTfm }
+#define FP_OP(x) { op::x, &RemoveInvalid::fpInstrTfm }
 
 		const OpEntry<RemoveInvalid::TransformFn> RemoveInvalid::transformMap[] = {
 			IMM_REG(mov),
@@ -47,6 +48,18 @@ namespace code {
 			TRANSFORM(shr),
 			TRANSFORM(sar),
 			TRANSFORM(shl),
+
+			FP_OP(fadd),
+			FP_OP(fsub),
+			FP_OP(fneg),
+			FP_OP(fmul),
+			FP_OP(fdiv),
+			FP_OP(fcmp),
+			FP_OP(fcast),
+			FP_OP(fcasti),
+			FP_OP(fcastu),
+			FP_OP(icastf),
+			FP_OP(ucastf),
 		};
 
 		static bool isComplexParam(Listing *l, Var v) {
@@ -426,6 +439,56 @@ namespace code {
 
 		void RemoveInvalid::umodTfm(Listing *dest, Instr *instr, Nat line) {
 			imodTfm(dest, instr, line);
+		}
+
+		Reg RemoveInvalid::loadFpRegister(Listing *dest, const Operand &op, Nat line) {
+			// Must be in a fp register!
+			if (fpRegister(op))
+				return op.reg();
+
+			// Just load it into a free vector register!
+			Reg r = asSize(unusedFpReg(used->at(line)), op.size());
+			used->at(line)->put(r);
+			*dest << mov(r, op);
+			return r;
+		}
+
+		Operand RemoveInvalid::loadFpRegisterOrMemory(Listing *dest, const Operand &op, Nat line) {
+			switch (op.type()) {
+			case opRelative:
+			case opVariable:
+				return op;
+			default:
+				return loadFpRegister(dest, op, line);
+			}
+		}
+
+		void RemoveInvalid::fpInstrTfm(Listing *dest, Instr *instr, Nat line) {
+			// The XMM instructions we use support a source in memory, but not a destination.
+			Operand dst = instr->dest();
+			DestMode mode = destMode(instr->op());
+
+			Reg dstReg = noReg;
+			if (mode & destRead) {
+				dstReg = loadFpRegister(dest, dst, line);
+			} else {
+				// Just pick a register if the specified one is not good enough.
+				if (!fpRegister(dst)) {
+					dstReg = asSize(unusedFpReg(used->at(line)), dst.size());
+					used->at(line)->put(dstReg);
+					// No need to load it, it is not read.
+				}
+			}
+
+			Operand src = loadFpRegisterOrMemory(dest, instr->src(), line);
+
+			*dest << instr->alter(dstReg, src);
+
+			// Write it back if necessary.
+			if (mode & destWrite) {
+				if (dst.type() != opRegister || dst.reg() != dstReg)
+					*dest << mov(dst, dstReg);
+			}
 		}
 
 	}

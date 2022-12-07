@@ -252,7 +252,7 @@ doEndDetourMember:
 
 	# If it is odd, we need to do a vtable lookup!
 	testq $1, %rax
-	jeq 1f
+	je 1f
 
 	# Perform a vtable lookup and store it on the stack, ready for 'retq' to consume.
 	movq (%rdi), %rax  # load the vtable pointer

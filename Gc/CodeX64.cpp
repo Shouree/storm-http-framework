@@ -82,7 +82,7 @@ namespace storm {
 
 			// Write the value back to memory.
 			unalignedAtomicWrite(*(size_t *)mem, insert);
-			invalidateICache(mem);
+			invalidateICache(mem, (byte *)mem + sizeof(size_t));
 		}
 
 #endif

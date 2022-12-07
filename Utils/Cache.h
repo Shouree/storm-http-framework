@@ -45,6 +45,8 @@ inline void clearLocalICache();
 
 // Nothing special needed on X86/X64 except for preventing reordering from the compiler.
 inline void invalidateDCache(void *start, void *end) {
+	(void)start;
+	(void)end;
 	__asm__ volatile ("" : : : "memory");
 }
 
@@ -53,10 +55,13 @@ inline void dataBarrier() {
 }
 
 inline void invalidateSingleICache(void *start) {
+	(void)start;
 	__asm__ volatile ("" : : : "memory");
 }
 
 inline void invalidateICache(void *start, void *end) {
+	(void)start;
+	(void)end;
 	__asm__ volatile ("" : : : "memory");
 }
 

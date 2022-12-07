@@ -295,7 +295,17 @@ namespace code {
 				if (!in->has(candidates[i]))
 					return candidates[i];
 			}
+			return noReg;
+		}
 
+		Reg unusedFpReg(RegSet *in) {
+			static const Reg candidates[] = {
+				xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
+			};
+			for (nat i = 0; i < ARRAY_COUNT(candidates); i++) {
+				if (!in->has(candidates[i]))
+					return candidates[i];
+			}
 			return noReg;
 		}
 

@@ -61,9 +61,10 @@ inline const void *address(T fn) {
 
 template <class Fn>
 inline Fn asMemberPtr(const void *fn) {
-	Fn result;
+	Fn to;
 	memset(&to, 0, sizeof(Fn));
 	memcpy(&to, &fn, sizeof(void *));
+	return to;
 }
 
 #elif defined(GCC) && defined(POSIX) && defined(ARM64)
