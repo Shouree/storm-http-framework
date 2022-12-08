@@ -677,6 +677,9 @@ namespace code {
 
 			OUTPUT(fstp),
 			OUTPUT(fld),
+			// Basic testing shows that:
+			// use movups instead of movaps for unaligned loads
+			// unaligned operations for add/sub/etc is fine
 			// OUTPUT(fistp),
 			// OUTPUT(fild),
 			// OUTPUT(fldz),
