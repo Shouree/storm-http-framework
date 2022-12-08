@@ -164,8 +164,6 @@ namespace storm {
 		ioThread(null),
 		stackInfo(gc) {
 
-		PVAR(this);
-
 		bootStatus = bootNone;
 
 		stackId = ::stackInfo().attach(stackInfo);
