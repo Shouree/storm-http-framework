@@ -390,7 +390,7 @@ BEGIN_TEST(UThreadTracesTest, OS) {
 	// Should find the two threads that are recursing now.
 	// Note: If this test fails, it is possible that the debug information stopped working,
 	// or that the compiler optimized the "recurseInner" recursion a bit too hard.
-	CHECK_GTE(numUThreads, 2);
+	CHECK_GTE(numUThreads, size_t(2));
 
 	// Make threads exit.
 	UThread::leave();

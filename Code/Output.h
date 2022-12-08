@@ -161,7 +161,7 @@ namespace code {
 		STORM_CTOR CodeOutput();
 
 		virtual void *codePtr() const;
-		virtual void finish();
+		virtual void STORM_FN finish();
 	};
 
 	/**

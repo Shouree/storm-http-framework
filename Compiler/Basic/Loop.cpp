@@ -13,7 +13,7 @@ namespace storm {
 
 		Condition *Loop::cond() {
 			if (!condition)
-				throw new (this) RuntimeError(S("Must call 'cond' before creating a while body!"));
+				throw new (this) UsageError(S("Must call 'cond' before creating a while body!"));
 			return condition;
 		}
 
@@ -33,7 +33,7 @@ namespace storm {
 
 		CondSuccess *Loop::createWhileBody() {
 			if (!condition)
-				throw new (this) RuntimeError(S("Must call 'cond' before creating a while body!"));
+				throw new (this) UsageError(S("Must call 'cond' before creating a while body!"));
 			whileExpr = new (this) CondSuccess(pos, this, condition);
 			return whileExpr;
 		}

@@ -153,7 +153,7 @@ namespace code {
 	};
 
 	static Bool isLabelJump(Instr *instr) {
-		return instr->op() == op::jmp & instr->dest().type() == opLabel;
+		return (instr->op() == op::jmp) & (instr->dest().type() == opLabel);
 	}
 
 	static Bool processJump(RegState &state, Instr *instr, Nat target, RegSet *usedNow) {

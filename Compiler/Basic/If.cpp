@@ -35,7 +35,7 @@ namespace storm {
 			using namespace code;
 
 			if (!trueCode)
-				throw new (this) RuntimeError(S("Must set the true branch in an if-statement!"));
+				throw new (this) UsageError(S("Must set the true branch in an if-statement!"));
 
 			Value condType(StormInfo<Bool>::type(engine()));
 			CodeResult *condResult = new (this) CodeResult(condType, state->block);

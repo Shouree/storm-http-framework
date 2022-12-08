@@ -76,7 +76,7 @@ namespace storm {
 
 		void CondSuccess::set(Expr *e) {
 			if (expr)
-				throw new (e) RuntimeError(S("Cannot call CondSuccess::set multiple times!"));
+				throw new (e) UsageError(S("Cannot call CondSuccess::set multiple times!"));
 			expr = e;
 		}
 

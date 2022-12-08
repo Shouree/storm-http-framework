@@ -281,7 +281,7 @@ namespace storm {
 				msg = TO_S(target, S("Type mismatch for object passed to 'pointer'. Expected ")
 						<< p->at(0) << S(", but got ") << Value(runtime::typeOf(thisPtr)));
 
-			throw new (target) RuntimeError(msg);
+			throw new (target) UsageError(msg);
 		}
 		Type *t = fnType(p);
 

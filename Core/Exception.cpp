@@ -36,6 +36,8 @@ namespace storm {
 		return this;
 	}
 
+	RuntimeError::RuntimeError() {}
+
 	GcError::GcError(const wchar *msg) : msg(msg) {
 		saveTrace();
 	}
@@ -79,6 +81,19 @@ namespace storm {
 		*to << S("Operation not supported: ") << msg;
 	}
 
+	UsageError::UsageError(const wchar *msg) {
+		this->msg = new (this) Str(msg);
+		saveTrace();
+	}
+
+	UsageError::UsageError(Str *msg) : msg(msg) {
+		saveTrace();
+	}
+
+	void UsageError::message(StrBuf *to) const {
+		*to << msg;
+	}
+
 	InternalError::InternalError(const wchar *msg) {
 		this->msg = new (this) Str(msg);
 		saveTrace();
@@ -93,27 +108,14 @@ namespace storm {
 		*to << S("Internal error: ") << msg;
 	}
 
-	RuntimeError::RuntimeError(const wchar *msg) {
-		this->msg = new (this) Str(msg);
-		saveTrace();
+	AbstractFnCalled::AbstractFnCalled(const wchar *name) : RuntimeError() {
+		this->name = new (this) Str(name);
 	}
 
-	RuntimeError::RuntimeError(Str *msg) {
-		this->msg = msg;
-		saveTrace();
-	}
-
-	void RuntimeError::message(StrBuf *to) const {
-		*to << msg;
-	}
-
-	AbstractFnCalled::AbstractFnCalled(const wchar *name) : RuntimeError(name) {}
-
-	AbstractFnCalled::AbstractFnCalled(Str *name) : RuntimeError(name) {}
+	AbstractFnCalled::AbstractFnCalled(Str *name) : RuntimeError(), name(name) {}
 
 	void AbstractFnCalled::message(StrBuf *to) const {
-		*to << S("Abstract function called: ");
-		RuntimeError::message(to);
+		*to << S("Abstract function called: ") << name;
 	}
 
 	StrError::StrError(const wchar *msg) {

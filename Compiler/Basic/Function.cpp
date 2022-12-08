@@ -328,7 +328,7 @@ namespace storm {
 		bs::FnBody *BSTreeFn::createBody() {
 			if (!root) {
 				Str *msg = TO_S(engine(), S("The body of ") << identifier() << S(" was not set before trying to use it."));
-				throw new (this) RuntimeError(msg);
+				throw new (this) UsageError(msg);
 			}
 
 			return root;

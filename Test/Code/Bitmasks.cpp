@@ -38,7 +38,7 @@ static Nat useBitmask32(Word bitmask) {
 	*l << mov(eax, intConst(0));
 
 	// On ARM, the or operation is encoded using the bitmask method.
-	*l << bor(eax, intConst(bitmask));
+	*l << bor(eax, intConst(Nat(bitmask)));
 
 	*l << fnRet(eax);
 

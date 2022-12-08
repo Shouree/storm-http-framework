@@ -43,11 +43,21 @@ namespace storm {
 
 
 	/**
+	 * Runtime errors from various parts of the system.
+	 */
+	class EXCEPTION_EXPORT RuntimeError : public Exception {
+		STORM_EXCEPTION;
+	public:
+		STORM_CTOR RuntimeError();
+	};
+
+
+	/**
 	 * Exception thrown by the garbage collector.
 	 *
 	 * The most common type of error is an out of memory error, but others may occur.
 	 */
-	class EXCEPTION_EXPORT GcError : public Exception {
+	class EXCEPTION_EXPORT GcError : public RuntimeError {
 		STORM_EXCEPTION;
 	public:
 		// Create, basic C-string to avoid memory allocations.
@@ -64,7 +74,7 @@ namespace storm {
 	/**
 	 * Arithmetic errors. Thrown by numerical operations when an error occurs.
 	 */
-	class EXCEPTION_EXPORT NumericError : public Exception {
+	class EXCEPTION_EXPORT NumericError : public RuntimeError {
 		STORM_EXCEPTION;
 	public:
 		// Create.
@@ -90,7 +100,7 @@ namespace storm {
 	/**
 	 * Access violation. Thrown when an invalid address has been accessed.
 	 */
-	class EXCEPTION_EXPORT MemoryAccessError : public NumericError {
+	class EXCEPTION_EXPORT MemoryAccessError : public RuntimeError {
 		STORM_EXCEPTION;
 	public:
 		// Create.
@@ -122,28 +132,29 @@ namespace storm {
 
 
 	/**
-	 * Internal error.
+	 * Invalid usage.
 	 */
-	class EXCEPTION_EXPORT InternalError : public Exception {
+	class EXCEPTION_EXPORT UsageError : public Exception {
 		STORM_EXCEPTION;
 	public:
-		InternalError(const wchar *msg);
-		STORM_CTOR InternalError(Str *msg);
+		UsageError(const wchar *msg);
+		STORM_CTOR UsageError(Str *msg);
 
 		virtual void STORM_FN message(StrBuf *to) const;
+
 	private:
 		Str *msg;
 	};
 
 
 	/**
-	 * Runtime errors.
+	 * Internal error.
 	 */
-	class EXCEPTION_EXPORT RuntimeError : public Exception {
+	class EXCEPTION_EXPORT InternalError : public RuntimeError {
 		STORM_EXCEPTION;
 	public:
-		RuntimeError(const wchar *msg);
-		STORM_CTOR RuntimeError(Str *msg);
+		InternalError(const wchar *msg);
+		STORM_CTOR InternalError(Str *msg);
 
 		virtual void STORM_FN message(StrBuf *to) const;
 	private:
@@ -158,7 +169,11 @@ namespace storm {
 	public:
 		AbstractFnCalled(const wchar *name);
 		STORM_CTOR AbstractFnCalled(Str *msg);
+
 		virtual void STORM_FN message(StrBuf *to) const;
+
+	private:
+		Str *name;
 	};
 
 

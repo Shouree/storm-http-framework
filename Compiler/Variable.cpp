@@ -74,9 +74,9 @@ namespace storm {
 
 		FnType *fnType = as<FnType>(runtime::typeOf(initializer));
 		if (!fnType)
-			throw new (this) RuntimeError(S("Invalid type of the initializer passed to GlobalVar. Must be a function pointer."));
+			throw new (this) UsageError(S("Invalid type of the initializer passed to GlobalVar. Must be a function pointer."));
 		if (fnType->params->count() != 1)
-			throw new (this) RuntimeError(S("An initializer provided to GlobalVar may not take parameters."));
+			throw new (this) UsageError(S("An initializer provided to GlobalVar may not take parameters."));
 
 		hasArray = type.isValue();
 	}
@@ -86,9 +86,9 @@ namespace storm {
 
 		FnType *fnType = as<FnType>(runtime::typeOf(initializer));
 		if (!fnType)
-			throw new (this) RuntimeError(S("Invalid type of the initializer passed to GlobalVar. Must be a function pointer."));
+			throw new (this) UsageError(S("Invalid type of the initializer passed to GlobalVar. Must be a function pointer."));
 		if (fnType->params->count() != 1)
-			throw new (this) RuntimeError(S("An initializer provided to GlobalVar may not take parameters."));
+			throw new (this) UsageError(S("An initializer provided to GlobalVar may not take parameters."));
 
 		hasArray = type.isValue();
 	}
@@ -107,14 +107,14 @@ namespace storm {
 		// Find the 'call' function so that we may call that.
 		Function *callFn = as<Function>(fnType->find(S("call"), thisPtr(fnType), engine().scope()));
 		if (!callFn)
-			throw new (this) RuntimeError(S("Can not find 'call()' in the provided function pointer. Is the signature correct?"));
+			throw new (this) InternalError(S("Can not find 'call()' in the provided function pointer. Is the signature correct?"));
 
 		// Check the return type.
 		if (!type.canStore(callFn->result)) {
 			Str *msg = TO_S(this, S("The global variable ") << name
 							<< S(" can not store the type returned from the initializer. Expected ")
 							<< type << S(", got ") << callFn->result << S("."));
-			throw new (this) RuntimeError(msg);
+			throw new (this) UsageError(msg);
 		}
 
 		void *outPtr = &data;

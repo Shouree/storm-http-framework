@@ -34,95 +34,95 @@ namespace code {
 		// https://developer.arm.com/documentation/ddi0596/2021-12/Index-by-Encoding?lang=en
 
 		// Check if value fits in 6-bit signed.
-		static Bool isImm6S(Int value) {
+		static Bool isImm6S(Long value) {
 			return value >= -0x20 && value <= 0x1F;
 		}
-		static void checkImm6S(RootObject *e, Int value) {
+		static void checkImm6S(RootObject *e, Long value) {
 			if (!isImm6S(value))
 				throw new (e) InvalidValue(TO_S(e, S("Too large signed 6-bit immediate value: ") << value));
 		}
 
 		// Check if value fits in 6-bit unsigned.
-		static Bool isImm6U(Nat value) {
+		static Bool isImm6U(Word value) {
 			return value <= 0x3F;
 		}
-		static void checkImm6U(RootObject *e, Int value) {
+		static void checkImm6U(RootObject *e, Long value) {
 			if (!isImm6U(value))
 				throw new (e) InvalidValue(TO_S(e, S("Too large unsigned 6-bit immediate value: ") << value));
 		}
 
 		// Check if value fits in 7-bit signed.
-		static Bool isImm7S(Int value) {
+		static Bool isImm7S(Long value) {
 			return value >= -0x40 && value <= 0x3F;
 		}
-		static void checkImm7S(RootObject *e, Int value) {
+		static void checkImm7S(RootObject *e, Long value) {
 			if (!isImm7S(value))
 				throw new (e) InvalidValue(TO_S(e, S("Too large signed 7-bit immediate value: ") << value));
 		}
 
 		// Check if value fits in 7-bit unsigned.
-		static Bool isImm7U(Nat value) {
+		static Bool isImm7U(Word value) {
 			return value <= 0x7F;
 		}
-		static void checkImm7U(RootObject *e, Nat value) {
+		static void checkImm7U(RootObject *e, Word value) {
 			if (!isImm7U(value))
 				throw new (e) InvalidValue(TO_S(e, S("Too large unsigned 7-bit immediate value: ") << value));
 		}
 
 		// Check if value fits in 12-bit signed.
-		static Bool isImm12S(Int value) {
+		static Bool isImm12S(Long value) {
 			return value >= -0x800 && value <= 0x7FF;
 		}
-		static void checkImm12S(RootObject *e, Int value) {
+		static void checkImm12S(RootObject *e, Long value) {
 			if (!isImm12S(value))
 				throw new (e) InvalidValue(TO_S(e, S("Too large signed 12-bit immediate value: ") << value));
 		}
 
 		// Check if value fits in 12-bit unsigned.
-		static Bool isImm12U(Nat value) {
+		static Bool isImm12U(Word value) {
 			return value <= 0xFFF;
 		}
-		static void checkImm12U(RootObject *e, Nat value) {
+		static void checkImm12U(RootObject *e, Word value) {
 			if (!isImm12U(value))
 				throw new (e) InvalidValue(TO_S(e, S("Too large unsigned 12-bit immediate value: ") << value));
 		}
 
 		// Check if value fits in 19-bit signed.
-		static Bool isImm19S(Int value) {
+		static Bool isImm19S(Long value) {
 			return value >= -0x40000 && value <= 0x3FFFF;
 		}
-		static void checkImm19S(RootObject *e, Int value) {
+		static void checkImm19S(RootObject *e, Long value) {
 			if (!isImm19S(value))
 				throw new (e) InvalidValue(TO_S(e, S("Too large signed 19-bit immediate value: ") << value));
 		}
 
 		// Check if value fits in 19-bit unsigned.
-		static Bool isImm19U(Nat value) {
+		static Bool isImm19U(Word value) {
 			return value <= 0x7FFFF;
 		}
-		static void checkImm19U(RootObject *e, Int value) {
+		static void checkImm19U(RootObject *e, Long value) {
 			if (!isImm19U(value))
 				throw new (e) InvalidValue(TO_S(e, S("Too large unsigned 19-bit immediate value: ") << value));
 		}
 
 		// Check if value fits in 26-bit signed.
-		static Bool isImm26S(Int value) {
+		static Bool isImm26S(Long value) {
 			return value >= -0x02000000 && value <= 0x03FFFFFF;
 		}
-		static void checkImm26S(RootObject *e, Int value) {
+		static void checkImm26S(RootObject *e, Long value) {
 			if (!isImm26S(value))
 				throw new (e) InvalidValue(TO_S(e, S("Too large signed 26-bit immediate value: ") << value));
 		}
 
 		// Put data instructions. 2 registers, 12-bit unsigned immediate.
-		static inline void putData2(Output *to, Nat op, Nat rDest, Nat rSrc, Nat imm) {
+		static inline void putData2(Output *to, Nat op, Nat rDest, Nat rSrc, Word imm) {
 			checkImm12U(to, imm);
 			Nat instr = (op << 22) | rDest | (rSrc << 5) | ((imm & 0xFFF) << 10);
 			to->putInt(instr);
 		}
 
 		// Put data instructions. 3 registers, and a 6-bit unsigned immediate. Some instructions allow 'rb' to be shifted.
-		static inline void putData3(Output *to, Nat op, Nat rDest, Nat ra, Nat rb, Nat imm) {
+		static inline void putData3(Output *to, Nat op, Nat rDest, Nat ra, Nat rb, Word imm) {
 			checkImm6U(to, imm);
 			Nat instr = (op << 21) | rDest | (rb << 16) | (ra << 5) | ((imm & 0x3F) << 10);
 			to->putInt(instr);
@@ -158,21 +158,21 @@ namespace code {
 		}
 
 		// Put instructions for loads and stores: 3 registers and a 7-bit signed immediate.
-		static inline void putLoadStore(Output *to, Nat op, Nat base, Nat r1, Nat r2, Int imm) {
+		static inline void putLoadStore(Output *to, Nat op, Nat base, Nat r1, Nat r2, Long imm) {
 			checkImm7S(to, imm);
 			Nat instr = (op << 22) | r1 | (base << 5) | (r2 << 10) | ((imm & 0x7F) << 15);
 			to->putInt(instr);
 		}
 
 		// Put a "large" load/store (for bytes, mainly): 2 registers and 12-bit immediate.
-		static inline void putLoadStoreLarge(Output *to, Nat op, Nat base, Nat r1, Int imm) {
+		static inline void putLoadStoreLarge(Output *to, Nat op, Nat base, Nat r1, Long imm) {
 			checkImm12S(to, imm);
 			Nat instr = (op << 22) | r1 | (base << 5) | ((0xFFF & imm) << 10);
 			to->putInt(instr);
 		}
 
 		// Put a load/store with 19-bit immediate offset from PC.
-		static inline void putLoadStoreImm(Output *to, Nat op, Nat reg, Int imm) {
+		static inline void putLoadStoreImm(Output *to, Nat op, Nat reg, Long imm) {
 			checkImm19S(to, imm);
 			Nat instr = (op << 24) | reg | ((0x7FFFF & imm) << 5);
 			to->putInt(instr);
@@ -810,10 +810,10 @@ namespace code {
 			Nat dstReg = intRegZR(dst.reg());
 			bool is64 = dst.size().size64() > 4;
 			if (src.type() == opConstant) {
-				Nat shift = src.constant();
+				Nat shift = Nat(src.constant());
 				if (shift == 0) {
 					// Nothing to do.
-				} else if (shift >= (is64 ? 64 : 32)) {
+				} else if (shift >= Nat(is64 ? 64 : 32)) {
 					// Saturated shift. Simply move 0 to the register.
 					putData3(to, 0x550, dstReg, 31, 31, 0);
 				} else {
@@ -839,10 +839,10 @@ namespace code {
 			Nat dstReg = intRegZR(dst.reg());
 			bool is64 = dst.size().size64() > 4;
 			if (src.type() == opConstant) {
-				Nat shift = src.constant();
+				Nat shift = Nat(src.constant());
 				if (shift == 0) {
 					// Nothing to do.
-				} else if (shift >= (is64 ? 64 : 32)) {
+				} else if (shift >= Nat(is64 ? 64 : 32)) {
 					// Saturated shift. Simply move 0 to the register.
 					putData3(to, 0x550, dstReg, 31, 31, 0);
 				} else {
@@ -869,7 +869,7 @@ namespace code {
 			bool is64 = dst.size().size64() > 4;
 			if (src.type() == opConstant) {
 				Nat bits = is64 ? 64 : 32;
-				Nat shift = src.constant();
+				Nat shift = Nat(src.constant());
 				if (shift > bits - 1)
 					shift = bits - 1;
 				if (shift == 0) {

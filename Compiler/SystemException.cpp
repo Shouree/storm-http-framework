@@ -15,9 +15,23 @@ namespace storm {
 	// TODO: Call code inside Code/ for this...
 	RootObject *functionContext(const void *fnStart) {
 		size_t size = runtime::codeSize(fnStart);
+		if (s <= sizeof(void *) * 2)
+			return null;
+
 		const byte *end = (const byte *)fnStart + size;
 		RootObject **data = (RootObject **)end;
 		return data[-2];
+	}
+#endif
+
+#ifdef X86
+	RootObject *functionContext(const void *fnStart) {
+		size_t s = runtime::codeSize(fnStart);
+		if (s <= sizeof(void *))
+			return null;
+
+		const void *pos = (const char *)fnStart + s - sizeof(void *);
+		return *(RootObject **)pos;
 	}
 #endif
 
@@ -114,6 +128,14 @@ namespace storm {
 		sigemptyset(&sa.sa_mask);
 		sa.sa_flags = SA_RESTART | SA_SIGINFO;
 		sigaction(SIGSEGV, &sa, &oldSegvAction);
+	}
+
+#endif
+
+#ifdef WINDOWS
+
+	static void initialize() {
+		TODO(L"Implement me!");
 	}
 
 #endif

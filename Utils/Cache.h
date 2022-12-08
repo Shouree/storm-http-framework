@@ -4,6 +4,13 @@
 
 #ifdef __cplusplus
 extern "C" {
+#else
+
+#ifdef VISUAL_STUDIO
+	// in c-mode, the inline keyword does not seem to be supported. Use 'static' instead, that is
+	// good enough there.
+#define inline static
+#endif
 #endif
 
 /**
@@ -128,7 +135,7 @@ inline void invalidateICache(void *start, void *end) {
 #endif
 
 
-#elif defined(MSVC)
+#elif defined(VISUAL_STUDIO)
 
 // Note: On MSVC we currently only support X86, where we don't need explicit cache control.
 #if !defined(X86) && !defined(X64)
@@ -139,9 +146,17 @@ inline void invalidateDCache(void *start, void *end) {}
 inline void invalidateSingleICache(void *start) {}
 inline void invalidateICache(void *start, void *end) {}
 inline void clearLocalICache() {}
+inline void dataBarrier() {}
+
 
 #endif
 
 #ifdef __cplusplus
 }
+#else
+
+#ifdef VISUAL_STUDIO
+#undef inline
+#endif
+
 #endif

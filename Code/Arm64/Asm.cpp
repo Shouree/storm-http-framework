@@ -121,30 +121,30 @@ namespace code {
 #define ARM_REG_SPECIAL(NR, NAME)				\
 		if (number == NR) {						\
 			if (size == 0) {					\
-				return S("px" NAME);			\
+				return S("px") S(NAME);			\
 			} else if (size == 4) {				\
-				return S("w" NAME);				\
+				return S("w") S(NAME);			\
 			} else if (size == 8) {				\
-				return S("x" NAME);				\
+				return S("x") S(NAME);			\
 			} else if (size == 1) {				\
-				return S("b" NAME);				\
+				return S("b") S(NAME);			\
 			}									\
 	}
 
 #define ARM_REG_CASE(NR)						\
 		ARM_REG_SPECIAL(NR, #NR)
 
-#define ARM_VEC(NR)								\
-		if (number == NR) {						\
-			if (size == 1) {					\
-				return S("b" #NR);				\
-			} else if (size == 4) {				\
-				return S("s" #NR);				\
-			} else if (size == 8) {				\
-				return S("d" #NR);				\
-			} else {							\
-				return S("q" #NR "(invalid)");	\
-			}									\
+#define ARM_VEC(NR)										\
+		if (number == NR) {								\
+			if (size == 1) {							\
+				return S("b") S(#NR);					\
+			} else if (size == 4) {						\
+				return S("s") S(#NR);					\
+			} else if (size == 8) {						\
+				return S("d") S(#NR);					\
+			} else {									\
+				return S("q") S(#NR) S("(invalid)");	\
+			}											\
 		}
 
 		const wchar *nameArm64(Reg r) {
