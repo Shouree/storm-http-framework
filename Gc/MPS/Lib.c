@@ -84,18 +84,6 @@ void mps_init() {
 
 #ifdef DEBUG
 
-#ifdef POSIX
-	// Set up a handler for SIGSEGV that raises a SIGINT instead. This makes debugging in GDB a lot
-	// easier, since it is not possible to distinguish between a genuine SIGSEGV and a SIGSEGV that
-	// MPS handles otherwise.
-	struct sigaction sa;
-	sa.sa_handler = &mps_on_sigsegv;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-
-	sigaction(SIGSEGV, &sa, NULL);
-#endif
-
 #ifdef WINDOWS
 	AddVectoredExceptionHandler(0, &fallbackHandler);
 #endif

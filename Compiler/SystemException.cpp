@@ -77,6 +77,30 @@ namespace storm {
 		chainSigHandler(oldFpeAction, signal, info, context);
 	}
 
+	static struct sigaction oldSegvAction;
+
+	static void handleSegv(int signal, siginfo_t *info, void *context) {
+		// Try to find an engine based on the code that called the instruction, so that we can
+		// extract an Engine object to instantiate the exception.
+		Engine *e = findEngine(info->si_addr);
+		if (!e)
+			e = runtime::someEngineUnsafe();
+
+		if (e) {
+			switch (info->si_code) {
+			case SEGV_MAPERR:
+			case SEGV_ACCERR:
+				throw new (*e) MemoryAccessError(Word(info->si_addr));
+			default:
+				// We could add more...
+				break;
+			}
+		}
+
+		// If we get here, dispatch to other signal handler. This might crash the process.
+		chainSigHandler(oldSegvAction, signal, info, context);
+	}
+
 	static void initialize() {
 		// Add handler for SIGFPE
 		struct sigaction sa;
@@ -84,6 +108,12 @@ namespace storm {
 		sigemptyset(&sa.sa_mask);
 		sa.sa_flags = SA_RESTART | SA_SIGINFO;
 		sigaction(SIGFPE, &sa, &oldFpeAction);
+
+		// Add handler for SIGSEGV
+		sa.sa_sigaction = &handleSegv;
+		sigemptyset(&sa.sa_mask);
+		sa.sa_flags = SA_RESTART | SA_SIGINFO;
+		sigaction(SIGSEGV, &sa, &oldSegvAction);
 	}
 
 #endif

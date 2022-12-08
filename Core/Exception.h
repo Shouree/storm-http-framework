@@ -88,6 +88,24 @@ namespace storm {
 
 
 	/**
+	 * Access violation. Thrown when an invalid address has been accessed.
+	 */
+	class EXCEPTION_EXPORT MemoryAccessError : public NumericError {
+		STORM_EXCEPTION;
+	public:
+		// Create.
+		STORM_CTOR MemoryAccessError(Word address);
+
+		// Message.
+		virtual void STORM_FN message(StrBuf *to) const;
+
+	private:
+		// Faulting address.
+		Word address;
+	};
+
+
+	/**
 	 * Generic exceptions.
 	 */
 	class EXCEPTION_EXPORT NotSupported : public Exception {

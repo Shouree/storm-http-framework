@@ -47,10 +47,21 @@ namespace storm {
 
 	NumericError::NumericError() {}
 
-	DivisionByZero::DivisionByZero() {}
+	DivisionByZero::DivisionByZero() {
+		saveTrace();
+	}
 
 	void DivisionByZero::message(StrBuf *to) const {
 		*to << S("Integer division by zero");
+	}
+
+
+	MemoryAccessError::MemoryAccessError(Word address) : address(address) {
+		saveTrace();
+	}
+
+	void MemoryAccessError::message(StrBuf *to) const {
+		*to << S("Memory access error: address 0x") << hex(size_t(address)) << S(" is invalid.");
 	}
 
 

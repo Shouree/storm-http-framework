@@ -146,8 +146,17 @@ namespace storm {
 	};
 
 
+	static Nat generateId() {
+		// Initialize conversion of system errors.
+		setupSystemExceptions();
+
+		// We use this to inject signal handlers before the MPS.
+		return atomicIncrement(engineId);
+	}
+
+
 	Engine::Engine(const Path &root, ThreadMode mode, void *stackBase) :
-		id(atomicIncrement(engineId)),
+		id(generateId()),
 		gc(defaultArena, defaultFinalizer),
 		threadGroup(util::memberVoidFn(this, &Engine::attachThread), util::memberVoidFn(this, &Engine::detachThread)),
 		world(gc),
@@ -155,15 +164,14 @@ namespace storm {
 		ioThread(null),
 		stackInfo(gc) {
 
+		PVAR(this);
+
 		bootStatus = bootNone;
 
 		stackId = ::stackInfo().attach(stackInfo);
 
 		// Tell the thread system about the 'stackBase' we received.
 		os::Thread::setStackBase(stackBase);
-
-		// Initialize conversion of system errors.
-		setupSystemExceptions();
 
 		// Initialize the roots we need.
 		memset(&o, 0, sizeof(GcRoot));
