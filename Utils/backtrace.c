@@ -3,6 +3,9 @@
 
 #if defined(POSIX) && !defined(NO_LIBBACKTRACE)
 
+// Seems to be needed to build properly. Likely would be added by the configure script.
+#include <link.h>
+
 // Include all files required by the backtrace library, so we do not have to compile it separatly.
 #include "Linux/backtrace/atomic.c"
 #include "Linux/backtrace/backtrace.c"

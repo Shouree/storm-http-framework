@@ -275,6 +275,8 @@ void CppInfo::format(GenericOutput &to, void *fnBase, int offset) const {
 #elif defined(POSIX) && !defined(NO_LIBBACKTRACE)
 #include "backtrace.h"
 #include <cxxabi.h>
+#include <setjmp.h>
+#include <signal.h>
 
 static void backtraceError(void *data, const char *msg, int errnum) {
 	printf("Error during backtraces (%d): %s\n", errnum, msg);
@@ -306,10 +308,42 @@ static void formatError(void *data, const char *msg, int errnum) {
 	d->any = false;
 }
 
+static THREAD jmp_buf checkStringExit;
+
+static void handleSigSegv(int signal) {
+	(void)signal;
+	siglongjmp(checkStringExit, 1);
+}
+
+// Check so that it is possible to read a string. It seems like backtrace_syminfo sometimes might
+// give bogous strings to us, especially when messing with signal handlers. Note: since we mess with
+// signal handlers, this will not work reliably with strings on the GC heap.
+static bool checkString(const char *str) {
+	struct sigaction newAction, oldAction;
+	sigemptyset(&newAction.sa_mask);
+	newAction.sa_handler = &handleSigSegv;
+	newAction.sa_flags = SA_RESTART;
+	sigaction(SIGSEGV, &newAction, &oldAction);
+	if (sigsetjmp(checkStringExit, true) != 0) {
+		// Segmentation fault reading the string!
+		sigaction(SIGSEGV, &oldAction, NULL);
+
+		return false;
+	}
+
+	// Try reading the string. A call to strlen works nicely. Use the result so that it is not
+	// optimized out.
+	bool ok =  strlen(str) > 0;
+	sigaction(SIGSEGV, &oldAction, NULL);
+	return ok;
+}
+
 static void formatOk(void *data, uintptr_t pc, const char *symname, uintptr_t symval, uintptr_t symsize) {
 	FormatData *d = (FormatData *)data;
 
-	if (symname) {
+	// If the version of libbacktrace does not match the one GCC uses well enough, then we won't
+	// crash at least. In some systems it seems like libbacktrace is installed by default.
+	if (checkString(symname)) {
 		int status = 0;
 		char *demangled = abi::__cxa_demangle(symname, null, null, &status);
 		if (status == 0) {
