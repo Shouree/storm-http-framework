@@ -24,6 +24,7 @@
 #include "StdIoThread.h"
 #include "Visibility.h"
 #include "Exception.h"
+#include "SystemException.h"
 #include "OS/StackTrace.h"
 
 // Only included from here:
@@ -160,6 +161,9 @@ namespace storm {
 
 		// Tell the thread system about the 'stackBase' we received.
 		os::Thread::setStackBase(stackBase);
+
+		// Initialize conversion of system errors.
+		setupSystemExceptions();
 
 		// Initialize the roots we need.
 		memset(&o, 0, sizeof(GcRoot));

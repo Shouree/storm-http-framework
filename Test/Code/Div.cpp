@@ -29,9 +29,7 @@ BEGIN_TEST(DivI, Code) {
 	CHECK_EQ((*fn)(8, -2), -4);
 	CHECK_EQ((*fn)(-8, -2), 4);
 
-	// This is somewhat sane. The important part is that it should work the same regardless of
-	// platform. It does not at the moment.
-	CHECK_EQ((*fn)(8, 0), 0);
+	CHECK_ERROR((*fn)(8, 0), DivisionByZero);
 } END_TEST
 
 BEGIN_TEST(DivI2, Code) {

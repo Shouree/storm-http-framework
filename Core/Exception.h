@@ -62,6 +62,32 @@ namespace storm {
 
 
 	/**
+	 * Arithmetic errors. Thrown by numerical operations when an error occurs.
+	 */
+	class EXCEPTION_EXPORT NumericError : public Exception {
+		STORM_EXCEPTION;
+	public:
+		// Create.
+		STORM_CTOR NumericError();
+	};
+
+
+	/**
+	 * Division by zero. Thrown on integer divisions by zero. Floating point numbers generate
+	 * infinity/nan in many cases instead.
+	 */
+	class EXCEPTION_EXPORT DivisionByZero : public NumericError {
+		STORM_EXCEPTION;
+	public:
+		// Create.
+		STORM_CTOR DivisionByZero();
+
+		// Message.
+		virtual void STORM_FN message(StrBuf *to) const;
+	};
+
+
+	/**
 	 * Generic exceptions.
 	 */
 	class EXCEPTION_EXPORT NotSupported : public Exception {

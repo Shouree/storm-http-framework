@@ -64,16 +64,6 @@ void mps_on_sigsegv(int signal) {
 	// Raise SIGINT instead. See the comment below for details.
 	raise(SIGINT);
 }
-
-void catch_fpe(int signal, siginfo_t *info, void *context) {
-	fprintf(stderr, "FPE: %d %d %p\n", signal, info->si_code, info->si_addr);
-	if (info->si_code == FPE_INTDIV) {
-		// Address of instruction is in info->si_addr. We can use that to get an Engine instance.
-		fprintf(stderr, "Integer division by zero!\n");
-	}
-	fflush(stderr);
-	exit(0);
-}
 #endif
 
 #ifdef WINDOWS
@@ -104,11 +94,6 @@ void mps_init() {
 	sa.sa_flags = SA_RESTART;
 
 	sigaction(SIGSEGV, &sa, NULL);
-
-	sa.sa_sigaction = &catch_fpe;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART | SA_SIGINFO;
-	sigaction(SIGFPE, &sa, NULL);
 #endif
 
 #ifdef WINDOWS

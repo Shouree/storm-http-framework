@@ -45,6 +45,15 @@ namespace storm {
 	}
 
 
+	NumericError::NumericError() {}
+
+	DivisionByZero::DivisionByZero() {}
+
+	void DivisionByZero::message(StrBuf *to) const {
+		*to << S("Integer division by zero");
+	}
+
+
 	NotSupported::NotSupported(const wchar *msg) {
 		this->msg = new (this) Str(msg);
 		saveTrace();
