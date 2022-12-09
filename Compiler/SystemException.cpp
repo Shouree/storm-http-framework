@@ -7,31 +7,52 @@
 #ifdef POSIX
 #define XOPEN
 #include <signal.h>
+#include <ucontext.h>
 #endif
 
 namespace storm {
 
 #ifdef X64
 	// TODO: Call code inside Code/ for this...
-	RootObject *functionContext(const void *fnStart) {
+	static RootObject *functionContext(const void *fnStart) {
 		size_t size = runtime::codeSize(fnStart);
-		if (s <= sizeof(void *) * 2)
+		if (size <= sizeof(void *) * 2)
 			return null;
 
 		const byte *end = (const byte *)fnStart + size;
 		RootObject **data = (RootObject **)end;
 		return data[-2];
 	}
+
+	static const void *instructionPtr(const ucontext_t *ctx) {
+		return (const void *)ctx->uc_mcontext.gregs[REG_RIP];
+	}
+
 #endif
 
 #ifdef X86
-	RootObject *functionContext(const void *fnStart) {
+	static RootObject *functionContext(const void *fnStart) {
 		size_t s = runtime::codeSize(fnStart);
 		if (s <= sizeof(void *))
 			return null;
 
 		const void *pos = (const char *)fnStart + s - sizeof(void *);
 		return *(RootObject **)pos;
+	}
+
+	static const void *instructionPtr(const ucontext_t *ctx) {
+		return (const void *)ctx->uc_mcontext.gregs[REG_RIP];
+	}
+#endif
+
+#ifdef ARM64
+	static RootObject *functionContext(const void *fnStart) {
+		assert(false);
+		return null;
+	}
+
+	static const void *instructionPtr(const ucontext_t *ctx) {
+		return (const void *)ctx->uc_mcontext.pc;
 	}
 #endif
 
@@ -95,16 +116,19 @@ namespace storm {
 
 	static void handleSegv(int signal, siginfo_t *info, void *context) {
 		// Try to find an engine based on the code that called the instruction, so that we can
-		// extract an Engine object to instantiate the exception.
-		Engine *e = findEngine(info->si_addr);
+		// extract an Engine object to instantiate the exception. Note: the si_addr member here is
+		// the address of the faulting access, not the address of the faulting instruction. To get
+		// the faulting instruction, we need to look inside 'context'.
+		Engine *e = findEngine(instructionPtr((ucontext_t *)context));
 		if (!e)
 			e = runtime::someEngineUnsafe();
 
 		if (e) {
 			switch (info->si_code) {
 			case SEGV_MAPERR:
+				throw new (*e) MemoryAccessError(Word(info->si_addr), false);
 			case SEGV_ACCERR:
-				throw new (*e) MemoryAccessError(Word(info->si_addr));
+				throw new (*e) MemoryAccessError(Word(info->si_addr), true);
 			default:
 				// We could add more...
 				break;
