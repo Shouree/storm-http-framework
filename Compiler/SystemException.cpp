@@ -3,6 +3,8 @@
 #include "Utils/Lock.h"
 #include "Gc/DwarfTable.h"
 #include "Core/Exception.h"
+#include "Code/Arena.h"
+#include "Code/Binary.h"
 
 #ifdef POSIX
 #define XOPEN
@@ -13,17 +15,6 @@
 namespace storm {
 
 #ifdef X64
-	// TODO: Call code inside Code/ for this...
-	static RootObject *functionContext(const void *fnStart) {
-		size_t size = runtime::codeSize(fnStart);
-		if (size <= sizeof(void *) * 2)
-			return null;
-
-		const byte *end = (const byte *)fnStart + size;
-		RootObject **data = (RootObject **)end;
-		return data[-2];
-	}
-
 	static const void *instructionPtr(const ucontext_t *ctx) {
 		return (const void *)ctx->uc_mcontext.gregs[REG_RIP];
 	}
@@ -31,26 +22,12 @@ namespace storm {
 #endif
 
 #ifdef X86
-	static RootObject *functionContext(const void *fnStart) {
-		size_t s = runtime::codeSize(fnStart);
-		if (s <= sizeof(void *))
-			return null;
-
-		const void *pos = (const char *)fnStart + s - sizeof(void *);
-		return *(RootObject **)pos;
-	}
-
 	static const void *instructionPtr(const ucontext_t *ctx) {
 		return (const void *)ctx->uc_mcontext.gregs[REG_RIP];
 	}
 #endif
 
 #ifdef ARM64
-	static RootObject *functionContext(const void *fnStart) {
-		assert(false);
-		return null;
-	}
-
 	static const void *instructionPtr(const ucontext_t *ctx) {
 		return (const void *)ctx->uc_mcontext.pc;
 	}
@@ -61,11 +38,11 @@ namespace storm {
 		if (!fde)
 			return null;
 
-		RootObject *o = functionContext(fde->codeStart());
-		if (!o)
+		code::Binary *b = code::codeBinary(fde->codeStart());
+		if (!b)
 			return null;
 
-		return &o->engine();
+		return &b->engine();
 	}
 
 #ifdef POSIX

@@ -24,6 +24,10 @@ namespace storm {
 			// Disabled for now.
 			disabled = 0x00,
 
+			// Diabled, but scanned. I.e., we store some information inside 'pointer', but the value
+			// of 'pointer' is not written anywhere in the code.
+			ptrStorage = 0x01,
+
 			// Raw pointer. Reads 4/8 bytes from 'offset' and treats those as a pointer.
 			rawPtr = 0x11,
 

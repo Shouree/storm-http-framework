@@ -15,20 +15,20 @@ namespace code {
 			// Initialize our members.
 			this->owner = owner;
 			codeRefs = new (this) Array<Reference *>();
-			code = (byte *)runtime::allocCode(engine(), size + 2*sizeof(void *), numRefs + 3);
+			code = (byte *)runtime::allocCode(engine(), size, numRefs + 3);
 			labels = lbls;
 			pos = 0;
 			ref = 3;
 
-			// Store 'codeRefs' and 'owner' at the end of our allocated space.
+			// Store 'codeRefs' and 'owner' at position 0 and 1 in our references.
 			GcCode *refs = runtime::codeRefs(code);
-			refs->refs[0].offset = size;
-			refs->refs[0].kind = GcCodeRef::rawPtr;
-			refs->refs[0].pointer = codeRefs;
+			refs->refs[0].offset = 0;
+			refs->refs[0].kind = GcCodeRef::ptrStorage;
+			refs->refs[0].pointer = owner;
 
-			refs->refs[1].offset = size + sizeof(void *);
-			refs->refs[1].kind = GcCodeRef::rawPtr;
-			refs->refs[1].pointer = owner;
+			refs->refs[1].offset = 0;
+			refs->refs[1].kind = GcCodeRef::ptrStorage;
+			refs->refs[1].pointer = codeRefs;
 
 			CodeTable::Handle unwind = codeTable().add(code);
 			refs->refs[2].offset = 0;

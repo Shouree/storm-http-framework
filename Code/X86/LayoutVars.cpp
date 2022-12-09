@@ -32,7 +32,7 @@ namespace code {
 			TRANSFORM(fnRetRef),
 		};
 
-		LayoutVars::LayoutVars(Binary *owner) : owner(owner) {}
+		LayoutVars::LayoutVars() {}
 
 		Operand LayoutVars::resultLoc() {
 			if (memberFn) {

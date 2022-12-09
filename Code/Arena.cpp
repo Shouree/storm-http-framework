@@ -20,7 +20,7 @@ namespace code {
 		return src;
 	}
 
-	Listing *Arena::transform(Listing *src, Binary *owner) const {
+	Listing *Arena::transform(Listing *src) const {
 		assert(false);
 		return src;
 	}
@@ -93,4 +93,11 @@ namespace code {
 #else
 #error "Please note which is the default arena for your platform."
 #endif
+
+	Binary *codeBinary(const void *fn) {
+		// All backends do this.
+		GcCode *refs = runtime::codeRefs((void *)fn);
+		return (Binary *)refs->refs[0].pointer;
+	}
+
 }

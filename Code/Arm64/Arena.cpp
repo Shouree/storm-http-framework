@@ -15,7 +15,7 @@ namespace code {
 
 		Arena::Arena() {}
 
-		Listing *Arena::transform(Listing *l, Binary *owner) const {
+		Listing *Arena::transform(Listing *l) const {
 			TODO(L"Activate info!");
 // #if defined(POSIX) && defined(X64)
 // 			activateInfo();
@@ -25,7 +25,7 @@ namespace code {
 			l = code::transform(l, this, new (this) RemoveInvalid());
 
 			// Expand variables and function calls as well as function prolog and epilog.
-			l = code::transform(l, this, new (this) Layout(owner));
+			l = code::transform(l, this, new (this) Layout());
 
 			return l;
 		}
@@ -33,17 +33,6 @@ namespace code {
 		void Arena::output(Listing *src, Output *to) const {
 			code::arm64::output(src, to);
 			to->finish();
-
-			// if (CodeOutput *c = as<CodeOutput>(to)) {
-			// 	PLN(L"-- BEGIN --");
-			// 	PVAR(src);
-			// 	PNN(L"Generated code:\n./disas_arm64.sh");
-			// 	Byte *code = (Byte *)c->codePtr();
-			// 	for (Nat i = 0; i < c->tell(); i++) {
-			// 		PNN(L" " << toHex(code[i]));
-			// 	}
-			// 	PLN(L"\n-- END --");
-			// }
 		}
 
 		LabelOutput *Arena::labelOutput() const {

@@ -22,7 +22,7 @@ namespace code {
 
 		Arena::Arena() {}
 
-		Listing *Arena::transform(Listing *l, Binary *owner) const {
+		Listing *Arena::transform(Listing *l) const {
 #if defined(WINDOWS) && defined(X86)
 			activateInfo();
 #endif
@@ -39,7 +39,7 @@ namespace code {
 			// Expand variables and function calls as well as function prolog and epilog. We need to
 			// know all used registers for this to work, so it has to be run after the previous
 			// transforms.
-			l = code::transform(l, this, new (this) LayoutVars(owner));
+			l = code::transform(l, this, new (this) LayoutVars());
 
 			return l;
 		}

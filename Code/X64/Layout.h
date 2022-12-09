@@ -25,7 +25,7 @@ namespace code {
 		class Layout : public Transform {
 			STORM_CLASS;
 		public:
-			STORM_CTOR Layout(Binary *owner);
+			STORM_CTOR Layout();
 
 			// Start transform.
 			virtual void STORM_FN before(Listing *dest, Listing *src);
@@ -37,9 +37,6 @@ namespace code {
 			virtual void STORM_FN after(Listing *dest, Listing *src);
 
 		private:
-			// Owner. We need to store it when using exceptions.
-			Binary *owner;
-
 			// Layout of all parameters for this function.
 			Params *params;
 

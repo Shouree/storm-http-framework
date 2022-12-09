@@ -32,7 +32,7 @@ namespace code {
 			TRANSFORM(fnRetRef),
 		};
 
-		Layout::Layout(Binary *owner) : owner(owner) {}
+		Layout::Layout() {}
 
 		void Layout::before(Listing *dest, Listing *src) {
 			// Initialize state.
@@ -154,9 +154,6 @@ namespace code {
 				*dest << lblOffset(a.pos);
 				*dest << dat(natConst(0)); // TODO: Store "a" here!
 			}
-
-			// Owner.
-			*dest << dat(objPtr(owner));
 
 			// PLN(L"Layout:");
 			// for (Nat i = 0; i < layout->count(); i++)

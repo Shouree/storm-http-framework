@@ -16,16 +16,6 @@ namespace code {
 
 		struct SEHFrame;
 
-		// Find the Binary for a code segment we generated earlier.
-		static Binary *codeBinary(const void *code) {
-			size_t s = runtime::codeSize(code);
-			if (s <= sizeof(void *))
-				return null;
-
-			const void *pos = (const char *)code + s - sizeof(void *);
-			return *(Binary **)pos;
-		}
-
 		// Stack frame we're implementing.
 		class Frame : public StackFrame {
 		public:

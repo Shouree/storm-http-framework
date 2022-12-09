@@ -26,7 +26,7 @@ namespace code {
 		};
 
 
-		Layout::Layout(Binary *owner) : owner(owner) {}
+		Layout::Layout() {}
 
 		void Layout::before(Listing *dest, Listing *src) {
 			// Initialize some state.
@@ -128,8 +128,6 @@ namespace code {
 
 			// Table size.
 			*dest << dat(ptrConst(activeBlocks->count()));
-			// Owner.
-			*dest << dat(objPtr(owner));
 		}
 
 		Operand Layout::resolve(Listing *src, const Operand &op) {

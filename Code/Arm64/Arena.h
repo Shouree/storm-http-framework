@@ -18,7 +18,7 @@ namespace code {
 			 * Transform.
 			 */
 
-			virtual Listing *STORM_FN transform(Listing *src, MAYBE(Binary *) owner) const;
+			virtual Listing *STORM_FN transform(Listing *src) const;
 			virtual void STORM_FN output(Listing *src, Output *to) const;
 
 			/**

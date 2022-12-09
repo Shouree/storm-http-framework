@@ -14,7 +14,7 @@ namespace code {
 	}
 
 	void Binary::compile(Arena *arena, Listing *listing, Bool debug) {
-		Listing *tfm = arena->transform(listing, this);
+		Listing *tfm = arena->transform(listing);
 		if (debug)
 			PVAR(tfm);
 
@@ -38,6 +38,11 @@ namespace code {
 
 		runtime::codeUpdatePtrs(output->codePtr());
 		set(output->codePtr(), output->tell());
+
+#ifdef DEBUG
+		// All backends should output the pointer to the binary like this.
+		assert(codeBinary(output->codePtr()) == this);
+#endif
 	}
 
 	void Binary::toS(StrBuf *to) const {

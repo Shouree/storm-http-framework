@@ -13,7 +13,7 @@ namespace code {
 
 		Arena::Arena() {}
 
-		Listing *Arena::transform(Listing *l, Binary *owner) const {
+		Listing *Arena::transform(Listing *l) const {
 #if defined(POSIX) && defined(X64)
 			activateInfo();
 #endif
@@ -22,7 +22,7 @@ namespace code {
 			l = code::transform(l, this, new (this) RemoveInvalid());
 
 			// Expand variables and function calls as well as function prolog and epilog.
-			l = code::transform(l, this, new (this) Layout(owner));
+			l = code::transform(l, this, new (this) Layout());
 
 			return l;
 		}

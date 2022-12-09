@@ -76,12 +76,6 @@ namespace code {
 		struct FnData {
 			// Number of entries in the block table.
 			size_t blockCount;
-
-			// The binary that contains the rest of the unwinding information for this Binary object.
-			Binary *owner;
-
-			// Pointer to an array of updater objects for this function.
-			Array<Reference *> *refs;
 		};
 
 		/**
@@ -278,12 +272,13 @@ namespace code {
 			TODO(L"Set stack pointer to what we would expect. Otherwise, the stack pointer might be offset when unwinding function calls with stacked parameters.");
 
 			const FnData *fnData = getData((const void *)fn);
+			Binary *binary = codeBinary((const void *)fn);
 
 			if (actions & _UA_SEARCH_PHASE) {
 				// Phase 1: Search for handlers.
 
 				// See if this function has any handlers at all.
-				if (!fnData->owner->hasCatch())
+				if (!binary->hasCatch())
 					return _URC_CONTINUE_UNWIND;
 
 				// See if this is an exception Storm can catch (somewhat expensive).
@@ -300,7 +295,7 @@ namespace code {
 					return _URC_CONTINUE_UNWIND;
 
 				Binary::Resume resume;
-				if (!fnData->owner->hasCatch(block, object, resume))
+				if (!binary->hasCatch(block, object, resume))
 					return _URC_CONTINUE_UNWIND;
 
 				// Store things to phase 2, right above the _Unwind_Exception, just like GCC does:
@@ -327,7 +322,7 @@ namespace code {
 
 				// Cleanup our frame.
 				StackFrame frame(block, active, (void *)rbp);
-				fnData->owner->cleanup(frame, block);
+				binary->cleanup(frame, block);
 
 				// Get the exception. Since it is a pointer, we can deallocate directly.
 				// Note that we store the dereferenced pointer inside the EH table, so we don't need
@@ -352,7 +347,7 @@ namespace code {
 				decodeFnState(encoded, block, active);
 				if (block != Block().key()) {
 					StackFrame frame(block, active, (void *)rbp);
-					fnData->owner->cleanup(frame);
+					binary->cleanup(frame);
 				}
 				return _URC_CONTINUE_UNWIND;
 			} else {
@@ -392,8 +387,7 @@ namespace code {
 			}
 
 			virtual void format(GenericOutput &to, void *fnBase, int offset) const {
-				void *meta = (byte *)fnBase + runtime::codeSize(fnBase) - 2*sizeof(void *);
-				Binary *owner = *(Binary **)meta;
+				Binary *owner = codeBinary(fnBase);
 				Str *name = owner->ownerName();
 				if (name) {
 					to.put(name->c_str());

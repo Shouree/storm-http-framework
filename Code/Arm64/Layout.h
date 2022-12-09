@@ -21,7 +21,7 @@ namespace code {
 		class Layout : public Transform {
 			STORM_CLASS;
 		public:
-			STORM_CTOR Layout(Binary *owner);
+			STORM_CTOR Layout();
 
 			// Start transform.
 			virtual void STORM_FN before(Listing *dest, Listing *src);
@@ -33,9 +33,6 @@ namespace code {
 			virtual void STORM_FN after(Listing *dest, Listing *src);
 
 		private:
-			// Owner.
-			Binary *owner;
-
 			// Variable layout.
 			Array<Offset> *layout;
 

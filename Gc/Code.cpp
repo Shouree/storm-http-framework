@@ -32,6 +32,7 @@ namespace storm {
 
 			switch (ref.kind) {
 			case GcCodeRef::disabled:
+			case GcCodeRef::ptrStorage:
 				// Nothing to do...
 				break;
 			case GcCodeRef::rawPtr:
