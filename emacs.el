@@ -133,7 +133,7 @@
 (add-hook 'find-file-hooks 'correct-win-filename)
 (defun correct-win-filename ()
   (interactive)
-  (rename-buffer (file-name-nodirectory buffer-file-name) t))
+  (rename-buffer (file-name-nondirectory buffer-file-name) t))
 
 ;; Behaviour.
 
