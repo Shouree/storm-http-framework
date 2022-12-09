@@ -11,6 +11,9 @@ public:
 	virtual void put(const char *str) = 0;
 	virtual void put(size_t i) = 0;
 	virtual void putHex(size_t i) = 0;
+
+	// Called if a single frame consists of multiple frames due to inlining.
+	virtual void nextFrame() = 0;
 };
 
 /**
@@ -18,13 +21,15 @@ public:
  */
 class StdOutput : public GenericOutput {
 public:
-	StdOutput(wostream &to) : to(to) {}
+	StdOutput(wostream &to) : to(to), frameNumber(0) {}
 
 	virtual void put(const wchar *str) { to << str; }
 	virtual void put(const char *str) { to << str; }
 	virtual void put(size_t i) { to << i; }
 	virtual void putHex(size_t i) { to << toHex(i); }
+	virtual void nextFrame();
 private:
+	nat frameNumber;
 	wostream &to;
 };
 

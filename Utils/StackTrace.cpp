@@ -77,10 +77,10 @@ String format(const StackTrace &t) {
 	for (nat i = 0; i < t.count(); i++) {
 		const StackFrame &frame = t[i];
 
-		to << std::setw(3) << i << L": ";
+		sOut.nextFrame();
 		l.format(sOut, frame.id, frame.fnBase, frame.offset);
-		to << endl;
 	}
+	to << endl;
 
 	return to.str();
 }

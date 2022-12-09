@@ -17,15 +17,21 @@ namespace storm {
 
 	class StrBufOut : public GenericOutput {
 	public:
-		StrBufOut(StrBuf *to) : to(to) {}
+		StrBufOut(StrBuf *to) : to(to), frameNumber(0) {}
 
 		virtual void put(const wchar *str) { *to << str; }
 		virtual void put(const char *str) { *to << toWChar(to->engine(), str)->v; }
 		virtual void put(size_t i) { *to << i; }
 		virtual void putHex(size_t i) { *to << hex(i); }
 
+		virtual void nextFrame() {
+			if (frameNumber > 0)
+				*to << S("\n");
+			*to << width(3) << (frameNumber++) << S(": ");
+		}
 	private:
 		StrBuf *to;
+		Nat frameNumber;
 	};
 
 	void StackTrace::format(StrBuf *to) const {
@@ -33,9 +39,7 @@ namespace storm {
 		StrBufOut adapter(to);
 
 		for (Nat i = 0; i < frames->count(); i++) {
-			if (i > 0)
-				*to << S("\n");
-			*to << width(3) << i << S(": ");
+			adapter.nextFrame();
 
 			Frame f = frames->at(i);
 			s.format(adapter, f.id, f.base, f.offset);

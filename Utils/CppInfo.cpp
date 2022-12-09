@@ -319,6 +319,9 @@ static void handleSigSegv(int signal) {
 // give bogous strings to us, especially when messing with signal handlers. Note: since we mess with
 // signal handlers, this will not work reliably with strings on the GC heap.
 static bool checkString(const char *str) {
+	if (!str)
+		return false;
+
 	struct sigaction newAction, oldAction;
 	sigemptyset(&newAction.sa_mask);
 	newAction.sa_handler = &handleSigSegv;
@@ -333,9 +336,41 @@ static bool checkString(const char *str) {
 
 	// Try reading the string. A call to strlen works nicely. Use the result so that it is not
 	// optimized out.
-	bool ok =  strlen(str) > 0;
+	bool ok = strlen(str) > 0;
 	sigaction(SIGSEGV, &oldAction, NULL);
 	return ok;
+}
+
+static int fullFormatOk(void *data, uintptr_t pc, const char *filename, int lineno, const char *function) {
+	FormatData *d = (FormatData *)data;
+
+	// Might be called multiple times. Inform the output if this is the case.
+	if (d->any)
+		d->to.nextFrame();
+
+	if (checkString(filename)) {
+		d->to.put(filename);
+		if (lineno >= 1) {
+			d->to.put("(L");
+			d->to.put(lineno);
+			d->to.put("): ");
+		}
+		d->any = true;
+	}
+
+	if (checkString(function)) {
+		int status = 0;
+		char *demangled = abi::__cxa_demangle(function, null, null, &status);
+		if (status == 0) {
+			d->to.put(demangled);
+		} else {
+			d->to.put(function);
+		}
+		free(demangled);
+		d->any = true;
+	}
+
+	return 0;
 }
 
 static void formatOk(void *data, uintptr_t pc, const char *symname, uintptr_t symval, uintptr_t symsize) {
@@ -362,7 +397,8 @@ void CppInfo::format(GenericOutput &to, void *base, int offset) const {
 	static LookupState state;
 
 	FormatData data = { to, false };
-	backtrace_syminfo(state.state, (uintptr_t)base + offset, &formatOk, &formatError, &data);
+	// backtrace_syminfo(state.state, (uintptr_t)base + offset, &formatOk, &formatError, &data);
+	backtrace_pcinfo(state.state, (uintptr_t)base + offset, &fullFormatOk, &formatError, &data);
 
 	if (!data.any) {
 		to.put("Unknown function @");
