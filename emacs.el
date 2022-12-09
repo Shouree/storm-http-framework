@@ -14,8 +14,6 @@
 	  (lambda ()
 	    (setq tab-width 4)))
 
-(setq project-root "~/Projects/storm/")
-
 
 ;; Setup code-style. From the Linux Kernel Coding style.
 
@@ -132,142 +130,10 @@
 	(indent-for-tab-command))
     (goto-char last)))
 
-(defun in-project (filename)
-  (and filename
-       (string-match (expand-file-name project-root) filename)))
-
-(defun subpath (filename)
-  (substring (expand-file-name filename) (length (expand-file-name project-root))))
-
-(defun subproject (filename)
-  (let ((l (split-string (subpath filename) "/")))
-    (car l)))
-
-(defun filename (fname)
-  (let ((l (split-string fname "/")))
-    (car (last l))))
-
-(defun subproj-relative-file (filename)
-  (let ((subproj (subproject filename)))
-    (substring (subpath filename) (+ 1 (length subproj)))))
-
-(add-hook 'find-file-hooks 'maybe-add-cpp-template)
-(defun maybe-add-cpp-template ()
-  (interactive "*")
-  (if (and (in-project buffer-file-name)
-	   (not (file-exists-p buffer-file-name)))
-      (if (string-match "\\.cpp$" buffer-file-name)
-	  (add-cpp-template)
-	(if (string-match "\\.h$" buffer-file-name)
-	    (add-header-template)))))
-
 (add-hook 'find-file-hooks 'correct-win-filename)
 (defun correct-win-filename ()
   (interactive)
-  (rename-buffer (filename buffer-file-name) t))
-
-(defun add-cpp-template ()
-  (unless (insert-file-template-p)
-    (insert "#include \"stdafx.h\"\n")
-    (unless (is-test-project)
-      (insert "#include \"")
-      (insert (replace-regexp-in-string
-	       "\\.cpp" ".h"
-	       (filename buffer-file-name)))
-      (insert "\""))
-    (insert "\n\n")
-    (if (shall-have-namespace)
-	(insert-namespace))
-    (if (is-test-project)
-	(insert-test-template))))
-
-(defun add-header-template ()
-  (unless (insert-file-template-p)
-    (insert "#pragma once\n\n")
-    (if (shall-have-namespace)
-	(insert-namespace))))
-
-(defun insert-file-template-p ()
-  "Inserts a template from the file 'ext'.template in the same directory as the file"
-  (let* ((dir (file-name-directory buffer-file-name))
-	 (ext (file-name-extension buffer-file-name))
-	 (tName (concat dir ext ".template")))
-    (if (file-exists-p (concat dir ext ".template"))
-	(progn
-	  (insert-file-template tName)
-	  t)
-      nil)))
-
-(defun insert-file-template (file)
-  (insert-file-contents file)
-
-  ;; Replace $header$...
-  (goto-char 0)
-  (perform-replace "$header$"
-		   (replace-regexp-in-string "\\.cpp" ".h" (filename buffer-file-name))
-		   nil
-		   nil
-		   nil)
-
-
-  ;; Replace $file$...
-  (goto-char 0)
-  (perform-replace "$file$"
-		   (replace-regexp-in-string "\\.cpp" "" (filename buffer-file-name))
-		   nil
-		   nil
-		   nil)
-
-  ;; Find $$ and put the cursor there.
-  (goto-char 0)
-  (if (re-search-forward "\\$\\$" nil t)
-      (progn
-	(replace-match "")
-	(indent-for-tab-command))))
-
-(defun insert-test-template ()
-  (insert "BEGIN_TEST(")
-  (insert (replace-regexp-in-string "\\.cpp" "" (filename buffer-file-name)))
-  (insert ") {\n")
-  (indent-for-tab-command)
-  (insert "Engine &e = gEngine();\n\n")
-  (let ((pos (point)))
-    (insert "\n\n} END_TEST")
-    (indent-for-tab-command)
-    (goto-char pos)
-    (indent-for-tab-command)))
-
-(defun is-test-project ()
-  (let ((proj (subproject buffer-file-name)))
-    (and (>= (length proj) 4)
-	 (equal (substring proj -4) "Test"))))
-
-(defun shall-have-namespace ()
-  (let ((proj (subproject buffer-file-name)))
-    (not
-     (or
-      (is-test-project)
-      (equal proj "Utils")
-      (equal proj "CppTypes")
-      (equal proj "StormBuiltin")))))
-
-(defun namespace-name ()
-  (let ((name (downcase (subproject buffer-file-name))))
-    (cond ((string-equal name "shared") "storm")
-	  ((string-equal name "runtime") "storm")
-	  ((string-equal name "compiler") "storm")
-	  ((string-equal name "core") "storm")
-	  ((string-equal name "gc") "storm")
-	  (t name))))
-
-(defun insert-namespace ()
-  (insert "namespace ")
-  (insert (namespace-name))
-  (insert " {\n\n")
-  (let ((pos (point)))
-    (insert "\n\n}\n")
-    (goto-char pos)
-    (indent-for-tab-command)))
+  (rename-buffer (file-name-nodirectory buffer-file-name) t))
 
 ;; Behaviour.
 
