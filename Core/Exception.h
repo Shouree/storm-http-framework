@@ -103,8 +103,14 @@ namespace storm {
 	class EXCEPTION_EXPORT MemoryAccessError : public RuntimeError {
 		STORM_EXCEPTION;
 	public:
+		enum Type {
+			notMapped,
+			invalidAccess,
+			invalidAlignment,
+		};
+
 		// Create. If 'mapped' is true, then the address is mapped, but the access type was invalid.
-		STORM_CTOR MemoryAccessError(Word address, Bool mapped);
+		STORM_CTOR MemoryAccessError(Word address, Type type);
 
 		// Message.
 		virtual void STORM_FN message(StrBuf *to) const;
@@ -113,8 +119,8 @@ namespace storm {
 		// Faulting address.
 		Word address;
 
-		// Address mapped?
-		Bool mapped;
+		// Type of fault.
+		Type type;
 	};
 
 

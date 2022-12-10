@@ -66,29 +66,9 @@ void mps_on_sigsegv(int signal) {
 }
 #endif
 
-#ifdef WINDOWS
-LONG WINAPI fallbackHandler(LPEXCEPTION_POINTERS info) {
-	LPEXCEPTION_RECORD er = info->ExceptionRecord;
-	if (er->ExceptionCode != EXCEPTION_ACCESS_VIOLATION)
-		return EXCEPTION_CONTINUE_SEARCH;
-
-	// Try to print a stack trace before continuing.
-	gc_panic_stacktrace();
-	return EXCEPTION_CONTINUE_SEARCH;
-}
-#endif
-
 void mps_init() {
 	// Custom assertions.
 	mps_lib_assert_fail_install(&mps_assert_fail);
-
-#ifdef DEBUG
-
-#ifdef WINDOWS
-	AddVectoredExceptionHandler(0, &fallbackHandler);
-#endif
-
-#endif
 }
 
 #endif

@@ -784,7 +784,7 @@ namespace code {
 			OUTPUT(ucastf),
 			// Basic testing shows that:
 			// use movups instead of movaps for unaligned loads
-			// unaligned operations for add/sub/etc is fine
+			// unaligned operations for add/sub/movss/etc is fine
 
 			OUTPUT(threadLocal),
 			OUTPUT(dat),

@@ -58,16 +58,23 @@ namespace storm {
 	}
 
 
-	MemoryAccessError::MemoryAccessError(Word address, Bool mapped) : address(address), mapped(mapped) {
+	MemoryAccessError::MemoryAccessError(Word address, Type type) : address(address), type(type) {
 		saveTrace();
 	}
 
 	void MemoryAccessError::message(StrBuf *to) const {
 		*to << S("Memory access error: ");
-		if (mapped)
-			*to << S("access to address 0x") << hex(size_t(address)) << S(" does not match memory permissions.");
-		else
+		switch (type) {
+		case notMapped:
 			*to << S("address 0x") << hex(size_t(address)) << S(" is not valid.");
+			break;
+		case invalidAccess:
+			*to << S("access to address 0x") << hex(size_t(address)) << S(" does not match memory permissions.");
+			break;
+		case invalidAlignment:
+			*to << S("address 0x") << hex(size_t(address)) << S(" is not properly aligned.");
+			break;
+		}
 	}
 
 
