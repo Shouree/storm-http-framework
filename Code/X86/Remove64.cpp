@@ -59,7 +59,7 @@ namespace code {
 				used->remove(dest.reg());
 
 			// Save registers
-			Preserve preserve(fnDirtyRegs(e), used, to);
+			Preserve preserve(fnDirtyRegs, fnDirtyCount, used, to);
 
 			*to << push(high32(src));
 			*to << push(low32(src));

@@ -94,7 +94,7 @@ namespace code {
 			Operand resolve(Listing *src, const Operand &op);
 
 			// Initialize a block or a block.
-			void initBlock(Listing *dest, Block p);
+			void initBlock(Listing *dest, Block p, Reg freeReg);
 
 			// Destroy a block.
 			void destroyBlock(Listing *dest, Block p, bool preserveEax);

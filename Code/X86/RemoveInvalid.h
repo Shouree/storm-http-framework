@@ -53,8 +53,13 @@ namespace code {
 			// Transform table.
 			static const OpEntry<TransformFn> transformMap[];
 
+			// Load floating-point register.
+			Reg loadFpRegister(Listing *dest, const Operand &op, Nat line);
+			Operand loadFpRegisterOrMemory(Listing *dest, const Operand &op, Nat line);
+
 			// Transform functions.
 			void immRegTfm(Listing *dest, Instr *instr, Nat line);
+			void beginBlockTfm(Listing *dest, Instr *instr, Nat line);
 			void leaTfm(Listing *dest, Instr *instr, Nat line);
 			void mulTfm(Listing *dest, Instr *instr, Nat line);
 			void idivTfm(Listing *dest, Instr *instr, Nat line);
@@ -67,6 +72,14 @@ namespace code {
 			void sarTfm(Listing *dest, Instr *instr, Nat line);
 			void icastTfm(Listing *dest, Instr *instr, Nat line);
 			void ucastTfm(Listing *dest, Instr *instr, Nat line);
+			void fnegTfm(Listing *dest, Instr *instr, Nat line);
+			void fcastiTfm(Listing *dest, Instr *instr, Nat line);
+			void fcastuTfm(Listing *dest, Instr *instr, Nat line);
+			void icastfTfm(Listing *dest, Instr *instr, Nat line);
+			void ucastfTfm(Listing *dest, Instr *instr, Nat line);
+
+			// Generic transform for floating point operations.
+			void fpInstrTfm(Listing *dest, Instr *instr, Nat line);
 
 			// Perform a function call.
 			void fnCall(Listing *dest, TypeInstr *instr, Array<Param> *params);

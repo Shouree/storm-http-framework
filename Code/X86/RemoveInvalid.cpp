@@ -10,6 +10,7 @@ namespace code {
 
 #define IMM_REG(x) { op::x, &RemoveInvalid::immRegTfm }
 #define TRANSFORM(x) { op::x, &RemoveInvalid::x ## Tfm }
+#define FP_OP(x) { op::x, &RemoveInvalid::fpInstrTfm }
 
 		const OpEntry<RemoveInvalid::TransformFn> RemoveInvalid::transformMap[] = {
 			IMM_REG(mov),
@@ -21,6 +22,8 @@ namespace code {
 			IMM_REG(sbb),
 			IMM_REG(bxor),
 			IMM_REG(cmp),
+
+			TRANSFORM(beginBlock),
 
 			TRANSFORM(lea),
 			TRANSFORM(mul),
@@ -39,6 +42,18 @@ namespace code {
 			TRANSFORM(fnParamRef),
 			TRANSFORM(fnCall),
 			TRANSFORM(fnCallRef),
+
+			FP_OP(fadd),
+			FP_OP(fsub),
+			TRANSFORM(fneg),
+			FP_OP(fmul),
+			FP_OP(fdiv),
+			FP_OP(fcmp),
+			FP_OP(fcast),
+			TRANSFORM(fcasti),
+			TRANSFORM(fcastu),
+			TRANSFORM(icastf),
+			TRANSFORM(ucastf),
 		};
 
 		RemoveInvalid::Param::Param(Operand src, TypeDesc *type, Bool ref) : src(src), type(type), ref(ref) {}
@@ -111,6 +126,13 @@ namespace code {
 				*dest << mov(reg, instr->src());
 				*dest << instr->alterSrc(reg);
 			}
+		}
+
+		void RemoveInvalid::beginBlockTfm(Listing *dest, Instr *instr, Nat line) {
+			// We need to tell the next step what register(s) are free.
+			Reg r = unusedReg(line);
+			if (r != noReg)
+				*dest << instr->alterDest(r);
 		}
 
 		void RemoveInvalid::leaTfm(Listing *dest, Instr *instr, Nat line) {
@@ -675,6 +697,173 @@ namespace code {
 			fnCall(dest, t, params);
 
 			params->clear();
+		}
+
+		Reg RemoveInvalid::loadFpRegister(Listing *dest, const Operand &op, Nat line) {
+			// Must be in a fp register!
+			if (fpRegister(op))
+				return op.reg();
+
+			// Just load it into a free vector register!
+			Reg r = asSize(unusedFpReg(used->at(line)), op.size());
+			used->at(line)->put(r);
+			*dest << mov(r, op);
+			return r;
+		}
+
+		Operand RemoveInvalid::loadFpRegisterOrMemory(Listing *dest, const Operand &op, Nat line) {
+			switch (op.type()) {
+			case opRelative:
+			case opVariable:
+				return op;
+			default:
+				return loadFpRegister(dest, op, line);
+			}
+		}
+
+		void RemoveInvalid::fpInstrTfm(Listing *dest, Instr *instr, Nat line) {
+			// The XMM instructions we use support a source in memory, but not a destination.
+			Operand dst = instr->dest();
+			DestMode mode = destMode(instr->op());
+
+			Reg dstReg = noReg;
+			if (mode & destRead) {
+				dstReg = loadFpRegister(dest, dst, line);
+			} else {
+				// Just pick a register if the specified one is not good enough.
+				if (fpRegister(dst)) {
+					dstReg = dst.reg();
+				} else {
+					dstReg = asSize(unusedFpReg(used->at(line)), dst.size());
+					// We don't need to update the register in the used set either, usage will not overlap.
+					// No need to load it, it is not read.
+				}
+			}
+
+			Operand src = loadFpRegisterOrMemory(dest, instr->src(), line);
+
+			*dest << instr->alter(dstReg, src);
+
+			// Write it back if necessary.
+			if (mode & destWrite) {
+				if (dst.type() != opRegister || dst.reg() != dstReg) {
+					*dest << mov(dst, dstReg);
+				}
+			}
+		}
+
+		void RemoveInvalid::fnegTfm(Listing *dest, Instr *instr, Nat line) {
+			Operand src = loadFpRegisterOrMemory(dest, instr->src(), line);
+			Operand dst = instr->dest();
+
+			// Just pick a register if the specified one is not good enough.
+			if (!fpRegister(dst)) {
+				Reg dstReg = asSize(unusedFpReg(used->at(line)), dst.size());
+				*dest << instr->alter(dstReg, src);
+				*dest << mov(dst, dstReg);
+			} else {
+				*dest << instr->alterSrc(src);
+			}
+		}
+
+		void RemoveInvalid::fcastiTfm(Listing *dest, Instr *instr, Nat line) {
+			// If the output size is 32-bit we use SSE instructions directly. If 64-bit, it is
+			// easier to fall back to the "old" FP unit as it has an operation for integer
+			// conversions directly.
+			Operand dst = instr->dest();
+			if (dst.size() == Size::sLong) {
+				// x87 FP stack. Source and destination need to be in memory.
+				Operand src = instr->src();
+				bool spillToStack = dst.type() == opRegister || src.type() == opRegister;
+
+				if (spillToStack) {
+					*dest << sub(ptrStack, ptrConst(Size::sLong));
+				}
+
+				Operand stackTmp = xRel(src.size(), ptrStack, Offset());
+				if (src.type() == opRegister) {
+					*dest << mov(stackTmp, src);
+					src = stackTmp;
+				}
+
+				if (dst.type() == opRegister) {
+					*dest << instr->alter(stackTmp, src);
+				} else {
+					*dest << instr->alterSrc(src);
+				}
+
+				if (spillToStack) {
+					if (dst.type() == opRegister) {
+						*dest << pop(low32(dst));
+						*dest << pop(high32(dst));
+					} else {
+						*dest << add(ptrStack, ptrConst(Size::sLong));
+					}
+				}
+
+			} else {
+				// SSE. Need source in fp register or memory. Destination has to be integer register.
+				Operand src = loadFpRegisterOrMemory(dest, instr->src(), line);
+				if (dst.type() != opRegister) {
+					Reg r = asSize(unusedReg(line), dst.size());
+					*dest << instr->alter(r, src);
+					*dest << mov(dst, r);
+				} else {
+					*dest << instr->alterSrc(src);
+				}
+			}
+		}
+
+		void RemoveInvalid::fcastuTfm(Listing *dest, Instr *instr, Nat line) {
+			fcastiTfm(dest, instr, line);
+		}
+
+		void RemoveInvalid::icastfTfm(Listing *dest, Instr *instr, Nat line) {
+			// If the output size is 32-bit we use SSE instructions directly. If 64-bit, it is
+			// easier to fall back to the "old" FP unit as it has an operation for integer
+			// conversions directly.
+			Operand src = instr->src();
+			if (src.size() == Size::sLong) {
+				// x87 FP stack. Source and destination need to be in memory.
+				Operand dst = instr->dest();
+				Operand stackTmp = xRel(src.size(), ptrStack, Offset());
+				bool spillToStack = dst.type() == opRegister || src.type() == opRegister;
+
+				if (spillToStack) {
+					if (src.type() == opRegister) {
+						*dest << push(high32(src));
+						*dest << push(low32(src));
+					} else {
+						*dest << sub(ptrStack, ptrConst(Size::sLong));
+					}
+				}
+
+				if (dst.type() == opRegister) {
+					*dest << instr->alter(stackTmp, src);
+					*dest << mov(dst, stackTmp);
+				} else {
+					*dest << instr->alterSrc(src);
+				}
+
+				if (spillToStack) {
+					*dest << add(ptrStack, ptrConst(Size::sLong));
+				}
+
+			} else {
+				// SSE. Need source in fp register or memory. Destination has to be integer register.
+				Operand dst = instr->dest();
+				if (fpRegister(dst)) {
+					*dest << instr;
+				} else {
+					Reg r = asSize(unusedFpReg(used->at(line)), dst.size());
+					*dest << instr->alterDest(r);
+					*dest << mov(dst, r);
+				}
+			}
+		}
+
+		void RemoveInvalid::ucastfTfm(Listing *dest, Instr *instr, Nat line) {
+			icastfTfm(dest, instr, line);
 		}
 
 	}

@@ -54,6 +54,7 @@ namespace code {
 		const Reg r14 = Reg(0x826);
 		const Reg r15 = Reg(0x827);
 
+		// Note: these intentionally overlap with the X86 implementation.
 		const Reg emm0 = Reg(0x428);
 		const Reg emm1 = Reg(0x429);
 		const Reg emm2 = Reg(0x42A);

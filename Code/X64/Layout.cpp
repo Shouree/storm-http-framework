@@ -225,7 +225,11 @@ namespace code {
 		void Layout::beginBlockTfm(Listing *dest, Listing *src, Nat line) {
 			Instr *instr = src->at(line);
 			// Note: register is added in the previous pass.
-			initBlock(dest, instr->src().block(), instr->dest().reg());
+			Reg freeReg = noReg;
+			if (instr->dest().type() == opRegister)
+				freeReg = instr->dest().reg();
+
+			initBlock(dest, instr->src().block(), freeReg);
 		}
 
 		void Layout::endBlockTfm(Listing *dest, Listing *src, Nat line) {
@@ -318,6 +322,12 @@ namespace code {
 			block = init;
 
 			Bool initReg = true;
+			Bool restoreReg = reg == noReg;
+			if (restoreReg) {
+				reg = eax;
+				*dest << push(eax);
+			}
+
 			Array<Var> *vars = dest->allVars(init);
 			// Go in reverse to make linear accesses in memory when we're using big variables.
 			for (Nat i = vars->count(); i > 0; i--) {
@@ -326,6 +336,9 @@ namespace code {
 				if (!dest->isParam(v))
 					zeroVar(dest, layout->at(v.key()), v.size(), reg, initReg);
 			}
+
+			if (restoreReg)
+				*dest << pop(eax);
 
 			if (usingEH) {
 				// Remember where the block started.

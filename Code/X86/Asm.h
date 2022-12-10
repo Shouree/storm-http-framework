@@ -13,8 +13,6 @@ namespace code {
 
 		/**
 		 * X86-specific registers.
-		 *
-		 * TODO: Expose to Storm somehow.
 		 */
 		extern const Reg ptrD;
 		extern const Reg ptrSi;
@@ -29,11 +27,36 @@ namespace code {
 		extern const Reg rsi;
 		extern const Reg rdi;
 
+		/**
+		 * XMM registers for fp operations (using sse). Called 'emm' for 4 bytes and 'xmm' for 8
+		 * bytes wide.
+		 */
+		extern const Reg emm0;
+		extern const Reg emm1;
+		extern const Reg emm2;
+		extern const Reg emm3;
+		extern const Reg emm4;
+		extern const Reg emm5;
+		extern const Reg emm6;
+		extern const Reg emm7;
+		extern const Reg xmm0;
+		extern const Reg xmm1;
+		extern const Reg xmm2;
+		extern const Reg xmm3;
+		extern const Reg xmm4;
+		extern const Reg xmm5;
+		extern const Reg xmm6;
+		extern const Reg xmm7;
+
+
 		// Convert to names.
 		const wchar *nameX86(Reg r);
 
 		// Find unused registers to work with. Returns noReg if none. Takes 64-bit registers into account.
 		Reg STORM_FN unusedReg(RegSet *in);
+
+		// Find an unused fp register given a set of used registers.
+		Reg STORM_FN unusedFpReg(RegSet *in);
 
 		// Add 64-bit registers if needed.
 		void STORM_FN add64(RegSet *to);
@@ -45,13 +68,20 @@ namespace code {
 		Operand STORM_FN high32(Operand o);
 
 		// All registers.
-		RegSet *STORM_FN allRegs(EnginePtr e);
+		extern const Reg *allRegs;
+		extern const size_t allCount;
 
-		// Registers not preserved over function calls.
-		RegSet *STORM_FN fnDirtyRegs(EnginePtr e);
+		// Registers clobbered by function calls.
+		extern const Reg *fnDirtyRegs;
+		extern const size_t fnDirtyCount;
 
 		// Find the register id of a register.
 		nat registerId(Reg r);
+
+		// Is this a xmm register?
+		bool fpRegister(Reg r);
+		bool fpRegister(const Operand &op);
+		nat fpRegisterId(Reg r);
 
 		// Get the 'op-code' for conditional operators.
 		byte condOp(CondFlag c);
@@ -118,14 +148,13 @@ namespace code {
 		void STORM_FN restore(Reg r, Reg saved, Listing *dest);
 
 		/**
-		 * Preserve a set of registers.
+		 * Preserve a set of registers. Assumed to be stored on the stack somewhere.
 		 */
 		class Preserve {
-			STORM_VALUE;
 		public:
-			STORM_CTOR Preserve(RegSet *preserve, RegSet *used, Listing *dest);
+			Preserve(const Reg *preserve, size_t preserveCount, RegSet *used, Listing *dest);
 
-			void STORM_FN restore();
+			void restore();
 		private:
 			Listing *dest;
 			Array<Nat> *srcReg;

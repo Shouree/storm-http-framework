@@ -6,23 +6,102 @@
 namespace code {
 	namespace x86 {
 
-#define OUTPUT(x) { op::x, &x ## Out }
+		static void movFromFp(Output *to, Instr *instr) {
+			Operand dst = instr->dest();
+			bool large = dst.size().size32() > 4;
+			bool spilled = false;
+			if (dst.type() == opRegister) {
+				// Need to spill to memory.
+				spilled = true;
+				dst = xRel(dst.size(), ptrStack, Offset());
+				// Reserve memory on stack (esp -= 4/8)
+				to->putByte(0x81);
+				modRm(to, 5, ptrStack);
+				to->putInt(dst.size().size32());
+			}
 
-		typedef void (*OutputFn)(Output *to, Instr *instr);
+			if (large)
+				to->putByte(0xF2);
+			else
+				to->putByte(0xF3);
+			to->putByte(0x0F);
+			to->putByte(0x11);
+			modRm(to, fpRegisterId(instr->src().reg()), dst);
+
+			if (spilled) {
+				dst = instr->dest();
+				if (large) {
+					to->putByte(0x58 + registerId(low32(dst.reg())));
+					to->putByte(0x58 + registerId(high32(dst.reg())));
+				} else {
+					to->putByte(0x58 + registerId(dst.reg()));
+				}
+			}
+		}
+
+		static void movToFp(Output *to, Instr *instr) {
+			Operand src = instr->src();
+			bool large = src.size().size32() > 4;
+			bool spilled = false;
+			if (src.type() == opRegister) {
+				// Spill to memory using push.
+				spilled = true;
+				if (large) {
+					to->putByte(0x50 + registerId(high32(src.reg())));
+					to->putByte(0x50 + registerId(low32(src.reg())));
+				} else {
+					to->putByte(0x50 + registerId(src.reg()));
+				}
+				src = xRel(src.size(), ptrStack, Offset());
+			}
+
+			if (large)
+				to->putByte(0xF2);
+			else
+				to->putByte(0xF3);
+			to->putByte(0x0F);
+			to->putByte(0x10);
+			modRm(to, fpRegisterId(instr->dest().reg()), src);
+
+			if (spilled) {
+				// Clear stack (esp += 4/8)
+				to->putByte(0x81);
+				modRm(to, 0, ptrStack);
+				to->putInt(src.size().size32());
+			}
+		}
 
 		void movOut(Output *to, Instr *instr) {
-			ImmRegInstr8 op8 = {
-				0xC6, 0,
-				0x88,
-				0x8A,
-			};
-			ImmRegInstr op = {
-				0x0, 0xFF, // Not supported
-				0xC7, 0,
-				0x89,
-				0x8B,
-			};
-			immRegInstr(to, op8, op, instr->dest(), instr->src());
+			bool fpSrc = fpRegister(instr->src());
+			bool fpDest = fpRegister(instr->dest());
+			if (fpSrc && fpDest) {
+				// Two fp registers:
+				if (instr->size() == Size::sDouble)
+					to->putByte(0xF2);
+				else
+					to->putByte(0xF3);
+				to->putByte(0x0F);
+				to->putByte(0x10);
+				modRm(to, fpRegisterId(instr->dest().reg()), instr->src());
+			} else if (fpSrc) {
+				movFromFp(to, instr);
+			} else if (fpDest) {
+				movToFp(to, instr);
+			} else {
+				// Integer mov.
+				ImmRegInstr8 op8 = {
+					0xC6, 0,
+					0x88,
+					0x8A,
+				};
+				ImmRegInstr op = {
+					0x0, 0xFF, // Not supported
+					0xC7, 0,
+					0x89,
+					0x8B,
+				};
+				immRegInstr(to, op8, op, instr->dest(), instr->src());
+			}
 		}
 
 		void swapOut(Output *to, Instr *instr) {
@@ -493,115 +572,127 @@ namespace code {
 		}
 
 		void fstpOut(Output *to, Instr *instr) {
-			if (instr->size() == Size::sDouble)
+			if (instr->dest().size() == Size::sDouble)
 				to->putByte(0xDD);
 			else
 				to->putByte(0xD9);
 			modRm(to, 3, instr->dest());
 		}
 
-		void fistpOut(Output *to, Instr *instr) {
-#ifdef X86_REQUIRE_SSE3
-			// Issue FISTTP instead.
-			if (instr->size() == Size::sLong) {
-				to->putByte(0xDD);
-				modRm(to, 1, instr->dest());
-			} else {
-				to->putByte(0xDB);
-				modRm(to, 1, instr->dest());
-			}
-#else
-			// Use space just above stack for this.
-			Operand modified = intRel(ptrStack, -Offset(4));
-			Operand old = intRel(ptrStack, -Offset(2));
-
-			// Set rounding mode to 'truncate'.
-
-			// FNSTCW [ESP - 2]
-			to->putByte(0xD9);
-			modRm(to, 7, old);
-
-			// FNSTCW [ESP - 4]
-			to->putByte(0xD9);
-			modRm(to, 7, modified);
-
-			// OR [esp - 4], #0xC00 - Set bits 10 and 11 to 1.
-			borOut(to, bor(instr->engine(), modified, natConst(0xC00)));
-
-			// FLDCW [ESP - 4]
-			to->putByte(0xD9);
-			modRm(to, 5, modified);
-
-			// FISTP 'dest'
-			if (instr->size() == Size::sLong) {
-				to->putByte(0xDF);
-				modRm(to, 7, instr->dest());
-			} else {
-				to->putByte(0xDB);
-				modRm(to, 3, instr->dest());
-			}
-
-			// FLDCW [ESP - 2] - restore old mode
-			to->putByte(0xD9);
-			modRm(to, 5, old);
-#endif
-		}
-
 		void fldOut(Output *to, Instr *instr) {
-			if (instr->size() == Size::sDouble)
+			if (instr->src().size() == Size::sDouble)
 				to->putByte(0xDD);
 			else
 				to->putByte(0xD9);
 			modRm(to, 0, instr->src());
 		}
 
-		void fildOut(Output *to, Instr *instr) {
-			if (instr->size() == Size::sLong) {
-				to->putByte(0xDF);
-				modRm(to, 5, instr->src());
+		static void fpOp(Output *to, Instr *instr, byte op) {
+			if (instr->size() == Size::sDouble)
+				to->putByte(0xF2);
+			else
+				to->putByte(0xF3);
+			to->putByte(0x0F);
+			to->putByte(op);
+			modRm(to, fpRegisterId(instr->dest().reg()), instr->src());
+		}
+
+		void faddOut(Output *to, Instr *instr) {
+			fpOp(to, instr, 0x58);
+		}
+
+		void fsubOut(Output *to, Instr *instr) {
+			fpOp(to, instr, 0x5C);
+		}
+
+		void fmulOut(Output *to, Instr *instr) {
+			fpOp(to, instr, 0x59);
+		}
+
+		void fdivOut(Output *to, Instr *instr) {
+			fpOp(to, instr, 0x5E);
+		}
+
+		void fcmpOut(Output *to, Instr *instr) {
+			// Note: this is COMISS/COMISD, not CMPSS/CMPSD
+			if (instr->size() == Size::sDouble)
+				to->putByte(0x66);
+			to->putByte(0x0F);
+			to->putByte(0x2F);
+			modRm(to, fpRegisterId(instr->dest().reg()), instr->src());
+		}
+
+		void fcastOut(Output *to, Instr *instr) {
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+
+			if (src.size() == dst.size()) {
+				// Just a mov operation!
+				movOut(to, instr);
+				return;
+			}
+
+			if (src.size() == Size::sDouble)
+				to->putByte(0xF2);
+			else
+				to->putByte(0xF3);
+			to->putByte(0x0F);
+			to->putByte(0x5A);
+			modRm(to, fpRegisterId(instr->dest().reg()), instr->src());
+		}
+
+		void fcastiOut(Output *to, Instr *instr) {
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+			if (dst.size() == Size::sLong) {
+				// Use "old-style" FP instructions. We know that both operands are in memory, so we
+				// can simply emit fld and fisttp:
+				fldOut(to, instr);
+				to->putByte(0xDD);
+				modRm(to, 1, instr->dest());
 			} else {
-				to->putByte(0xDB);
-				modRm(to, 0, instr->src());
+				// Use CVTTSS2SI or CVTTSD2SI.
+				if (src.size() == Size::sDouble)
+					to->putByte(0xF2);
+				else
+					to->putByte(0xF3);
+				to->putByte(0x0F);
+				to->putByte(0x2C);
+				modRm(to, registerId(instr->dest().reg()), instr->src());
 			}
 		}
 
-		void fldzOut(Output *to, Instr *instr) {
-			to->putByte(0xD9);
-			to->putByte(0xEE);
+		void fcastuOut(Output *to, Instr *instr) {
+			// TODO: Do something sensible!
+			fcastiOut(to, instr);
 		}
 
-		void faddpOut(Output *to, Instr *instr) {
-			to->putByte(0xDE);
-			to->putByte(0xC1);
+		void icastfOut(Output *to, Instr *instr) {
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+			if (src.size() == Size::sLong) {
+				// Use "old-style" FP instructions. We know that both operands are in memory, so we
+				// can simply emit FILD followed by FSTP
+				to->putByte(0xDF);
+				modRm(to, 5, instr->src());
+				fstpOut(to, instr);
+			} else {
+				// TODO: Need to clear target register first? (use PXOR, 66 0f ef XX)
+
+				// Use CVTSI2SS or CVTSI2SD
+				if (src.size() == Size::sDouble)
+					to->putByte(0xF2);
+				else
+					to->putByte(0xF3);
+				to->putByte(0x0F);
+				to->putByte(0x2A);
+				modRm(to, fpRegisterId(instr->dest().reg()), instr->src());
+			}
 		}
 
-		void fsubpOut(Output *to, Instr *instr) {
-			to->putByte(0xDE);
-			to->putByte(0xE9);
-		}
-
-		void fmulpOut(Output *to, Instr *instr) {
-			to->putByte(0xDE);
-			to->putByte(0xC9);
-		}
-
-		void fdivpOut(Output *to, Instr *instr) {
-			to->putByte(0xDE);
-			to->putByte(0xF9);
-		}
-
-		void fcomppOut(Output *to, Instr *instr) {
-			// fcomip ST1
-			to->putByte(0xDF);
-			to->putByte(0xF0 + 1);
-
-			// fstp ST0 (effectively only a pop)
-			to->putByte(0xDD);
-			to->putByte(0xD8 + 0);
-		}
-
-		void fwaitOut(Output *to, Instr *instr) {
-			to->putByte(0x9B);
+		void ucastfOut(Output *to, Instr *instr) {
+			// TODO: Do something sensible!
+			icastfOut(to, instr);
 		}
 
 		void threadLocalOut(Output *to, Instr *instr) {
@@ -645,6 +736,10 @@ namespace code {
 			// We don't output metadata.
 		}
 
+#define OUTPUT(x) { op::x, &x ## Out }
+
+		typedef void (*OutputFn)(Output *to, Instr *instr);
+
 		const OpEntry<OutputFn> outputMap[] = {
 			OUTPUT(mov),
 			OUTPUT(swap),
@@ -677,18 +772,19 @@ namespace code {
 
 			OUTPUT(fstp),
 			OUTPUT(fld),
+			OUTPUT(fadd),
+			OUTPUT(fsub),
+			OUTPUT(fmul),
+			OUTPUT(fdiv),
+			OUTPUT(fcmp),
+			OUTPUT(fcast),
+			OUTPUT(fcasti),
+			OUTPUT(fcastu),
+			OUTPUT(icastf),
+			OUTPUT(ucastf),
 			// Basic testing shows that:
 			// use movups instead of movaps for unaligned loads
 			// unaligned operations for add/sub/etc is fine
-			// OUTPUT(fistp),
-			// OUTPUT(fild),
-			// OUTPUT(fldz),
-			// OUTPUT(faddp),
-			// OUTPUT(fsubp),
-			// OUTPUT(fmulp),
-			// OUTPUT(fdivp),
-			// OUTPUT(fcompp),
-			// OUTPUT(fwait),
 
 			OUTPUT(threadLocal),
 			OUTPUT(dat),

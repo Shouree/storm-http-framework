@@ -21,35 +21,75 @@ namespace code {
 		const Reg rsi = Reg(0x811);
 		const Reg rdi = Reg(0x812);
 
+		const Reg emm0 = Reg(0x428);
+		const Reg emm1 = Reg(0x429);
+		const Reg emm2 = Reg(0x42A);
+		const Reg emm3 = Reg(0x42B);
+		const Reg emm4 = Reg(0x42C);
+		const Reg emm5 = Reg(0x42D);
+		const Reg emm6 = Reg(0x42E);
+		const Reg emm7 = Reg(0x42F);
+		const Reg xmm0 = Reg(0x828);
+		const Reg xmm1 = Reg(0x829);
+		const Reg xmm2 = Reg(0x82A);
+		const Reg xmm3 = Reg(0x82B);
+		const Reg xmm4 = Reg(0x82C);
+		const Reg xmm5 = Reg(0x82D);
+		const Reg xmm6 = Reg(0x82E);
+		const Reg xmm7 = Reg(0x82F);
+
+		static const Reg pmm0 = Reg(0x028);
+		static const Reg pmm1 = Reg(0x029);
+		static const Reg pmm2 = Reg(0x02A);
+		static const Reg pmm3 = Reg(0x02B);
+		static const Reg pmm4 = Reg(0x02C);
+		static const Reg pmm5 = Reg(0x02D);
+		static const Reg pmm6 = Reg(0x02E);
+		static const Reg pmm7 = Reg(0x02F);
+
+#define CASE_REG(name) case name: return S(#name)
+
 		const wchar *nameX86(Reg r) {
 			switch (r) {
-			case ptrD:
-				return S("ptrD");
-			case ptrSi:
-				return S("ptrSi");
-			case ptrDi:
-				return S("ptrDi");
+				CASE_REG(ptrD);
+				CASE_REG(ptrSi);
+				CASE_REG(ptrDi);
+				CASE_REG(dl);
+				CASE_REG(sil);
+				CASE_REG(dil);
+				CASE_REG(edx);
+				CASE_REG(esi);
+				CASE_REG(edi);
+				CASE_REG(rdx);
+				CASE_REG(rsi);
+				CASE_REG(rdi);
 
-			case dl:
-				return S("dl");
-			case sil:
-				return S("sil");
-			case dil:
-				return S("dil");
+				CASE_REG(emm0);
+				CASE_REG(emm1);
+				CASE_REG(emm2);
+				CASE_REG(emm3);
+				CASE_REG(emm4);
+				CASE_REG(emm5);
+				CASE_REG(emm6);
+				CASE_REG(emm7);
+				CASE_REG(xmm0);
+				CASE_REG(xmm1);
+				CASE_REG(xmm2);
+				CASE_REG(xmm3);
+				CASE_REG(xmm4);
+				CASE_REG(xmm5);
+				CASE_REG(xmm6);
+				CASE_REG(xmm7);
 
-			case edx:
-				return S("edx");
-			case esi:
-				return S("esi");
-			case edi:
-				return S("edi");
-
-			case rdx:
-				return S("rdx");
-			case rsi:
-				return S("rsi");
-			case rdi:
-				return S("rdi");
+				// Only for completeness.
+				CASE_REG(pmm0);
+				CASE_REG(pmm1);
+				CASE_REG(pmm2);
+				CASE_REG(pmm3);
+				CASE_REG(pmm4);
+				CASE_REG(pmm5);
+				CASE_REG(pmm6);
+				CASE_REG(pmm7);
 			default:
 				return null;
 			}
@@ -71,6 +111,17 @@ namespace code {
 				}
 			}
 
+			return noReg;
+		}
+
+		Reg unusedFpReg(RegSet *in) {
+			static const Reg candidates[] = {
+				xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
+			};
+			for (nat i = 0; i < ARRAY_COUNT(candidates); i++) {
+				if (!in->has(candidates[i]))
+					return candidates[i];
+			}
 			return noReg;
 		}
 
@@ -134,24 +185,19 @@ namespace code {
 			return Operand();
 		}
 
-		RegSet *allRegs(EnginePtr e) {
-			RegSet *r = new (e.v) RegSet();
-			r->put(eax);
-			r->put(ebx);
-			r->put(ecx);
-			r->put(edx);
-			r->put(esi);
-			r->put(edi);
-			return r;
-		}
+		static const Reg regs[] = {
+			eax, ebx, ecx, edx, esi, edi,
+			xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7,
+		};
+		const Reg *allRegs = regs;
+		const size_t allCount = ARRAY_COUNT(regs);
 
-		RegSet *fnDirtyRegs(EnginePtr e) {
-			RegSet *r = new (e.v) RegSet();
-			r->put(eax);
-			r->put(ecx);
-			r->put(edx);
-			return r;
-		}
+		static const Reg dirtyRegs[] = {
+			eax, ecx, edx,
+			xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7,
+		};
+		const Reg *fnDirtyRegs = dirtyRegs;
+		const size_t fnDirtyCount = ARRAY_COUNT(dirtyRegs);
 
 		Reg preserve(Reg r, RegSet *used, Listing *dest) {
 			Reg into = unusedReg(used);
@@ -172,25 +218,27 @@ namespace code {
 			}
 		}
 
-		Preserve::Preserve(RegSet *regs, RegSet *used, Listing *dest) {
+		Preserve::Preserve(const Reg *regs, size_t regCount, RegSet *used, Listing *dest) {
 			this->dest = dest;
 			srcReg = new (dest) Array<Nat>();
 			destReg = new (dest) Array<Nat>();
 			RegSet *usedBefore = new (used) RegSet(*used);
 			RegSet *usedAfter = new (used) RegSet(*used);
 			// Do not attempt to use any of the registers we want to preserve to store stuff in.
-			usedAfter->put(regs);
+			for (size_t i = 0; i < regCount; i++)
+				usedAfter->put(regs[i]);
 
 			add64(usedBefore);
 			add64(usedAfter);
 
-			for (RegSet::Iter i = regs->begin(); i != regs->end(); ++i) {
-				if (usedBefore->has(*i)) {
-					Reg r = preserve(*i, usedAfter, dest);
-					srcReg->push(Nat(*i));
-					destReg->push(Nat(r));
-					if (r != noReg)
-						usedAfter->put(r);
+			for (size_t i = 0; i < regCount; i++) {
+				Reg r = regs[i];
+				if (usedBefore->has(r)) {
+					Reg to = preserve(r, usedAfter, dest);
+					srcReg->push(Nat(r));
+					destReg->push(Nat(to));
+					if (to != noReg)
+						usedAfter->put(to);
 				}
 			}
 		}
@@ -208,30 +256,64 @@ namespace code {
 			case al:
 			case ptrA:
 			case eax:
+			case rax:
 				return 0;
 			case cl:
 			case ptrC:
 			case ecx:
+			case rcx:
 				return 1;
 			case bl:
 			case ptrB:
 			case ebx:
+			case rbx:
 				return 3;
+
+			case dl:
+			case ptrD:
+			case edx:
+			case rdx:
+				return 2;
+
+			case sil:
+			case ptrSi:
+			case esi:
+			case rsi:
+				return 6;
+
+			case dil:
+			case ptrDi:
+			case edi:
+			case rdi:
+				return 7;
 
 			case ptrStack:
 				return 4;
 			case ptrFrame:
 				return 5;
 			default:
-				if (asSize(r, Size::sPtr) == ptrD)
-					return 2;
-				if (asSize(r, Size::sPtr) == ptrSi)
-					return 6;
-				if (asSize(r, Size::sPtr) == ptrDi)
-					return 7;
+				if (fpRegister(r))
+					return fpRegisterId(r);
 				assert(false, L"Can not use " + ::toS(name(r)));
 				return 0;
 			}
+		}
+
+		bool fpRegister(const Operand &op) {
+			if (op.type() != opRegister)
+				return false;
+			else
+				return fpRegister(op.reg());
+		}
+
+		bool fpRegister(Reg r) {
+			Nat t = Nat(r) & 0xFF;
+			return t >= 0x28 && t <= 0x2F;
+		}
+
+		nat fpRegisterId(Reg r) {
+			assert(fpRegister(r));
+			return (Nat(r) & 0xF) - 8;
 		}
 
 		byte condOp(CondFlag c) {

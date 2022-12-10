@@ -88,29 +88,23 @@ namespace code {
 			resultParam = code::x86::resultParam(src->result);
 			memberFn = src->member;
 
-			RegSet *used;
-
 			// At least on Windows, registers are not preserved if an exception is caught
 			// here. Therefore, if we contain any exception handlers, we just assume that all
 			// registers are dirty.
+			// TODO: If we ever support 32-bit Linux, this is probably not needed.
 			if (src->exceptionCaught()) {
-				// TODO: If we ever support 32-bit Linux, this is probably not needed.
-				used = allRegs(engine());
+				preserved = new (this) RegSet();
+				for (size_t i = 0; i < allCount; i++)
+					preserved->put(allRegs[i]);
 			} else {
-				used = allUsedRegs(src);
-				add64(used);
+				preserved = allUsedRegs(src);
+				add64(preserved);
 			}
 
-			preserved = new (this) RegSet();
-			RegSet *notPreserved = fnDirtyRegs(engine());
+			// Now, remove registers we don't need to preserve since they are considered to be "dirty".
+			for (size_t i = 0; i < fnDirtyCount; i++)
+				preserved->remove(fnDirtyRegs[i]);
 
-			// Any registers in 'all' which are not in 'notPreserved' needs to be properly stored
-			// through this function call.
-
-			for (RegSet::Iter i = used->begin(); i != used->end(); ++i) {
-				if (!notPreserved->has(i.v()))
-					preserved->put(i.v());
-			}
 
 			layout = code::x86::layout(src, preserved->count(), usingEH, resultParam, memberFn);
 
@@ -183,32 +177,32 @@ namespace code {
 			return xRel(src.size(), ptrFrame, layout->at(v.key()) + src.offset());
 		}
 
-		// Zero the memory of a variable. 'initEax' should be true if we need to set eax to 0 before
-		// using it as our zero. 'initEax' will be set to false, so that it is easy to use zeroVar
-		// in a loop, causing only the first invocation to emit 'eax := 0'.
-		static void zeroVar(Listing *dest, Offset start, Size size, bool &initEax) {
+		// Zero the memory of a variable. 'initReg' should be true if we need to set <reg> to 0 before
+		// using it as our zero. 'initReg' will be set to false, so that it is easy to use zeroVar
+		// in a loop, causing only the first invocation to emit '<reg> := 0'.
+		static void zeroVar(Listing *dest, Offset start, Size size, Reg reg, bool &initReg) {
 			nat s32 = size.size32();
 			if (s32 == 0)
 				return;
 
-			if (initEax) {
-				*dest << bxor(eax, eax);
-				initEax = false;
+			if (initReg) {
+				*dest << bxor(reg, reg);
+				initReg = false;
 			}
 
 			nat pos = 0;
 			while (pos < s32) {
 				if (s32 - pos >= 4) {
-					*dest << mov(intRel(ptrFrame, start + Offset(pos)), eax);
+					*dest << mov(intRel(ptrFrame, start + Offset(pos)), asSize(reg, Size::sInt));
 					pos += 4;
 				} else {
-					*dest << mov(byteRel(ptrFrame, start + Offset(pos)), al);
+					*dest << mov(byteRel(ptrFrame, start + Offset(pos)), asSize(reg, Size::sByte));
 					pos += 1;
 				}
 			}
 		}
 
-		void LayoutVars::initBlock(Listing *dest, Block init) {
+		void LayoutVars::initBlock(Listing *dest, Block init, Reg freeReg) {
 			if (block != dest->parent(init)) {
 				Str *msg = TO_S(engine(), S("Can not begin ") << init << S(" unless the current is ")
 								<< dest->parent(init) << S(". Current is ") << block);
@@ -217,8 +211,7 @@ namespace code {
 
 			block = init;
 
-			TODO(L"We can't assume that eax is free at this point.");
-			bool initEax = true;
+			bool initReg = true;
 
 			Array<Var> *vars = dest->allVars(init);
 			Array<Listing::CatchInfo> *catchInfo = dest->catchInfo(init);
@@ -227,7 +220,7 @@ namespace code {
 				Var v = vars->at(i - 1);
 
 				if (!dest->isParam(v))
-					zeroVar(dest, layout->at(v.key()), v.size(), initEax);
+					zeroVar(dest, layout->at(v.key()), v.size(), freeReg, initReg);
 			}
 
 			// If the block was empty, we don't need to update the info.
@@ -382,8 +375,8 @@ namespace code {
 				offset -= Offset::sPtr;
 			}
 
-			// Initialize the root block.
-			initBlock(dest, dest->root());
+			// Initialize the root block. We know that eax is safe to use here.
+			initBlock(dest, dest->root(), eax);
 		}
 
 		void LayoutVars::epilogTfm(Listing *dest, Listing *src, Nat line) {
@@ -419,7 +412,9 @@ namespace code {
 		}
 
 		void LayoutVars::beginBlockTfm(Listing *dest, Listing *src, Nat line) {
-			initBlock(dest, src->at(line)->src().block());
+			Instr *instr = src->at(line);
+			// Note: register is added in the previous pass.
+			initBlock(dest, instr->src().block(), instr->dest().reg());
 		}
 
 		void LayoutVars::endBlockTfm(Listing *dest, Listing *src, Nat line) {

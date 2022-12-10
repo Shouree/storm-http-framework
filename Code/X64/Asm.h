@@ -61,9 +61,9 @@ namespace code {
 		extern const Reg r15;
 
 		/**
-		 * XMM registers required for the calling convention. Called 'emm' for 4 bytes wide and
-		 * 'xmm' for 8 bytes wide. These are only usable in 'mov' instructions. It is not possible
-		 * to move data from a regular register to an xmm register directly.
+		 * XMM registers required for the calling convention and FP operations. Called 'emm' for 4
+		 * bytes wide and 'xmm' for 8 bytes wide. These are only usable in 'mov' instructions. It is
+		 * not possible to move data from a regular register to an xmm register directly.
 		 */
 		extern const Reg emm0;
 		extern const Reg emm1;
