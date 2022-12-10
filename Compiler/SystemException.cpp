@@ -14,25 +14,6 @@
 
 namespace storm {
 
-#ifdef X64
-	static const void *instructionPtr(const ucontext_t *ctx) {
-		return (const void *)ctx->uc_mcontext.gregs[REG_RIP];
-	}
-
-#endif
-
-#ifdef X86
-	static const void *instructionPtr(const ucontext_t *ctx) {
-		return (const void *)ctx->uc_mcontext.gregs[REG_RIP];
-	}
-#endif
-
-#ifdef ARM64
-	static const void *instructionPtr(const ucontext_t *ctx) {
-		return (const void *)ctx->uc_mcontext.pc;
-	}
-#endif
-
 	static Engine *findEngine(const void *pc) {
 		FDE *fde = dwarfTable().find(pc);
 		if (!fde)
@@ -46,6 +27,24 @@ namespace storm {
 	}
 
 #ifdef POSIX
+
+#ifdef X64
+	static const void *instructionPtr(const ucontext_t *ctx) {
+		return (const void *)ctx->uc_mcontext.gregs[REG_RIP];
+	}
+#endif
+
+#ifdef X86
+	static const void *instructionPtr(const ucontext_t *ctx) {
+		return (const void *)ctx->uc_mcontext.gregs[REG_EIP];
+	}
+#endif
+
+#ifdef ARM64
+	static const void *instructionPtr(const ucontext_t *ctx) {
+		return (const void *)ctx->uc_mcontext.pc;
+	}
+#endif
 
 	static void chainSigHandler(struct sigaction &sig, int signal, siginfo_t *info, void *context) {
 		if (sig.sa_flags & SA_SIGINFO) {
