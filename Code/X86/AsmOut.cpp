@@ -71,6 +71,22 @@ namespace code {
 			}
 		}
 
+		static void movOut(Output *to, const Operand &dest, const Operand &src) {
+			// Integer mov.
+			ImmRegInstr8 op8 = {
+				0xC6, 0,
+				0x88,
+				0x8A,
+			};
+			ImmRegInstr op = {
+				0x0, 0xFF, // Not supported
+				0xC7, 0,
+				0x89,
+				0x8B,
+			};
+			immRegInstr(to, op8, op, dest, src);
+		}
+
 		void movOut(Output *to, Instr *instr) {
 			bool fpSrc = fpRegister(instr->src());
 			bool fpDest = fpRegister(instr->dest());
@@ -88,19 +104,7 @@ namespace code {
 			} else if (fpDest) {
 				movToFp(to, instr);
 			} else {
-				// Integer mov.
-				ImmRegInstr8 op8 = {
-					0xC6, 0,
-					0x88,
-					0x8A,
-				};
-				ImmRegInstr op = {
-					0x0, 0xFF, // Not supported
-					0xC7, 0,
-					0x89,
-					0x8B,
-				};
-				immRegInstr(to, op8, op, instr->dest(), instr->src());
+				movOut(to, instr->dest(), instr->src());
 			}
 		}
 
@@ -113,7 +117,7 @@ namespace code {
 			modRm(to, registerId(instr->dest().reg()), instr->src());
 		}
 
-		void addOut(Output *to, Instr *instr) {
+		static void addOut(Output *to, const Operand &dest, const Operand &src) {
 			ImmRegInstr8 op8 = {
 				0x80, 0,
 				0x00,
@@ -125,10 +129,13 @@ namespace code {
 				0x01,
 				0x03
 			};
-			immRegInstr(to, op8, op, instr->dest(), instr->src());
+			immRegInstr(to, op8, op, dest, src);
+		}
+		void addOut(Output *to, Instr *instr) {
+			addOut(to, instr->dest(), instr->src());
 		}
 
-		void adcOut(Output *to, Instr *instr) {
+		static void adcOut(Output *to, const Operand &dest, const Operand &src) {
 			ImmRegInstr8 op8 = {
 				0x80, 2,
 				0x10,
@@ -140,7 +147,10 @@ namespace code {
 				0x11,
 				0x13
 			};
-			immRegInstr(to, op8, op, instr->dest(), instr->src());
+			immRegInstr(to, op8, op, dest, src);
+		}
+		void adcOut(Output *to, Instr *instr) {
+			adcOut(to, instr->dest(), instr->src());
 		}
 
 		void borOut(Output *to, Instr *instr) {
@@ -216,7 +226,7 @@ namespace code {
 			immRegInstr(to, op8, op, instr->dest(), instr->src());
 		}
 
-		void bxorOut(Output *to, Instr *instr) {
+		static void bxorOut(Output *to, const Operand &dest, const Operand &src) {
 			ImmRegInstr8 op8 = {
 				0x80, 6,
 				0x30,
@@ -228,7 +238,10 @@ namespace code {
 				0x31,
 				0x33
 			};
-			immRegInstr(to, op8, op, instr->dest(), instr->src());
+			immRegInstr(to, op8, op, dest, src);
+		}
+		void bxorOut(Output *to, Instr *instr) {
+			bxorOut(to, instr->dest(), instr->src());
 		}
 
 		void cmpOut(Output *to, Instr *instr) {
@@ -663,8 +676,129 @@ namespace code {
 		}
 
 		void fcastuOut(Output *to, Instr *instr) {
-			// TODO: Do something sensible!
-			fcastiOut(to, instr);
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+
+			// Use "old-style" FP instructions. We know that both operands are in memory, so we
+			// can simply emit fld and fisttp:
+			fldOut(to, instr);
+
+			if (dst.size() == Size::sLong) {
+				// Complex case. Conversions to integers are 'staurated', and we use that. We spill
+				// the number to memory first, load it back and subtract from the original
+				// number. That gives us a difference that we can add to the original number.
+				// We know that we have 16 bytes available on the stack to do our work, and a register
+				// <dsth>, <dstl> to use as a temporary.
+
+				Reg dstl = low32(dst.reg());
+				Reg dsth = high32(dst.reg());
+				Operand stackPos = longRel(ptrStack, Offset());
+				Operand stackLow = low32(stackPos);
+				Operand stackHigh = high32(stackPos);
+
+
+				// We emit the following code: (source is already loaded)
+				// mov <dstl>, 0xFFFFFFFF
+				// mov <stack>, <dstl>
+				// shr <dstl>, 1
+				// mov <stack+4>, <dstl>
+				// fild <stack>
+				// fcomi ST1
+				// ja LARGE
+				// fldz ST1
+				// fcomip ST1
+				// ja NORMAL
+				// xor <dsth>, <dsth>
+				// xor <dstl>, <dstl>
+				// j DONE
+				// LARGE:
+				// fsubp ST1 (maybe fsubr)
+				// fsttp <stack>
+				// mov <dstl>, <stack>
+				// mov <dsth>, <stack+4>
+				// add <dstl>, 0xFFFFFFFF
+				// adc <dsth>, 0x7FFFFFFF
+				// j DONE
+				// NORMAL:
+				// fsttp <stack>
+				// mov <dstl>, <stack>
+				// mov <dsth>, <stack+4>
+				// DONE:
+
+				// mov <dstl>, 0xFFFFFF
+				movOut(to, dstl, natConst(0xFFFFFFFF));
+				// mov <stack>, <dstl>
+				movOut(to, stackLow, dstl);
+				// shr <dstl>
+				to->putByte(0xC1);
+				modRm(to, 5, dstl);
+				to->putByte(0x01);
+				// mov <stack+4>, <dstl>
+				movOut(to, stackHigh, dstl);
+				// fild
+				to->putByte(0xDF);
+				modRm(to, 5, stackPos);
+				// fcomi ST1
+				to->putByte(0xDB);
+				to->putByte(0xF1);
+				// ja LARGE
+				to->putByte(0x0F);
+				to->putByte(0x82);
+				to->putInt(23);
+				// fstp ST0 (effectively only a pop)
+				to->putByte(0xDD);
+				to->putByte(0xD8 + 0);
+				// fldz ST1
+				to->putByte(0xD9);
+				to->putByte(0xEE);
+				// fcomip ST1
+				to->putByte(0xDF);
+				to->putByte(0xF1);
+				// ja NORMAL
+				to->putByte(0x0F);
+				to->putByte(0x82);
+				to->putInt(40);
+				// fstp ST0 (effectively only a pop)
+				to->putByte(0xDD);
+				to->putByte(0xD8 + 0);
+				// xor x2 (4 bytes)
+				bxorOut(to, dstl, dstl);
+				bxorOut(to, dsth, dsth);
+				// j DONE
+				to->putByte(0xE9);
+				to->putInt(0x27);
+				// LARGE:
+				// fsubp/fsubr ST0
+				to->putByte(0xDE);
+				to->putByte(0xE9);
+				// fsttp <stack>
+				to->putByte(0xDD);
+				modRm(to, 1, stackPos);
+				// mov x2
+				movOut(to, dstl, stackLow);
+				movOut(to, dsth, stackHigh);
+				// add <dstl>, <stack>
+				addOut(to, dstl, natConst(0xFFFFFFFF));
+				// adc <dsth>, <stack+4>
+				adcOut(to, dsth, natConst(0x7FFFFFFF));
+				// j DONE
+				to->putByte(0xE9);
+				to->putInt(0xA);
+				// NORMAL:
+				// fsttp <stack>
+				to->putByte(0xDD);
+				modRm(to, 1, stackPos);
+				// mov x2
+				movOut(to, dstl, stackLow);
+				movOut(to, dsth, stackHigh);
+				// DONE:
+
+			} else {
+				// Simple case, just tell the hardware to emit a 64-bit output and return the lower
+				// 32-bits of it.
+				to->putByte(0xDD);
+				modRm(to, 1, instr->dest());
+			}
 		}
 
 		void icastfOut(Output *to, Instr *instr) {
@@ -691,8 +825,73 @@ namespace code {
 		}
 
 		void ucastfOut(Output *to, Instr *instr) {
-			// TODO: Do something sensible!
-			icastfOut(to, instr);
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+			if (src.size() == Size::sLong) {
+				// This case is a bit tricky. We need to check the sign bit manually and adjust.
+				// The idea here is to load the number as usual. If it was treated as negative, we
+				// can simply compensate by adding a large enough number to it.
+
+				// We emit the following code:
+				// fild <src>
+				// mov <tmp>, <src+4>
+				// test <tmp>, <tmp>
+				// jns DONE
+				// xor <tmp>, <tmp>
+				// mov <dst>, <tmp>
+				// mov <tmp>, #exp
+				// mov <dst+4>, <tmp>
+				// fild <tmp>
+				// faddp ST1
+				// DONE
+				// fstp
+
+				// Here, #exp is the number 2^62 as encoded for a double:
+				Nat exp = (64 + 1023) << 20;
+
+				Reg tmp = asSize(dst.reg(), Size::sInt);
+				Operand stackPos = longRel(ptrStack, Offset());
+				Operand stackLow = low32(stackPos);
+				Operand stackHigh = high32(stackPos);
+
+				// fild <src>
+				to->putByte(0xDF);
+				modRm(to, 5, instr->src());
+				// mov <tmp>, <src+4>
+				movOut(to, tmp, stackHigh);
+				// test <tmp>, <tmp>
+				to->putByte(0x85);
+				modRm(to, registerId(tmp), tmp);
+				// jns DONE
+				to->putByte(0x0F);
+				to->putByte(0x89);
+				to->putInt(20);
+				// xor <tmp>, <tmp>
+				bxorOut(to, tmp, tmp);
+				// mov <dst>, <tmp>
+				movOut(to, stackLow, tmp);
+				// mov <tmp>, #exp
+				movOut(to, tmp, natConst(exp));
+				// mov <dst+4>, <tmp>
+				movOut(to, stackHigh, tmp);
+				// fild <tmp>
+				to->putByte(0xDD);
+				modRm(to, 0, stackPos);
+				// faddp ST0
+				to->putByte(0xDE);
+				to->putByte(0xC1);
+				// fstp <dest>
+				if (dst.size() == Size::sDouble)
+					to->putByte(0xDD);
+				else
+					to->putByte(0xD9);
+				modRm(to, 3, stackPos);
+			} else {
+				// Issue a 64-bit load. Pre-processing ensures that this is fine to do.
+				to->putByte(0xDF);
+				modRm(to, 5, instr->src());
+				fstpOut(to, instr);
+			}
 		}
 
 		void threadLocalOut(Output *to, Instr *instr) {

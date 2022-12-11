@@ -780,14 +780,14 @@ namespace code {
 					*dest << sub(ptrStack, ptrConst(Size::sLong));
 				}
 
-				Operand stackTmp = xRel(src.size(), ptrStack, Offset());
 				if (src.type() == opRegister) {
+					Operand stackTmp = xRel(src.size(), ptrStack, Offset());
 					*dest << mov(stackTmp, src);
 					src = stackTmp;
 				}
 
 				if (dst.type() == opRegister) {
-					*dest << instr->alter(stackTmp, src);
+					*dest << instr->alter(xRel(dst.size(), ptrStack, Offset()), src);
 				} else {
 					*dest << instr->alterSrc(src);
 				}
@@ -815,7 +815,95 @@ namespace code {
 		}
 
 		void RemoveInvalid::fcastuTfm(Listing *dest, Instr *instr, Nat line) {
-			fcastiTfm(dest, instr, line);
+			// In case we are asked to convert to a 32-bit uint, we always use the x87 FP stack.
+			// For the 32-bit output case, we simply convert to a 64-bit int and return the lower
+			// 32 bits. For the 64-bit case, we need to emit a bit more elaborate code that needs
+			// a register and 64-bits of temporary storage on the stack.
+
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+			if (dst.size() == Size::sLong) {
+				Size stackSize = Size::sLong;
+
+				// A temporary register is needed as destination.
+				Reg dstReg = noReg;
+				if (dst.type() == opRegister) {
+					dstReg = dst.reg();
+				}
+				if (dstReg == noReg) {
+					const Reg options[3] = { rax, rbx, rcx };
+					RegSet *used = this->used->at(line);
+					for (Nat i = 0; i < ARRAY_COUNT(options); i++) {
+						if (!used->has(low32(options[i])) && !used->has(high32(options[i]))) {
+							dstReg = options[i];
+							break;
+						}
+					}
+				}
+				Bool saveRax = false;
+				if (dstReg == noReg) {
+					dstReg = rax;
+					saveRax = true;
+					stackSize += Size::sLong;
+				}
+
+				*dest << sub(ptrStack, ptrConst(stackSize));
+
+				if (saveRax) {
+					*dest << mov(intRel(ptrStack, Offset::sLong), eax);
+					*dest << mov(intRel(ptrStack, Offset::sLong + Offset::sInt), edx);
+				}
+
+				// Source needs to be in memory.
+				if (src.type() == opRegister) {
+					Operand stackTmp = xRel(src.size(), ptrStack, Offset());
+					*dest << mov(stackTmp, src);
+					src = stackTmp;
+				}
+
+				*dest << instr->alter(dstReg, src);
+
+				if (saveRax) {
+					*dest << mov(eax, intRel(ptrStack, Offset::sLong));
+					*dest << mov(edx, intRel(ptrStack, Offset::sLong + Offset::sInt));
+				}
+
+				// Copy result to proper location.
+				if (dst.type() != opRegister || dst.reg() != dstReg) {
+					*dest << mov(low32(dst), low32(dstReg));
+					*dest << mov(high32(dst), high32(dstReg));
+				}
+				*dest << add(ptrStack, ptrConst(stackSize));
+			} else {
+				// We always need to spill to the stack since the output will be longer than the target.
+				*dest << sub(ptrStack, ptrConst(Size::sLong));
+
+				if (src.type() == opRegister) {
+					Operand stackTmp = xRel(src.size(), ptrStack, Offset());
+					*dest << mov(stackTmp, src);
+					src = stackTmp;
+				}
+
+				*dest << instr->alter(intRel(ptrStack, Offset()), src);
+
+				if (dst.type() == opRegister) {
+					*dest << mov(dst, intRel(ptrStack, Offset()));
+				} else {
+					Reg tmpReg = unusedReg(line);
+					if (tmpReg == noReg) {
+						*dest << push(eax);
+						*dest << mov(eax, intRel(ptrStack, Offset()));
+						*dest << mov(dst, eax);
+						*dest << pop(eax);
+					} else {
+						tmpReg = asSize(tmpReg, Size::sInt);
+						*dest << mov(tmpReg, intRel(ptrStack, Offset()));
+						*dest << mov(dst, tmpReg);
+					}
+				}
+
+				*dest << add(ptrStack, ptrConst(Size::sLong));
+			}
 		}
 
 		void RemoveInvalid::icastfTfm(Listing *dest, Instr *instr, Nat line) {
@@ -826,7 +914,6 @@ namespace code {
 			if (src.size() == Size::sLong) {
 				// x87 FP stack. Source and destination need to be in memory.
 				Operand dst = instr->dest();
-				Operand stackTmp = xRel(src.size(), ptrStack, Offset());
 				bool spillToStack = dst.type() == opRegister || src.type() == opRegister;
 
 				if (spillToStack) {
@@ -839,6 +926,7 @@ namespace code {
 				}
 
 				if (dst.type() == opRegister) {
+					Operand stackTmp = xRel(dst.size(), ptrStack, Offset());
 					*dest << instr->alter(stackTmp, src);
 					*dest << mov(dst, stackTmp);
 				} else {
@@ -850,7 +938,7 @@ namespace code {
 				}
 
 			} else {
-				// SSE. Need source in fp register or memory. Destination has to be integer register.
+				// SSE. Need source in register or memory. Destination has to be integer register.
 				Operand dst = instr->dest();
 				if (fpRegister(dst)) {
 					*dest << instr;
@@ -863,7 +951,89 @@ namespace code {
 		}
 
 		void RemoveInvalid::ucastfTfm(Listing *dest, Instr *instr, Nat line) {
-			icastfTfm(dest, instr, line);
+			// For unsigned values, we always use the x87 stack. For Nat, we simply spill it to the
+			// stack and load a 64-bit integer value. For Word, we need slightly more complex
+			// machine code. That code requires the source to be in a register, the destination in
+			// memory, and 8 bytes of stack space allocated for it.
+
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+			Size stackSize = Size::sLong;
+
+			// We need a temporary register. If dest is a register, we can use that.
+			Reg tmpReg = noReg;
+			if (dst.type() == opRegister)
+				tmpReg = dst.reg();
+			if (tmpReg == noReg)
+				tmpReg = unusedReg(line);
+			Bool saveEax = false;
+			if (tmpReg == noReg) {
+				tmpReg = eax;
+				saveEax = true;
+				stackSize += Size::sLong;
+			}
+
+			tmpReg = asSize(tmpReg, Size::sInt);
+
+			*dest << sub(ptrStack, ptrConst(stackSize));
+
+			if (saveEax)
+				*dest << mov(intRel(ptrStack, Offset::sLong), eax);
+
+			Bool copyResult = false;
+
+
+			if (src.size() == Size::sLong) {
+				// Source needs to be in memory.
+				if (src.type() == opRegister) {
+					*dest << mov(intRel(ptrStack, Offset()), low32(src));
+					*dest << mov(intRel(ptrStack, Offset::sInt), high32(src));
+				} else {
+					*dest << mov(tmpReg, low32(src));
+					*dest << mov(intRel(ptrStack, Offset()), tmpReg);
+					*dest << mov(tmpReg, high32(src));
+					*dest << mov(intRel(ptrStack, Offset::sInt), tmpReg);
+				}
+
+				// Inform the next step where the result is located.
+				*dest << instr->alter(asSize(tmpReg, dst.size()), longRel(ptrStack, Offset()));
+				copyResult = true;
+
+			} else {
+				// We always need to copy to the stack to ensure that we have space for zero
+				// extension.
+
+				if (src.type() == opRegister) {
+					*dest << mov(intRel(ptrStack, Offset()), src);
+				} else {
+					*dest << mov(tmpReg, src);
+					*dest << mov(intRel(ptrStack, Offset()), tmpReg);
+				}
+				*dest << bxor(tmpReg, tmpReg);
+				*dest << mov(intRel(ptrStack, Offset::sInt), tmpReg);
+
+				if (dst.type() == opRegister) {
+					*dest << instr->alter(xRel(dst.size(), ptrStack, Offset()), intRel(ptrStack, Offset()));
+					copyResult = true;
+				} else {
+					*dest << instr->alterSrc(intRel(ptrStack, Offset()));
+				}
+			}
+
+
+			if (saveEax)
+				*dest << mov(eax, intRel(ptrStack, Offset::sLong));
+
+			// Copy result back to where it belongs.
+			if (dst.type() == opRegister) {
+				*dest << mov(dst, xRel(dst.size(), ptrStack, Offset()));
+			} else {
+				Reg fpReg = asSize(unusedFpReg(used->at(line)), dst.size());
+				*dest << mov(fpReg, xRel(dst.size(), ptrStack, Offset()));
+				*dest << mov(dst, fpReg);
+			}
+
+			*dest << add(ptrStack, ptrConst(Size::sLong));
 		}
 
 	}
