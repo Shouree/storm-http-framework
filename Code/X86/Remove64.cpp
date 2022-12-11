@@ -48,7 +48,6 @@ namespace code {
 
 		// Call a function which implements the instruction. (reads src and dest, stores in dest).
 		static void callFn(Listing *to, Instr *instr, RegSet *used, const void *fn) {
-			Engine &e = to->engine();
 			Operand src = instr->src();
 			Operand dest = instr->dest();
 

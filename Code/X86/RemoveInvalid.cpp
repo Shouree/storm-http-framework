@@ -1025,12 +1025,14 @@ namespace code {
 				*dest << mov(eax, intRel(ptrStack, Offset::sLong));
 
 			// Copy result back to where it belongs.
-			if (dst.type() == opRegister) {
-				*dest << mov(dst, xRel(dst.size(), ptrStack, Offset()));
-			} else {
-				Reg fpReg = asSize(unusedFpReg(used->at(line)), dst.size());
-				*dest << mov(fpReg, xRel(dst.size(), ptrStack, Offset()));
-				*dest << mov(dst, fpReg);
+			if (copyResult) {
+				if (dst.type() == opRegister) {
+					*dest << mov(dst, xRel(dst.size(), ptrStack, Offset()));
+				} else {
+					Reg fpReg = asSize(unusedFpReg(used->at(line)), dst.size());
+					*dest << mov(fpReg, xRel(dst.size(), ptrStack, Offset()));
+					*dest << mov(dst, fpReg);
+				}
 			}
 
 			*dest << add(ptrStack, ptrConst(Size::sLong));

@@ -676,7 +676,7 @@ namespace code {
 		}
 
 		void fcastuOut(Output *to, Instr *instr) {
-			Operand src = instr->src();
+			// Operand src = instr->src();
 			Operand dst = instr->dest();
 
 			// Use "old-style" FP instructions. We know that both operands are in memory, so we
@@ -803,7 +803,7 @@ namespace code {
 
 		void icastfOut(Output *to, Instr *instr) {
 			Operand src = instr->src();
-			Operand dst = instr->dest();
+			// Operand dst = instr->dest();
 			if (src.size() == Size::sLong) {
 				// Use "old-style" FP instructions. We know that both operands are in memory, so we
 				// can simply emit FILD followed by FSTP
