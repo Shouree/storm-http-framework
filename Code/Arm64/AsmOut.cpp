@@ -964,7 +964,7 @@ namespace code {
 		}
 
 		static void fromFloat(Output *to, Instr *instr, Nat op) {
-			Bool in64 = instr->dest().size().size64() > 4;
+			Bool in64 = instr->src().size().size64() > 4;
 			Bool out64 = instr->dest().size().size64() > 4;
 
 			if (in64)
@@ -985,7 +985,7 @@ namespace code {
 		}
 
 		static void toFloat(Output *to, Instr *instr, Nat op) {
-			Bool in64 = instr->dest().size().size64() > 4;
+			Bool in64 = instr->src().size().size64() > 4;
 			Bool out64 = instr->dest().size().size64() > 4;
 
 			if (out64)
