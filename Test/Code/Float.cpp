@@ -89,7 +89,7 @@ BEGIN_TEST(FloatFromWordTest, Code) {
 
 	// Too large for a signed long:
 	CHECK_EQ((*fn)(100000), 100000); // Separate code-path on x86.
-	CHECK_EQ((*fn)(10000000000000000000), 10000000000000000000.0f);
+	CHECK_EQ((*fn)(10000000000000000000u), 10000000000000000000.0f);
 } END_TEST
 
 BEGIN_TEST(FloatToNatTest, Code) {
@@ -127,7 +127,7 @@ BEGIN_TEST(FloatToWordTest, Code) {
 	Fn fn = (Fn)b->address();
 
 	// Too large for a signed long. Floats are inexact, so we make sure that the sign is handled properly.
-	CHECK_GT((*fn)(10000000000000000000.0f), Word(9500000000000000000));
+	CHECK_GT((*fn)(10000000000000000000.0f), Word(9500000000000000000u));
 	CHECK_EQ((*fn)(133.0f), Word(133));
 	CHECK_EQ((*fn)(-133.0f), Word(0)); // This is how the X86 implementation works, others may differ.
 } END_TEST

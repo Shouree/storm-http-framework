@@ -524,7 +524,88 @@ namespace code {
 		}
 
 		void RemoveInvalid::fcastuTfm(Listing *dest, Instr *instr, Nat line) {
-			fcastiTfm(dest, instr, line);
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+
+			src = loadFpRegisterOrMemory(dest, src, line);
+
+			if (dst.size() == Size::sDouble) {
+				// This is a bit tricky. We need to examine the number and adjust it if it is too large.
+				Reg tmpReg = noReg;
+				if (dst.type() == opRegister)
+					tmpReg = dst.reg();
+				if (tmpReg == noReg)
+					tmpReg = asSize(unusedReg(used->at(line)), Size::sLong);
+				used->at(line)->put(tmpReg);
+				Reg tmpReg2 = asSize(unusedReg(used->at(line)), Size::sLong);
+				Reg fpReg = asSize(unusedFpReg(used->at(line)), Size::sDouble);
+				used->at(line)->put(fpReg);
+
+				Reg srcCopy = asSize(unusedFpReg(used->at(line)), Size::sDouble);
+
+				Label done = dest->label();
+				Label normal = dest->label();
+				Label zero = dest->label();
+
+				// Copy source to a double.
+				if (src.size() != Size::sDouble)
+					*dest << fcast(srcCopy, src);
+				else
+					*dest << mov(srcCopy, src);
+
+				// Check if below zero:
+				*dest << bxor(tmpReg, tmpReg);
+				*dest << ucastf(fpReg, tmpReg);
+				*dest << fcmp(fpReg, srcCopy);
+				*dest << jmp(zero, ifFAboveEqual);
+
+				// Create 0x7FFF...FFF
+				*dest << mov(tmpReg, wordConst(1));
+				*dest << shl(tmpReg, byteConst(63));
+				*dest << sub(tmpReg, wordConst(1));
+
+				// Convert it to a floating point number.
+				*dest << icastf(fpReg, tmpReg);
+
+				// If the value is larger than the cutoff, then we need to adjust it.
+				*dest << fcmp(fpReg, srcCopy);
+				*dest << jmp(normal, ifFAbove);
+
+				// It is large. Subtract, extract, and then add back the difference.
+				*dest << fsub(srcCopy, fpReg);
+				*dest << fcastu(tmpReg2, srcCopy);
+				*dest << add(tmpReg, tmpReg2);
+				*dest << jmp(done);
+
+				*dest << zero;
+				*dest << bxor(tmpReg, tmpReg);
+				*dest << jmp(done);
+
+				// Normal. Just extract it.
+				*dest << normal;
+				*dest << fcastu(tmpReg, srcCopy);
+
+				// Store back.
+				*dest << done;
+
+				if (dst.type() != opRegister || dst.reg() != tmpReg) {
+					*dest << mov(dst, tmpReg);
+				}
+
+			} else {
+				src = loadFpRegisterOrMemory(dest, src, line);
+
+				// We can simply write to the output register as if it was 64-bit in size.
+				if (dst.type() != opRegister) {
+					Reg r = asSize(unusedReg(used->at(line)), Size::sLong);
+					*dest << instr->alter(r, src);
+					*dest << ucast(dst, r);
+				} else {
+					Reg largeDst = asSize(dst.reg(), Size::sLong);
+					*dest << instr->alter(largeDst, src);
+					*dest << ucast(dst.reg(), largeDst);
+				}
+			}
 		}
 
 		void RemoveInvalid::icastfTfm(Listing *dest, Instr *instr, Nat line) {
@@ -539,7 +620,55 @@ namespace code {
 		}
 
 		void RemoveInvalid::ucastfTfm(Listing *dest, Instr *instr, Nat line) {
-			icastfTfm(dest, instr, line);
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+
+			if (src.size() == Size::sLong) {
+				// This is a bit tricky. We need to check the sign bit manually for this to work.
+				Reg tmpReg = asSize(unusedReg(used->at(line)), Size::sLong);
+				// work with doubles to avoid rounding errors during conversion
+				Reg fpReg = noReg;
+				if (fpRegister(dst))
+					fpReg = asSize(dst.reg(), Size::sDouble);
+				else
+					fpReg = asSize(unusedFpReg(used->at(line)), Size::sDouble);
+
+				Label done = dest->label();
+
+				// Floating-point value that we shall add if the number is negative.
+				Word fpAdd = Word(64 + 1023) << 52;
+
+				*dest << mov(tmpReg, src);
+				*dest << ucastf(fpReg, src);
+				*dest << shl(tmpReg, byteConst(1)); // behaves same as cmp to zero in this case
+				// *dest << cmp(tmpReg, longConst(0));
+				*dest << jmp(done, ifAboveEqual);
+				*dest << fadd(fpReg, longRel(lblLarge, Offset::sWord * large->count()));
+				large->push(wordConst(fpAdd));
+
+				*dest << done;
+				if (!fpRegister(dst) || fpReg != dst.reg()) {
+					if (dst.size() != size(fpReg)) {
+						// Cast to float if necessary. Output of fcast has to be a register.
+						*dest << fcast(asSize(fpReg, dst.size()), fpReg);
+						fpReg = asSize(fpReg, dst.size());
+					}
+					*dest << mov(dst, fpReg);
+				}
+
+			} else {
+				// We can simply cast the source to a longer size, and use that.
+				Reg longSrc = asSize(unusedReg(used->at(line)), Size::sLong);
+				*dest << ucast(longSrc, src);
+
+				if (fpRegister(dst)) {
+					*dest << instr->alterSrc(longSrc);
+				} else {
+					Reg r = asSize(unusedFpReg(used->at(line)), dst.size());
+					*dest << instr->alter(r, longSrc);
+					*dest << mov(dst, r);
+				}
+			}
 		}
 
 	}
