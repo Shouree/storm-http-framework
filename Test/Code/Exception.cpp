@@ -498,3 +498,75 @@ BEGIN_TEST(ExceptionCatch, Code) {
 	// 	PLN(L"Caught string: " << (void *)s << L", " << s);
 	// }
 } END_TEST
+
+
+// Has many parameters, so that at least one of them is on the stack!
+static void CODECALL throwStrError(Int, Int, Int, Int, Int, Int, Int, Int, Int, Int) {
+	throw new (gEngine()) Str(S("Throw me!"));
+}
+
+size_t captureSp() {
+	// This is approximative, but good enough for the test (i.e., we only want it to be at the same
+	// location, we don't care exactly what part of the stack we get).
+	volatile int x;
+	return size_t(&x);
+}
+
+BEGIN_TEST(ExceptionRestoreSpOnCatch, Code) {
+	TODO(L"ENABLE, FAILS ON X64");
+	break;
+
+	TODO(L"Verify so that some parameters are on the stack for Arm as well!");
+
+	// Make sure that the stack pointer is restored properly if needed.
+	Engine &e = gEngine();
+	Arena *arena = code::arena(e);
+
+	Ref errorFn = arena->external(S("errorFn"), address(&::throwStrError));
+	Ref captureSp = arena->external(S("captureSp"), address(&::captureSp));
+
+	Listing *l = new (e) Listing();
+	Var param1 = l->createParam(ptrDesc(e));
+	Var param2 = l->createParam(ptrDesc(e));
+	Block ehBlock = l->createBlock(l->root());
+	Label catched = l->label();
+	Label fnEnd = l->label();
+	l->addCatch(ehBlock, StormInfo<Object>::type(e), catched);
+
+	*l << prolog();
+	*l << begin(ehBlock);
+	*l << fnCall(captureSp, false, ptrDesc(e), ptrA);
+	*l << mov(ptrB, param1);
+	*l << mov(ptrRel(ptrB, Offset()), ptrA);
+	*l << fnParam(intDesc(e), intConst(0));
+	*l << fnParam(intDesc(e), intConst(1));
+	*l << fnParam(intDesc(e), intConst(2));
+	*l << fnParam(intDesc(e), intConst(3));
+	*l << fnParam(intDesc(e), intConst(4));
+	*l << fnParam(intDesc(e), intConst(5));
+	*l << fnParam(intDesc(e), intConst(6));
+	*l << fnParam(intDesc(e), intConst(7));
+	*l << fnParam(intDesc(e), intConst(8));
+	*l << fnParam(intDesc(e), intConst(9));
+	*l << fnCall(errorFn, false);
+	*l << end(ehBlock);
+	*l << jmp(fnEnd);
+
+	*l << catched;
+	*l << fnCall(captureSp, false, ptrDesc(e), ptrA);
+	*l << mov(ptrB, param2);
+	*l << mov(ptrRel(ptrB, Offset()), ptrA);
+
+	*l << fnEnd;
+	*l << fnRet();
+
+	Binary *b = new (e) Binary(arena, l, true);
+	typedef void (*Fn)(size_t *a, size_t *b);
+	Fn fn = (Fn)b->address();
+
+	size_t before = 0;
+	size_t after = 0;
+	CHECK_RUNS((*fn)(&before, &after));
+	CHECK_EQ(after, before);
+
+} END_TEST
