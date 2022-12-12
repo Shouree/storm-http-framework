@@ -293,4 +293,13 @@ namespace code {
 		return false;
 	}
 
+	size_t Binary::stackDepth(Nat active) {
+		(void)active;
+
+		// The first entry is the total stack depth.
+		byte *data = (byte *)address();
+		size_t *table = (size_t *)(data + metaOffset);
+		return table[0];
+	}
+
 }

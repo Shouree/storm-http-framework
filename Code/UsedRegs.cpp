@@ -263,6 +263,8 @@ namespace code {
 		// a later pass. This might need to be repeated a number of times until the
 		// computation converges.
 
+		// TODO: Look at labels that can catch exceptions and treat them differently?
+
 		RegState state(arena, src);
 
 		// All registers.

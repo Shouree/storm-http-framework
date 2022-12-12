@@ -6,6 +6,7 @@
 #include "Core/Str.h"
 #include "DwarfRegs.h"
 #include "Asm.h"
+#include "EhThunk.h"
 
 #ifdef POSIX
 #include <cxxabi.h>
@@ -156,12 +157,13 @@ namespace code {
 		 * - 'handlerSwitchValue' in the personality function to store the current block, so we don't
 		 *   have to re-compute it in phase 2. This is not important for the implementation to function,
 		 *   but GCC does something similar, so why not do the same and gain the small performance boost?
-		 * - 'catcTemp' in the personality function to store the location we shall resume from so we
+		 * - 'catchTemp' in the personality function to store the location we shall resume from so we
 		 *   don't have to re-compute it in phase 2. Not important for the implementation to function,
 		 *   but GCC does something similar. It is potentially dangerous to store a GC pointer in this
 		 *   structure, as it is not scanned (it is allocated separately using malloc). However, during
 		 *   the time the pointer is stored in here, a pointer into the same code block is pinned by
 		 *   being on the execution stack anyway, so it is fine in this case.
+		 * - 'actionRecord' and 'languageSpecificData' are seemingly free to use. We don't use them.
 		 */
 		struct ExStore {
 			std::type_info *exceptionType;
@@ -172,11 +174,17 @@ namespace code {
 
 			void *nextException;
 			int handlerCount;
+#ifdef __ARM_EABI_UNWINDER__
+			// For some ARM architectures:
+			ExStore* nextPropagatingException;
+			int propagationCount;
+#else
 			int handlerSwitchValue;
 			const byte *actionRecord;
 			const byte *languageSpecificData;
 			void *catchTemp;
 			void *adjustedPtr;
+#endif
 
 			struct _Unwind_Exception exception;
 		};
@@ -269,8 +277,6 @@ namespace code {
 			size_t pc = _Unwind_GetIP(context);
 			size_t rbp = _Unwind_GetGR(context, DW_REG_RBP);
 
-			TODO(L"Set stack pointer to what we would expect. Otherwise, the stack pointer might be offset when unwinding function calls with stacked parameters.");
-
 			const FnData *fnData = getData((const void *)fn);
 			Binary *binary = codeBinary((const void *)fn);
 
@@ -305,8 +311,10 @@ namespace code {
 				store->adjustedPtr = object;
 
 				// The following two are not too important, but we keep them at reasonable places as
-				// to not confuse the GCC implementation:
+				// to not confuse the GCC implementation. We recover them later, but we could compute
+				// them again.
 				store->catchTemp = resume.ip;
+				store->languageSpecificData = (byte *)rbp - resume.stackDepth;
 				store->handlerSwitchValue = encoded;
 
 				// Tell the system we have a handler! It will call us with _UA_HANDLER_FRAME later.
@@ -322,20 +330,19 @@ namespace code {
 
 				// Cleanup our frame.
 				StackFrame frame(block, active, (void *)rbp);
-				binary->cleanup(frame, block);
+				block = binary->cleanup(frame, block);
 
-				// Get the exception. Since it is a pointer, we can deallocate directly.
-				// Note that we store the dereferenced pointer inside the EH table, so we don't need
-				// to dereference it again here!
-				void *exception = __cxa_begin_catch(data);
-				// We don't need the data to be alive anymore. We can deallocate it now!
-				__cxa_end_catch();
-
-				// Set up the context as desired. It should be unwound for us, so we just need to
-				// modify RAX and IP, then we're good to go!
-				// Note: It seems we can only set "RAX" and "RDX" here.
-				_Unwind_SetGR(context, DW_REG_RAX, (_Unwind_Word)exception);
-				_Unwind_SetIP(context, pc);
+				// Note: It seems we can only set "RAX" and "RDX" here (that's what GCC uses,
+				// so those are likely the only ones that will work reliably).
+				// Set up the context as desired. We need to restore the stack pointer to what
+				// we would expect. For this reason, we first call a 'thunk' that does this
+				// for us. We also let the thunk call '__cxa_begin_catch' and '__cxa_end_catch'
+				// for us (we could call them here, but doing it later matches what C++ does
+				// and saves us a register). We set RDX to the PC we wish to jump to, and
+				// RAX contains the new SP we should install.
+				_Unwind_SetGR(context, DW_REG_RAX, (_Unwind_Word)data);
+				_Unwind_SetGR(context, DW_REG_RDX, (_Unwind_Word)pc);
+				_Unwind_SetIP(context, (_Unwind_Word)&x64ResumeExceptionThunk);
 
 				return _URC_INSTALL_CONTEXT;
 			} else if (actions & _UA_CLEANUP_PHASE) {
@@ -355,6 +362,25 @@ namespace code {
 				printf("WARNING: Personality function called with an unknown action!\n");
 				return _URC_CONTINUE_UNWIND;
 			}
+		}
+
+		extern "C" void *x86ResumeException(_Unwind_Exception *data, const void **spOut) {
+			// Get the exception storage so that we can extract the new stack pointer.
+			ExStore *store = BASE_PTR(ExStore, data, exception);
+			if (spOut)
+				*spOut = store->languageSpecificData;
+
+			// Get the exception. Since it is a pointer, we can deallocate directly.
+			// Note that we store the dereferenced pointer inside the EH table, so we don't need
+			// to dereference it again here!
+			void *exception = __cxa_begin_catch(data);
+
+			// We don't need the data to be alive anymore. We can deallocate it now! This
+			// technically means that we are lying to the runtime slightly, (i.e. rethrows do not
+			// look like rethrows), but we don't use anything that matters for this anyway.
+			__cxa_end_catch();
+
+			return exception;
 		}
 
 #else

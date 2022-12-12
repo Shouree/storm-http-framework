@@ -53,6 +53,9 @@ namespace code {
 		// Check if we have a catch-clause for the active part or any of its parents.
 		bool hasCatch(Nat part, RootObject *exception, Resume &resume);
 
+		// Get the stack depth at particular block.
+		size_t stackDepth(Nat block);
+
 		// Output to string.
 		virtual void STORM_FN toS(StrBuf *to) const;
 

@@ -513,7 +513,7 @@ size_t captureSp() {
 }
 
 BEGIN_TEST(ExceptionRestoreSpOnCatch, Code) {
-	TODO(L"ENABLE, FAILS ON X64");
+	TODO(L"ENABLE");
 	break;
 
 	TODO(L"Verify so that some parameters are on the stack for Arm as well!");
