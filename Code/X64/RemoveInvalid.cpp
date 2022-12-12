@@ -636,7 +636,8 @@ namespace code {
 				Label done = dest->label();
 
 				// Floating-point value that we shall add if the number is negative.
-				Word fpAdd = Word(64 + 1023) << 52;
+				// MSVC wants extra paren to not emit warning...
+				Word fpAdd = (Word(64 + 1023)) << 52;
 
 				*dest << mov(tmpReg, src);
 				*dest << ucastf(fpReg, src);
