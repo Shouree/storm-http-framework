@@ -43,6 +43,9 @@ namespace code {
 		};
 
 		void activateInfo() {
+#ifdef POSIX
+			initHook();
+#endif
 			static RegisterInfo<DwarfInfo> info;
 		}
 

@@ -53,6 +53,14 @@ namespace code {
 			return found;
 		}
 
+
+		void initHook() {
+			// Note: This hook does not do anything. We need to reference this object file from
+			// somewhere that is used, otherwise the linker will not include the object file in the
+			// final build, and therefore our override will not be visible otherwise. Just calling
+			// the function somewhere is therefore enough to initialize the hook.
+		}
+
 	}
 }
 

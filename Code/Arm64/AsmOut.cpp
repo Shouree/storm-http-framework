@@ -193,14 +193,28 @@ namespace code {
 		void prologOut(Output *to, Instr *instr) {
 			Offset stackSize = instr->src().offset();
 			Int scaled = stackSize.v64() / 8;
-			if (!isImm7S(scaled)) {
-				TODO(L"Make prolog that handles this properly.");
+			if (isImm7S(scaled) && false) {
+				// Small enough: we can do the modifications in the store operation:
+
+				// - stp x29, x30, [sp, -stackSize]!
+				putLoadStore(to, 0x2A6, 31, 29, 30, -scaled);
+
+			} else if (scaled <= 0xFFFF) {
+				// Too large. Load value into register (inter-procedure clobbered x16 is good for this).
+
+				// - mov x16, #<scaled>
+				to->putInt(0xD2800000 | ((scaled & 0xFFFF) << 5) | 16);
+				// - sub sp, sp, (x16 << 3)
+				putData3(to, 0x659, 31, 31, 16, 3 << 3 | 3); // flags mean shift 3 steps, treat as unsigned 64-bit
+				// - stp x29, x30, [sp]
+				putLoadStore(to, 0x2A4, 31, 29, 30, 0);
+
+			} else {
+				// Note: In reality, the stack size is likely a bit smaller since we are limited by
+				// pointer offsets, since they are limited to 14 bytes (=16 KiB).
 				throw new (to) InvalidValue(S("Too large stack size for Arm64!"));
 			}
 
-			// We emit:
-			// - stp x29, x30, [sp, -stackSize]!
-			putLoadStore(to, 0x2A6, 31, 29, 30, -scaled);
 			// - mov x29, sp   # create stack frame
 			putData2(to, 0x244, 29, 31, 0);
 
@@ -210,18 +224,23 @@ namespace code {
 		void epilogOut(Output *to, Instr *instr) {
 			Offset stackSize = instr->src().offset();
 			Int scaled = stackSize.v64() / 8;
-			if (!isImm7S(scaled)) {
-				TODO(L"Make epilog that handles this properly.");
+			if (isImm7S(scaled)) {
+				// We emit:
+				// - ldp x29, x30, [sp], stackSize
+				putLoadStore(to, 0x2A3, 31, 29, 30, scaled);
+			} else if (scaled <= 0xFFFF) {
+				// The inverse of the prolog is:
+
+				// - ldp x29, x30, [sp]
+				putLoadStore(to, 0x2A5, 31, 29, 30, 0);
+				// - mov x16, #<scaled>
+				to->putInt(0xD2800000 | ((scaled & 0xFFFF) << 5) | 16);
+				// - add sp, sp, (x16 << 3)
+				putData3(to, 0x459, 31, 31, 16, 3 << 3 | 3); // flags mean shift 3 steps, treat as unsigned 64-bit
+
+			} else {
 				throw new (to) InvalidValue(S("Too large stack size for Arm64!"));
 			}
-			// We emit:
-			// - ldp x29, x30, [sp], stackSize
-			putLoadStore(to, 0x2A3, 31, 29, 30, scaled);
-
-			// Note: We could also emit:
-			// - ldp x29, x30, [x29]
-			// - add sp, sp, #stackSize
-			// this is more robust against messing up SP, but uses more instructions, and is likely slower.
 
 			// Note: No DWARF metadata since this could be an early return.
 		}

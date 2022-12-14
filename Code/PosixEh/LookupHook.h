@@ -1,3 +1,10 @@
 #pragma once
 
-// Header to ensure that LookupHook.cpp is compiled.
+namespace code {
+	namespace eh {
+
+		// Initialize the hook.
+		void initHook();
+
+	}
+}
