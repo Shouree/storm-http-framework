@@ -4,6 +4,7 @@
 #include "Asm.h"
 #include "../Binary.h"
 #include "../Layout.h"
+#include "../PosixEh/FnState.h"
 
 namespace code {
 	namespace x64 {
@@ -123,7 +124,7 @@ namespace code {
 			for (Nat i = 0; i < activeBlocks->count(); i++) {
 				const ActiveBlock &a = activeBlocks->at(i);
 				*dest << lblOffset(a.pos);
-				*dest << dat(natConst(encodeFnState(a.block.key(), a.activated)));
+				*dest << dat(natConst(code::eh::encodeFnState(a.block.key(), a.activated)));
 			}
 
 			// Table size.

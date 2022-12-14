@@ -1,12 +1,11 @@
 #include "stdafx.h"
-#include "DwarfEh.h"
-#include "PosixEh.h"
-#include "Asm.h"
+#include "FunctionInfo.h"
 #include "Utils/Bitwise.h"
-#include "DwarfRegs.h"
+#include "Registers.h"
+#include "Code/PosixEh/Personality.h"
 
 namespace code {
-	namespace x64 {
+	namespace dwarf {
 
 		/**
 		 * Definitions of some useful DWARF constants.
@@ -43,45 +42,6 @@ namespace code {
 		/**
 		 * DWARF helpers.
 		 */
-
-		// Convert from a register to a DWARF number.
-		nat dwarfRegister(Reg reg) {
-			reg = asSize(reg, Size::sPtr);
-			if (reg == ptrA)
-				return DW_REG_RAX;
-			if (reg == ptrD)
-				return DW_REG_RDX;
-			if (reg == ptrC)
-				return DW_REG_RCX;
-			if (reg == ptrB)
-				return DW_REG_RBX;
-			if (reg == ptrSi)
-				return DW_REG_RSI;
-			if (reg == ptrDi)
-				return DW_REG_RDI;
-			if (reg == ptrFrame)
-				return DW_REG_RBP;
-			if (reg == ptrStack)
-				return DW_REG_RSP;
-			if (reg == ptr8)
-				return DW_REG_R8;
-			if (reg == ptr9)
-				return DW_REG_R9;
-			if (reg == ptr10)
-				return DW_REG_R10;
-			if (reg == ptr11)
-				return DW_REG_R11;
-			if (reg == ptr12)
-				return DW_REG_R12;
-			if (reg == ptr13)
-				return DW_REG_R13;
-			if (reg == ptr14)
-				return DW_REG_R14;
-			if (reg == ptr15)
-				return DW_REG_R15;
-			assert(false, L"This register is not supported by DWARF yet.");
-			return 0;
-		}
 
 		/**
 		 * Output to a buffer in DWARF compatible format.
@@ -195,7 +155,7 @@ namespace code {
 		 * Initialize CIE records to match the output from FnInfo.
 		 */
 
-		void initDwarfCIE(CIE *cie) {
+		void initCIE(CIE *cie) {
 			cie->id = 0;
 			cie->version = 1;
 			DStream out(cie->data, CIE_DATA);
@@ -211,7 +171,7 @@ namespace code {
 			out.putUNum(2 + sizeof(void *)); // size of augmentation data
 			out.putByte(DW_EH_PE_absptr); // absolute addresses
 			out.putByte(DW_EH_PE_absptr); // encoding of the personality function
-			out.putPtr(address(&stormPersonality));
+			out.putPtr(address(&code::eh::stormPersonality));
 
 			out.putOp(DW_CFA_def_cfa, DW_REG_RSP, 8); // def_cfa rsp, 8
 			out.putOp(DW_CFA_offset + DW_REG_RA, 1); // offset ra, saved at cfa-8
@@ -279,4 +239,3 @@ namespace code {
 
 	}
 }
-

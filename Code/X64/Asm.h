@@ -220,8 +220,5 @@ namespace code {
 		void immRegInstr(Output *to, const ImmRegInstr8 &op, const Operand &dest, const Operand &src);
 		void immRegInstr(Output *to, const ImmRegInstr8 &op8, const ImmRegInstr &op, const Operand &dest, const Operand &src);
 
-		// Encode/decode block-id and activation-id into a format we store in a single word on the stack.
-		Nat encodeFnState(Nat block, Nat activation);
-		void decodeFnState(Nat original, Nat &block, Nat &activation);
 	}
 }

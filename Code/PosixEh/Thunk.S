@@ -1,13 +1,13 @@
 #include "Utils/Platform.h"
-#ifdef X64
-
 	.text
 
-	.globl x64ResumeExceptionThunk
-	.type x64ResumeExceptionThunk, @function
+	.globl posixResumeExceptionThunk
+	.type posixResumeExceptionThunk, @function
 	.align 4
 
-x64ResumeExceptionThunk:
+posixResumeExceptionThunk:
+
+#if defined(X64)
 	# Save registers we need. Note: We don't really need to save anything except for what
 	# we need later on.
 	pushq %rdx
@@ -18,7 +18,7 @@ x64ResumeExceptionThunk:
 	movq %rax, %rdi
 	movq %rsp, %rsi
 
-	call *x86ResumeException@GOTPCREL(%rip)
+	call *posixResumeException@GOTPCREL(%rip)
 
 	# Restore and jump.
 	popq %rcx
@@ -27,6 +27,12 @@ x64ResumeExceptionThunk:
 	# Update stack pointer and continue!
 	mov %rcx, %rsp
 	jmp *%rdx
+
+#elif defined(ARM64)
+
+	// TODO: This is not done...
+
+	br x1
 
 #endif
 

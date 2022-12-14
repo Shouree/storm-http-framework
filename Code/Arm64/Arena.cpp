@@ -9,6 +9,7 @@
 #include "Layout.h"
 #include "Params.h"
 #include "../Exception.h"
+#include "Code/PosixEh/StackInfo.h"
 
 namespace code {
 	namespace arm64 {
@@ -16,10 +17,9 @@ namespace code {
 		Arena::Arena() {}
 
 		Listing *Arena::transform(Listing *l) const {
-			TODO(L"Activate info!");
-// #if defined(POSIX) && defined(X64)
-// 			activateInfo();
-// #endif
+#if defined(POSIX) && defined(ARM64)
+			code::eh::activateInfo();
+#endif
 
 			// Remove unsupported OP-codes, replacing them with their equivalents.
 			l = code::transform(l, this, new (this) RemoveInvalid());

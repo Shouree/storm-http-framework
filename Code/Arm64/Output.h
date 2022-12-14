@@ -1,7 +1,7 @@
 #pragma once
 #include "../Output.h"
 #include "Core/GcCode.h"
-#include "Code/X64/DwarfEh.h" // TODO: Move somewhere else.
+#include "Code/Dwarf/FunctionInfo.h"
 
 namespace code {
 	class Binary;
@@ -48,7 +48,7 @@ namespace code {
 			UNKNOWN(PTR_GC) byte *code;
 
 			// CFI object we're writing to.
-			code::x64::FnInfo fnInfo;
+			code::dwarf::FnInfo fnInfo;
 
 			// Position in the code.
 			Nat pos;

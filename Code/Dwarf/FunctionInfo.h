@@ -1,10 +1,11 @@
 #pragma once
-#include "../Reg.h"
 #include "Gc/DwarfRecords.h"
+#include "../Reg.h"
 
 namespace code {
-	namespace x64 {
-		STORM_PKG(core.asm.x64);
+	namespace dwarf {
+
+		STORM_PKG(core.asm.dwarf);
 
 		/**
 		 * Generation of DWARF unwinding information to properly support exceptions in the generated
@@ -57,7 +58,7 @@ namespace code {
 		};
 
 		// Initialize the CIE records we want.
-		void initDwarfCIE(CIE *cie);
+		void initCIE(CIE *cie);
 
 	}
 }

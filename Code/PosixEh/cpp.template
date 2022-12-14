@@ -1,0 +1,14 @@
+#include "stdafx.h"
+#include "$header$"
+
+#ifdef POSIX
+
+namespace code {
+	namespace eh {
+
+		$$
+
+	}
+}
+
+#endif

@@ -32,7 +32,7 @@ namespace code {
 			refs->refs[1].pointer = codeRefs;
 
 			// An entry for the DWARF unwinding information.
-			FDE *unwind = dwarfTable().alloc(code, &initDwarfCIE);
+			FDE *unwind = dwarfTable().alloc(code, &code::dwarf::initCIE);
 			fnInfo.set(unwind);
 			refs->refs[2].offset = 0;
 			refs->refs[2].kind = GcCodeRef::unwindInfo;

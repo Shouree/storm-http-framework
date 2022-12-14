@@ -26,17 +26,17 @@ namespace code {
 			refs->refs[0].kind = GcCodeRef::ptrStorage;
 			refs->refs[0].pointer = owner;
 
-			// An entry for the DWARF unwinding information.
-			FDE *unwind = storm::dwarfTable().alloc(code, &code::x64::initDwarfCIE);
-			fnInfo.set(unwind);
-			refs->refs[1].offset = 0;
-			refs->refs[1].kind = GcCodeRef::unwindInfo;
-			refs->refs[1].pointer = unwind;
+			// Store 'codeRefs' to keep the updaters alive.
+			refs->refs[1].offset = size;
+			refs->refs[1].kind = GcCodeRef::rawPtr;
+			refs->refs[1].pointer = codeRefs;
 
-			// Store 'codeRefs' at the end of our allocated space.
-			refs->refs[2].offset = size;
-			refs->refs[2].kind = GcCodeRef::rawPtr;
-			refs->refs[2].pointer = codeRefs;
+			// An entry for the DWARF unwinding information.
+			FDE *unwind = storm::dwarfTable().alloc(code, &code::dwarf::initCIE);
+			fnInfo.set(unwind);
+			refs->refs[2].offset = 0;
+			refs->refs[2].kind = GcCodeRef::unwindInfo;
+			refs->refs[2].pointer = unwind;
 		}
 
 		void CodeOut::putByte(Byte b) {

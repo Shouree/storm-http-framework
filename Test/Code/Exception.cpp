@@ -31,9 +31,6 @@ static Int throwError(Int point) {
 }
 
 BEGIN_TEST(CodeExceptionTest, Code) {
-	TODO(L"ENABLE");
-	break;
-
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
