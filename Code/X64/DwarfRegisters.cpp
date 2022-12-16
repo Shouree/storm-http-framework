@@ -1,10 +1,9 @@
 #include "stdafx.h"
-#include "Registers.h"
-
-#include "X64/Asm.h"
+#include "DwarfRegisters.h"
+#include "Asm.h"
 
 namespace code {
-	namespace dwarf {
+	namespace x64 {
 
 #define REG_MAP(our, dw) if (reg == our) return dw
 

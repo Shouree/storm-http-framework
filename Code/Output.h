@@ -87,11 +87,13 @@ namespace code {
 		 * Call frame information: used during stack unwinding.
 		 */
 
-		// Mark the end of the prolog.
-		virtual void STORM_FN markProlog();
-		// Mark the end of the epilog.
-		virtual void STORM_FN markEpilog();
-		// Mark that a register has been saved at 'offset' relative ptrFrame.
+		// Define the base position of the frame (DWARF calls it CFA offset)
+		virtual void STORM_FN setFrameOffset(Offset offset);
+		// Define the register used for the frame (DWARF calls it the CFA register)
+		virtual void STORM_FN setFrameRegister(Reg reg);
+		// Define both register and offset for the frame.
+		virtual void STORM_FN setFrame(Reg reg, Offset offset);
+		// Define that a register has been preserved at 'offset' relative the CFA.
 		virtual void STORM_FN markSaved(Reg reg, Offset offset);
 
 	protected:

@@ -98,9 +98,4 @@ namespace storm {
 
 	};
 
-	/**
-	 * A stream that simplifies writing in the DWARF format.
-	 */
-
-
 }

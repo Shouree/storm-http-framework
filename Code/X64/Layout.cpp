@@ -172,11 +172,12 @@ namespace code {
 		}
 
 		void Layout::prologTfm(Listing *dest, Listing *src, Nat line) {
-			*dest << push(ptrFrame);
-			*dest << mov(ptrFrame, ptrStack);
-
-			// Notify that we've generated the prolog.
+			// Generate the prolog. Generates push and mov to set up a basic stack frame. Also emits
+			// proper unwind data.
 			*dest << prolog();
+
+			// *dest << push(ptrFrame);
+			// *dest << mov(ptrFrame, ptrStack);
 
 			// Allocate stack space.
 			if (layout->last() != Offset())

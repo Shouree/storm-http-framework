@@ -218,7 +218,7 @@ static void genTypes(wostream &to, World &w) {
 
 		// Package.
 		if (t.pkg.empty() && config.compiler)
-			PLN(L"@" << t.pos << L": error: placing types in the root package.");
+			PLN(t.pos << L": error: placing types in the root package.");
 		to << L"S(\"" << t.pkg << L"\"), ";
 
 		// Is this type private?

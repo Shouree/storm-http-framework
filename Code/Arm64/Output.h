@@ -1,14 +1,14 @@
 #pragma once
 #include "../Output.h"
 #include "Core/GcCode.h"
-#include "Code/Dwarf/FunctionInfo.h"
+#include "Code/Dwarf/CodeOutput.h"
 
 namespace code {
 	class Binary;
 	namespace arm64 {
 		STORM_PKG(core.asm.arm64);
 
-		class CodeOut : public CodeOutput {
+		class CodeOut : public code::dwarf::CodeOutput {
 			STORM_CLASS;
 		public:
 			STORM_CTOR CodeOut(Binary *owner, Array<Nat> *lbls, Nat size, Nat refs);
@@ -26,10 +26,6 @@ namespace code {
 			virtual void STORM_FN putPtrSelf(Word w);
 			virtual Nat STORM_FN tell() const;
 
-			virtual void STORM_FN markProlog();
-			virtual void STORM_FN markEpilog();
-			virtual void STORM_FN markSaved(Reg reg, Offset offset);
-
 			virtual void *codePtr() const;
 		protected:
 			virtual void STORM_FN markLabel(Nat id);
@@ -46,12 +42,6 @@ namespace code {
 
 			// Code we're writing to.
 			UNKNOWN(PTR_GC) byte *code;
-
-			// CFI object we're writing to.
-			code::dwarf::FnInfo fnInfo;
-
-			// Position in the code.
-			Nat pos;
 
 			// Size of the code.
 			Nat size;

@@ -1,11 +1,29 @@
 #include "stdafx.h"
 #include "Output.h"
 #include "Gc/DwarfTable.h"
-#include "../Binary.h"
+#include "Code/Binary.h"
+#include "Code/Dwarf/Stream.h"
+#include "DwarfRegisters.h"
 #include "Utils/Bitwise.h"
 
 namespace code {
 	namespace x64 {
+
+		static const Int codeAlignment = 1;
+		static const Nat dataAlignment = -8;
+
+		void initCIE(CIE *cie) {
+			Nat pos = code::dwarf::initStormCIE(cie, codeAlignment, dataAlignment, DW_REG_RA);
+
+			code::dwarf::DStream out(cie->data, CIE_DATA, pos);
+
+			// All functions in x86 start with the return pointer pushed on the stack. We emit that
+			// once and for all in the CIE record:
+			out.putUOp(DW_CFA_def_cfa, DW_REG_RSP, 8); // def_cfa rsp, 8
+			out.putUOp(DW_CFA_offset + DW_REG_RA, 1); // offset ra, saved at cfa-8
+
+			assert(!out.overflow(), L"Increase CIE_DATA!");
+		}
 
 		CodeOut::CodeOut(Binary *owner, Array<Nat> *lbls, Nat size, Nat numRefs) {
 			// Properly align 'size'.
@@ -32,8 +50,8 @@ namespace code {
 			refs->refs[1].pointer = codeRefs;
 
 			// An entry for the DWARF unwinding information.
-			FDE *unwind = dwarfTable().alloc(code, &code::dwarf::initCIE);
-			fnInfo.set(unwind);
+			FDE *unwind = dwarfTable().alloc(code, &initCIE);
+			fnInfo.set(unwind, codeAlignment, dataAlignment, true, &dwarfRegister);
 			refs->refs[2].offset = 0;
 			refs->refs[2].kind = GcCodeRef::unwindInfo;
 			refs->refs[2].pointer = unwind;
@@ -165,18 +183,6 @@ namespace code {
 
 		Nat CodeOut::toRelative(Nat offset) {
 			return offset - (pos + 4); // NOTE: All relative things on the X86-64 are 4 bytes long, not 8!
-		}
-
-		void CodeOut::markProlog() {
-			fnInfo.prolog(pos);
-		}
-
-		void CodeOut::markEpilog() {
-			fnInfo.epilog(pos);
-		}
-
-		void CodeOut::markSaved(Reg reg, Offset offset) {
-			fnInfo.preserve(pos, reg, offset);
 		}
 
 

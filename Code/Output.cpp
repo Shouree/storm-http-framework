@@ -161,9 +161,11 @@ namespace code {
 		return 0;
 	}
 
-	void Output::markProlog() {}
+	void Output::setFrameOffset(Offset offset) {}
 
-	void Output::markEpilog() {}
+	void Output::setFrameRegister(Reg reg) {}
+
+	void Output::setFrame(Reg reg, Offset offset) {}
 
 	void Output::markSaved(Reg reg, Offset offset) {}
 

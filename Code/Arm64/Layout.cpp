@@ -308,7 +308,8 @@ namespace code {
 
 		void Layout::prologTfm(Listing *dest, Instr *src) {
 			// Emit instruction for updating sp, also preserves sp and fp from old frame, and sets fp to sp.
-			*dest << instrSrc(engine(), op::prolog, ptrConst(layout->last()));
+			Offset stackSize = layout->last();
+			*dest << instrSrc(engine(), op::prolog, ptrConst(stackSize));
 
 			// Preserve registers.
 			Nat offset = 16; // After sp and fp.
@@ -324,7 +325,9 @@ namespace code {
 				Operand memory = longRel(ptrFrame, Offset(offset));
 				Reg reg = asSize(begin.v(), Size::sLong);
 				*dest << mov(memory, reg);
-				*dest << preserve(memory, reg);
+				// Note: offsets are relative to the CFA, which is the location of the stack pointer
+				// at the start of the function:
+				*dest << preserve(longRel(ptrFrame, Offset(offset) - stackSize), reg);
 				offset += 8;
 			}
 

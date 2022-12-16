@@ -199,6 +199,11 @@ namespace code {
 				// - stp x29, x30, [sp, -stackSize]!
 				putLoadStore(to, 0x2A6, 31, 29, 30, -scaled);
 
+				// New offset for stack:
+				to->setFrameOffset(stackSize);
+
+				// The fact that registers have been preserved is done after the if-stmt as it is the same for all cases.
+
 			} else if (scaled <= 0xFFFF) {
 				// Too large. Load value into register (inter-procedure clobbered x16 is good for this).
 
@@ -206,6 +211,8 @@ namespace code {
 				to->putInt(0xD2800000 | ((scaled & 0xFFFF) << 5) | 16);
 				// - sub sp, sp, (x16 << 3)
 				putData3(to, 0x659, 31, 31, 16, 3 << 3 | 3); // flags mean shift 3 steps, treat as unsigned 64-bit
+				// CFA offset is now different:
+				to->setFrameOffset(stackSize);
 				// - stp x29, x30, [sp]
 				putLoadStore(to, 0x2A4, 31, 29, 30, 0);
 
@@ -215,10 +222,14 @@ namespace code {
 				throw new (to) InvalidValue(S("Too large stack size for Arm64!"));
 			}
 
+			// We have now saved the stack pointer and the return pointer:
+			to->markSaved(xr(29), -stackSize);
+			to->markSaved(xr(30), -(stackSize - Size::sPtr));
+
 			// - mov x29, sp   # create stack frame
 			putData2(to, 0x244, 29, 31, 0);
-
-			// TODO: Output DWARF metadata as well.
+			// Now: use x29 as the frame register instead!
+			to->setFrameRegister(xr(29));
 		}
 
 		void epilogOut(Output *to, Instr *instr) {
@@ -911,7 +922,8 @@ namespace code {
 		}
 
 		void preserveOut(Output *to, Instr *instr) {
-			TODO(L"Implement PRESERVE pseudo-op!");
+			PVAR(instr);
+			to->markSaved(instr->src().reg(), instr->dest().offset());
 		}
 
 		static void fpOut(Output *to, Instr *instr, Nat op) {
@@ -1155,7 +1167,7 @@ namespace code {
 						i++;
 					} else if (r == mergePreserve) {
 						// Consumed 3 ops, but we need to handle the "preserve" now (out of order).
-						preserveOut(to, src->at(i + 2));
+						preserveOut(to, src->at(i + 1));
 						i += 2;
 					}
 				} else {

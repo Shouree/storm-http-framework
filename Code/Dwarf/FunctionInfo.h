@@ -21,24 +21,29 @@ namespace code {
 
 		class FDEStream;
 
+		typedef Nat (*RegToDwarf)(Reg);
+
 		/**
 		 * Generate information about functions, later used by the exception system on some
 		 * platforms.
 		 */
-		class FnInfo {
+		class FunctionInfo {
 			STORM_VALUE;
 		public:
 			// Create.
-			FnInfo();
+			FunctionInfo();
 
-			// Set the FDE we shall write to.
-			void set(FDE *fde);
+			// Set the FDE we shall write to, and specify the data alignment of the CIE record.
+			void set(FDE *fde, Nat codeAlignment, Int dataAlignment, Bool is64, RegToDwarf toDwarf);
 
-			// Note that the prolog has been executed. The prolog is expected to use ptrFrame as usual.
-			void prolog(Nat pos);
+			// Define CFA offset.
+			void setCFAOffset(Nat pos, Offset offset);
 
-			// Note that the epilog has been executed.
-			void epilog(Nat pos);
+			// Define CFA register.
+			void setCFARegister(Nat pos, Reg reg);
+
+			// Define CFA offset *and* register.
+			void setCFA(Nat pos, Reg reg, Offset offset);
 
 			// Note that a register has been stored to the stack (for preservation).
 			void preserve(Nat pos, Reg reg, Offset offset);
@@ -46,6 +51,18 @@ namespace code {
 		private:
 			// The data emitted.
 			FDE *target;
+
+			// Convert register numbers.
+			UNKNOWN(PTR_NOGC) RegToDwarf regToDwarf;
+
+			// Code alignment factor.
+			Nat codeAlignment;
+
+			// Data alignment factor.
+			Int dataAlignment;
+
+			// Use 64-bit offsets?
+			Bool is64;
 
 			// Offset inside 'to'.
 			Nat offset;
@@ -55,10 +72,18 @@ namespace code {
 
 			// Go to 'pos'.
 			void advance(FDEStream &to, Nat pos);
+
+			// Get correct offset.
+			Int getOffset(Offset offset);
 		};
 
-		// Initialize the CIE records we want.
-		void initCIE(CIE *cie);
+		// Initialize CIE records for Storm.
+
+		// Initialize the CIE records that correspond to what Storm uses. Data alignment is specific
+		// for backends, so it is provided as a parameter. Returns the current position in the CIE
+		// record if some backend wishes to continue writing.
+		// 'returnColumn' is the column where the return address is stored.
+		Nat initStormCIE(CIE *cie, Nat codeAlignment, Int dataAlignment, Nat returnColumn);
 
 	}
 }

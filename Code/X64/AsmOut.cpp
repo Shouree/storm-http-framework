@@ -7,7 +7,23 @@ namespace code {
 	namespace x64 {
 
 		void prologOut(Output *to, Instr *instr) {
-			to->markProlog();
+			// We generate:
+			// - push rbp
+			// - mov rbp, rsp
+
+			// push rbp
+			to->putByte(0x50 + 5);
+			// now the CFA offset is different
+			to->setFrameOffset(Offset::sPtr*2);
+			// We also saved RBP on the stack
+			to->markSaved(ptrFrame, -Offset::sPtr*2);
+
+			// mov rbp, rsp
+			to->putByte(0x48);
+			to->putByte(0x89);
+			to->putByte(0xE5);
+			// now we use ebp as the CFA register, offset is the same
+			to->setFrameRegister(ptrFrame);
 		}
 
 		void epilogOut(Output *to, Instr *instr) {
@@ -19,7 +35,10 @@ namespace code {
 		}
 
 		void preserveOut(Output *to, Instr *instr) {
-			to->markSaved(instr->src().reg(), instr->dest().offset());
+			// Offset between the stack pointer and the CFA. This difference is due to us spilling
+			// RBP from the previous function, and the return address on the stack.
+			Size offset = Size::sPtr * 2;
+			to->markSaved(instr->src().reg(), instr->dest().offset() - offset);
 		}
 
 		void locationOut(Output *, Instr *) {
