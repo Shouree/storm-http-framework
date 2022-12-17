@@ -31,6 +31,7 @@ namespace code {
 			TRANSFORM(fnParam),
 			TRANSFORM(fnParamRef),
 			TRANSFORM(mov),
+			TRANSFORM(lea),
 			TRANSFORM(swap),
 			TRANSFORM(cmp),
 			TRANSFORM(setCond),
@@ -392,7 +393,6 @@ namespace code {
 			if (!t) {
 				throw new (this) InvalidValue(S("Using a fnCall that was not created properly."));
 			}
-
 			emitFnCall(to, t->src(), t->dest(), t->type, true, currentBlock, used->at(line), params);
 			params->clear();
 		}
@@ -424,6 +424,18 @@ namespace code {
 			Reg tmpReg = unusedReg(used->at(line), src.size());
 			loadRegister(to, tmpReg, src);
 			*to << mov(dest, tmpReg);
+		}
+
+		void RemoveInvalid::leaTfm(Listing *to, Instr *instr, Nat line) {
+			Operand dest = instr->dest();
+			if (dest.type() == opRegister) {
+				*to << instr;
+				return;
+			}
+
+			Reg tmp = unusedReg(used->at(line), dest.size());
+			*to << instr->alterDest(tmp);
+			*to << mov(dest, tmp);
 		}
 
 		void RemoveInvalid::swapTfm(Listing *to, Instr *instr, Nat line) {

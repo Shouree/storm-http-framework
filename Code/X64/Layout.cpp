@@ -93,8 +93,8 @@ namespace code {
 			*dest << alignAs(Size::sPtr);
 			*dest << dest->meta();
 
-			// Total stack size.
-			*dest << dat(ptrConst(layout->last()));
+			// Offset between RBP and RSP.
+			*dest << dat(ptrConst(-layout->last()));
 
 			// Output metadata table.
 			Array<Var> *vars = src->allVars();

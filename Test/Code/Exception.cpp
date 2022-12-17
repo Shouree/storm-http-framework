@@ -13,7 +13,9 @@ static void intCleanup(Int v) {
 
 static void intCleanupGc(Int v) {
 	// Run a GC cycle to make interesting things happen during unwinding.
-	gEngine().gc.collect();
+	// gEngine().gc.collect();
+	// Instead of causing a full collect (which takes ~500 ms on Arm) we allocate some objects.
+	storm::debug::createList(gEngine(), 1024);
 	destroyed += v;
 }
 
@@ -88,9 +90,6 @@ BEGIN_TEST(CodeExceptionTest, Code) {
 
 
 BEGIN_TEST(CodeCleanupTest, Code) {
-	TODO(L"ENABLE");
-	break;
-
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -162,9 +161,6 @@ BEGIN_TEST(CodeCleanupTest, Code) {
 
 
 BEGIN_TEST(ExceptionRefTest, Code) {
-	TODO(L"ENABLE");
-	break;
-
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -283,9 +279,6 @@ static void copyLarge(Large *dest, Large *src) {
 }
 
 BEGIN_TEST(ExceptionLargeTest, Code) {
-	TODO(L"ENABLE");
-	break;
-
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -333,9 +326,6 @@ BEGIN_TEST(ExceptionLargeTest, Code) {
 
 
 BEGIN_TEST(ExceptionLayers, Code) {
-	TODO(L"ENABLE");
-	break;
-
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -392,9 +382,6 @@ static StrBuf *CODECALL addBuf(StrBuf *to) {
 }
 
 BEGIN_TEST(ExceptionCatch, Code) {
-	TODO(L"ENABLE");
-	break;
-
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -486,7 +473,6 @@ BEGIN_TEST(ExceptionCatch, Code) {
 	CHECK(DbgVal::clear());
 	CHECK_EQ(destroyed, 4 + 7);
 
-
 	// // DebugBreak();
 	// try {
 	// 	Str *r = (*fn)();
@@ -510,11 +496,6 @@ size_t captureSp() {
 }
 
 BEGIN_TEST(ExceptionRestoreSpOnCatch, Code) {
-	TODO(L"ENABLE");
-	break;
-
-	TODO(L"Verify so that some parameters are on the stack for Arm as well!");
-
 	// Make sure that the stack pointer is restored properly if needed.
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
@@ -557,7 +538,7 @@ BEGIN_TEST(ExceptionRestoreSpOnCatch, Code) {
 	*l << fnEnd;
 	*l << fnRet();
 
-	Binary *b = new (e) Binary(arena, l, true);
+	Binary *b = new (e) Binary(arena, l);
 	typedef void (*Fn)(size_t *a, size_t *b);
 	Fn fn = (Fn)b->address();
 

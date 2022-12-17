@@ -101,6 +101,7 @@ namespace code {
 			void leaTfm(Listing *dest, Instr *src);
 			void icastTfm(Listing *dest, Instr *src);
 			void ucastTfm(Listing *dest, Instr *src);
+			void callTfm(Listing *dest, Instr *src);
 		};
 
 		// Compute the layout of variables, given a listing, parameters and the number of registers

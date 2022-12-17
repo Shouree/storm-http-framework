@@ -251,7 +251,7 @@ namespace storm {
 			return;
 		initialized = true;
 
-		// initialize();
+		initialize();
 	}
 
 }

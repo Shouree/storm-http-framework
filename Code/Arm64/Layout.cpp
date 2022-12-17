@@ -28,6 +28,7 @@ namespace code {
 			TRANSFORM(lea),
 			TRANSFORM(icast),
 			TRANSFORM(ucast),
+			TRANSFORM(call),
 
 			TRANSFORM(fnRet),
 			TRANSFORM(fnRetRef),
@@ -132,8 +133,8 @@ namespace code {
 			*dest << alignAs(Size::sPtr);
 			*dest << dest->meta();
 
-			// Total stack size.
-			*dest << dat(ptrConst(layout->last()));
+			// Offset between sp and fp. On ARM64, it is always zero.
+			*dest << dat(ptrConst(0));
 
 			// Output metadata table.
 			Array<Var> *vars = src->allVars();
@@ -156,10 +157,8 @@ namespace code {
 				*dest << dat(natConst(code::eh::encodeFnState(a.block.key(), a.activated)));
 			}
 
-			// PLN(L"Layout:");
-			// for (Nat i = 0; i < layout->count(); i++)
-			// 	PLN(i << L": " << layout->at(i));
-			// PVAR(dest);
+			// Table size.
+			*dest << dat(ptrConst(activeBlocks->count()));
 		}
 
 		Operand Layout::resolve(Listing *src, const Operand &op) {
@@ -454,6 +453,7 @@ namespace code {
 		}
 
 		void Layout::fnRetTfm(Listing *dest, Instr *src) {
+			PLN(L"TODO: Handle indirect variables!");
 			Operand value = resolve(dest, src->src());
 			assert(value.size() == dest->result->size(), L"Wrong size passed to fnRet!");
 
@@ -492,6 +492,7 @@ namespace code {
 		}
 
 		void Layout::fnRetRefTfm(Listing *dest, Instr *src) {
+			PLN(L"TODO: Handle indirect variables!");
 			Operand value = resolve(dest, src->src());
 			assert(value.size() == Size::sPtr, L"Wrong size passed to fnRetRef!");
 
@@ -633,6 +634,30 @@ namespace code {
 		void Layout::ucastTfm(Listing *dest, Instr *instr) {
 			// Works the same.
 			icastTfm(dest, instr);
+		}
+
+		void Layout::callTfm(Listing *dest, Instr *instr) {
+			Operand target = instr->src();
+			if (target.type() == opVariable) {
+				Nat varId = target.var().key();
+				Bool indirect = varIndirect->at(varId);
+				Offset stackOffset = layout->at(varId);
+				Offset varOffset = target.offset();
+
+				if (indirect) {
+					*dest << mov(ptrr(17), ptrRel(ptrFrame, stackOffset));
+					*dest << mov(ptrr(17), ptrRel(ptrr(17), varOffset));
+					*dest << instr->alterSrc(ptrr(17));
+				} else {
+					*dest << mov(ptrr(17), ptrRel(ptrFrame, stackOffset + varOffset));
+					*dest << instr->alterSrc(ptrr(17));
+				}
+			} else if (target.type() == opRelative) {
+				*dest << mov(ptrr(17), target);
+				*dest << instr->alterSrc(ptrr(17));
+			} else {
+				*dest << instr;
+			}
 		}
 
 		Array<Offset> *layout(Listing *src, Params *params, Nat spilled) {

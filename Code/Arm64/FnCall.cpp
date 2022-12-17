@@ -475,6 +475,12 @@ namespace code {
 				}
 			}
 
+			// If we are asked to store an empty result somewhere, we ignore that entirely.
+			if (resultType->size() == Size()) {
+				resultRef = false;
+				resultPos = Operand();
+			}
+
 			// If we are asked to store the result in memory as indicated by a register, then we
 			// need to preserve the register. We can store it in 'resultTempReg' if that is the
 			// case. We must also ensure that the register is preserved when we emit parameter code.

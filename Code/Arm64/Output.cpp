@@ -39,7 +39,7 @@ namespace code {
 			// Initialize our members.
 			this->owner = owner;
 			codeRefs = new (this) Array<Reference *>();
-			code = (byte *)runtime::allocCode(engine(), size + sizeof(void *), numRefs + 3);
+			code = (byte *)runtime::allocCode(engine(), size, numRefs + 3);
 			labels = lbls;
 			pos = 0;
 			ref = 3;
@@ -52,8 +52,8 @@ namespace code {
 			refs->refs[0].pointer = owner;
 
 			// Store 'codeRefs' to keep the updaters alive.
-			refs->refs[1].offset = size;
-			refs->refs[1].kind = GcCodeRef::rawPtr;
+			refs->refs[1].offset = 0;
+			refs->refs[1].kind = GcCodeRef::ptrStorage;
 			refs->refs[1].pointer = codeRefs;
 
 			// An entry for the DWARF unwinding information.

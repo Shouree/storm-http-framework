@@ -43,8 +43,8 @@ namespace code {
 			// Next instruction to execute. 'null' if nothing is to be done.
 			void *ip;
 
-			// Stack depth.
-			size_t stackDepth;
+			// Offset from the frame pointer to the stack pointer.
+			ssize_t stackOffset;
 
 			// Part outside the one handling the exception.
 			size_t cleanUntil;
@@ -52,9 +52,6 @@ namespace code {
 
 		// Check if we have a catch-clause for the active part or any of its parents.
 		bool hasCatch(Nat part, RootObject *exception, Resume &resume);
-
-		// Get the stack depth at particular block.
-		size_t stackDepth(Nat block);
 
 		// Output to string.
 		virtual void STORM_FN toS(StrBuf *to) const;

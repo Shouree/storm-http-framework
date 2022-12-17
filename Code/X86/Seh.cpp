@@ -291,7 +291,7 @@ EXCEPTION_DISPOSITION __cdecl x86SEH(_EXCEPTION_RECORD *er, void *frame, _CONTEX
 		// not clobbered if we need it. It is also nice, as we don't have to think too carefully about
 		// calling conventions and stack manipulations.
 		ctx->Ebp = (UINT_PTR)f->ebp();
-		ctx->Esp = ctx->Ebp - resume.stackDepth;
+		ctx->Esp = ctx->Ebp + resume.stackOffset;
 
 		// Run.
 		ctx->Eip = (UINT_PTR)&x86EhEntry;

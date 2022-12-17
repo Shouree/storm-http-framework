@@ -264,6 +264,7 @@ namespace code {
 		// computation converges.
 
 		// TODO: Look at labels that can catch exceptions and treat them differently?
+		// As these labels "generate" ptrA, we should treat them with some care.
 
 		RegState state(arena, src);
 

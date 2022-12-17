@@ -279,8 +279,8 @@ namespace code {
 					resume.ip = data + found->resumeOffset;
 
 					// The first entry is the total stack depth.
-					size_t *table = (size_t *)(data + metaOffset);
-					resume.stackDepth = table[0];
+					ssize_t *table = (ssize_t *)(data + metaOffset);
+					resume.stackOffset = table[0];
 
 					// Remember how far to clean.
 					resume.cleanUntil = block;
@@ -291,15 +291,6 @@ namespace code {
 		}
 
 		return false;
-	}
-
-	size_t Binary::stackDepth(Nat active) {
-		(void)active;
-
-		// The first entry is the total stack depth.
-		byte *data = (byte *)address();
-		size_t *table = (size_t *)(data + metaOffset);
-		return table[0];
 	}
 
 }

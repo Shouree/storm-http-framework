@@ -224,12 +224,12 @@ namespace code {
 			// 'data' is compiler specific information about the exception. See 'unwind.h' for details.
 			// 'context' is the unwinder state.
 
-			// Note: using _Unwind_GetCFA seems to return the CFA of the previous frame.
+			// Note: using _Unwind_GetCFA seems to return the CFA of the previous frame: it is not
+			// rewinded to the start of the function to be examined, rather only to the point where
+			// the next function was called.
 			size_t fn = _Unwind_GetRegionStart(context);
 			size_t pc = _Unwind_GetIP(context);
-			size_t rbp = _Unwind_GetCFA(context);
-			TODO(L"RBP is likely wrong, it is slighly offset relative to the CFA...");
-			// size_t rbp = _Unwind_GetGR(context, DW_REG_RBP);
+			size_t fp = _Unwind_GetGR(context, DWARF_EH_FRAME_POINTER);
 
 			const FnData *fnData = getData((const void *)fn);
 			Binary *binary = codeBinary((const void *)fn);
@@ -268,7 +268,7 @@ namespace code {
 				// to not confuse the GCC implementation. We recover them later, but we could compute
 				// them again.
 				store->catchTemp = resume.ip;
-				store->languageSpecificData = (byte *)rbp - resume.stackDepth;
+				store->languageSpecificData = (byte *)fp + resume.stackOffset;
 				store->handlerSwitchValue = encoded;
 
 				// Tell the system we have a handler! It will call us with _UA_HANDLER_FRAME later.
@@ -283,7 +283,7 @@ namespace code {
 				pc = (size_t)store->catchTemp;
 
 				// Cleanup our frame.
-				StackFrame frame(block, active, (void *)rbp);
+				StackFrame frame(block, active, (void *)fp);
 				block = binary->cleanup(frame, block);
 
 				// Note: It seems we can only set "RAX" and "RDX" here (that's what GCC uses,
@@ -307,7 +307,7 @@ namespace code {
 				Nat encoded = stormFindBlockActive(fnData, fn, pc);
 				decodeFnState(encoded, block, active);
 				if (block != Block().key()) {
-					StackFrame frame(block, active, (void *)rbp);
+					StackFrame frame(block, active, (void *)fp);
 					binary->cleanup(frame);
 				}
 				return _URC_CONTINUE_UNWIND;

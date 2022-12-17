@@ -30,8 +30,18 @@ posixResumeExceptionThunk:
 
 #elif defined(ARM64)
 
-	// TODO: This is not done...
+	# Store what we need for later. The important part is that we need to be able to access
+	# x1 later, to branch there.
+	stp xzr, x1, [sp, -16]!
 
+	# Call the resume function. As a parameter it needs the current exception, and a pointer
+	# to where it should store the stack pointer. x0 is already in the right place.
+	mov x1, sp
+	bl posixResumeException
+
+	# Restore state, update sp and jump. We may not trash x0 here.
+	ldp x2, x1, [sp]
+	mov sp, x2
 	br x1
 
 #endif

@@ -69,6 +69,24 @@ namespace code {
 				throw new (e) InvalidValue(TO_S(e, S("Too large unsigned 7-bit immediate value: ") << value));
 		}
 
+		// Check if value fits in 9-bit signed.
+		static Bool isImm9S(Long value) {
+			return value >= -0x100 && value <= 0xFF;
+		}
+		static void checkImm9S(RootObject *e, Long value) {
+			if (!isImm9S(value))
+				throw new (e) InvalidValue(TO_S(e, S("Too large signed 9-bit immediate value: ") << value));
+		}
+
+		// Check if value fits in 9-bit unsigned.
+		static Bool isImm9U(Word value) {
+			return value <= 0x1FF;
+		}
+		static void checkImm9U(RootObject *e, Word value) {
+			if (!isImm9U(value))
+				throw new (e) InvalidValue(TO_S(e, S("Too large unsigned 9-bit immediate value: ") << value));
+		}
+
 		// Check if value fits in 12-bit signed.
 		static Bool isImm12S(Long value) {
 			return value >= -0x800 && value <= 0x7FF;
@@ -158,15 +176,36 @@ namespace code {
 		}
 
 		// Put instructions for loads and stores: 3 registers and a 7-bit signed immediate.
-		static inline void putLoadStore(Output *to, Nat op, Nat base, Nat r1, Nat r2, Long imm) {
+		static inline void putLoadStoreS(Output *to, Nat op, Nat base, Nat r1, Nat r2, Long imm) {
 			checkImm7S(to, imm);
 			Nat instr = (op << 22) | r1 | (base << 5) | (r2 << 10) | ((imm & 0x7F) << 15);
 			to->putInt(instr);
 		}
 
+		// Put instructions for loads and stores: 3 registers and a 7-bit unsigned immediate.
+		static inline void putLoadStoreU(Output *to, Nat op, Nat base, Nat r1, Nat r2, Word imm) {
+			checkImm7U(to, imm);
+			Nat instr = (op << 22) | r1 | (base << 5) | (r2 << 10) | ((imm & 0x7F) << 15);
+			to->putInt(instr);
+		}
+
+		// Put a "mid-sized" load/store (for negative offsets, mainly): 2 registers and 9-bit immediate.
+		static inline void putLoadStoreMidS(Output *to, Nat op, Nat base, Nat r1, Long imm) {
+			checkImm9S(to, imm);
+			Nat instr = (op << 21) | r1 | (base << 5) | ((0x1FF & imm) << 12);
+			to->putInt(instr);
+		}
+
 		// Put a "large" load/store (for bytes, mainly): 2 registers and 12-bit immediate.
-		static inline void putLoadStoreLarge(Output *to, Nat op, Nat base, Nat r1, Long imm) {
+		static inline void putLoadStoreLargeS(Output *to, Nat op, Nat base, Nat r1, Long imm) {
 			checkImm12S(to, imm);
+			Nat instr = (op << 22) | r1 | (base << 5) | ((0xFFF & imm) << 10);
+			to->putInt(instr);
+		}
+
+		// Put a "large" load/store (for bytes, mainly): 2 registers and 12-bit immediate.
+		static inline void putLoadStoreLargeU(Output *to, Nat op, Nat base, Nat r1, Word imm) {
+			checkImm12U(to, imm);
 			Nat instr = (op << 22) | r1 | (base << 5) | ((0xFFF & imm) << 10);
 			to->putInt(instr);
 		}
@@ -197,7 +236,7 @@ namespace code {
 				// Small enough: we can do the modifications in the store operation:
 
 				// - stp x29, x30, [sp, -stackSize]!
-				putLoadStore(to, 0x2A6, 31, 29, 30, -scaled);
+				putLoadStoreS(to, 0x2A6, 31, 29, 30, -scaled);
 
 				// New offset for stack:
 				to->setFrameOffset(stackSize);
@@ -214,7 +253,7 @@ namespace code {
 				// CFA offset is now different:
 				to->setFrameOffset(stackSize);
 				// - stp x29, x30, [sp]
-				putLoadStore(to, 0x2A4, 31, 29, 30, 0);
+				putLoadStoreU(to, 0x2A4, 31, 29, 30, 0);
 
 			} else {
 				// Note: In reality, the stack size is likely a bit smaller since we are limited by
@@ -238,12 +277,12 @@ namespace code {
 			if (isImm7S(scaled)) {
 				// We emit:
 				// - ldp x29, x30, [sp], stackSize
-				putLoadStore(to, 0x2A3, 31, 29, 30, scaled);
+				putLoadStoreS(to, 0x2A3, 31, 29, 30, scaled);
 			} else if (scaled <= 0xFFFF) {
 				// The inverse of the prolog is:
 
 				// - ldp x29, x30, [sp]
-				putLoadStore(to, 0x2A5, 31, 29, 30, 0);
+				putLoadStoreU(to, 0x2A5, 31, 29, 30, 0);
 				// - mov x16, #<scaled>
 				to->putInt(0xD2800000 | ((scaled & 0xFFFF) << 5) | 16);
 				// - add sp, sp, (x16 << 3)
@@ -267,8 +306,10 @@ namespace code {
 
 			// Bytes are special:
 			if (opSize == 1) {
-				Nat op = intReg ? 0x0E5 : 0x0F5;
-				putLoadStoreLarge(to, op, intRegSP(baseReg), intRegZR(dest1), offset);
+				if (offset < 0)
+					putLoadStoreMidS(to, intReg ? 0x1C2 : 0x1E2, intRegSP(baseReg), intRegZR(dest1), offset);
+				else
+					putLoadStoreLargeU(to, intReg ? 0x0E5 : 0x0F5, intRegSP(baseReg), intRegZR(dest1), offset);
 				return false;
 			}
 
@@ -294,16 +335,26 @@ namespace code {
 				throw new (to) InvalidValue(S("Memory access on Arm must be aligned!"));
 			offset /= opSize;
 
+			// There are no ldp ops for negative offsets.
+			if (offset < 0)
+				dest2 = noReg;
+
 			if (dest2 != noReg) {
 				if (intReg)
-					putLoadStore(to, opSize == 4 ? 0x0A5 : 0x2A5, intRegSP(baseReg), intRegZR(dest1), intRegZR(dest2), offset);
+					putLoadStoreU(to, opSize == 4 ? 0x0A5 : 0x2A5, intRegSP(baseReg), intRegZR(dest1), intRegZR(dest2), offset);
 				else
-					putLoadStore(to, opSize == 4 ? 0x0B5 : 0x1B5, intRegSP(baseReg), fpReg(dest1), fpReg(dest2), offset);
+					putLoadStoreU(to, opSize == 4 ? 0x0B5 : 0x1B5, intRegSP(baseReg), fpReg(dest1), fpReg(dest2), offset);
+			} else if (offset < 0) {
+				// Here: We need to use 'ldur' instead. That one is unscaled.
+				if (intReg)
+					putLoadStoreMidS(to, opSize == 4 ? 0x5C2 : 0x7C2, intRegSP(baseReg), intRegZR(dest1), offset * opSize);
+				else
+					putLoadStoreMidS(to, opSize == 4 ? 0x5E2 : 0x7E2, intRegSP(baseReg), intRegZR(dest1), offset * opSize);
 			} else {
 				if (intReg)
-					putLoadStoreLarge(to, opSize == 4 ? 0x2E5 : 0x3E5, intRegSP(baseReg), intRegZR(dest1), offset);
+					putLoadStoreLargeU(to, opSize == 4 ? 0x2E5 : 0x3E5, intRegSP(baseReg), intRegZR(dest1), offset);
 				else
-					putLoadStoreLarge(to, opSize == 4 ? 0x2F5 : 0x3F5, intRegSP(baseReg), fpReg(dest1), offset);
+					putLoadStoreLargeU(to, opSize == 4 ? 0x2F5 : 0x3F5, intRegSP(baseReg), fpReg(dest1), offset);
 			}
 
 			return dest2 != noReg;
@@ -320,8 +371,10 @@ namespace code {
 
 			// Bytes are special:
 			if (opSize == 1) {
-				Nat op = intReg ? 0x0E4 : 0x0F4;
-				putLoadStoreLarge(to, op, intRegSP(baseReg), intRegZR(src1), offset);
+				if (offset < 0)
+					putLoadStoreMidS(to, intReg ? 0x1C0 : 0x1E0, intRegSP(baseReg), intRegZR(src1), offset);
+				else
+					putLoadStoreLargeU(to, intReg ? 0x0E4 : 0x0F4, intRegSP(baseReg), intRegZR(src1), offset);
 				return false;
 			}
 
@@ -347,17 +400,26 @@ namespace code {
 				throw new (to) InvalidValue(S("Memory access on Arm must be aligned!"));
 			offset /= opSize;
 
-			// TODO: Handle fp registers!
+			// There are no ldp ops for negative offsets.
+			if (offset < 0)
+				src2 = noReg;
+
 			if (src2 != noReg) {
 				if (intReg)
-					putLoadStore(to, opSize == 4 ? 0x0A4 : 0x2A4, intRegSP(baseReg), intRegZR(src1), intRegZR(src2), offset);
+					putLoadStoreU(to, opSize == 4 ? 0x0A4 : 0x2A4, intRegSP(baseReg), intRegZR(src1), intRegZR(src2), offset);
 				else
-					putLoadStore(to, opSize == 4 ? 0x0B4 : 0x1B4, intRegSP(baseReg), fpReg(src1), fpReg(src2), offset);
+					putLoadStoreU(to, opSize == 4 ? 0x0B4 : 0x1B4, intRegSP(baseReg), fpReg(src1), fpReg(src2), offset);
+			} else if (offset < 0) {
+				// Here: we need to use 'ldur' instead.
+				if (intReg)
+					putLoadStoreMidS(to, opSize == 4 ? 0x5C0 : 0x7C0, intRegSP(baseReg), intRegZR(src1), offset * opSize);
+				else
+					putLoadStoreMidS(to, opSize == 4 ? 0x5E0 : 0x7E0, intRegSP(baseReg), intRegZR(src1), offset * opSize);
 			} else {
 				if (intReg)
-					putLoadStoreLarge(to, opSize == 4 ? 0x2E4 : 0x3E4, intRegSP(baseReg), intRegZR(src1), offset);
+					putLoadStoreLargeU(to, opSize == 4 ? 0x2E4 : 0x3E4, intRegSP(baseReg), intRegZR(src1), offset);
 				else
-					putLoadStoreLarge(to, opSize == 4 ? 0x2F4 : 0x3F4, intRegSP(baseReg), fpReg(src1), offset);
+					putLoadStoreLargeU(to, opSize == 4 ? 0x2F4 : 0x3F4, intRegSP(baseReg), fpReg(src1), offset);
 			}
 
 			return src2 != noReg;
@@ -448,7 +510,8 @@ namespace code {
 		void leaOut(Output *to, Instr *instr) {
 			Operand destOp = instr->dest();
 			if (destOp.type() != opRegister)
-				throw new (to) InvalidValue(S("Destination of lea should have bbeen transformed to a register."));
+				throw new (to) InvalidValue(S("Destination of lea should have been transformed to a register."));
+
 			Nat dest = intRegZR(destOp.reg());
 
 			Operand src = instr->src();
@@ -487,11 +550,12 @@ namespace code {
 				break;
 				// Split into two op-codes: a load and a register call.
 				offset = target.offset().v64() / 8;
-				putLoadStoreLarge(to, 0x3E5, intRegZR(target.reg()), 17, offset);
+				putLoadStoreLargeU(to, 0x3E5, intRegZR(target.reg()), 17, offset);
 				// blr x17
 				to->putInt(0xD63F0220);
 				break;
 			default:
+				PVAR(instr);
 				assert(false, L"Unsupported call target!");
 				break;
 			}
@@ -549,7 +613,7 @@ namespace code {
 			case opRelative:
 				// Split into two op-codes: a load and a register jump.
 				offset = target.offset().v64() / 8;
-				putLoadStoreLarge(to, 0x3E5, intRegZR(target.reg()), 17, offset);
+				putLoadStoreLargeU(to, 0x3E5, intRegZR(target.reg()), 17, offset);
 				// br x17
 				to->putInt(0xD61F0220);
 				break;
@@ -698,14 +762,14 @@ namespace code {
 
 				if (srcSize == 1) {
 					Nat op = 0x0E6;
-					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset);
+					putLoadStoreLargeU(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset);
 				} else if (srcSize == 4) {
 					Nat op = 0x2E6;
-					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset / 4);
+					putLoadStoreLargeU(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset / 4);
 				} else {
 					// This is a regular load.
 					Nat op = 0x3E5;
-					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset / 8);
+					putLoadStoreLargeU(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset / 8);
 				}
 
 				// Maybe clamp to smaller size.
@@ -741,13 +805,13 @@ namespace code {
 
 				if (srcSize == 1) {
 					Nat op = intDst ? 0x0E5 : 0x0F5;
-					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset);
+					putLoadStoreLargeU(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset);
 				} else if (srcSize == 4) {
 					Nat op = intDst ? 0x2E5 : 0x2F5;
-					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset / 4);
+					putLoadStoreLargeU(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset / 4);
 				} else {
 					Nat op = intDst ? 0x3E5 : 0x3F5;
-					putLoadStoreLarge(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset / 8);
+					putLoadStoreLargeU(to, op, intRegSP(src.reg()), intRegZR(dst.reg()), offset / 8);
 				}
 
 				// Maybe clamp to smaller size.
@@ -1066,6 +1130,14 @@ namespace code {
 			to->align(Nat(instr->src().constant()));
 		}
 
+		void locationOut(Output *, Instr *) {
+			// We don't save location data in the generated code.
+		}
+
+		void metaOut(Output *, Instr *) {
+			// We don't save metadata in the generated code.
+		}
+
 #define OUTPUT(x) { op::x, &x ## Out }
 
 		typedef void (*OutputFn)(Output *to, Instr *instr);
@@ -1113,6 +1185,8 @@ namespace code {
 			OUTPUT(dat),
 			OUTPUT(lblOffset),
 			OUTPUT(align),
+			OUTPUT(location),
+			OUTPUT(meta),
 		};
 
 		bool empty(Array<Label> *x) {

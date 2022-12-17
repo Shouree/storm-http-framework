@@ -1,4 +1,5 @@
 #pragma once
+#include "Utils/Platform.h"
 
 namespace code {
 	namespace dwarf {
@@ -10,7 +11,15 @@ namespace code {
 		 */
 #define DWARF_EH_RETURN_0 __builtin_eh_return_data_regno(0)
 #define DWARF_EH_RETURN_1 __builtin_eh_return_data_regno(1)
-#define DWARF_EH_SP __builtin_dwarf_sp_column()
+
+		/**
+		 * Frame pointer for the current platform.
+		 */
+#if defined(X64) || defined(X86)
+#define DWARF_EH_FRAME_POINTER 6
+#elif defined(ARM64)
+#define DWARF_EH_FRAME_POINTER 29
+#endif
 
 	}
 }

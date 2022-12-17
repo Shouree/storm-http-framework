@@ -141,8 +141,8 @@ namespace code {
 			*dest << alignAs(Size::sPtr);
 			*dest << dest->meta();
 
-			// Total stack size.
-			*dest << dat(ptrConst(layout->last()));
+			// Offset between EBP and ESP.
+			*dest << dat(ptrConst(-layout->last()));
 
 			// All variables. Create VarCleanup instances.
 			Array<Var> *vars = src->allVars();

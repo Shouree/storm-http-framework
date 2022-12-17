@@ -93,6 +93,7 @@ namespace code {
 
 			// Fix constraints for specific operations.
 			void movTfm(Listing *to, Instr *instr, Nat line);
+			void leaTfm(Listing *to, Instr *instr, Nat line);
 			void swapTfm(Listing *to, Instr *instr, Nat line);
 			void cmpTfm(Listing *to, Instr *instr, Nat line);
 			void setCondTfm(Listing *to, Instr *instr, Nat line);
