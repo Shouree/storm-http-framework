@@ -384,7 +384,7 @@ namespace code {
 			if (!t) {
 				throw new (this) InvalidValue(S("Using a fnCall that was not created properly."));
 			}
-			emitFnCall(to, t->src(), t->dest(), t->type, false, currentBlock, used->at(line), params);
+			emitFnCall(this, to, t->src(), t->dest(), t->type, false, currentBlock, used->at(line), params);
 			params->clear();
 		}
 
@@ -393,7 +393,7 @@ namespace code {
 			if (!t) {
 				throw new (this) InvalidValue(S("Using a fnCall that was not created properly."));
 			}
-			emitFnCall(to, t->src(), t->dest(), t->type, true, currentBlock, used->at(line), params);
+			emitFnCall(this, to, t->src(), t->dest(), t->type, true, currentBlock, used->at(line), params);
 			params->clear();
 		}
 

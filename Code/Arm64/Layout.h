@@ -69,8 +69,8 @@ namespace code {
 			Bool usingEH;
 
 			// Resolve local variables.
-			Operand resolve(Listing *src, const Operand &op);
-			Operand resolve(Listing *src, const Operand &op, const Size &size);
+			Operand resolve(Listing *src, const Operand &op, Reg tmpReg);
+			Operand resolve(Listing *src, const Operand &op, const Size &size, Reg tmpReg);
 
 			// Initialize and destroy blocks.
 			void initBlock(Listing *dest, Block init);

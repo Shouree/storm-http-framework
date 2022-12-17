@@ -29,6 +29,9 @@ namespace code {
 			// Finalize transform.
 			virtual void STORM_FN after(Listing *dest, Listing *src);
 
+			// Helper function to create a constant for a large integer.
+			Operand largeConstant(const Operand &constant);
+
 		private:
 			// Used registers for each line.
 			Array<RegSet *> *used;
@@ -71,9 +74,6 @@ namespace code {
 			// Generate code that ensures that 'op' is either a constant of a particular size, or a
 			// register.
 			Operand regOrImm(Listing *to, const Operand &op, Nat line, Nat immBits, Bool immSigned);
-
-			// Helper function to create a constant for a large integer.
-			Operand largeConstant(const Operand &constant);
 
 			// Modify instructions for byte-sized operands.
 			Instr *modifyByte(Listing *to, Instr *instr, Nat line);

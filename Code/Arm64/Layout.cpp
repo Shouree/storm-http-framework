@@ -161,18 +161,26 @@ namespace code {
 			*dest << dat(ptrConst(activeBlocks->count()));
 		}
 
-		Operand Layout::resolve(Listing *src, const Operand &op) {
-			return resolve(src, op, op.size());
+		Operand Layout::resolve(Listing *dest, const Operand &op, Reg tmpReg) {
+			return resolve(dest, op, op.size(), tmpReg);
 		}
 
-		Operand Layout::resolve(Listing *src, const Operand &op, const Size &size) {
+		Operand Layout::resolve(Listing *dest, const Operand &op, const Size &size, Reg tmpReg) {
 			if (op.type() != opVariable)
 				return op;
 
 			Var v = op.var();
-			if (!src->accessible(v, currentBlock))
+			if (!dest->accessible(v, currentBlock))
 				throw new (this) VariableUseError(v, currentBlock);
-			return xRel(size, ptrFrame, layout->at(v.key()) + op.offset());
+
+			if (varIndirect->at(v.key())) {
+				assert(tmpReg != noReg);
+				tmpReg = asSize(tmpReg, Size::sPtr);
+				*dest << mov(tmpReg, ptrRel(ptrFrame, layout->at(v.key())));
+				return xRel(size, tmpReg, op.offset());
+			} else {
+				return xRel(size, ptrFrame, layout->at(v.key()) + op.offset());
+			}
 		}
 
 		static void zeroVar(Listing *dest, Offset offset, Size size) {
@@ -273,19 +281,19 @@ namespace code {
 					Reg param = ptrr(0);
 					if (when & freeIndirection) {
 						if (when & freePtr) {
-							*dest << mov(param, resolve(dest, v, Size::sPtr));
+							*dest << mov(param, resolve(dest, v, Size::sPtr, noReg));
 							*dest << call(dtor, Size());
 						} else {
-							*dest << mov(param, resolve(dest, v, Size::sPtr));
+							*dest << mov(param, resolve(dest, v, Size::sPtr, noReg));
 							*dest << mov(asSize(param, v.size()), xRel(v.size(), param, Offset()));
 							*dest << call(dtor, Size());
 						}
 					} else {
 						if (when & freePtr) {
-							*dest << lea(param, resolve(dest, v));
+							*dest << lea(param, resolve(dest, v, noReg));
 							*dest << call(dtor, Size());
 						} else {
-							*dest << mov(asSize(param, v.size()), resolve(dest, v));
+							*dest << mov(asSize(param, v.size()), resolve(dest, v, noReg));
 							*dest << call(dtor, Size());
 						}
 					}
@@ -453,8 +461,7 @@ namespace code {
 		}
 
 		void Layout::fnRetTfm(Listing *dest, Instr *src) {
-			PLN(L"TODO: Handle indirect variables!");
-			Operand value = resolve(dest, src->src());
+			Operand value = resolve(dest, src->src(), ptrA);
 			assert(value.size() == dest->result->size(), L"Wrong size passed to fnRet!");
 
 			// Handle the return value.
@@ -492,8 +499,7 @@ namespace code {
 		}
 
 		void Layout::fnRetRefTfm(Listing *dest, Instr *src) {
-			PLN(L"TODO: Handle indirect variables!");
-			Operand value = resolve(dest, src->src());
+			Operand value = resolve(dest, src->src(), ptrA);
 			assert(value.size() == Size::sPtr, L"Wrong size passed to fnRetRef!");
 
 			// Handle the return value.

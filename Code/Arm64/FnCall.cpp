@@ -2,6 +2,7 @@
 #include "FnCall.h"
 #include "Params.h"
 #include "Asm.h"
+#include "RemoveInvalid.h"
 #include "Utils/Bitwise.h"
 #include "../Exception.h"
 
@@ -230,12 +231,11 @@ namespace code {
 			return block;
 		}
 
-		static Nat pushParams(Listing *dest, Array<ParamInfo> *params, Params *layout) {
+		static Nat pushParams(RemoveInvalid *tfm, Listing *dest, Array<ParamInfo> *params, Params *layout) {
 			if (layout->stackCount() == 0)
 				return 0;
 
 			// Reserve space on the stack first.
-			TODO(L"We might need EH info for this!");
 			*dest << sub(ptrStack, ptrConst(layout->stackTotalSize()));
 
 			// Now we can copy parameters! We need to be careful to not emit memory-memory moves, as
@@ -252,9 +252,12 @@ namespace code {
 					if (info.src.type() == opRelative || info.src.type() == opVariable) {
 						inlineMemcpy(dest, dst, info.src, reg1, reg2);
 					} else if (info.src.type() == opConstant) {
-						TODO(L"We need to handle large constants here!");
 						Reg r = asSize(reg1, sz);
-						*dest << mov(r, info.src);
+						if (info.src.constant() > 0xFFFF) {
+							*dest << mov(r, tfm->largeConstant(info.src));
+						} else {
+							*dest << mov(r, info.src);
+						}
 						*dest << mov(dst, r);
 					} else {
 						// We can copy it natively.
@@ -458,7 +461,7 @@ namespace code {
 		}
 
 		// Actual entry-point.
-		void emitFnCall(Listing *dest, Operand toCall, Operand resultPos, TypeDesc *resultType,
+		void emitFnCall(RemoveInvalid *tfm, Listing *dest, Operand toCall, Operand resultPos, TypeDesc *resultType,
 						Bool resultRef, Block currentBlock, RegSet *used, Array<ParamInfo> *params) {
 			Engine &e = dest->engine();
 
@@ -510,7 +513,7 @@ namespace code {
 			Block block = copyToMemory(dest, used, params, paramLayout, currentBlock);
 
 			// Put parameters onto the stack (if required).
-			Nat extraStack = pushParams(dest, params, paramLayout);
+			Nat extraStack = pushParams(tfm, dest, params, paramLayout);
 
 			// Start copying parameters into registers.
 			setRegisters(dest, params, paramLayout);

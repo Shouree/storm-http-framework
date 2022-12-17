@@ -6,6 +6,8 @@ namespace code {
 	namespace arm64 {
 		STORM_PKG(core.asm.arm64);
 
+		class RemoveInvalid;
+
 		/**
 		 * Parameter information.
 		 */
@@ -30,7 +32,7 @@ namespace code {
 		/**
 		 * Emit code required to perform a function call. Used from 'RemoveInvalid'.
 		 */
-		void emitFnCall(Listing *dest, Operand call, Operand resultPos, TypeDesc *resultType,
+		void emitFnCall(RemoveInvalid *tfm, Listing *dest, Operand call, Operand resultPos, TypeDesc *resultType,
 						Bool resultRef, Block currentBlock, RegSet *used, Array<ParamInfo> *params);
 
 	}
