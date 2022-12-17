@@ -150,7 +150,10 @@ namespace storm {
 		add(inlinedFunction(engine, vInt, S("int"), v, fnPtr(engine, &floatToInt))->makePure());
 		Value vLong = Value(StormInfo<Long>::type(engine));
 		add(inlinedFunction(engine, vLong, S("long"), v, fnPtr(engine, &floatToInt))->makePure());
-		TODO(L"Add conversions to nat and word as well.");
+		Value vNat = Value(StormInfo<Nat>::type(engine));
+		add(inlinedFunction(engine, vNat, S("nat"), v, fnPtr(engine, &floatToNat))->makePure());
+		Value vWord = Value(StormInfo<Word>::type(engine));
+		add(inlinedFunction(engine, vWord, S("word"), v, fnPtr(engine, &floatToNat))->makePure());
 		Value vDouble = Value(StormInfo<Double>::type(engine));
 		add(inlinedFunction(engine, vDouble, S("double"), v, fnPtr(engine, &floatToFloat))->makePure());
 
@@ -259,6 +262,10 @@ namespace storm {
 		add(inlinedFunction(engine, vInt, S("int"), v, fnPtr(engine, &floatToInt))->makePure());
 		Value vLong = Value(StormInfo<Long>::type(engine));
 		add(inlinedFunction(engine, vLong, S("long"), v, fnPtr(engine, &floatToInt))->makePure()); // We can use the same function here!
+		Value vNat = Value(StormInfo<Nat>::type(engine));
+		add(inlinedFunction(engine, vNat, S("nat"), v, fnPtr(engine, &floatToNat))->makePure());
+		Value vWord = Value(StormInfo<Word>::type(engine));
+		add(inlinedFunction(engine, vWord, S("word"), v, fnPtr(engine, &floatToNat))->makePure());
 		Value vFloat = Value(StormInfo<Float>::type(engine));
 		add(inlinedFunction(engine, vFloat, S("float"), v, fnPtr(engine, &floatToFloat))->makePure());
 

@@ -526,6 +526,10 @@ namespace code {
 					putData2(to, 0x344, dest, intRegZR(src.reg()), -src.offset().v64());
 				}
 				break;
+			case opReference:
+				// This means to load the value of the reference, similarly to mov.
+				loadLongConst(to, dest, src.ref());
+				break;
 			default:
 				throw new (to) InvalidValue(TO_S(to, S("Unsupported source operand for lea: ") << src));
 			}
