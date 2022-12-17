@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Platform.h"
+#include <stddef.h> // for size_t
 
 #ifdef __cplusplus
 extern "C" {
@@ -105,18 +106,20 @@ inline void invalidateSingleICache(void *start) {
 }
 
 inline void invalidateICache(void *start, void *end) {
-	char *b = (char *)start;
-	char *e = (char *)end;
+	size_t b = (size_t)start;
+	size_t e = (size_t)end;
 
 	// Get cache sizes.
 	unsigned int cache_info = 0;
 	__asm__ volatile ("mrs %0, ctr_el0\n\t" : "=r" (cache_info));
 
-	unsigned int icache = 4 << (cache_info & 0xF);
-	unsigned int dcache = 4 << ((cache_info >> 16) & 0xF);
+	size_t icache = 4 << (cache_info & 0xF);
+	size_t dcache = 4 << ((cache_info >> 16) & 0xF);
 
-	// First, clear the data cache.
-	for (char *at = b; at < e; at += dcache)
+	// First, clear the data cache. Note: We need to round 'start' down to a multiple of the cache
+	// size. Otherwise, we might miss the last cacheline. We know that both icache and dcache are
+	// power of two, so it is fairly easy to round them cheaply with some bit twiddling.
+	for (size_t at = b & ~(dcache - 1); at < e; at += dcache)
 		__asm__ volatile ("dc cvau, %0\n\t" : : "r" (at));
 
 	// Make sure it is visible. We wait with the memory barrier until here. We don't care in which
@@ -125,7 +128,7 @@ inline void invalidateICache(void *start, void *end) {
 	__asm__ volatile ("dsb ish\n\t" : : : "memory");
 
 	// Then, we clear the instruction cache.
-	for (char *at = b; at < e; at += icache)
+	for (size_t at = b & ~(icache - 1); at < e; at += icache)
 		__asm__ volatile ("ic ivau, %0\n\t" : : "r" (at));
 
 	// Again, wait for the cleaning to be propagated properly.
