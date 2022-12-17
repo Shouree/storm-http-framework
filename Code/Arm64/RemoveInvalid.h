@@ -48,6 +48,12 @@ namespace code {
 			// Label to the start of the large constants section.
 			Label lblLarge;
 
+			// Label to integer division by zero code, if necessary.
+			Label lblDivZero;
+
+			// Get the division by zero label if needed.
+			Label divZeroLabel(Listing *l);
+
 			// Signature for the table of transform functions.
 			typedef void (RemoveInvalid::*TransformFn)(Listing *to, Instr *instr, Nat line);
 
@@ -106,6 +112,8 @@ namespace code {
 			void ucastfTfm(Listing *to, Instr *instr, Nat line);
 
 			// Transform mod into div + multiply as needed. No mod operation on ARM!
+			void idivTfm(Listing *to, Instr *instr, Nat line);
+			void udivTfm(Listing *to, Instr *instr, Nat line);
 			void imodTfm(Listing *to, Instr *instr, Nat line);
 			void umodTfm(Listing *to, Instr *instr, Nat line);
 

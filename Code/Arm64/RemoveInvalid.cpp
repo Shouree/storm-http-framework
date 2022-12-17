@@ -5,6 +5,8 @@
 #include "../Listing.h"
 #include "../UsedRegs.h"
 #include "../Exception.h"
+#include "../Binary.h"
+#include "Gc/DwarfTable.h"
 
 namespace code {
 	namespace arm64 {
@@ -41,8 +43,8 @@ namespace code {
 			DATA12(add),
 			DATA12(sub),
 			DATA4REG(mul),
-			DATA4REG(idiv),
-			DATA4REG(udiv),
+			TRANSFORM(idiv),
+			TRANSFORM(udiv),
 			TRANSFORM(umod),
 			TRANSFORM(imod),
 
@@ -159,13 +161,54 @@ namespace code {
 			}
 		}
 
+		static Engine *findEngine() {
+#ifdef ARM64
+			void **fp;
+			__asm__ ( "mov %0, x29"
+					: "=r" (fp)
+					: : );
+			void *pc = fp[1];
+			storm::FDE *fde = storm::dwarfTable().find(pc);
+			if (!fde)
+				return null;
+
+			Binary *b = codeBinary(fde->codeStart());
+			if (!b)
+				return null;
+
+			return &b->engine();
+#else
+			return null;
+#endif
+		}
+
+		extern "C" void SHARED_EXPORT throwDivisionException() {
+			Engine *e = findEngine();
+			if (!e)
+				e = runtime::someEngineUnsafe();
+			throw new (*e) DivisionByZero();
+		}
+
 		void RemoveInvalid::after(Listing *dest, Listing *src) {
+			if (lblDivZero != Label()) {
+				*dest << lblDivZero;
+				const void *errorFn = address(&throwDivisionException);
+				*dest << mov(ptrr(16), largeConstant(xConst(Size::sPtr, (Word)errorFn)));
+				*dest << call(ptrr(16), Size());
+			}
+
 			for (Nat i = 0; i < large->count(); i++) {
 				*dest << alignAs(Size::sPtr);
 				if (i == 0)
 					*dest << lblLarge;
 				*dest << dat(large->at(i));
 			}
+		}
+
+		Label RemoveInvalid::divZeroLabel(Listing *dest) {
+			if (lblDivZero == Label())
+				lblDivZero = dest->label();
+			return lblDivZero;
 		}
 
 		/**
@@ -686,6 +729,33 @@ namespace code {
 			}
 		}
 
+		void RemoveInvalid::idivTfm(Listing *to, Instr *instr, Nat line) {
+			Operand src = instr->src();
+			if (src.type() != opRegister) {
+				Reg t = unusedReg(used->at(line), src.size());
+				used->at(line)->put(t);
+				loadRegister(to, t, src);
+				src = t;
+			}
+
+			*to << cmp(src, xConst(src.size(), 0));
+			*to << jmp(divZeroLabel(to), ifEqual); // TODO: Could be marked as "robust" to aid branch predictor
+
+			Operand dest = instr->dest();
+			if (dest.type() != opRegister) {
+				Reg t = unusedReg(used->at(line), dest.size());
+				loadRegister(to, t, dest);
+				*to << instr->alter(t, src);
+				*to << mov(dest, t);
+			} else {
+				*to << instr->alterSrc(src);
+			}
+		}
+
+		void RemoveInvalid::udivTfm(Listing *to, Instr *instr, Nat line) {
+			idivTfm(to, instr, line);
+		}
+
 		void RemoveInvalid::imodTfm(Listing *to, Instr *instr, Nat line) {
 			umodTfm(to, instr, line);
 		}
@@ -713,6 +783,9 @@ namespace code {
 				loadRegister(to, t, dest);
 				dest = t;
 			}
+
+			*to << cmp(src, xConst(src.size(), 0));
+			*to << jmp(divZeroLabel(to), ifEqual); // TODO: Could be marked as "robust" to aid branch predictor
 
 			// The modulo code. Since we can't use 3-op codes here, we generate:
 			// mov <t>, <a>
