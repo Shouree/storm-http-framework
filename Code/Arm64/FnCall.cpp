@@ -251,6 +251,11 @@ namespace code {
 					Operand dst = xRel(sz, sp, Offset(layout->stackOffset(i)));
 					if (info.src.type() == opRelative || info.src.type() == opVariable) {
 						inlineMemcpy(dest, dst, info.src, reg1, reg2);
+					} else if (info.src.type() == opConstant) {
+						TODO(L"We need to handle large constants here!");
+						Reg r = asSize(reg1, sz);
+						*dest << mov(r, info.src);
+						*dest << mov(dst, r);
 					} else {
 						// We can copy it natively.
 						*dest << mov(dst, info.src);
@@ -323,7 +328,7 @@ namespace code {
 		// Set a register to what it is supposed to be, assuming 'src' is the actual value.
 		static void setRegisterVal(RegEnv &env, Reg target, Param param, const Operand &src) {
 			if (param.offset() == 0 && src.size().size64() <= 8) {
-				if (src.type() == opRegister && src.reg() == target) {
+				if (src.type() == opRegister && same(src.reg(), target)) {
 					// Already done!
 				} else {
 					Reg to = asSize(target, src.size());

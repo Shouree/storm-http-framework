@@ -193,7 +193,7 @@ namespace code {
 		void prologOut(Output *to, Instr *instr) {
 			Offset stackSize = instr->src().offset();
 			Int scaled = stackSize.v64() / 8;
-			if (isImm7S(scaled) && false) {
+			if (isImm7S(scaled)) {
 				// Small enough: we can do the modifications in the store operation:
 
 				// - stp x29, x30, [sp, -stackSize]!
@@ -367,7 +367,9 @@ namespace code {
 			Bool intSrc = isIntReg(src);
 			Bool intDst = isIntReg(dest);
 			if (intSrc && intDst) {
-				if (size(src).size64() > 4)
+				if (src == ptrStack || dest == ptrStack)
+					putData2(to, 0x244, intRegSP(dest), intRegSP(src), 0);
+				else if (size(src).size64() > 4)
 					putData3(to, 0x550, intRegZR(dest), 31, intRegZR(src), 0);
 				else
 					putData3(to, 0x150, intRegZR(dest), 31, intRegZR(src), 0);
@@ -398,7 +400,7 @@ namespace code {
 				break;
 			case opRelative:
 				if (instr->src().type() != opRegister)
-					throw new (to) InvalidValue(S("Invalid source for store operation on ARM."));
+					throw new (to) InvalidValue(TO_S(to, S("Invalid source for store operation on ARM: ") << instr->src()));
 				return storeOut(to, instr, next);
 			default:
 				throw new (to) InvalidValue(TO_S(to, S("Invalid destination for move operation: ") << instr));
@@ -922,7 +924,6 @@ namespace code {
 		}
 
 		void preserveOut(Output *to, Instr *instr) {
-			PVAR(instr);
 			to->markSaved(instr->src().reg(), instr->dest().offset());
 		}
 
