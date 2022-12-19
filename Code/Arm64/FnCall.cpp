@@ -550,6 +550,8 @@ namespace code {
 					Reg r = ptrr(2);
 					if (store.type() == opRegister)
 						r = store.reg();
+					else
+						*dest << mov(r, store);
 					store = xRel(resultType->size(), r, Offset());
 				}
 

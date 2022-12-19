@@ -527,8 +527,8 @@ namespace code {
 				}
 				break;
 			case opReference:
-				// This means to load the value of the reference, similarly to mov.
-				loadLongConst(to, dest, src.ref());
+				// This means to load the refSource instead of loading from the pointer.
+				loadLongConst(to, dest, src.refSource());
 				break;
 			default:
 				throw new (to) InvalidValue(TO_S(to, S("Unsupported source operand for lea: ") << src));
