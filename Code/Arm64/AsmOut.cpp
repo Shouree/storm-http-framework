@@ -316,12 +316,18 @@ namespace code {
 			// Look at "next" to see if we can merge it with this instruction.
 			if (next && next->dest().type() == opRegister && next->src().type() == opRelative) {
 				if (same(next->src().reg(), baseReg) && Int(next->dest().size().size64()) == opSize) {
-					if (isIntReg(next->dest().reg()) == intReg) {
+					// Note: It is undefined to load the same register multiple times. Also: it
+					// might break semantics when turning:
+					// - ldr x0, [x0]
+					// - ldr x0, [x0]
+					// into
+					// - ldp x0, x0, [x0]
+					if (!same(next->dest().reg(), dest1) && isIntReg(next->dest().reg()) == intReg) {
 						// Look at the offsets, if they are next to each other, we can merge them.
 						Int off = next->src().offset().v64();
-						if (off == offset + opSize && isImm7S(offset / opSize)) {
+						if (off == offset + opSize && isImm7U(offset / opSize)) {
 							dest2 = next->dest().reg();
-						} else if (off == offset - opSize && isImm7S(off / opSize)) {
+						} else if (off == offset - opSize && isImm7U(off / opSize)) {
 							// Put the second one first.
 							dest2 = dest1;
 							dest1 = next->dest().reg();
@@ -334,10 +340,6 @@ namespace code {
 			if (offset % opSize)
 				throw new (to) InvalidValue(S("Memory access on Arm must be aligned!"));
 			offset /= opSize;
-
-			// There are no ldp ops for negative offsets.
-			if (offset < 0)
-				dest2 = noReg;
 
 			if (dest2 != noReg) {
 				if (intReg)
@@ -381,12 +383,13 @@ namespace code {
 			// Look at "next" to see if we can merge it with this instruction.
 			if (next && next->src().type() == opRegister && next->dest().type() == opRelative) {
 				if (same(next->dest().reg(), baseReg) && Int(next->src().size().size64()) == opSize) {
-					if (isIntReg(next->src().reg()) == intReg) {
+					// Note: It is undefined to store the same register multiple times.
+					if (!same(next->src().reg(), src1) && isIntReg(next->src().reg()) == intReg) {
 						// Look at the offsets, if they are next to each other, we can merge them.
 						Int off = next->dest().offset().v64();
-						if (off == offset + opSize && isImm7S(offset / opSize)) {
+						if (off == offset + opSize && isImm7U(offset / opSize)) {
 							src2 = next->src().reg();
-						} else if (off == offset - opSize && isImm7S(off / opSize)) {
+						} else if (off == offset - opSize && isImm7U(off / opSize)) {
 							// Put the second one first.
 							src2 = src1;
 							src1 = next->src().reg();
