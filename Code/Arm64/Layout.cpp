@@ -339,7 +339,6 @@ namespace code {
 			}
 
 			// Preserve parameters.
-			TODO(L"Handle simple parameters that are too large to fit in registers!");
 			Array<Var> *paramVars = dest->allParams();
 			for (Nat i = 0; i < params->registerCount(); i++) {
 				Param p = params->registerAt(i);

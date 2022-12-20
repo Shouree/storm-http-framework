@@ -7,6 +7,7 @@
 #include "Gc/CodeTable.h"
 
 #ifdef POSIX
+#include "Gc/Fault.h"
 #include "Gc/DwarfTable.h"
 
 #define XOPEN
@@ -91,7 +92,7 @@ namespace storm {
 		chainSigHandler(oldFpeAction, signal, info, context);
 	}
 
-	static struct sigaction oldSegvAction;
+	// static struct sigaction oldSegvAction;
 
 	static void handleSegv(int signal, siginfo_t *info, void *context) {
 		// Try to find an engine based on the code that called the instruction, so that we can
@@ -115,7 +116,10 @@ namespace storm {
 		}
 
 		// If we get here, dispatch to other signal handler. This might crash the process.
-		chainSigHandler(oldSegvAction, signal, info, context);
+		// chainSigHandler(oldSegvAction, signal, info, context);
+
+		// If we get here, raise SIGINT for easier debugging.
+		raise(SIGINT);
 	}
 
 	static struct sigaction oldBusAction;
@@ -155,10 +159,11 @@ namespace storm {
 		sigaction(SIGFPE, &sa, &oldFpeAction);
 
 		// Add handler for SIGSEGV
-		sa.sa_sigaction = &handleSegv;
-		sigemptyset(&sa.sa_mask);
-		sa.sa_flags = SA_RESTART | SA_SIGINFO;
-		sigaction(SIGSEGV, &sa, &oldSegvAction);
+		// sa.sa_sigaction = &handleSegv;
+		// sigemptyset(&sa.sa_mask);
+		// sa.sa_flags = SA_RESTART | SA_SIGINFO;
+		// sigaction(SIGSEGV, &sa, &oldSegvAction);
+		setSegvHandler(&handleSegv);
 
 		// Add handler for SIGBUS
 		sa.sa_sigaction = &handleBus;
@@ -236,7 +241,7 @@ namespace storm {
 	}
 
 	static void initialize() {
-		AddVectoredExceptionHandler(0, &SysExceptionFilter);
+		AddVectoredExceptionHandler(1, &SysExceptionFilter);
 	}
 
 #endif

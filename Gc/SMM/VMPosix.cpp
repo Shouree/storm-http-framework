@@ -7,6 +7,7 @@
 #include "Utils.h"
 #include "VMAlloc.h"
 #include "Block.h"
+#include "Gc/Fault.h"
 #include <sys/mman.h>
 #include <signal.h>
 
@@ -40,11 +41,8 @@ namespace storm {
 				return;
 			}
 
-			// We don't know this memory. Trigger another signal to terminate us.
-#ifdef DEBUG
-			gc_panic_stacktrace();
-#endif
-			raise(SIGINT);
+			// We don't know this memory. Forward to default handler.
+			gcHandleSegv(signal, info, context);
 		}
 
 		void VMPosix::initNotify() {

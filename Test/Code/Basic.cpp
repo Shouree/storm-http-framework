@@ -273,10 +273,10 @@ BEGIN_TEST(CodeArm64Layout, CodeBasic) {
 	t->at(3) = Primitive(primitive::real, Size::sFloat, Offset::sInt*3);
 	p->add(3, t);
 
-	SimpleDesc *u = new (e) SimpleDesc(Size::sLong*3, 4);
-	t->at(0) = Primitive(primitive::integer, Size::sLong, Offset());
-	t->at(1) = Primitive(primitive::integer, Size::sLong, Offset::sLong);
-	t->at(2) = Primitive(primitive::integer, Size::sLong, Offset::sLong*2);
+	SimpleDesc *u = new (e) SimpleDesc(Size::sLong*3, 3);
+	u->at(0) = Primitive(primitive::integer, Size::sLong, Offset());
+	u->at(1) = Primitive(primitive::integer, Size::sLong, Offset::sLong);
+	u->at(2) = Primitive(primitive::integer, Size::sLong, Offset::sLong*2);
 	p->add(4, u);
 
 	CHECK_EQ(p->stackCount(), 1);

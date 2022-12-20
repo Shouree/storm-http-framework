@@ -146,23 +146,17 @@ namespace storm {
 	};
 
 
-	static Nat generateId() {
-		// Initialize conversion of system errors.
-		setupSystemExceptions();
-
-		// We use this to inject signal handlers before the MPS.
-		return atomicIncrement(engineId);
-	}
-
-
 	Engine::Engine(const Path &root, ThreadMode mode, void *stackBase) :
-		id(generateId()),
+		id(atomicIncrement(engineId)),
 		gc(defaultArena, defaultFinalizer),
 		threadGroup(util::memberVoidFn(this, &Engine::attachThread), util::memberVoidFn(this, &Engine::detachThread)),
 		world(gc),
 		objRoot(null),
 		ioThread(null),
 		stackInfo(gc) {
+
+		// Handle system errors.
+		setupSystemExceptions();
 
 		bootStatus = bootNone;
 

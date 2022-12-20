@@ -57,16 +57,18 @@ void mps_assert_fail(const char *file, unsigned line, const char *condition) {
 	abort();
 }
 
-#ifdef POSIX
-void mps_on_sigsegv(int signal) {
-	(void)signal;
-	gc_panic_stacktrace();
-	// Raise SIGINT instead. See the comment below for details.
-	raise(SIGINT);
-}
-#endif
+void gcHandleSegv(int signal, siginfo_t *info, void *context);
 
 void mps_init() {
+#ifdef POSIX
+	// We need to install the handler for SIGSEGV before we start MPS.
+	struct sigaction sa;
+	sa.sa_sigaction = &gcHandleSegv;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_RESTART | SA_SIGINFO;
+	sigaction(SIGSEGV, &sa, NULL);
+#endif
+
 	// Custom assertions.
 	mps_lib_assert_fail_install(&mps_assert_fail);
 }
