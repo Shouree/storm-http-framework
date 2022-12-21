@@ -555,6 +555,7 @@ namespace code {
 			case opRegister:
 				to->putInt(0xD63F0000 | (intRegZR(target.reg()) << 5));
 				break;
+			case opRelative:
 				// Split into two op-codes: a load and a register call.
 				offset = target.offset().v64() / 8;
 				putLoadStoreLargeU(to, 0x3E5, intRegZR(target.reg()), 17, offset);
