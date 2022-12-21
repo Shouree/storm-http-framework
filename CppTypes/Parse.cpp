@@ -528,6 +528,9 @@ static void parseType(Tokenizer &tok, ParseEnv &env, const CppName &inside, bool
 	} else if (tok.skipIf(L"STORM_EXCEPTION_BASE")) {
 		type->clear(Class::value);
 		type->set(Class::rootException);
+	} else if (exported) {
+		// Warn about STORM_EXCEPTION not being present.
+		throw Error(L"Exceptions from Storm must be exported with STORM_EXCEPTION as well as EXCEPTION_EXPORT.", tok.peek().pos);
 	} else {
 		// No. Ignore the rest of the block!
 		parseBlock(tok);

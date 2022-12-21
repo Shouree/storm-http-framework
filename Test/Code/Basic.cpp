@@ -279,13 +279,12 @@ BEGIN_TEST(CodeArm64Layout, CodeBasic) {
 	u->at(2) = Primitive(primitive::integer, Size::sLong, Offset::sLong*2);
 	p->add(4, u);
 
-	CHECK_EQ(p->stackCount(), 1);
-	CHECK_EQ(p->stackParam(0).id(), 4);
-	CHECK_EQ(p->stackOffset(0), 0);
+	CHECK_EQ(p->stackCount(), 0);
 	CHECK_EQ(p->registerAt(0), Param(0, Size::sInt, 0, false));
 	CHECK_EQ(p->registerAt(8), Param(1, Size::sInt, 0, false));
-	CHECK_EQ(p->registerAt(2), Param(2, Size::sLong, 0, false));
-	CHECK_EQ(p->registerAt(3), Param(2, Size::sLong, 8, false));
-	CHECK_EQ(p->registerAt(4), Param(3, Size::sLong, 0, false));
-	CHECK_EQ(p->registerAt(5), Param(3, Size::sLong, 8, false));
+	CHECK_EQ(p->registerAt(1), Param(2, Size::sLong, 0, false));
+	CHECK_EQ(p->registerAt(2), Param(2, Size::sLong, 8, false));
+	CHECK_EQ(p->registerAt(3), Param(3, Size::sLong, 0, false));
+	CHECK_EQ(p->registerAt(4), Param(3, Size::sLong, 8, false));
+	CHECK_EQ(p->registerAt(5), Param(4, Size::sPtr, 0, true));
 } END_TEST

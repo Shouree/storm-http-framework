@@ -157,7 +157,7 @@ namespace code {
 
 			// If the byte transform had to modify the destination, make sure to store it back where it belongs.
 			if (i != original && i->dest() != original->dest()) {
-				*dest << mov(i->dest(), original->dest());
+				*dest << mov(original->dest(), i->dest());
 			}
 		}
 
@@ -712,10 +712,10 @@ namespace code {
 			if (mode & destRead) {
 				dstReg = loadFpRegister(to, dest, line);
 			} else {
-				if (dest.type() == opRegister) {
+				if (dest.type() == opRegister && isVectorReg(dest.reg())) {
 					dstReg = dest.reg();
 				} else {
-					dstReg = unusedReg(used->at(line), dest.size());
+					dstReg = unusedVectorReg(used->at(line), dest.size());
 					// We don't need to update the register in the used set either, usage will not overlap.
 					// Don't need to load!
 				}

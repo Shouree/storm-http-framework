@@ -175,6 +175,7 @@ namespace storm {
 	 * Calling an abstract function.
 	 */
 	class EXCEPTION_EXPORT AbstractFnCalled : public RuntimeError {
+		STORM_EXCEPTION;
 	public:
 		AbstractFnCalled(const wchar *name);
 		STORM_CTOR AbstractFnCalled(Str *msg);

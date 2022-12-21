@@ -127,7 +127,7 @@ namespace storm {
 		void *allocObject(size_t size, Type *type) {
 			const GcType *t = type->gcType();
 #ifdef DEBUG
-			// Try to keep the failure case out of the normal case, even in debug mode.
+			// Try to keep the failure case out of the hot code, even in debug mode.
 			if (size > t->stride)
 				allocFailSize(t, size);
 			if (t->type != type)

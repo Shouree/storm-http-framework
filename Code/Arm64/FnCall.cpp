@@ -532,7 +532,6 @@ namespace code {
 
 			// Restore stack if needed.
 			if (extraStack > 0) {
-				TODO(L"We might need EH info for this!");
 				*dest << add(ptrStack, ptrConst(extraStack));
 			}
 
@@ -568,8 +567,8 @@ namespace code {
 					} else if (resultSz <= 8) {
 						*dest << mov(opOffset(Size::sWord, store, 0), asSize(srcReg1, Size::sWord));
 					} else {
-						*dest << mov(opPtrOffset(store, 0), srcReg1);
-						*dest << mov(opPtrOffset(store, 8), srcReg2);
+						*dest << mov(opOffset(Size::sWord, store, 0), asSize(srcReg1, Size::sWord));
+						*dest << mov(opOffset(Size::sWord, store, 8), asSize(srcReg2, Size::sWord));
 					}
 				}
 			}

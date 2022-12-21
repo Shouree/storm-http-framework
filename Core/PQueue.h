@@ -11,6 +11,7 @@ namespace storm {
 	 * Custom error type.
 	 */
 	class EXCEPTION_EXPORT PQueueError : public Exception {
+		STORM_EXCEPTION;
 	public:
 		PQueueError(const wchar *msg) {
 			this->msg = new (this) Str(msg);

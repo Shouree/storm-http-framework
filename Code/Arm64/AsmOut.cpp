@@ -490,8 +490,8 @@ namespace code {
 				loadLongConst(to, intRegZR(destReg), src.object());
 				return false;
 			case opConstant:
-				if (src.constant() >= 0xFFFF)
-					throw new (to) InvalidValue(S("Too large immediate to load"));
+				if (src.constant() > 0xFFFF)
+					throw new (to) InvalidValue(TO_S(to, S("Too large immediate to load: ") << src));
 				// Note: No difference between nat and word version.
 				to->putInt(0xD2800000 | ((0xFFFF & src.constant()) << 5) | intRegZR(destReg));
 				return false;
@@ -562,7 +562,6 @@ namespace code {
 				to->putInt(0xD63F0220);
 				break;
 			default:
-				PVAR(instr);
 				assert(false, L"Unsupported call target!");
 				break;
 			}
@@ -1042,7 +1041,7 @@ namespace code {
 			Bool is64 = dest.size().size64() > 4;
 			Nat baseOp = 0x0F1;
 			if (is64)
-				baseOp |= Nat(1) << 22;
+				baseOp |= Nat(1) << 1;
 			putData3(to, baseOp, 0x0, fpReg(dest.reg()), fpReg(src.reg()), 0x08);
 		}
 
