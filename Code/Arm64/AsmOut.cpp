@@ -626,8 +626,6 @@ namespace code {
 				to->putInt(0xD61F0220);
 				break;
 			case opLabel:
-				if (target.label().key() == 6)
-					PVAR(to->offset(target.label()));
 				offset = Int(to->offset(target.label())) - Int(to->tell());
 				offset /= 4;
 				checkImm26S(to, offset);
