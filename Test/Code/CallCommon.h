@@ -55,3 +55,5 @@ struct ByteStruct {
 };
 
 code::SimpleDesc *bytesDesc(Engine &e);
+
+code::SimpleDesc *rectDesc(Engine &e);

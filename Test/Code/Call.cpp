@@ -7,6 +7,7 @@
 #include "Code/Arm64/Arena.h"
 #include "Code/Arm64/Asm.h"
 #include "Compiler/Debug.h"
+#include "Core/Geometry/Rect.h"
 
 /**
  * File containing tests for calling conventions from the caller's perspective.
@@ -655,6 +656,45 @@ BEGIN_TEST(CallBytes, Code) {
 	ByteStruct r = (*fn)(ByteStruct(2, 3));
 	CHECK_EQ(r.a, 33);
 	CHECK_EQ(r.b, 16);
+} END_TEST
+
+Float CODECALL callRect(geometry::Rect r) {
+	// On ARM64 it seems like each fp value is passed in its own vector register.
+	return r.size().w + r.size().h;
+}
+
+geometry::Rect returnRect() {
+	return geometry::Rect(1, 2, 3, 4);
+}
+
+BEGIN_TEST_(CallRect, Code) {
+	Engine &e = gEngine();
+	Arena *arena = code::arena(e);
+
+	Ref rectFn = arena->external(S("rectFn"), address(&callRect));
+	SimpleDesc *rect = rectDesc(e);
+
+	Listing *l = new (e) Listing(false, floatDesc(e));
+	Var p = l->createVar(l->root(), rect->size());
+
+	*l << prolog();
+	*l << mov(floatRel(p, Offset()), floatConst(10.0f));
+	*l << mov(floatRel(p, Offset::sFloat), floatConst(11.0f));
+	*l << mov(floatRel(p, Offset::sFloat * 2), floatConst(21.0f));
+	*l << mov(floatRel(p, Offset::sFloat * 3), floatConst(31.0f));
+	*l << fnParam(rect, p);
+	*l << fnCall(rectFn, false, floatDesc(e), eax);
+	*l << fnRet(eax);
+
+	Binary *bin = new (e) Binary(arena, l);
+	typedef Float (*Fn)();
+	Fn fn = (Fn)bin->address();
+
+	Float f = (*fn)();
+	CHECK_EQ(f, 42.0f);
+	PVAR(returnRect());
+	// TODO: Also make test where we return a Rect (passed in 4 regs)
+	// TODO: Make sure we have corresponding tests in Callee.cpp
 } END_TEST
 
 BEGIN_TEST(CallMore, Code) {
