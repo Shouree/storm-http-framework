@@ -319,15 +319,15 @@ namespace code {
 					// Note: It is undefined to load the same register multiple times. Also: it
 					// might break semantics when turning:
 					// - ldr x0, [x0]
-					// - ldr x0, [x0]
+					// - ldr x0, [x0+8]
 					// into
 					// - ldp x0, x0, [x0]
 					if (!same(next->dest().reg(), dest1) && isIntReg(next->dest().reg()) == intReg) {
 						// Look at the offsets, if they are next to each other, we can merge them.
 						Int off = next->src().offset().v64();
-						if (off == offset + opSize && isImm7U(offset / opSize)) {
+						if (off == offset + opSize && isImm7S(offset / opSize)) {
 							dest2 = next->dest().reg();
-						} else if (off == offset - opSize && isImm7U(off / opSize)) {
+						} else if (off == offset - opSize && isImm7S(off / opSize)) {
 							// Put the second one first.
 							dest2 = dest1;
 							dest1 = next->dest().reg();
@@ -341,11 +341,13 @@ namespace code {
 				throw new (to) InvalidValue(S("Memory access on Arm must be aligned!"));
 			offset /= opSize;
 
+			// Interestingly enough, ldp takes a signed offset but ldr takes an unsigned offset.
+
 			if (dest2 != noReg) {
 				if (intReg)
-					putLoadStoreU(to, opSize == 4 ? 0x0A5 : 0x2A5, intRegSP(baseReg), intRegZR(dest1), intRegZR(dest2), offset);
+					putLoadStoreS(to, opSize == 4 ? 0x0A5 : 0x2A5, intRegSP(baseReg), intRegZR(dest1), intRegZR(dest2), offset);
 				else
-					putLoadStoreU(to, opSize == 4 ? 0x0B5 : 0x1B5, intRegSP(baseReg), fpReg(dest1), fpReg(dest2), offset);
+					putLoadStoreS(to, opSize == 4 ? 0x0B5 : 0x1B5, intRegSP(baseReg), fpReg(dest1), fpReg(dest2), offset);
 			} else if (offset < 0) {
 				// Here: We need to use 'ldur' instead. That one is unscaled.
 				if (intReg)
@@ -383,13 +385,14 @@ namespace code {
 			// Look at "next" to see if we can merge it with this instruction.
 			if (next && next->src().type() == opRegister && next->dest().type() == opRelative) {
 				if (same(next->dest().reg(), baseReg) && Int(next->src().size().size64()) == opSize) {
-					// Note: It is undefined to store the same register multiple times.
-					if (!same(next->src().reg(), src1) && isIntReg(next->src().reg()) == intReg) {
+					// Note: Contrary to the load instruction, it is well-defined to store the same
+					// register multiple times.
+					if (isIntReg(next->src().reg()) == intReg) {
 						// Look at the offsets, if they are next to each other, we can merge them.
 						Int off = next->dest().offset().v64();
-						if (off == offset + opSize && isImm7U(offset / opSize)) {
+						if (off == offset + opSize && isImm7S(offset / opSize)) {
 							src2 = next->src().reg();
-						} else if (off == offset - opSize && isImm7U(off / opSize)) {
+						} else if (off == offset - opSize && isImm7S(off / opSize)) {
 							// Put the second one first.
 							src2 = src1;
 							src1 = next->src().reg();
@@ -403,15 +406,13 @@ namespace code {
 				throw new (to) InvalidValue(S("Memory access on Arm must be aligned!"));
 			offset /= opSize;
 
-			// There are no ldp ops for negative offsets.
-			if (offset < 0)
-				src2 = noReg;
+			// Interestingly enough, LDP takes a signed offset while LDR takes an unsigned offset...
 
 			if (src2 != noReg) {
 				if (intReg)
-					putLoadStoreU(to, opSize == 4 ? 0x0A4 : 0x2A4, intRegSP(baseReg), intRegZR(src1), intRegZR(src2), offset);
+					putLoadStoreS(to, opSize == 4 ? 0x0A4 : 0x2A4, intRegSP(baseReg), intRegZR(src1), intRegZR(src2), offset);
 				else
-					putLoadStoreU(to, opSize == 4 ? 0x0B4 : 0x1B4, intRegSP(baseReg), fpReg(src1), fpReg(src2), offset);
+					putLoadStoreS(to, opSize == 4 ? 0x0B4 : 0x1B4, intRegSP(baseReg), fpReg(src1), fpReg(src2), offset);
 			} else if (offset < 0) {
 				// Here: we need to use 'ldur' instead.
 				if (intReg)
@@ -625,6 +626,8 @@ namespace code {
 				to->putInt(0xD61F0220);
 				break;
 			case opLabel:
+				if (target.label().key() == 6)
+					PVAR(to->offset(target.label()));
 				offset = Int(to->offset(target.label())) - Int(to->tell());
 				offset /= 4;
 				checkImm26S(to, offset);
@@ -1206,10 +1209,17 @@ namespace code {
 			mergePreserve,
 		};
 
+		bool anyLabels(Listing *src, Nat at) {
+			Array<Label> *lbl = src->labels(at);
+			return lbl != null && lbl->count() > 0;
+		}
+
 		MergeResult mergeMov(Listing *src, Output *to, Instr *first, Nat at) {
 			Nat remaining = src->count() - at;
 
-			if (remaining >= 1) {
+			// Note: We can't merge loads if there are labels between. Otherwise, we can't jump to
+			// those labels later on.
+			if (remaining >= 1 && !anyLabels(src, at + 1)) {
 				// Immediately followed by a mov?
 				Instr *second = src->at(at + 1);
 				if (second->op() == op::mov) {
@@ -1217,7 +1227,7 @@ namespace code {
 				}
 
 				// Maybe a "preserve" is between?
-				if (remaining >= 2 && second->op() == op::preserve) {
+				if (remaining >= 2 && second->op() == op::preserve && !anyLabels(src, at + 2)) {
 					Instr *third = src->at(at + 2);
 					if (third->op() == op::mov) {
 						return movOut(to, first, third) ? mergePreserve : mergeNone;
