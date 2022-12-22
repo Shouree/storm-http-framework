@@ -208,8 +208,7 @@ namespace storm {
 
 	static void castDouble(InlineParams p) {
 		p.allocRegs(0);
-		*p.state->l << fld(p.param(1));
-		*p.state->l << fstp(doubleRel(p.regParam(0), Offset()));
+		*p.state->l << fcast(doubleRel(p.regParam(0), Offset()), p.param(1));
 	}
 
 	static Double doubleRead(IStream *from) {
