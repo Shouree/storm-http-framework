@@ -213,6 +213,7 @@ BEGIN_TEST(CodeHereTest, CodeBasic) {
 
 BEGIN_TEST(CodeX64Layout, CodeBasic) {
 	using namespace code::x64;
+	using code::x64::Param;
 
 	Engine &e = gEngine();
 
@@ -251,8 +252,6 @@ BEGIN_TEST(CodeX64Layout, CodeBasic) {
 } END_TEST
 
 BEGIN_TEST(CodeArm64Layout, CodeBasic) {
-	using namespace code::arm64;
-
 	Engine &e = gEngine();
 
 	code::arm64::Params *p = new (e) code::arm64::Params();
@@ -280,11 +279,11 @@ BEGIN_TEST(CodeArm64Layout, CodeBasic) {
 	p->add(4, u);
 
 	CHECK_EQ(p->stackCount(), 0);
-	CHECK_EQ(p->registerAt(0), Param(0, Size::sInt, 0, false));
-	CHECK_EQ(p->registerAt(8), Param(1, Size::sInt, 0, false));
-	CHECK_EQ(p->registerAt(1), Param(2, Size::sLong, 0, false));
-	CHECK_EQ(p->registerAt(2), Param(2, Size::sLong, 8, false));
-	CHECK_EQ(p->registerAt(3), Param(3, Size::sLong, 0, false));
-	CHECK_EQ(p->registerAt(4), Param(3, Size::sLong, 8, false));
-	CHECK_EQ(p->registerAt(5), Param(4, Size::sPtr, 0, true));
+	CHECK_EQ(p->registerParam(0), Param(0, Size::sInt, true, 0, false));
+	CHECK_EQ(p->registerParam(8), Param(1, Size::sInt, true, 0, false));
+	CHECK_EQ(p->registerParam(1), Param(2, Size::sLong, true, 0, false));
+	CHECK_EQ(p->registerParam(2), Param(2, Size::sLong, true, 8, false));
+	CHECK_EQ(p->registerParam(3), Param(3, Size::sLong, true, 0, false));
+	CHECK_EQ(p->registerParam(4), Param(3, Size::sLong, true, 8, false));
+	CHECK_EQ(p->registerParam(5), Param(4, Size::sPtr, true, 0, true));
 } END_TEST

@@ -77,7 +77,7 @@ namespace code {
 			// Keep track of which parameters are stored indirectly.
 			varIndirect = new (this) Array<Bool>(layout->count(), false);
 			for (Nat i = 0; i < params->totalCount(); i++) {
-				Param par = params->totalAt(i);
+				Param par = params->totalParam(i);
 				if (par.any()) {
 					Var v = p->at(par.id());
 					varIndirect->at(v.key()) = par.inMemory();
@@ -341,7 +341,7 @@ namespace code {
 			// Preserve parameters.
 			Array<Var> *paramVars = dest->allParams();
 			for (Nat i = 0; i < params->registerCount(); i++) {
-				Param p = params->registerAt(i);
+				Param p = params->registerParam(i);
 				if (p == Param())
 					continue;
 
@@ -695,7 +695,7 @@ namespace code {
 			// for that to work properly.
 			Nat spilledParams = 0;
 			for (Nat i = 0; i < params->registerCount(); i++)
-				if (params->registerAt(i) != Param())
+				if (params->registerParam(i) != Param())
 					spilledParams++;
 
 			// TODO: We might need to align spilled registers to a 16-byte boundary to make stp and
@@ -713,7 +713,7 @@ namespace code {
 			// Fill in the parameters that need to be spilled to the stack.
 			Nat spillCount = spilled;
 			for (Nat i = 0; i < params->registerCount(); i++) {
-				Param p = params->registerAt(i);
+				Param p = params->registerParam(i);
 				// Some params are "padding".
 				if (p.empty())
 					continue;

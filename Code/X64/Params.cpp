@@ -316,6 +316,7 @@ namespace code {
 		}
 
 		Params *layoutParams(TypeDesc *result, Array<TypeDesc *> *params) {
+			TODO(L"Use the generic Params interface here as well!");
 			Params *layout = new (params) Params();
 			if (code::x64::result(result)->memory)
 				layout->add(Param::returnId, ptrPrimitive());

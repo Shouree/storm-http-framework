@@ -62,7 +62,7 @@ namespace code {
 			// Store the registers used for parameters inside variables on the stack.
 			Array<Var> *vars = new (this) Array<Var>(layout->registerCount(), Var());
 			for (Nat i = 0; i < layout->registerCount(); i++) {
-				if (layout->registerAt(i) != Param()) {
+				if (layout->registerParam(i) != Param()) {
 					Var &v = vars->at(i);
 					v = l->createVar(l->root(), Size::sLong);
 					*l << mov(v, asSize(layout->registerSrc(i), Size::sLong));
@@ -108,7 +108,7 @@ namespace code {
 				if (r == noReg || isVectorReg(r))
 					continue;
 
-				if (params->registerAt(id) == Param())
+				if (params->registerParam(id) == Param())
 					continue;
 
 				return r;

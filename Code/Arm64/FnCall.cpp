@@ -31,7 +31,7 @@ namespace code {
 		// Any parameters that need to be copied to memory?
 		static Bool hasMemory(Params *params) {
 			for (Nat i = 0; i < params->totalCount(); i++)
-				if (params->totalAt(i).inMemory())
+				if (params->totalParam(i).inMemory())
 					return true;
 			return false;
 		}
@@ -67,7 +67,7 @@ namespace code {
 			// multiple values over ones that are read directly.
 			Bool firstComplex = true;
 			for (Nat i = 0; i < layout->totalCount(); i++) {
-				Param p = layout->totalAt(i);
+				Param p = layout->totalParam(i);
 				if (p.empty())
 					continue;
 
@@ -112,7 +112,7 @@ namespace code {
 			// to the stack, which is why we do this later.
 			firstComplex = true;
 			for (Nat i = 0; i < layout->totalCount(); i++) {
-				Param p = layout->totalAt(i);
+				Param p = layout->totalParam(i);
 				if (p.empty())
 					continue;
 
@@ -159,7 +159,7 @@ namespace code {
 
 			// First: copy simple parameters to the stack. This potentially frees up registers.
 			for (Nat i = 0; i < layout->totalCount(); i++) {
-				Param p = layout->totalAt(i);
+				Param p = layout->totalParam(i);
 				// Only worry about parameters that need to be in memory for now.
 				if (p.empty() || !p.inMemory())
 					continue;
@@ -200,7 +200,7 @@ namespace code {
 
 			// Then we can actually copy parameters.
 			for (Nat i = 0; i < layout->totalCount(); i++) {
-				Param p = layout->totalAt(i);
+				Param p = layout->totalParam(i);
 				if (p.empty() || !p.inMemory())
 					continue;
 
@@ -306,7 +306,7 @@ namespace code {
 		// Make sure any content inside 'reg' is used now, so that 'reg' can be reused for other purposes.
 		static void vacateRegister(RegEnv &env, Reg reg) {
 			for (Nat i = 0; i < env.layout->registerCount(); i++) {
-				Param p = env.layout->registerAt(i);
+				Param p = env.layout->registerParam(i);
 				if (p.empty())
 					continue;
 
@@ -392,7 +392,7 @@ namespace code {
 		// Try to assign the proper value to a single register (other assignments might be performed
 		// beforehand to vacate registers).
 		static void setRegister(RegEnv &env, Nat i) {
-			Param param = env.layout->registerAt(i);
+			Param param = env.layout->registerParam(i);
 			// Empty?
 			if (param.empty())
 				return;

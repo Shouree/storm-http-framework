@@ -691,10 +691,9 @@ BEGIN_TEST_(CallRect, Code) {
 	Fn fn = (Fn)bin->address();
 
 	Float f = (*fn)();
-	CHECK_EQ(f, 42.0f);
-	PVAR(returnRect());
-	// TODO: Also make test where we return a Rect (passed in 4 regs)
-	// TODO: Make sure we have corresponding tests in Callee.cpp
+	CHECK_EQ(f, 31.0f);
+	TODO(L"Also make test where we return a Rect (passed in 4 regs)");
+	TODO(L"Make sure we have corresponding tests in Callee.cpp");
 } END_TEST
 
 BEGIN_TEST(CallMore, Code) {
