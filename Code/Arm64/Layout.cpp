@@ -46,12 +46,10 @@ namespace code {
 			for (size_t i = 0; i < fnDirtyCount; i++)
 				preserved->remove(fnDirtyRegs[i]);
 
-			// Figure out result.
-			result = code::arm64::result(src->result);
-
 			// Find parameters.
 			Array<Var> *p = src->allParams();
 			params = new (this) Params();
+			params->result(src->result);
 			for (Nat i = 0; i < p->count(); i++) {
 				params->add(i, src->paramDesc(p->at(i)));
 			}
@@ -60,16 +58,16 @@ namespace code {
 			// registers during cleanup. Make sure we have them.
 			// Note: We don't always have to preserve register 19. We only need it if we
 			// need to run destructors in the epilog.
-			if (result->regType != primitive::none && usingEH) {
-				preserved->put(ptrr(19));
-				if (result->twoReg)
-					preserved->put(ptrr(20));
+			Result result = params->result();
+			if (usingEH) {
+				for (Nat i = 0; i < result.registerCount(); i++)
+					preserved->put(ptrr(19 + i));
 			}
 
 			Nat preserveCount = preserved->count();
 			// If result is passed in memory, we need to spill x8 to the stack as well. We treat it
 			// as a regular clobbered register.
-			if (result->memory) {
+			if (result.memoryRegister() != noReg) {
 				preserveCount++;
 			}
 			layout = code::arm64::layout(src, params, preserveCount);
@@ -217,39 +215,21 @@ namespace code {
 			}
 		}
 
-		void Layout::saveResult(Listing *dest, Result *result) {
-			if (result->memory)
-				return;
+		void Layout::saveResult(Listing *dest) {
+			Result result = params->result();
 
-			switch (result->regType) {
-			case primitive::integer:
-				*dest << mov(ptrr(19), ptrr(0));
-				if (result->twoReg)
-					*dest << mov(ptrr(20), ptrr(1));
-				break;
-			case primitive::real:
-				*dest << mov(xr(19), dr(0));
-				if (result->twoReg)
-					*dest << mov(xr(20), dr(1));
-				break;
+			for (Nat i = 0; i < result.registerCount(); i++) {
+				Reg src = result.registerAt(i);
+				*dest << mov(asSize(ptrr(19 + i), size(src)), src);
 			}
 		}
 
-		void Layout::restoreResult(Listing *dest, Result *result) {
-			if (result->memory || result->regType == primitive::none)
-				return;
+		void Layout::restoreResult(Listing *dest) {
+			Result result = params->result();
 
-			switch (result->regType) {
-			case primitive::integer:
-				*dest << mov(ptrr(0), ptrr(19));
-				if (result->twoReg)
-					*dest << mov(ptrr(1), ptrr(20));
-				break;
-			case primitive::real:
-				*dest << mov(dr(0), xr(19));
-				if (result->twoReg)
-					*dest << mov(dr(1), xr(20));
-				break;
+			for (Nat i = 0; i < result.registerCount(); i++) {
+				Reg dst = result.registerAt(i);
+				*dest << mov(dst, asSize(ptrr(19 + i), size(dst)));
 			}
 		}
 
@@ -274,7 +254,7 @@ namespace code {
 						continue;
 
 					if (preserveResult && !savedResult) {
-						saveResult(dest, result);
+						saveResult(dest);
 						savedResult = true;
 					}
 
@@ -302,7 +282,7 @@ namespace code {
 			}
 
 			if (savedResult) {
-				restoreResult(dest, result);
+				restoreResult(dest);
 			}
 
 			currentBlock = dest->parent(currentBlock);
@@ -322,7 +302,7 @@ namespace code {
 			Nat offset = 16; // After sp and fp.
 
 			// Store x8 if we need it.
-			if (result->memory) {
+			if (params->result().memoryRegister() != noReg) {
 				*dest << mov(resultLocation(), ptrr(8));
 				offset += 8;
 			}
@@ -346,7 +326,7 @@ namespace code {
 					continue;
 
 				Offset offset = layout->at(paramVars->at(p.id()).key()) + Offset(p.offset());
-				*dest << mov(longRel(ptrFrame, offset), asSize(params->registerSrc(i), Size::sLong));
+				*dest << mov(xRel(p.size(), ptrFrame, offset), asSize(params->registerSrc(i), p.size()));
 			}
 
 			// Initialize the root block.
@@ -364,7 +344,7 @@ namespace code {
 
 			// Restore spilled registers.
 			Nat offset = 16;
-			if (result->memory)
+			if (params->result().memoryRegister() != noReg)
 				offset += 8; // Adjust for preserving x8, but we don't need to restore it.
 			for (RegSet::Iter begin = preserved->begin(), end = preserved->end(); begin != end; ++begin) {
 				*dest << mov(asSize(begin.v(), Size::sLong), longRel(ptrFrame, Offset(offset)));
@@ -421,8 +401,8 @@ namespace code {
 			}
 		}
 
-		static void returnSimple(Listing *dest, Result *result, Size size, Reg src, Operand resultLocation) {
-			if (result->memory) {
+		static void returnSimple(Listing *dest, const Result &result, Size size, Reg src, Operand resultLocation) {
+			if (result.memoryRegister() != noReg) {
 				// Memcpy using the mov instruction.
 				Reg destReg = ptrB;
 				if (src == ptrB)
@@ -431,55 +411,38 @@ namespace code {
 
 				inlineMemcpy(dest, xRel(size, destReg, Offset()), xRel(size, src, Offset()), ptrr(16), ptrr(17));
 
-			} else if (result->regType != primitive::none) {
-				// Just populate the relevant registers:
-				if (result->regType == primitive::real) {
-					if (size.size64() <= 1) {
-						*dest << mov(br(0), xRel(Size::sByte, src, Offset()));
-					} else if (size.size64() <= 4) {
-						*dest << mov(sr(0), xRel(Size::sInt, src, Offset()));
-					} else if (size.size64() <= 8) {
-						*dest << mov(dr(0), xRel(Size::sLong, src, Offset()));
-					} else {
-						*dest << mov(dr(0), xRel(Size::sLong, src, Offset()));
-						*dest << mov(dr(1), xRel(Size::sLong, src, Offset(Size::sLong)));
-					}
-				} else {
-					if (size.size64() <= 1) {
-						*dest << mov(al, xRel(Size::sByte, src, Offset()));
-					} else if (size.size64() <= 4) {
-						*dest << mov(eax, xRel(Size::sInt, src, Offset()));
-					} else if (size.size64() <= 8) {
-						*dest << mov(rax, xRel(Size::sLong, src, Offset()));
-					} else {
-						*dest << mov(rax, xRel(Size::sLong, src, Offset()));
-						*dest << mov(rbx, xRel(Size::sLong, src, Offset(Size::sLong)));
-					}
+			} else {
+				// Just populate the relevant registers!
+				for (Nat i = 0; i < result.registerCount(); i++) {
+					Reg dst = result.registerAt(i);
+					Offset off = result.registerOffset(i);
+					*dest << mov(dst, xRel(code::size(dst), src, off));
 				}
 			}
 		}
 
 		void Layout::fnRetTfm(Listing *dest, Instr *src) {
 			Operand value = resolve(dest, src->src(), ptrA);
-			assert(value.size() == dest->result->size(), L"Wrong size passed to fnRet!");
+			if (value.size() != dest->result->size()) {
+				StrBuf *msg = new (this) StrBuf();
+				*msg << S("Wrong size passed to fnRet. Got: ");
+				*msg << value.size();
+				*msg << S(" but expected ");
+				*msg << dest->result->size() << S(".");
+				throw new (this) InvalidValue(msg->toS());
+			}
 
 			// Handle the return value.
 			if (as<PrimitiveDesc>(dest->result)) {
-				switch (result->regType) {
-				case primitive::none:
-					break;
-				case primitive::integer:
-				case primitive::pointer:
-					if (value.type() == opRegister && same(value.reg(), ptrA)) {
-						// Already where it is supposed to be!
+				Result r = params->result();
+				assert(r.registerCount() <= 1);
+
+				if (r.registerCount() == 1) {
+					if (value.type() == opRegister && same(r.registerAt(0), value.reg())) {
+						// Already there, nothing to do!
 					} else {
-						// Just use a mov!
-						*dest << mov(asSize(ptrA, value.size()), value);
+						*dest << mov(r.registerAt(0), value);
 					}
-					break;
-				case primitive::real:
-					*dest << mov(asSize(dr(0), value.size()), value);
-					break;
 				}
 			} else if (ComplexDesc *c = as<ComplexDesc>(dest->result)) {
 				// Call the copy constructor.
@@ -488,7 +451,7 @@ namespace code {
 				*dest << call(c->ctor, Size());
 			} else if (SimpleDesc *s = as<SimpleDesc>(dest->result)) {
 				*dest << lea(ptrA, value);
-				returnSimple(dest, result, s->size(), ptrA, resultLocation());
+				returnSimple(dest, params->result(), s->size(), ptrA, resultLocation());
 			} else {
 				assert(false);
 			}
@@ -499,12 +462,14 @@ namespace code {
 
 		void Layout::fnRetRefTfm(Listing *dest, Instr *src) {
 			Operand value = resolve(dest, src->src(), ptrA);
-			assert(value.size() == Size::sPtr, L"Wrong size passed to fnRetRef!");
 
 			// Handle the return value.
 			if (PrimitiveDesc *p = as<PrimitiveDesc>(dest->result)) {
-				if (result->regType != primitive::none) {
-					Reg target = result->regType == primitive::real ? dr(0) : ptrA;
+				Result r = params->result();
+				assert(r.registerCount() <= 1);
+
+				if (r.registerCount() == 1) {
+					Reg target = r.registerAt(0);
 
 					if (value.type() == opRegister) {
 						*dest << mov(asSize(target, p->v.size()), xRel(p->v.size(), value.reg(), Offset()));
@@ -525,7 +490,7 @@ namespace code {
 				} else {
 					*dest << mov(reg, value);
 				}
-				returnSimple(dest, result, s->size(), reg, resultLocation());
+				returnSimple(dest, params->result(), s->size(), reg, resultLocation());
 			} else {
 				assert(false);
 			}

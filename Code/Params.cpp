@@ -93,6 +93,22 @@ namespace code {
 		this->stackParamAlign = stackParamAlign;
 	}
 
+	void Params::result(TypeDesc *type) {
+		if (PrimitiveDesc *p = as<PrimitiveDesc>(type)) {
+			resultPrimitive(p->v);
+		} else if (ComplexDesc *c = as<ComplexDesc>(type)) {
+			resultComplex(c);
+		} else if (SimpleDesc *s = as<SimpleDesc>(type)) {
+			resultSimple(s);
+		} else {
+			throw new (this) InvalidValue(TO_S(this, S("Unknown type description found: ") << type));
+		}
+	}
+
+	void Params::result(Primitive p) {
+		resultPrimitive(p);
+	}
+
 	void Params::add(Nat id, TypeDesc *type) {
 		if (PrimitiveDesc *p = as<PrimitiveDesc>(type)) {
 			addPrimitive(id, p->v);
@@ -183,4 +199,70 @@ namespace code {
 		return Param();
 	}
 
+
+	const GcType Result::dataType = {
+		GcType::tArray,
+		null,
+		null,
+		sizeof(Data),
+		0,
+		{},
+	};
+
+	Result::Result() : memReg(noReg), regs(null) {}
+
+	Result Result::inMemory(Reg reg) {
+		Result r;
+		r.memReg = reg;
+		return r;
+	}
+
+	Result Result::inRegisters(EnginePtr e, Nat count) {
+		Result r;
+		r.regs = runtime::allocArray<Data>(e, &dataType, count);
+		return r;
+	}
+
+	Result Result::inRegister(EnginePtr e, Reg reg) {
+		Result r;
+		r.regs = runtime::allocArray<Data>(e, &dataType, 1);
+		r.regs->v[0].reg = reg;
+		r.regs->v[0].offset = 0;
+		r.regs->filled = 1;
+		return r;
+	}
+
+	void Result::putRegister(Reg reg, Nat offset) {
+		if (!regs)
+			return;
+		if (regs->filled < regs->count) {
+			regs->v[regs->filled].reg = reg;
+			regs->v[regs->filled].offset = offset;
+			regs->filled++;
+		}
+	}
+
+	wostream &operator <<(wostream &to, Result r) {
+		if (r.memoryRegister() != noReg) {
+			to << L"in memory: " << name(r.memoryRegister());
+		} else if (r.registerCount() > 0) {
+			for (Nat i = 0; i < r.registerCount(); i++)
+				to << name(r.registerAt(i)) << L": @" << r.registerOffset(i) << L"\n";
+		} else {
+			to << L"(empty)";
+		}
+		return to;
+	}
+
+	StrBuf &operator <<(StrBuf &to, Result r) {
+		if (r.memoryRegister() != noReg) {
+			to << S("in memory: ") << name(r.memoryRegister());
+		} else if (r.registerCount() > 0) {
+			for (Nat i = 0; i < r.registerCount(); i++)
+				to << name(r.registerAt(i)) << S(": @") << r.registerOffset(i) << S("\n");
+		} else {
+			to << S("(empty)");
+		}
+		return to;
+	}
 }

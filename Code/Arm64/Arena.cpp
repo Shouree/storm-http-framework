@@ -52,8 +52,8 @@ namespace code {
 			Listing *l = new (this) Listing(this);
 
 			// Generate a layout of all parameters so we can properly restore them later.
-			Params *layout = layoutParams(params);
-			Result *res = code::arm64::result(result);
+			Params *layout = layoutParams(result, params);
+			Result res = layout->result();
 
 			// Note: We want to use the 'prolog' and 'epilog' functionality so that exceptions from
 			// 'fn' are able to propagate through this stub properly.
@@ -71,7 +71,7 @@ namespace code {
 
 			// If result is in memory, we need to save/restore x8 as well!
 			Var resVar;
-			if (res->memory) {
+			if (res.memoryRegister() != noReg) {
 				resVar = l->createVar(l->root(), Size::sPtr);
 				*l << mov(resVar, ptrr(8));
 			}
@@ -91,7 +91,7 @@ namespace code {
 					*l << mov(asSize(layout->registerSrc(i), Size::sLong), v);
 			}
 
-			if (res->memory) {
+			if (res.memoryRegister() != noReg) {
 				*l << mov(ptrr(8), resVar);
 			}
 

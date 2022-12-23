@@ -42,9 +42,6 @@ namespace code {
 			// Parameters.
 			Params *params;
 
-			// Result.
-			Result *result;
-
 			// Registers that need to be preserved.
 			RegSet *preserved;
 
@@ -77,8 +74,8 @@ namespace code {
 			void destroyBlock(Listing *dest, Block destroy, Bool preserveResult, Bool notifyTable);
 
 			// Save and restore the result when destroying blocks.
-			void saveResult(Listing *dest, Result *result);
-			void restoreResult(Listing *dest, Result *result);
+			void saveResult(Listing *dest);
+			void restoreResult(Listing *dest);
 
 			// Transform table.
 			typedef void (Layout::*TransformFn)(Listing *dest, Instr *src);

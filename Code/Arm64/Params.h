@@ -39,49 +39,19 @@ namespace code {
 			Reg STORM_FN registerSrc(Nat n) const;
 
 		protected:
+			void STORM_FN resultPrimitive(Primitive p);
+			void STORM_FN resultComplex(ComplexDesc *desc);
+			void STORM_FN resultSimple(SimpleDesc *desc);
+
 			void STORM_FN addPrimitive(Nat id, Primitive p);
 			void STORM_FN addComplex(Nat id, ComplexDesc *desc);
 			void STORM_FN addSimple(Nat id, SimpleDesc *desc);
 		};
 
-		// Create a 'params' object from a list of TypeDesc objects.
-		Params *STORM_FN layoutParams(Array<TypeDesc *> *types);
-
-
-		/**
-		 * Describes how the return value is stored.
-		 *
-		 * On ARM64, the rule is that if the function "fn(X)" would pass "X" in register, the same
-		 * registers are used for returning a value of type "X". Otherwise, an address to memory is
-		 * passed in x8.
-		 */
-		class Result : public storm::Object {
-			STORM_CLASS;
-		public:
-			// Create.
-			STORM_CTOR Result(TypeDesc *type);
-
-			// What types of registers to use for the result. They are always of the same type on Arm64.
-			primitive::PrimitiveKind regType;
-
-			// Using two registers?
-			Bool twoReg;
-
-			// Return in memory?
-			Bool memory;
-
-			// To string.
-			virtual void STORM_FN toS(StrBuf *to) const;
-
-		private:
-			// Helper functions.
-			void add(PrimitiveDesc *desc);
-			void add(ComplexDesc *desc);
-			void add(SimpleDesc *desc);
-		};
-
-		// Create a 'result' object describing how the return value shall be represented.
-		Result *STORM_FN result(TypeDesc *type);
+		// Create a 'params' object from a list of TypeDesc objects. Note: The result never affects
+		// the parameter layout on Arm64, so no parameter with the result id will ever appear in the
+		// returned object.
+		Params *STORM_FN layoutParams(TypeDesc *result, Array<TypeDesc *> *types);
 
 	}
 }

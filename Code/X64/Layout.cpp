@@ -481,7 +481,14 @@ namespace code {
 
 		void Layout::fnRetTfm(Listing *dest, Listing *src, Nat line) {
 			Operand value = resolve(src, src->at(line)->src());
-			assert(value.size() == src->result->size(), L"Wrong size passed to fnRet!");
+			if (value.size() != dest->result->size()) {
+				StrBuf *msg = new (this) StrBuf();
+				*msg << S("Wrong size passed to fnRet. Got: ");
+				*msg << value.size();
+				*msg << S(" but expected ");
+				*msg << dest->result->size() << S(".");
+				throw new (this) InvalidValue(msg->toS());
+			}
 
 			// Handle the return value.
 			if (PrimitiveDesc *p = as<PrimitiveDesc>(src->result)) {

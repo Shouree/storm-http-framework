@@ -3,6 +3,7 @@
 #include "Code/Binary.h"
 #include "Code/Listing.h"
 #include "Compiler/Debug.h"
+#include "Core/Geometry/Rect.h"
 
 /**
  * File containing tests for calling conventions from the callee's perspective.
@@ -218,3 +219,55 @@ BEGIN_TEST(CalleeComplex, Code) {
 
 
 // Note: CallBytes in call.cpp tests receiving a struct as well.
+
+
+BEGIN_TEST(CalleeRect, Code) {
+	using geometry::Rect;
+
+	Engine &e = gEngine();
+	Arena *arena = code::arena(e);
+
+	SimpleDesc *rect = rectDesc(e);
+	Listing *l = new (e) Listing(false, floatDesc(e));
+	Var p = l->createParam(rect);
+
+	*l << prolog();
+	*l << mov(eax, floatRel(p, Offset::sFloat*2));
+	*l << fsub(eax, floatRel(p, Offset()));
+	*l << fadd(eax, floatRel(p, Offset::sFloat*3));
+	*l << fsub(eax, floatRel(p, Offset::sFloat));
+	*l << fnRet(eax);
+
+	Binary *b = new (e) Binary(arena, l);
+	typedef Float (*Fn)(Rect);
+	Fn fn = (Fn)b->address();
+
+	Float r = (*fn)(Rect(10, 11, 21, 31));
+	CHECK_EQ(r, 31.0f);
+} END_TEST
+
+
+BEGIN_TEST(CalleeRectRet, Code) {
+	using geometry::Rect;
+
+	Engine &e = gEngine();
+	Arena *arena = code::arena(e);
+
+	SimpleDesc *rect = rectDesc(e);
+	Listing *l = new (e) Listing(false, rect);
+	Var p = l->createVar(l->root(), rect->size());
+
+	*l << prolog();
+	*l << mov(floatRel(p, Offset()), floatConst(1.0f));
+	*l << mov(floatRel(p, Offset::sFloat), floatConst(2.0f));
+	*l << mov(floatRel(p, Offset::sFloat*2), floatConst(3.0f));
+	*l << mov(floatRel(p, Offset::sFloat*3), floatConst(4.0f));
+	*l << fnRet(p);
+
+	Binary *b = new (e) Binary(arena, l);
+	typedef geometry::Rect (*Fn)();
+	Fn fn = (Fn)b->address();
+
+	geometry::Rect r = (*fn)();
+	CHECK_EQ(r, Rect(1, 2, 3, 4));
+} END_TEST

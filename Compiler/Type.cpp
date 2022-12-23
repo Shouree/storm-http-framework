@@ -548,6 +548,9 @@ namespace storm {
 
 		code::SimpleDesc *desc = new (this) code::SimpleDesc(mySize, elems);
 		populateSimpleDesc(desc);
+		// Note: In some cases (notably for C++ types) the desc will not be sorted according to offset.
+		// If this is the case, we need to sort it here, as other parts of the system expect it to be sorted.
+		desc->sort();
 		return desc;
 	}
 

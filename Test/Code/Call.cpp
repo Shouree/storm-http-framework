@@ -667,7 +667,7 @@ geometry::Rect returnRect() {
 	return geometry::Rect(1, 2, 3, 4);
 }
 
-BEGIN_TEST_(CallRect, Code) {
+BEGIN_TEST(CallRect, Code) {
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -692,8 +692,32 @@ BEGIN_TEST_(CallRect, Code) {
 
 	Float f = (*fn)();
 	CHECK_EQ(f, 31.0f);
-	TODO(L"Also make test where we return a Rect (passed in 4 regs)");
-	TODO(L"Make sure we have corresponding tests in Callee.cpp");
+} END_TEST
+
+BEGIN_TEST(CallRectRet, Code) {
+	Engine &e = gEngine();
+	Arena *arena = code::arena(e);
+
+	Ref rectRetFn = arena->external(S("rectRetFn"), address(&returnRect));
+	SimpleDesc *rect = rectDesc(e);
+
+	Listing *l = new (e) Listing(false, floatDesc(e));
+	Var p = l->createVar(l->root(), rect->size());
+
+	*l << prolog();
+	*l << fnCall(rectRetFn, false, rect, p);
+	*l << mov(eax, floatRel(p, Offset()));
+	*l << fadd(eax, floatRel(p, Offset::sFloat));
+	*l << fadd(eax, floatRel(p, Offset::sFloat*2));
+	*l << fadd(eax, floatRel(p, Offset::sFloat*3));
+	*l << fnRet(eax);
+
+	Binary *bin = new (e) Binary(arena, l, true);
+	typedef Float (*Fn)();
+	Fn fn = (Fn)bin->address();
+
+	Float f = (*fn)();
+	CHECK_EQ(f, 10.0f);
 } END_TEST
 
 BEGIN_TEST(CallMore, Code) {

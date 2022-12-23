@@ -6,6 +6,15 @@
 namespace code {
 	namespace arm64 {
 
+		static Size roundSize(Size sz) {
+			if (sz.size64() == 1)
+				return sz;
+			else if (sz.size64() <= 4)
+				return Size::sInt;
+			else
+				return sz.alignedAs(Size::sWord);
+		}
+
 		Params::Params() : code::Params(8, 8, 8, 16) {}
 
 		void Params::addPrimitive(Nat id, Primitive p) {
@@ -90,7 +99,7 @@ namespace code {
 			Nat size = type->size().size64();
 			if (size > 16) {
 				// Too large: pass on the stack, replace it with a pointer to the data.
-				addInt(Param(id, type->size(), true, 0, true));
+				addInt(Param(id, roundSize(type->size()), true, 0, true));
 				return;
 			}
 
@@ -104,13 +113,70 @@ namespace code {
 				}
 			} else {
 				if (hasInt(1)) {
-					addInt(Param(id, type->size(), true, 0, false));
+					addInt(Param(id, roundSize(type->size()), true, 0, false));
 					return;
 				}
 			}
 
 			// Fallback: Push it on the stack.
 			addStack(Param(id, type->size(), true, 0, false));
+		}
+
+		void Params::resultPrimitive(Primitive p) {
+			switch (p.kind()) {
+			case primitive::none:
+				// Nothing to do!
+				break;
+			case primitive::pointer:
+			case primitive::integer:
+				resultData = Result::inRegister(engine(), asSize(ptrr(0), p.size()));
+				break;
+			case primitive::real:
+				resultData = Result::inRegister(engine(), asSize(dr(0), p.size()));
+				break;
+			default:
+				dbg_assert(false, L"Unknown primitive type!");
+			}
+		}
+
+		void Params::resultComplex(ComplexDesc *) {
+			// Always returned in memory. Always in x8.
+			resultData = Result::inMemory(ptrr(8));
+		}
+
+		void Params::resultSimple(SimpleDesc *type) {
+			// Similar to 'addSimple' above, but don't have to handle cases with not enough register space.
+
+			// Uniform FP struct (HFA)?
+			if (uniformFp(type)) {
+				Nat regs = type->v->count;
+				if (regs <= 4) {
+					resultData = Result::inRegisters(engine(), regs);
+					for (Nat i = 0; i < regs; i++) {
+						const Primitive &p = type->v->v[i];
+						resultData.putRegister(asSize(dr(i), p.size()), p.offset().v64());
+					}
+					return;
+				}
+			} else {
+				// Integer!
+				Nat size = type->size().size64();
+				if (size <= 8) {
+					// One register:
+					Reg r = asSize(ptrr(0), roundSize(type->size()));
+					resultData = Result::inRegister(engine(), r);
+					return;
+				} else if (size <= 16) {
+					// Two registers:
+					resultData = Result::inRegisters(engine(), 2);
+					resultData.putRegister(xr(0), 0);
+					resultData.putRegister(xr(1), 8);
+					return;
+				}
+			}
+
+			// Pass it in memory:
+			resultData = Result::inMemory(ptrr(8));
 		}
 
 		Reg Params::registerSrc(Nat n) const {
@@ -121,75 +187,12 @@ namespace code {
 				return dr(n - intRegs);
 		}
 
-		Params *layoutParams(Array<TypeDesc *> *types) {
+		Params *layoutParams(TypeDesc *result, Array<TypeDesc *> *types) {
 			Params *p = new (types) Params();
+			p->result(result);
 			for (Nat i = 0; i < types->count(); i++)
 				p->add(i, types->at(i));
 			return p;
-		}
-
-
-		/**
-		 * Result.
-		 */
-
-		Result::Result(TypeDesc *result) {
-			regType = primitive::none;
-			twoReg = false;
-			memory = false;
-
-			if (PrimitiveDesc *p = as<PrimitiveDesc>(result)) {
-				add(p);
-			} else if (ComplexDesc *c = as<ComplexDesc>(result)) {
-				add(c);
-			} else if (SimpleDesc *s = as<SimpleDesc>(result)) {
-				add(s);
-			} else {
-				assert(false, L"Unknown type description found.");
-			}
-		}
-
-		void Result::toS(StrBuf *to) const {
-			if (memory) {
-				*to << S("(memory)");
-			} else if (regType == primitive::none) {
-				*to << S("(none)");
-			} else {
-				*to << primitive::name(regType);
-			}
-		}
-
-		void Result::add(PrimitiveDesc *desc) {
-			regType = desc->v.kind();
-			if (regType == primitive::pointer)
-				regType = primitive::integer;
-		}
-
-		void Result::add(ComplexDesc *desc) {
-			// Complex types are easy. They are always passed in memory.
-			memory = true;
-		}
-
-		void Result::add(SimpleDesc *desc) {
-			// The logic here is very similar to 'Params::addDesc'.
-			Nat sz = desc->size().size64();
-			if (sz > 16) {
-				// Too large. Pass it on the stack!
-				memory = true;
-				return;
-			}
-
-			if (sz > 8)
-				twoReg = true;
-
-			if (uniformFp(desc))
-				regType = primitive::real;
-			else
-				regType = primitive::integer;
-		}
-
-		Result *result(TypeDesc *result) {
-			return new (result) Result(result);
 		}
 
 	}

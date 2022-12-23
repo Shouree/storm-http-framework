@@ -65,7 +65,7 @@ namespace code {
 		// A1-7: 32-bit size
 		// B1-7: 64-bit size
 		// A8-31: 32-bit offset
-		// A8-31: 64-bit offset
+		// B8-31: 64-bit offset
 		Nat dataA;
 		Nat dataB;
 	};
@@ -140,7 +140,10 @@ namespace code {
 	public:
 		STORM_CTOR SimpleDesc(Size size, Nat entries);
 
+		// Total size:
 		Size s;
+
+		// Primitives. These are assumed to be sorted according to their offset.
 		GcArray<Primitive> *v;
 
 		Primitive &STORM_FN at(Nat id) {
@@ -151,6 +154,9 @@ namespace code {
 		Nat STORM_FN count() const {
 			return v->count;
 		}
+
+		// Sort primitives.
+		void STORM_FN sort();
 
 		// virtual void STORM_FN deepCopy(CloneEnv *env);
 		virtual Size STORM_FN size() const { return s; }

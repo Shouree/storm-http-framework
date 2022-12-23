@@ -48,6 +48,9 @@ namespace code {
 		// Set to particular values.
 		void STORM_FN set(Nat id, Size size, Bool use64, Nat offset, Bool inMemory);
 
+		// ID usable for the return value.
+		Nat STORM_FN returnId() { return 0xFF; }
+
 		/**
 		 * Get the different fields:
 		 */
@@ -113,6 +116,71 @@ namespace code {
 
 
 	/**
+	 * Description of how to store the results from a function call.
+	 *
+	 * Similarly to Params, this contains a set of registers to which the return value is
+	 * allocated. The result might also be passed in memory. In that case, the address of the value
+	 * should be passed in the indicated register.
+	 */
+	class Result {
+		STORM_VALUE;
+	public:
+		// Create empty result.
+		STORM_CTOR Result();
+
+		// Create, indicate that result is to be returned in memory.
+		static Result STORM_FN inMemory(Reg reg);
+
+		// Create, allocate a specified number of registers.
+		static Result STORM_FN inRegisters(EnginePtr e, Nat count);
+
+		// Create, store in a single register. Equivalent to creating and adding register in separate steps.
+		static Result STORM_FN inRegister(EnginePtr e, Reg reg);
+
+		// Set register data.
+		void putRegister(Reg reg, Nat offset);
+
+		// If the value is to be passed in memory, this function returns a register that should
+		// store the address where the result is to be stored. Otherwise returns noReg.
+		Reg STORM_FN memoryRegister() const { return memReg; }
+
+		// Get number of registers.
+		Nat STORM_FN registerCount() const {
+			return regs ? regs->filled : 0;
+		}
+
+		// Get register to store part of data inside. The register size indicates the size of the data.
+		Reg STORM_FN registerAt(Nat id) const {
+			return regs->v[id].reg;
+		}
+
+		// Get the offset of the input to store inside 'registerAt'.
+		Offset STORM_FN registerOffset(Nat id) const {
+			return Offset(regs->v[id].offset);
+		}
+
+	private:
+		// Register to store return address in.
+		Reg memReg;
+
+		// Data for register assignments.
+		struct Data {
+			Reg reg;
+			Nat offset;
+		};
+		GcArray<Data> *regs;
+
+		// GC types:
+		static const GcType dataType;
+	};
+
+
+	// Output.
+	wostream &operator <<(wostream &to, Result p);
+	StrBuf &STORM_FN operator <<(StrBuf &to, Result p);
+
+
+	/**
 	 * Describes the layout of parameters during a function call for some platform.
 	 *
 	 * This class is abstract as it lacks the layout logic. Use the Params class from a respective
@@ -129,6 +197,15 @@ namespace code {
 	public:
 		// Create an empty layout. Pre-allocate registers and specify stack alignment.
 		STORM_CTOR Params(Nat intCount, Nat realCount, Nat stackParamAlign, Nat stackAlign);
+
+		// Set the result type. Must be done before adding parameters.
+		void STORM_FN result(TypeDesc *type);
+		void STORM_FN result(Primitive p);
+
+		// Get the result.
+		Result STORM_FN result() {
+			return resultData;
+		}
 
 		// Add a single parameter to the layout.
 		void STORM_FN add(Nat id, TypeDesc *type);
@@ -198,6 +275,11 @@ namespace code {
 		Param STORM_FN totalParam(Nat id) const;
 
 	protected:
+		// Dispatched to subclasses from "result":
+		virtual void STORM_FN resultPrimitive(Primitive p) ABSTRACT;
+		virtual void STORM_FN resultComplex(ComplexDesc *c) ABSTRACT;
+		virtual void STORM_FN resultSimple(SimpleDesc *s) ABSTRACT;
+
 		// Dispatched to subclasses from "add":
 		virtual void STORM_FN addPrimitive(Nat id, Primitive p) ABSTRACT;
 		virtual void STORM_FN addComplex(Nat id, ComplexDesc *c) ABSTRACT;
@@ -212,6 +294,9 @@ namespace code {
 		// Check available space:
 		Bool STORM_FN hasInt(Nat count);
 		Bool STORM_FN hasReal(Nat count);
+
+		// Representation of the result. Returned from the 'result' call.
+		Result resultData;
 
 	private:
 		// Available integer registers (pre-allocated):

@@ -495,6 +495,7 @@ namespace code {
 
 			// Figure out parameter layout.
 			Params *paramLayout = new (e) Params();
+			paramLayout->result(resultType);
 			for (Nat i = 0; i < params->count(); i++) {
 				paramLayout->add(i, params->at(i).type);
 
@@ -507,7 +508,7 @@ namespace code {
 				}
 			}
 
-			Result *resultLayout = result(resultType);
+			Result resultLayout = paramLayout->result();
 
 			// Start by copying parameters to memory as needed.
 			Block block = copyToMemory(dest, used, params, paramLayout, currentBlock);
@@ -519,7 +520,7 @@ namespace code {
 			setRegisters(dest, params, paramLayout);
 
 			// Set x8 to a pointer to the result if required.
-			if (resultLayout->memory) {
+			if (resultLayout.memoryRegister() != noReg) {
 				if (resultRef) {
 					*dest << mov(ptrr(8), resultPos);
 				} else {
@@ -536,17 +537,10 @@ namespace code {
 			}
 
 			// Handle the result if required.
-			if (!resultLayout->memory && resultPos != Operand()) {
-				Reg srcReg1 = ptrr(0);
-				Reg srcReg2 = ptrr(1);
-				if (resultLayout->regType == primitive::real) {
-					srcReg1 = dr(0);
-					srcReg2 = dr(1);
-				}
-
+			if (!resultLayout.memoryRegister() != noReg && resultPos != Operand()) {
 				Operand store = resultPos;
 				if (resultRef) {
-					Reg r = ptrr(2);
+					Reg r = ptrr(2); // always safe here
 					if (store.type() == opRegister)
 						r = store.reg();
 					else
@@ -554,21 +548,17 @@ namespace code {
 					store = xRel(resultType->size(), r, Offset());
 				}
 
-				// Is it already in the right location?
-				if (store.type() == opRegister && same(store.reg(), srcReg1)) {
-					// Nothing needs to be done!
+				// Already in the right location?
+				if (store.type() == opRegister &&
+					resultLayout.registerCount() == 1 &&
+					same(resultLayout.registerAt(0), store.reg())) {
+					// Nothing to do.
 				} else {
-					// We need to copy the result to memory.
-					Nat resultSz = resultType->size().size64();
-					if (resultSz <= 1) {
-						*dest << mov(store, asSize(srcReg1, Size::sByte));
-					} else if (resultSz <= 4) {
-						*dest << mov(opOffset(Size::sInt, store, 0), asSize(srcReg1, Size::sInt));
-					} else if (resultSz <= 8) {
-						*dest << mov(opOffset(Size::sWord, store, 0), asSize(srcReg1, Size::sWord));
-					} else {
-						*dest << mov(opOffset(Size::sWord, store, 0), asSize(srcReg1, Size::sWord));
-						*dest << mov(opOffset(Size::sWord, store, 8), asSize(srcReg2, Size::sWord));
+					// Copy to destination. If count == 1, result might be a register.
+					for (Nat i = 0; i < resultLayout.registerCount(); i++) {
+						Reg r = resultLayout.registerAt(i);
+						Nat off = resultLayout.registerOffset(i).v64();
+						*dest << mov(opOffset(size(r), store, off), r);
 					}
 				}
 			}
