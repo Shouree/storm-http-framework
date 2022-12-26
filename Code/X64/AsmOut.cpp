@@ -627,6 +627,17 @@ namespace code {
 			fpOp(to, instr, opCode(0x0F, 0x5E));
 		}
 
+		void fnegOut(Output *to, Instr *instr) {
+			// set dest to zero, it has to be a register (using XORPS/XORPD)
+			Operand dest = instr->dest();
+			if (dest.size() == Size::sDouble)
+				modRm(to, prefixOpCode(0x66, 0x0F, 0x57), rmNone, dest, dest);
+			else
+				modRm(to, opCode(0x0F, 0x57), rmNone, dest, dest);
+			// fsub
+			fpOp(to, instr, opCode(0x0F, 0x5C));
+		}
+
 		void fcmpOut(Output *to, Instr *instr) {
 			// Note: this is COMISS/COMISD, not CMPSS/CMPSD
 			OpCode op = instr->size() == Size::sDouble
@@ -753,6 +764,7 @@ namespace code {
 			OUTPUT(fsub),
 			OUTPUT(fmul),
 			OUTPUT(fdiv),
+			OUTPUT(fneg),
 			OUTPUT(fcmp),
 			OUTPUT(fcast),
 			OUTPUT(fcasti),

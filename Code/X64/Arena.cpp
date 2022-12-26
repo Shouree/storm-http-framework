@@ -5,7 +5,7 @@
 #include "AsmOut.h"
 #include "RemoveInvalid.h"
 #include "Layout.h"
-//#include "Code/PosixEh/.h"
+#include "Code/PosixEh/StackInfo.h"
 #include "../Exception.h"
 
 namespace code {
@@ -15,7 +15,7 @@ namespace code {
 
 		Listing *Arena::transform(Listing *l) const {
 #if defined(POSIX) && defined(X64)
-			activateInfo();
+			code::eh::activateInfo();
 #endif
 
 			// Remove unsupported OP-codes, replacing them with their equivalents.
