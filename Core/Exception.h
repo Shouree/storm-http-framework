@@ -107,6 +107,7 @@ namespace storm {
 			notMapped,
 			invalidAccess,
 			invalidAlignment,
+			kernel,
 		};
 
 		// Create. If 'mapped' is true, then the address is mapped, but the access type was invalid.

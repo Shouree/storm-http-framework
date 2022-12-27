@@ -712,7 +712,7 @@ BEGIN_TEST(CallRectRet, Code) {
 	*l << fadd(eax, floatRel(p, Offset::sFloat*3));
 	*l << fnRet(eax);
 
-	Binary *bin = new (e) Binary(arena, l, true);
+	Binary *bin = new (e) Binary(arena, l);
 	typedef Float (*Fn)();
 	Fn fn = (Fn)bin->address();
 

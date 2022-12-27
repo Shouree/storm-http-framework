@@ -126,6 +126,7 @@ namespace code {
 				intReg = ptrD;
 			} else if (part1 == primitive::real) {
 				resultData.putRegister(asSize(realReg, firstSize), 0);
+				realReg = xmm1;
 			}
 
 			if (part2 == primitive::integer) {

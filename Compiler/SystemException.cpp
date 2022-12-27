@@ -109,6 +109,10 @@ namespace storm {
 				throw new (*e) MemoryAccessError(Word(info->si_addr), MemoryAccessError::notMapped);
 			case SEGV_ACCERR:
 				throw new (*e) MemoryAccessError(Word(info->si_addr), MemoryAccessError::invalidAccess);
+			case SI_KERNEL:
+				// Note: We can get SI_KERNEL (128), which means an invalid address. Sadly, the
+				// source address is not available in si_addr in that case...
+				throw new (*e) MemoryAccessError(Word(info->si_addr), MemoryAccessError::kernel);
 			default:
 				// We could add more...
 				break;

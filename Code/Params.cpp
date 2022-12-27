@@ -164,17 +164,17 @@ namespace code {
 	}
 
 	Bool Params::hasInt(Nat space) {
-		return integer->filled + space < integer->count;
+		return integer->filled + space <= integer->count;
 	}
 
 	Bool Params::hasReal(Nat space) {
-		return real->filled + space < real->count;
+		return real->filled + space <= real->count;
 	}
 
 	void Params::toS(StrBuf *to) const {
 		*to << S("Parameters:");
 		for (Nat i = 0; i < integer->filled; i++)
-			*to << S("\n") << name(registerSrc(i)) << i << S(":") << integer->v[i];
+			*to << S("\n") << name(registerSrc(i)) << S(":") << integer->v[i];
 		for (Nat i = 0; i < real->filled; i++)
 			*to << S("\n") << name(registerSrc(i + integer->count)) << S(":") << real->v[i];
 

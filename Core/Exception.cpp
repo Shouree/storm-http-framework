@@ -74,6 +74,9 @@ namespace storm {
 		case invalidAlignment:
 			*to << S("address 0x") << hex(size_t(address)) << S(" is not properly aligned.");
 			break;
+		case kernel:
+			*to << S("address 0x") << hex(size_t(address)) << S(" is reserved by the kernel (reported address might be incorrect).");
+			break;
 		}
 	}
 

@@ -460,7 +460,7 @@ namespace code {
 			} else {
 				for (Nat i = 0; i < result.registerCount(); i++) {
 					Reg r = result.registerAt(i);
-					*dest << mov(xRel(size(r), ptrSi, Offset(result.registerOffset(i))), r);
+					*dest << mov(r, xRel(size(r), ptrSi, Offset(result.registerOffset(i))));
 				}
 			}
 		}
