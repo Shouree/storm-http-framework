@@ -64,17 +64,19 @@ namespace code {
 
 		Params::Params() : code::Params(6, 8, 8, 16) {}
 
-		Reg Params::registerSrc(Nat id) {
+		Reg Params::registerSrc(Nat id) const {
 			static Reg v[] = {
 				ptrDi, ptrSi, ptrD, ptrC, ptr8, ptr9,
 				xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
 			};
-			return v[n];
+			return v[id];
 		}
 
 
 		void Params::resultPrimitive(Primitive p) {
-			if (p.kind() == primitive::real)
+			if (p.kind() == primitive::none)
+				resultData = Result::empty();
+			else if (p.kind() == primitive::real)
 				resultData = Result::inRegister(engine(), asSize(xmm0, p.size()));
 			else
 				resultData = Result::inRegister(engine(), asSize(ptrA, p.size()));
@@ -88,6 +90,11 @@ namespace code {
 
 		void Params::resultSimple(SimpleDesc *desc) {
 			Nat size = desc->size().size64();
+
+			if (size == 0) {
+				resultData = Result::empty();
+				return;
+			}
 
 			// Similar logic to adding parameters.
 			if (size > 2*8) {
@@ -135,10 +142,10 @@ namespace code {
 				break;
 			case primitive::pointer:
 			case primitive::integer:
-				addInt(Params(id, p, true));
+				addInt(Param(id, p, true));
 				break;
 			case primitive::real:
-				addReal(Params(id, p, true);
+				addReal(Param(id, p, true));
 				break;
 			}
 		}

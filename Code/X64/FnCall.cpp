@@ -20,16 +20,6 @@ namespace code {
 		 * Parameters passed on the stack:
 		 */
 
-		// Compute the total size of all parameters on the stack.
-		static Nat stackParamsSize(Array<ParamInfo> *src, Params *layout) {
-			Nat result = 0;
-			for (Nat i = 0; i < layout->stackCount(); i++) {
-				TypeDesc *desc = src->at(layout->stackAt(i)).type;
-				result += roundUp(desc->size().size64(), nat(8));
-			}
-			return result;
-		}
-
 		// Push a value on the stack.
 		static Nat pushValue(Listing *dest, const ParamInfo &p) {
 			Nat size = p.type->size().size64();
@@ -114,8 +104,10 @@ namespace code {
 
 		// Push parameters to the stack. Returns the total number of bytes pushed to the stack.
 		static Nat pushParams(Listing *dest, Array<ParamInfo> *src, Params *layout) {
+			// Note: It might be easier to pre-allocate the size of the stack, and then simply memcpy data.
+
 			Nat pushed = 0;
-			Nat size = stackParamsSize(src, layout);
+			Nat size = layout->stackTotalSizeUnaligned();
 			if (size & 0x0F) {
 				// We need to push an additional word to the stack to keep alignment.
 				*dest << push(natConst(0));
@@ -125,7 +117,7 @@ namespace code {
 
 			// Push the parameters.
 			for (Nat i = layout->stackCount(); i > 0; i--) {
-				const ParamInfo &p = src->at(layout->stackAt(i - 1));
+				const ParamInfo &p = src->at(layout->stackParam(i - 1).id());
 				if (p.ref == p.lea) {
 					pushed += pushValue(dest, p);
 				} else if (p.ref) {
@@ -157,6 +149,13 @@ namespace code {
 			Bool finished[16];
 			// Recursion depth.
 			Nat depth;
+
+			ParamInfo &info(Nat id) {
+				if (id == Param::returnId())
+					return src->last();
+				else
+					return src->at(id);
+			}
 		};
 
 		static void setRegister(RegEnv &env, Nat i);
@@ -164,11 +163,11 @@ namespace code {
 		// Make sure any content inside 'reg' is used now, so that 'reg' can be reused for other purposes.
 		static void vacateRegister(RegEnv &env, Reg reg) {
 			for (Nat i = 0; i < env.layout->registerCount(); i++) {
-				Param p = env.layout->registerAt(i);
+				Param p = env.layout->registerParam(i);
 				if (p == Param())
 					continue;
 
-				const Operand &src = env.src->at(p.id()).src;
+				const Operand &src = env.info(p.id()).src;
 				if (src.hasRegister() && same(src.reg(), reg)) {
 					// We need to set this register now, otherwise it will be destroyed!
 					if (env.active[i]) {
@@ -213,7 +212,7 @@ namespace code {
 
 		// Set a register to what it is supposed to be, assuming the address of 'src' shall be used.
 		static void setRegisterLea(RegEnv &env, Reg target, Param param, const Operand &src) {
-			assert(param.size() == 8);
+			assert(param.size().size64() == 8);
 			*env.dest << lea(asSize(target, Size::sPtr), src);
 		}
 
@@ -248,7 +247,7 @@ namespace code {
 		// Try to assign the proper value to a single register (other assignments might be performed
 		// beforehand to vacate registers).
 		static void setRegister(RegEnv &env, Nat i) {
-			Param param = env.layout->registerAt(i);
+			Param param = env.layout->registerParam(i);
 			// Empty?
 			if (param == Param())
 				return;
@@ -259,7 +258,7 @@ namespace code {
 			env.depth++;
 
 			Reg target = env.layout->registerSrc(i);
-			ParamInfo &p = env.src->at(param.id());
+			ParamInfo &p = env.info(param.id());
 
 			// See if 'target' contains something that is used by other parameters.
 			env.active[i] = true;
@@ -300,84 +299,6 @@ namespace code {
 			}
 		}
 
-		/**
-		 * Return values.
-		 */
-
-		// Handle returning a primitive value.
-		static void returnPrimitive(Listing *dest, PrimitiveDesc *p, const Operand &resultPos) {
-			switch (p->v.kind()) {
-			case primitive::none:
-				break;
-			case primitive::integer:
-			case primitive::pointer:
-				if (resultPos.type() == opRegister && same(resultPos.reg(), ptrA)) {
-				} else {
-					*dest << mov(resultPos, asSize(ptrA, resultPos.size()));
-				}
-				break;
-			case primitive::real:
-				*dest << mov(resultPos, asSize(xmm0, resultPos.size()));
-				break;
-			}
-		}
-
-		// Safe copy of a register to the location pointed to by ptrSi.
-		static void safeCopy(Listing *dest, Size size, Offset offset, Reg to) {
-			Reg t = asSize(to, size);
-			if (t != noReg) {
-				// Supported. No worries!
-				*dest << mov(xRel(size, ptrSi, offset), t);
-				return;
-			}
-
-			// Not supported. Try to copy an entire 'int' first if we are able to...
-			Nat toCopy = size.size64();
-			if (toCopy >= 4) {
-				*dest << mov(xRel(Size::sInt, ptrSi, offset), asSize(to, Size::sInt));
-				*dest << shr(asSize(to, Size::sLong), byteConst(32));
-				toCopy -= 4;
-				offset += Size::sInt;
-			}
-
-			// Then copy single bytes for as long as we need to.
-			while (toCopy > 0) {
-				*dest << mov(xRel(Size::sByte, ptrSi, offset), asSize(to, Size::sByte));
-				toCopy--;
-				offset += Size::sByte;
-
-				if (toCopy > 0)
-					*dest << shr(asSize(to, Size::sInt), byteConst(8));
-			}
-		}
-
-		// Handle returning a part of a simple value.
-		static void returnSimple(Listing *dest, primitive::PrimitiveKind k, nat &i, nat &r, Offset offset, Size totalSize) {
-			static const Reg intReg[2] = { ptrA, ptrD };
-			static const Reg realReg[2] = { xmm0, xmm1 };
-			// Make sure not to overwrite any crucial memory region...
-			Size size(min(totalSize.size64() - offset.v64(), nat(8)));
-
-			switch (k) {
-			case primitive::none:
-				break;
-			case primitive::integer:
-			case primitive::pointer:
-				safeCopy(dest, size, offset, intReg[i++]);
-				break;
-			case primitive::real:
-				*dest << mov(xRel(size, ptrSi, offset), asSize(realReg[r++], size));
-				break;
-			}
-		}
-
-		// Handle returning a simple value.
-		static void returnSimple(Listing *dest, Result *result, Size size) {
-			nat i = 0;
-			nat r = 0;
-			returnSimple(dest, result->part1, i, r, Offset(), size);
-			returnSimple(dest, result->part2, i, r, Offset::sPtr, size);
-		}
 
 		/**
 		 * Complex parameters.
@@ -499,14 +420,6 @@ namespace code {
 			return false;
 		}
 
-		// Produce a layout of 'params'.
-		static Params *paramLayout(Array<ParamInfo> *params) {
-			Params *r = new (params) Params();
-			for (Nat i = 0; i < params->count(); i++)
-				r->add(i, params->at(i).type);
-			return r;
-		}
-
 		/**
 		 * The actual entry-point.
 		 */
@@ -514,10 +427,14 @@ namespace code {
 		void emitFnCall(Listing *dest, Operand toCall, Operand resultPos, TypeDesc *resultType,
 						Bool resultRef, Block currentBlock, RegSet *used, Array<ParamInfo> *params) {
 
-			Engine &e = dest->engine();
 			Block block;
-			Result *resultLayout = code::x64::result(resultType);
 			bool complex = hasComplex(params);
+			Params *layout = new (dest) Params();
+			layout->result(resultType);
+			for (Nat i = 0; i < params->count(); i++)
+				layout->add(i, params->at(i).type);
+
+			Result result = layout->result();
 
 			// Copy 'used' so we do not alter our callers version.
 			used = new (used) RegSet(*used);
@@ -550,21 +467,17 @@ namespace code {
 				}
 			}
 
-			// Create copies of complex parameters (inside a block) if needed.
-			if (complex)
-				block = copyComplex(dest, used, params, currentBlock);
-
-			// Do we need a hidden parameter?
-			if (resultLayout->memory) {
-				// We want to pass a reference to 'src'.
+			if (result.memoryRegister() != noReg) {
 				if (resultRef) {
-					params->insert(0, ParamInfo(ptrDesc(e), resultPos, false, false));
+					params->push(ParamInfo(ptrDesc(dest->engine()), resultPos, false, false));
 				} else {
-					params->insert(0, ParamInfo(ptrDesc(e), resultPos, false, true));
+					params->push(ParamInfo(ptrDesc(dest->engine()), resultPos, false, true));
 				}
 			}
 
-			Params *layout = paramLayout(params);
+			// Create copies of complex parameters (inside a block) if needed.
+			if (complex)
+				block = copyComplex(dest, used, params, currentBlock);
 
 			// Push parameters on the stack. This is a 'safe' operation since it does not destroy any registers.
 			Nat pushed = pushParams(dest, params, layout);
@@ -576,19 +489,26 @@ namespace code {
 			*dest << call(toCall, Size());
 
 			// Handle the return value if required.
-			if (PrimitiveDesc *p = as<PrimitiveDesc>(resultType)) {
+			if (result.memoryRegister() != noReg) {
+				// No need to do anything, the callee wrote the result in the right place for us.
+				// Also: anything that fits in a register is passed in registers, so we never have to
+				// read the register from memory.
+			} else if (result.registerCount() > 0) {
 				if (resultRef) {
 					*dest << mov(ptrSi, resultPos);
-					resultPos = xRel(p->size(), ptrSi, Offset());
+					resultPos = xRel(resultType->size(), ptrSi, Offset());
 				}
-				returnPrimitive(dest, p, resultPos);
-			} else if (!resultLayout->memory) {
-				if (!resultRef) {
-					*dest << lea(ptrSi, resultPos);
-				} else if (resultPos.type() != opRegister || resultPos.reg() != ptrSi) {
-					*dest << mov(ptrSi, resultPos);
+
+				if (result.registerCount() == 1 && resultPos.type() == opRegister) {
+					if (!same(result.registerAt(0), resultPos.reg())) {
+						*dest << mov(resultPos, result.registerAt(0));
+					}
+				} else {
+					for (Nat i = 0; i < result.registerCount(); i++) {
+						Reg r = result.registerAt(i);
+						*dest << mov(opOffset(size(r), resultPos, result.registerOffset(i).v64()), r);
+					}
 				}
-				returnSimple(dest, resultLayout, resultType->size());
 			}
 
 			// Pop the stack.

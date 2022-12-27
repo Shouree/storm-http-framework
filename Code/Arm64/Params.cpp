@@ -125,7 +125,7 @@ namespace code {
 		void Params::resultPrimitive(Primitive p) {
 			switch (p.kind()) {
 			case primitive::none:
-				// Nothing to do!
+				resultData = Result::empty();
 				break;
 			case primitive::pointer:
 			case primitive::integer:
@@ -161,7 +161,11 @@ namespace code {
 			} else {
 				// Integer!
 				Nat size = type->size().size64();
-				if (size <= 8) {
+				if (size == 0) {
+					// Zero registers.
+					resultData = Result::empty();
+					return;
+				} else if (size <= 8) {
 					// One register:
 					Reg r = asSize(ptrr(0), roundSize(type->size()));
 					resultData = Result::inRegister(engine(), r);

@@ -49,7 +49,7 @@ namespace code {
 		void STORM_FN set(Nat id, Size size, Bool use64, Nat offset, Bool inMemory);
 
 		// ID usable for the return value.
-		Nat STORM_FN returnId() { return 0xFF; }
+		static Nat STORM_FN returnId() { return 0xFF; }
 
 		/**
 		 * Get the different fields:
@@ -127,6 +127,9 @@ namespace code {
 	public:
 		// Create empty result.
 		STORM_CTOR Result();
+
+		// Other way of creating empty result.
+		static Result STORM_FN empty() { return Result(); }
 
 		// Create, indicate that result is to be returned in memory.
 		static Result STORM_FN inMemory(Reg reg);
@@ -238,6 +241,11 @@ namespace code {
 		// Get total size of the stack.
 		Nat STORM_FN stackTotalSize() const {
 			return roundUp(stackSize, stackAlign);
+		}
+
+		// Get unaligned size of the stack.
+		Nat STORM_FN stackTotalSizeUnaligned() const {
+			return stackSize;
 		}
 
 		/**

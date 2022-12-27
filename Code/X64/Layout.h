@@ -40,9 +40,6 @@ namespace code {
 			// Layout of all parameters for this function.
 			Params *params;
 
-			// Layout of the result of this function.
-			Result *result;
-
 			// Registers that need to be preserved in the function prolog.
 			RegSet *toPreserve;
 
@@ -92,6 +89,7 @@ namespace code {
 			// Create and destroy blocks.
 			void initBlock(Listing *dest, Block init, Reg reg);
 			void destroyBlock(Listing *dest, Block destroy, Bool preserveRax, Bool notifyTable);
+			void epilog(Listing *dest, Listing *src, Nat line, Bool preserveRax);
 
 			// Spill parameters to the stack.
 			void spillParams(Listing *dest);

@@ -58,7 +58,7 @@ namespace code {
 			// Store the registers used for parameters inside variables on the stack.
 			Array<Var> *vars = new (this) Array<Var>(layout->registerCount(), Var());
 			for (Nat i = 0; i < layout->registerCount(); i++) {
-				if (layout->registerAt(i) != Param()) {
+				if (layout->registerParam(i) != Param()) {
 					Var &v = vars->at(i);
 					v = l->createVar(l->root(), Size::sLong);
 					*l << mov(v, asSize(layout->registerSrc(i), Size::sLong));
@@ -105,14 +105,14 @@ namespace code {
 				if (fpRegister(r))
 					continue;
 
-				Param par = layout->registerAt(id);
+				Param par = layout->registerParam(id);
 				// Unused?
 				if (par == Param()) {
 					last = r;
 					continue;
 				}
 				// Result parameter? Don't touch that!
-				if (par.id() == Param::returnId) {
+				if (par.id() == Param::returnId()) {
 					continue;
 				}
 				// All integer registers full?
@@ -137,7 +137,12 @@ namespace code {
 			if (!desc)
 				return 2;
 
-			return result(desc)->memory ? 1 : 0;
+			Params *p = new (this) Params();
+			p->result(desc);
+			if (p->result().memoryRegister() == noReg)
+				return 0;
+			else
+				return 1;
 		}
 
 		Operand Arena::firstParamLoc(Nat id) {

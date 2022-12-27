@@ -34,17 +34,9 @@ namespace code {
 			block = Block();
 			usingEH = src->exceptionAware();
 
-			// Compute where the result is to be stored.
-			result = code::x64::result(src->result);
-
 			// Compute the layout of all parameters.
 			params = new (this) Params();
-
-			// Hidden return parameter?
-			if (result->memory)
-				params->add(Param::returnId, ptrPrimitive());
-
-			// Add the rest of them.
+			params->result(src->result);
 			Array<Var> *p = src->allParams();
 			for (Nat i = 0; i < p->count(); i++) {
 				params->add(i, src->paramDesc(p->at(i)));
@@ -57,7 +49,7 @@ namespace code {
 
 			// Compute the layout.
 			Nat spilled = toPreserve->count();
-			if (result->memory)
+			if (params->result().memoryRegister() != noReg)
 				spilled++; // The hidden parameter needs to be spilled!
 
 			layout = code::x64::layout(src, params, spilled);
@@ -149,10 +141,10 @@ namespace code {
 			Array<Var> *all = dest->allParams();
 
 			for (Nat i = 0; i < params->registerCount(); i++) {
-				Param info = params->registerAt(i);
-				if (info.size() == 0)
+				Param info = params->registerParam(i);
+				if (info.size() == Size())
 					continue; // Not used.
-				if (info.id() == Param::returnId) {
+				if (info.id() == Param::returnId()) {
 					*dest << mov(ptrRel(ptrFrame, resultParam()), params->registerSrc(i));
 					continue;
 				}
@@ -201,11 +193,15 @@ namespace code {
 		}
 
 		void Layout::epilogTfm(Listing *dest, Listing *src, Nat line) {
+			epilog(dest, src, line, true);
+		}
+
+		void Layout::epilog(Listing *dest, Listing *src, Nat line, Bool preserveRax) {
 			// Destroy blocks. Note: we shall not modify 'block' nor alter the exception table as
 			// this may be an early return from the function.
 			Block oldBlock = block;
 			for (Block now = block; now != Block(); now = src->parent(now)) {
-				destroyBlock(dest, now, true, false);
+				destroyBlock(dest, now, preserveRax, false);
 			}
 			block = oldBlock;
 
@@ -221,7 +217,7 @@ namespace code {
 			*dest << pop(ptrFrame);
 
 			// Notify that we've generated the epilog.
-			*dest << epilog();
+			*dest << code::epilog();
 		}
 
 		void Layout::beginBlockTfm(Listing *dest, Listing *src, Nat line) {
@@ -350,11 +346,38 @@ namespace code {
 			}
 		}
 
+		static void saveResult(Listing *dest, const Result &result) {
+			if (result.memoryRegister() != noReg) {
+				// We need to keep the stack aligned to 16 bits.
+				*dest << push(result.memoryRegister());
+				*dest << push(result.memoryRegister());
+			} else if (result.registerCount() > 0) {
+				Size sz = Size::sPtr * roundUp(result.registerCount(), Nat(2));
+				*dest << sub(ptrStack, ptrConst(sz));
+				for (Nat i = 0; i < result.registerCount(); i++) {
+					*dest << mov(ptrRel(ptrStack, Offset::sPtr * i), asSize(result.registerAt(i), Size::sPtr));
+				}
+			}
+		}
+
+		static void restoreResult(Listing *dest, const Result &result) {
+			if (result.memoryRegister() != noReg) {
+				*dest << pop(result.memoryRegister());
+				*dest << pop(result.memoryRegister());
+			} else if (result.registerCount() > 0) {
+				Size sz = Size::sPtr * roundUp(result.registerCount(), Nat(2));
+				for (Nat i = 0; i < result.registerCount(); i++) {
+					*dest << mov(asSize(result.registerAt(i), Size::sPtr), ptrRel(ptrStack, Offset::sPtr * i));
+				}
+				*dest << add(ptrStack, ptrConst(sz));
+			}
+		}
+
 		void Layout::destroyBlock(Listing *dest, Block destroy, Bool preserveRax, Bool table) {
 			if (destroy != block)
 				throw new (this) BlockEndError();
 
-			Bool pushedRax = false;
+			Bool pushedResult = false;
 			Array<Var> *vars = dest->allVars(destroy);
 			// Destroy in reverse order.
 			for (Nat i = vars->count(); i > 0; i--) {
@@ -368,9 +391,9 @@ namespace code {
 					if (activated->at(v.key()) > activationId)
 						continue;
 
-					if (preserveRax && !pushedRax) {
-						saveResult(dest, dest->result);
-						pushedRax = true;
+					if (preserveRax && !pushedResult) {
+						saveResult(dest, params->result());
+						pushedResult = true;
 					}
 
 					if (when & freeIndirection) {
@@ -395,8 +418,8 @@ namespace code {
 				}
 			}
 
-			if (pushedRax) {
-				restoreResult(dest, dest->result);
+			if (pushedResult) {
+				restoreResult(dest, params->result());
 			}
 
 			block = dest->parent(block);
@@ -404,23 +427,6 @@ namespace code {
 				Label lbl = dest->label();
 				*dest << lbl;
 				activeBlocks->push(ActiveBlock(block, activationId, lbl));
-			}
-		}
-
-		static void returnLayout(Listing *dest, primitive::PrimitiveKind k, nat &i, nat &r, Offset offset) {
-			static const Reg intReg[2] = { ptrA, ptrD };
-			static const Reg realReg[2] = { xmm0, xmm1 };
-
-			switch (k) {
-			case primitive::none:
-				break;
-			case primitive::integer:
-			case primitive::pointer:
-				*dest << mov(intReg[i++], ptrRel(ptrSi, offset));
-				break;
-			case primitive::real:
-				*dest << mov(realReg[r++], longRel(ptrSi, offset));
-				break;
 			}
 		}
 
@@ -446,16 +452,16 @@ namespace code {
 		}
 
 		// Put the return value into registers. Assumes ptrSi contains a pointer to the struct to be returned.
-		static void returnSimple(Listing *dest, Result *result, SimpleDesc *type, Offset resultParam) {
-			if (result->memory) {
-				*dest << mov(ptrA, ptrRel(ptrFrame, resultParam));
+		static void returnSimple(Listing *dest, const Result &result, SimpleDesc *type, Offset resultParam) {
+			if (result.memoryRegister() != noReg) {
+				*dest << mov(result.memoryRegister(), ptrRel(ptrFrame, resultParam));
 				// Inline a memcpy using mov instructions.
-				movMemcpy(dest, ptrA, ptrSi, type->size());
+				movMemcpy(dest, result.memoryRegister(), ptrSi, type->size());
 			} else {
-				nat i = 0;
-				nat r = 0;
-				returnLayout(dest, result->part1, i, r, Offset());
-				returnLayout(dest, result->part2, i, r, Offset::sPtr);
+				for (Nat i = 0; i < result.registerCount(); i++) {
+					Reg r = result.registerAt(i);
+					*dest << mov(xRel(size(r), ptrSi, Offset(result.registerOffset(i))), r);
+				}
 			}
 		}
 
@@ -502,7 +508,7 @@ namespace code {
 				*dest << mov(ptrA, ptrRel(ptrFrame, resultParam()));
 			} else if (SimpleDesc *s = as<SimpleDesc>(src->result)) {
 				*dest << lea(ptrSi, value);
-				returnSimple(dest, result, s, resultParam());
+				returnSimple(dest, params->result(), s, resultParam());
 			} else {
 				assert(false);
 			}
@@ -544,7 +550,7 @@ namespace code {
 				*dest << mov(ptrA, ptrRel(ptrFrame, resultParam()));
 			} else if (SimpleDesc *s = as<SimpleDesc>(src->result)) {
 				*dest << mov(ptrSi, value);
-				returnSimple(dest, result, s, resultParam());
+				returnSimple(dest, params->result(), s, resultParam());
 			} else {
 				assert(false);
 			}
@@ -566,7 +572,7 @@ namespace code {
 				// Start by computing the locations of parameters passed on the stack.
 				Offset stackOffset = Offset::sPtr * 2;
 				for (Nat i = 0; i < params->stackCount(); i++) {
-					Nat paramId = params->stackAt(i); // Should never be 'Param::returnId'
+					Nat paramId = params->stackParam(i).id(); // Should never be 'Param::returnId'
 					Var var = all->at(paramId);
 
 					out->at(var.key()) = stackOffset;

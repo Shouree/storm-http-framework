@@ -28,7 +28,7 @@ namespace code {
 			STORM_CTOR Params();
 
 			// Get the register containing the parameter.
-			Reg STORM_FN registerSrc(Nat n);
+			Reg STORM_FN registerSrc(Nat n) const;
 
 		protected:
 			void STORM_FN resultPrimitive(Primitive p);
@@ -42,32 +42,6 @@ namespace code {
 
 		// Perform a full layout of parameters.
 		Params *STORM_FN layoutParams(TypeDesc *result, Array<TypeDesc *> *params);
-
-		// /**
-		//  * Describes how the return value is stored.
-		//  */
-		// class Result : public storm::Object {
-		// 	STORM_CLASS;
-		// public:
-		// 	// Create.
-		// 	STORM_CTOR Result(TypeDesc *type);
-
-		// 	// We're using a maximum of 2 registers. Reg1 is always at offset 0 and reg2 at offset 8.
-		// 	primitive::PrimitiveKind part1;
-		// 	primitive::PrimitiveKind part2;
-
-		// 	// Return in memory?
-		// 	Bool memory;
-
-		// 	// To string.
-		// 	virtual void STORM_FN toS(StrBuf *to) const;
-
-		// private:
-		// 	// Helper functions.
-		// 	void add(PrimitiveDesc *desc);
-		// 	void add(ComplexDesc *desc);
-		// 	void add(SimpleDesc *desc);
-		// };
 
 	}
 }

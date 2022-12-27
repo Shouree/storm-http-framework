@@ -334,57 +334,6 @@ namespace code {
 			}
 		}
 
-		void saveResult(Listing *dest, TypeDesc *result) {
-			Result *res = code::x64::result(result);
-			if (res->memory) {
-				// We still need to preserve 'rax'.
-				*dest << push(rax);
-				*dest << push(rax);
-			} else if (res->part1 == primitive::none && res->part2 == primitive::none) {
-				// Nothing to do!
-			} else {
-				nat i = 0;
-				nat r = 0;
-				*dest << sub(ptrStack, ptrConst(16));
-				saveResult(dest, res->part1, i, r, Offset());
-				saveResult(dest, res->part2, i, r, Offset::sPtr);
-			}
-		}
-
-		static void restoreResult(Listing *dest, primitive::PrimitiveKind k, nat &i, nat &r, Offset offset) {
-			static const Reg intReg[2] = { ptrA, ptrD };
-			static const Reg realReg[2] = { xmm0, xmm1 };
-
-			switch (k) {
-			case primitive::none:
-				break;
-			case primitive::integer:
-			case primitive::pointer:
-				*dest << mov(intReg[i++], ptrRel(ptrStack, offset));
-				break;
-			case primitive::real:
-				*dest << mov(realReg[r++], longRel(ptrStack, offset));
-				break;
-			}
-		}
-
-		void restoreResult(Listing *dest, TypeDesc *result) {
-			Result *res = code::x64::result(result);
-			if (res->memory) {
-				// We still need to preserve 'rax'.
-				*dest << push(rax);
-				*dest << push(rax);
-			} else if (res->part1 == primitive::none && res->part2 == primitive::none) {
-				// Nothing to do!
-			} else {
-				nat i = 0;
-				nat r = 0;
-				restoreResult(dest, res->part1, i, r, Offset());
-				restoreResult(dest, res->part2, i, r, Offset::sPtr);
-				*dest << add(ptrStack, ptrConst(16));
-			}
-		}
-
 		void put(Output *to, OpCode op) {
 			if (op.prefix)
 				to->putByte(op.prefix);
@@ -565,5 +514,25 @@ namespace code {
 			}
 		}
 
+		// Get a pointer-sized offset into whatever "operand" represents.
+		Operand opPtrOffset(Operand op, Nat offset) {
+			return opOffset(Size::sPtr, op, offset);
+		}
+
+		Operand opOffset(Size sz, Operand op, Nat offset) {
+			switch (op.type()) {
+			case opRelative:
+				return xRel(sz, op.reg(), op.offset() + Offset(offset));
+			case opVariable:
+				return xRel(sz, op.var(), op.offset() + Offset(offset));
+			case opRegister:
+				if (offset == 0)
+					return asSize(op.reg(), sz);
+				assert(false, L"Offset in registers are not supported.");
+				break;
+			default:
+				assert(false, L"Unsupported operand passed to 'opOffset'!");
+			}
+		}
 	}
 }

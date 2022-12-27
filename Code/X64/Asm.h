@@ -116,11 +116,6 @@ namespace code {
 		extern const Reg *fnDirtyRegs;
 		extern const size_t fnDirtyCount;
 
-		// Save/restore the registers (on the stack) required to store 'result' as a return value.
-		// Typically some combination of 'rax', 'rdx', 'xmm0' and 'xmm1' are used.
-		void STORM_FN saveResult(Listing *dest, TypeDesc *result);
-		void STORM_FN restoreResult(Listing *dest, TypeDesc *result);
-
 		// Description of an op-code.
 		struct OpCode {
 			// Any prefix for this op-code? Prefixes are always emitted before any REX
@@ -220,5 +215,8 @@ namespace code {
 		void immRegInstr(Output *to, const ImmRegInstr8 &op, const Operand &dest, const Operand &src);
 		void immRegInstr(Output *to, const ImmRegInstr8 &op8, const ImmRegInstr &op, const Operand &dest, const Operand &src);
 
+		// Get a pointer-sized offset into whatever "operand" represents.
+		Operand opPtrOffset(Operand op, Nat offset);
+		Operand opOffset(Size sz, Operand op, Nat offset);
 	}
 }
