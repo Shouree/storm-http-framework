@@ -1007,8 +1007,13 @@ namespace storm {
 							void *old = c->reserved;
 							if ((r = s.fix2(&c->reserved)) != Result())
 								return r;
-							if (old != c->reserved)
-								invalidateICache(at, next);
+							if (old != c->reserved) {
+								// Note: It is important that we use "real" pointers, especially for
+								// the "next" member. Otherwise, we might clear the first word in
+								// the next row of objects, and that object might be in another page
+								// that is protected.
+								invalidateICache(fromClient(at), fromClient(next));
+							}
 						}
 
 #ifdef SLOW_DEBUG
