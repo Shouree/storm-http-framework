@@ -12,8 +12,8 @@ annotated release tags in the Git repository.
 Binary releases
 -----------------
 
-- [Windows (32-bit)](storm_mps.zip)
-- [Linux (64-bit)](storm_mps.tar.gz) (should work for recent Debian-based distributions)
+- [Windows (32-bit, X86)](storm_mps.zip)
+- [Linux (64-bit, X86)](storm_mps.tar.gz) (should work for recent Debian-based distributions)
 
 
 To run the compiler, simply unpack the archive file and run `Storm` (`Storm.exe` on Windows), and
@@ -79,7 +79,7 @@ To build Storm, you need `mymake`, available at [GitHub](http://github.com/fstro
 `git://storm-lang.org/mymake.git`. When you have installed mymake, compiling Storm is just `mm release`
 to make a release build. During development, use `mm Main` or `mm Test` to build the
 development version of the main entry point and the test suite respectively. Mymake is available as
-a package in Debian (testing) as well.
+a package in Debian (testing) as well, and is installed as `mymake` instead of `mm`.
 
 To specify which garbage collector to use, either edit `Gc/Config.h`, or compile storm with `mm mps Main` or `mm smm Main`.
 

@@ -14,8 +14,13 @@ less important compared to debuggability). Therefore, classes inheriting from th
 need to call `saveTrace` again.
 
 Storm defines the following generic exception classes:
-- `NotSupported`: Thrown from interfaces where the requested operation is not supported in this case.
-- `InternalError`: Internal errors from the compiler or the runtime system.
-- `RuntimeError`: Generic runtime errors originating from incorrect usage of interfaces in the system.
+- `RuntimeError`: Generic runtime errors originating from the runtime system
+  - `GcError`: Exception thrown by the garbage collector. Typically due to allocation failures (i.e., out of memory).
+  - `NumericError`: Error in numerical operations.
+    - `DivisionByZero`: Thrown on division by zero. Note: can not necessarily be caught in C++.
+  - `MemoryAccessError`: Thrown on invalid memory accesses. Note: can not necessarily be caught in C++.
+- `NotSupported`: Thrown from interfaces where the requested operation is not supported.
+- `UsageError`: Thrown on invalid usage of some part of the system.
+- `InternalError`: Internal errors from the compiler or runtime system.
 - `StrError`, `MapError`, `SetError`, `ArrayError`: Errors thrown by the standard containers if they
   are used incorrectly (e.g. accessing elements that don't exist).

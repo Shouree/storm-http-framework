@@ -5,6 +5,8 @@ This portion of the documentation serves as a guide for getting Storm up and run
 machine, as well as illustrating some of the important concepts in Storm by taking a closer look at
 the examples included in the download.
 
+Storm currently works on Windows (X86, 32-bit), Linux (X86, 64-bit) and Linux (ARM, 64-bit).
+
 
 Downloading and Installing Storm
 ----------------------------------
