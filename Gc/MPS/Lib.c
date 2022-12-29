@@ -57,7 +57,9 @@ void mps_assert_fail(const char *file, unsigned line, const char *condition) {
 	abort();
 }
 
+#ifdef POSIX
 void gcHandleSegv(int signal, siginfo_t *info, void *context);
+#endif
 
 void mps_init() {
 #ifdef POSIX

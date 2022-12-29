@@ -279,7 +279,7 @@ namespace code {
 					resume.ip = data + found->resumeOffset;
 
 					// The first entry is the total stack depth.
-					ssize_t *table = (ssize_t *)(data + metaOffset);
+					ptrdiff_t *table = (ptrdiff_t *)(data + metaOffset);
 					resume.stackOffset = table[0];
 
 					// Remember how far to clean.

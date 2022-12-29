@@ -6,6 +6,12 @@
 namespace code {
 	namespace x86 {
 
+		void epilogOut(Output *to, Instr *instr) {
+			(void)instr;
+			// This is LEAVE.
+			to->putByte(0xC9);
+		}
+
 		static void movFromFp(Output *to, Instr *instr) {
 			Operand dst = instr->dest();
 			bool large = dst.size().size32() > 4;
@@ -821,19 +827,20 @@ namespace code {
 				// Use "old-style" FP instructions. We know that both operands are in memory, so we
 				// can simply emit FILD followed by FSTP
 				to->putByte(0xDF);
-				modRm(to, 5, instr->src());
+				modRm(to, 5, src);
 				fstpOut(to, instr);
 			} else {
 				// TODO: Need to clear target register first? (use PXOR, 66 0f ef XX)
+				Operand dst = instr->dest();
 
 				// Use CVTSI2SS or CVTSI2SD
-				if (src.size() == Size::sDouble)
+				if (dst.size() == Size::sDouble)
 					to->putByte(0xF2);
 				else
 					to->putByte(0xF3);
 				to->putByte(0x0F);
 				to->putByte(0x2A);
-				modRm(to, fpRegisterId(instr->dest().reg()), instr->src());
+				modRm(to, fpRegisterId(dst.reg()), src);
 			}
 		}
 
@@ -953,6 +960,7 @@ namespace code {
 		typedef void (*OutputFn)(Output *to, Instr *instr);
 
 		const OpEntry<OutputFn> outputMap[] = {
+			OUTPUT(epilog),
 			OUTPUT(mov),
 			OUTPUT(swap),
 			OUTPUT(add),

@@ -346,7 +346,9 @@ namespace code {
 	namespace eh {
 
 		_Unwind_Reason_Code stormPersonality(int, _Unwind_Action, _Unwind_Exception_Class,
-											_Unwind_Exception *, _Unwind_Context *) {}
+											_Unwind_Exception *, _Unwind_Context *) {
+			return 0;
+		}
 
 	}
 }

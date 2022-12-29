@@ -44,7 +44,7 @@ namespace code {
 			void *ip;
 
 			// Offset from the frame pointer to the stack pointer.
-			ssize_t stackOffset;
+			ptrdiff_t stackOffset;
 
 			// Part outside the one handling the exception.
 			size_t cleanUntil;

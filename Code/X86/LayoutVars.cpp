@@ -406,9 +406,12 @@ namespace code {
 				*dest << threadLocal() << mov(ptrRel(noReg, Offset()), ptrC);
 			}
 
-			// TODO: We could emit a "LEAVE" instr instead, that is supposedly faster.
-			*dest << mov(ptrStack, ptrFrame);
-			*dest << pop(ptrFrame);
+			// We use the "epilog" pseudo-op to emit the LEAVE instruction.
+			*dest << epilog();
+
+			// It is equivalent to the instructions below:
+			// *dest << mov(ptrStack, ptrFrame);
+			// *dest << pop(ptrFrame);
 		}
 
 		void LayoutVars::beginBlockTfm(Listing *dest, Listing *src, Nat line) {

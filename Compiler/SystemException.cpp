@@ -245,7 +245,7 @@ namespace storm {
 	}
 
 	static void initialize() {
-		AddVectoredExceptionHandler(1, &SysExceptionFilter);
+		AddVectoredExceptionHandler(0, &SysExceptionFilter);
 	}
 
 #endif

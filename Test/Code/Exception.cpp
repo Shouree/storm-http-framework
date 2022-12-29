@@ -488,12 +488,17 @@ static void CODECALL throwStrError(Int, Int, Int, Int, Int, Int, Int, Int, Int, 
 	throw new (gEngine()) Str(S("Throw me!"));
 }
 
+#pragma warning(push)
+// This warning is about returning the address of a local variable. In this case it is fine, as we
+// only use it to measure the depth of the stack.
+#pragma warning(disable: 4172)
 size_t captureSp() {
 	// This is approximative, but good enough for the test (i.e., we only want it to be at the same
 	// location, we don't care exactly what part of the stack we get).
 	volatile int x;
 	return size_t(&x);
 }
+#pragma warning(pop)
 
 BEGIN_TEST(ExceptionRestoreSpOnCatch, Code) {
 	// Make sure that the stack pointer is restored properly if needed.
