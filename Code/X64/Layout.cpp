@@ -212,11 +212,10 @@ namespace code {
 				offset -= Offset::sPtr;
 			}
 
-			// TODO: We could emit a "LEAVE" instr instead, that is supposedly faster.
-			*dest << mov(ptrStack, ptrFrame);
-			*dest << pop(ptrFrame);
+			// The "epilog" pseudo-op generates a LEAVE instruction, which corresponds to these instructions:
+			// *dest << mov(ptrStack, ptrFrame);
+			// *dest << pop(ptrFrame);
 
-			// Notify that we've generated the epilog.
 			*dest << code::epilog();
 		}
 

@@ -32,6 +32,9 @@ namespace code {
 			// In general, the epilog CFA information is not strictly neccessary as long as there
 			// are no exceptions thrown during the last two instructions in the epilog.
 			// to->markEpilog();
+
+			// We use this pseudo-op to generate the LEAVE instruction.
+			to->putByte(0xC9);
 		}
 
 		void preserveOut(Output *to, Instr *instr) {
