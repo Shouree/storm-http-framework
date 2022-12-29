@@ -182,12 +182,15 @@ namespace code {
 #endif
 		}
 
+#pragma warning(push)
+#pragma warning(disable: 4297) // Warning about exception model on Visual Studio.
 		extern "C" void SHARED_EXPORT throwDivisionException() {
 			Engine *e = findEngine();
 			if (!e)
 				e = runtime::someEngineUnsafe();
 			throw new (*e) DivisionByZero();
 		}
+#pragma warning(pop)
 
 		void RemoveInvalid::after(Listing *dest, Listing *src) {
 			if (lblDivZero != Label()) {
