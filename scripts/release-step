@@ -29,7 +29,7 @@ else
     packext="tar.gz"
 fi
 
-release-compile "$version" || { echo "Compilation failed on $arch"; exit 1; }
+release-compile "$arch" "$version" || { echo "Compilation failed on $arch"; exit 1; }
 release-package "$arch" "$notes"
 release-test $STORM_ROOT/release/storm_mps_$arch.$packext | { echo "The packaged compiler (mps) does not seem to be working on $arch."; exit 1; }
 release-test $STORM_ROOT/release/storm_smm_$arch.$packext | { echo "The packaged compiler (smm) does not seem to be working on $arch."; exit 1; }

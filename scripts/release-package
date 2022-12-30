@@ -103,12 +103,18 @@ done
 
 
 # Copy the file to two separate ones, one for each release:
-cp $OUT ${OUT_BASE}_mps_$arch$OUT_EXT
-mv $OUT ${OUT_BASE}_smm_$arch$OUT_EXT
+if [[ ! $arch == arm64 ]]
+then
+    cp $OUT ${OUT_BASE}_smm_$arch$OUT_EXT
+fi
+mv $OUT ${OUT_BASE}_mps_$arch$OUT_EXT
 
 # Add the main executables
+if [[ ! $arch == arm64 ]]
+then
+    add_rename_custom ${OUT_BASE}_smm_$arch$OUT_EXT release/Storm_smm$exe Storm$exe
+fi
 add_rename_custom ${OUT_BASE}_mps_$arch$OUT_EXT release/Storm_mps$exe Storm$exe
-add_rename_custom ${OUT_BASE}_smm_$arch$OUT_EXT release/Storm_smm$exe Storm$exe
 
 if [[ $OUT_EXT == .tar ]]
 then
@@ -122,7 +128,10 @@ then
     fi
 
     gzip ${OUT_BASE}_mps_$arch.tar
-    gzip ${OUT_BASE}_smm_$arch.tar
+    if [[ ! $arch == arm64 ]]
+    then
+	gzip ${OUT_BASE}_smm_$arch.tar
+    fi
 fi
 
 echo "Done!"

@@ -1,8 +1,10 @@
 #!/bin/bash
 
-if [[ $# -ge 1 ]]
+arch="$1"
+
+if [[ $# -ge 2 ]]
 then
-    version=$1
+    version=$2
 else
     version=$(find_version)
 fi
@@ -23,7 +25,10 @@ fi
 # Seems to be more or less standard in Git bash at least. If we fail, we will just run the build
 # less efficiently, so it is not a big problem.
 mm release $compat mps -ne || { echo "Compilation (mps) failed!"; exit 1; }
-mm release $compat smm -ne || { echo "Compilation (smm) failed!"; exit 1; }
+if [[ ! $arch == arm64 ]]
+then
+    mm release $compat smm -ne || { echo "Compilation (smm) failed!"; exit 1; }
+fi
 
 echo "Done! Running test suite..."
 release/Test_mps --all || { echo "Tests failed (mps)!"; exit 1; }
