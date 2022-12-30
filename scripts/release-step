@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# A single step in the build process.
+# Executed once for each architecture (typically on different machines).
+
+# Parameters are: <archlist> <version> <hash> <release-notes>
+# Where:
+# <archlist> is a list of architectures to compile for: <arch>|<host>|<arch>|... first one is the current arch, if more are in the list, will build there as well.
+# <version> is the current version
+# <hash> is the hash of the current Git-commit
+# <release-notes> is a file containing the release notes (we might not have the latest tags)
+
+archlist="$1"
+version="$2"
+hash="$3"
+notes="$4"
+export notes
+
+arch="${archlist%%|*}"
+archlist="${archlist#*|}"
+
+echo "----- Building for ${arch}... -----"
+
+
+if [[ $arch == win* ]]
+then
+    packext="zip"
+else
+    packext="tar.gz"
+fi
+
+release-compile "$version" || { echo "Compilation failed on $arch"; exit 1; }
+release-package "$arch" "$notes"
+release-test $STORM_ROOT/release/storm_mps_$arch.$packext | { echo "The packaged compiler (mps) does not seem to be working on $arch."; exit 1; }
+release-test $STORM_ROOT/release/storm_smm_$arch.$packext | { echo "The packaged compiler (smm) does not seem to be working on $arch."; exit 1; }
+
+
+if [[ ! "$archlist" == "" ]]
+then
+    host="${archlist%%|*}"
+    archlist="${archlist#*|}"
+
+    function tar_files {
+	cd $STORM_ROOT/release
+	cp $notes $STORM_ROOT/release/release_notes.md
+	shopt -s nullglob
+	tar cz storm_*.{zip,tar.gz}
+    }
+
+    echo "Continuing build at ${host}..."
+    tar_files | ssh "$host" "~/build-storm.sh" "$archlist" "$version" "$hash" || exit 1;
+fi
+
+exit 0

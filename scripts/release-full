@@ -1,5 +1,7 @@
 #!/bin/bash
 
+ARCHLIST="win32|filip@192.168.0.105|arm64|filip-www@fprg.se|amd64"
+
 completed=false
 
 function remove_tag {
@@ -32,17 +34,21 @@ then
     trap remove_tag EXIT
 fi
 
-release-compile || exit 1
-release-package zip || exit 1
-release-test $STORM_ROOT/release/storm_mps.zip || exit 1
-release-test $STORM_ROOT/release/storm_smm.zip || exit 1
+
+hash=$(git rev-parse HEAD)
+
+release-step "$ARCHLIST" "$version" "$hash" || { echo "Build failed. Try again!"; exit 1; }
+
+completed=true
+echo "Finished! Remember to push tags!"
+
 echo "All seems well, uploading the file..."
 hash=$(git rev-parse HEAD)
 function tar_it {
     cd $STORM_ROOT/release
+    cp $STORM_ROOT/doc/release_notes.md .
     tar cz storm_mps.zip storm_smm.zip
 }
 tar_it | ssh filip-www@fprg.se /home/filip-www/upload-storm.sh $version $hash || { echo "Build failed on the server. Try again!"; exit 1; }
 
-completed=true
 echo "Finished! Remember to push tags!"

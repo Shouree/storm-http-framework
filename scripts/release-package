@@ -3,10 +3,12 @@
 # Launchers to include in build: (space separated)
 launchers="progvis.main"
 
-notes_from=""
-
 OUT_BASE=$STORM_ROOT/release/storm
-if [[ $1 == "zip" ]]
+
+# Architecture
+arch="$1"
+
+if [[ $arch == win* ]]
 then
     OUT_EXT=.zip
     add="7z a"
@@ -19,9 +21,10 @@ else
     exe=""
     lib=".so"
     scr=".sh"
-    notes_from=$1
 fi
 OUT=$OUT_BASE$OUT_EXT
+
+notes="$2"
 
 function launcher {
     if [[ "$2" =~ \.bat$ ]]
@@ -63,9 +66,9 @@ echo "Packing release..."
 find doc/ -type f | xargs --delimiter='\n' $add $OUT > /dev/null
 
 # Release notes.
-if [[ -f $notes_from ]]
+if [[ -f $notes ]]
 then
-    unzip -p $notes_from doc/release_notes.md > doc/release_notes.md
+    cp "$notes" doc/release_notes.md
 else
     release-notes > doc/release_notes.md
 fi
@@ -100,26 +103,26 @@ done
 
 
 # Copy the file to two separate ones, one for each release:
-cp $OUT ${OUT_BASE}_mps$OUT_EXT
-mv $OUT ${OUT_BASE}_smm$OUT_EXT
+cp $OUT ${OUT_BASE}_mps_$arch$OUT_EXT
+mv $OUT ${OUT_BASE}_smm_$arch$OUT_EXT
 
 # Add the main executables
-add_rename_custom ${OUT_BASE}_mps$OUT_EXT release/Storm_mps$exe Storm$exe
-add_rename_custom ${OUT_BASE}_smm$OUT_EXT release/Storm_smm$exe Storm$exe
+add_rename_custom ${OUT_BASE}_mps_$arch$OUT_EXT release/Storm_mps$exe Storm$exe
+add_rename_custom ${OUT_BASE}_smm_$arch$OUT_EXT release/Storm_smm$exe Storm$exe
 
-if [[ $1 != "zip" ]]
+if [[ $OUT_EXT == .tar ]]
 then
-    if [[ -e ${OUT_BASE}_mps.tar.gz ]]
+    if [[ -e ${OUT_BASE}_mps_$arch.tar.gz ]]
     then
-	rm ${OUT_BASE}_mps.tar.gz
+	rm ${OUT_BASE}_mps_$arch.tar.gz
     fi
-    if [[ -e ${OUT_BASE}_smm.tar.gz ]]
+    if [[ -e ${OUT_BASE}_smm_$arch.tar.gz ]]
     then
-	rm ${OUT_BASE}_smm.tar.gz
+	rm ${OUT_BASE}_smm_$arch.tar.gz
     fi
 
-    gzip ${OUT_BASE}_mps.tar
-    gzip ${OUT_BASE}_smm.tar
+    gzip ${OUT_BASE}_mps_$arch.tar
+    gzip ${OUT_BASE}_smm_$arch.tar
 fi
 
 echo "Done!"
