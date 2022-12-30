@@ -339,7 +339,8 @@ BEGIN_TEST(UThreadExTest, OS) {
 
 static nat counter = 0;
 
-static void recurseInner(nat depth = 0) {
+// Note: Not static to make the symbol available to the debug information in more cases.
+void recurseInner(nat depth = 0) {
 	if (depth >= 3) // One extra since the last frame disappears sometimes...
 		UThread::leave();
 	else
