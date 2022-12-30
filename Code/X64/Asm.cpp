@@ -533,6 +533,7 @@ namespace code {
 			default:
 				assert(false, L"Unsupported operand passed to 'opOffset'!");
 			}
+			return Operand();
 		}
 	}
 }

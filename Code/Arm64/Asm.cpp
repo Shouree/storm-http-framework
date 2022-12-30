@@ -383,6 +383,7 @@ namespace code {
 			default:
 				assert(false, L"Unsupported operand passed to 'opOffset'!");
 			}
+			return Operand();
 		}
 
 		void inlineMemcpy(Listing *dest, Operand to, Operand from, Reg tmpA, Reg tmpB) {

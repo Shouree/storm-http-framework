@@ -14,7 +14,8 @@ namespace code {
 				return r;
 			if (r == 32)
 				return 31;
-			assert(false, L"Can not use this register with this op-code.");
+
+			throw new (runtime::someEngine()) InternalError(S("Can not use this register with this op-code."));
 		}
 
 		// Get register number where 31=zr.
@@ -22,7 +23,8 @@ namespace code {
 			Nat r = intRegNumber(reg);
 			if (r < 32)
 				return r;
-			assert(false, L"Can not use this register with this op-code.");
+
+			throw new (runtime::someEngine()) InternalError(S("Can not use this register with this op-code."));
 		}
 
 		// Get fp register number.
