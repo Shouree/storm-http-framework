@@ -5,7 +5,7 @@
 
 # Parameters are: <archlist> <version> <hash> <release-notes>
 # Where:
-# <archlist> is a list of architectures to compile for: <arch>|<host>|<arch>|... first one is the current arch, if more are in the list, will build there as well.
+# <archlist> is a list of architectures to compile for: <arch>!<host>!<arch>!... first one is the current arch, if more are in the list, will build there as well.
 # <version> is the current version
 # <hash> is the hash of the current Git-commit
 # <release-notes> is a file containing the release notes (we might not have the latest tags)
@@ -16,8 +16,8 @@ hash="$3"
 notes="$4"
 export notes
 
-arch="${archlist%%|*}"
-archlist="${archlist#*|}"
+arch="${archlist%%!*}"
+archlist="${archlist#*!}"
 
 echo "----- Building for ${arch}... -----"
 
@@ -37,18 +37,23 @@ release-test $STORM_ROOT/release/storm_smm_$arch.$packext || { echo "The package
 
 if [[ ! "$archlist" == "" ]]
 then
-    host="${archlist%%|*}"
-    archlist="${archlist#*|}"
+    host="${archlist%%!*}"
+    archlist="${archlist#*!}"
 
     function tar_files {
 	cd $STORM_ROOT/release
-	cp $notes $STORM_ROOT/release/release_notes.md
+	if [[ -f $notes ]]
+	then
+	    cp $notes $STORM_ROOT/release/release_notes.md
+	else
+	    release-notes > $STORM_ROOT/release/release_notes.md
+	fi
 	shopt -s nullglob
-	tar cz storm_*.{zip,tar.gz}
+	tar cz release_notes.md storm_*.{zip,tar.gz}
     }
 
     echo "Continuing build at ${host}..."
-    tar_files | ssh "$host" "~/build-storm.sh" "$archlist" "$version" "$hash" || exit 1;
+    tar_files | ssh "$host" '~/build-storm.sh' "$archlist" "$version" "$hash" || exit 1;
 fi
 
 exit 0
