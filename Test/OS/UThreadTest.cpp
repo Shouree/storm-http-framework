@@ -339,14 +339,17 @@ BEGIN_TEST(UThreadExTest, OS) {
 
 static nat counter = 0;
 
-static void recurseInner(nat depth = 0) {
+static void NOINLINE recurseInner(nat depth = 0) {
+	// Write global to avoid the compiler optimizing the call away.
+	counter++;
+
 	if (depth >= 3) // One extra since the last frame disappears sometimes...
 		UThread::leave();
 	else
 		recurseInner(depth + 1);
 
 	// Write global to avoid the compiler optimizing the call away.
-	counter++;
+	counter--;
 }
 
 static void recurseBase() {
