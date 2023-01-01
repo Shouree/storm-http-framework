@@ -12,8 +12,9 @@ annotated release tags in the Git repository.
 Binary releases
 -----------------
 
-- [Windows (32-bit, X86)](storm_mps.zip)
-- [Linux (64-bit, X86)](storm_mps.tar.gz) (should work for recent Debian-based distributions)
+- [Windows (32-bit, X86)](storm_win32_mps.zip)
+- [Linux (64-bit, X86)](storm_amd64_mps.tar.gz) (should work for recent Debian-based distributions)
+- [Linux (64-bit, ARM)](storm_arm64_mps.tar.gz) (should work for recent Debian-based distributions)
 
 
 To run the compiler, simply unpack the archive file and run `Storm` (`Storm.exe` on Windows), and
@@ -40,8 +41,9 @@ currently in the experimental stage.
   These releases use the [Memory Pool System](http://www.ravenbrook.com/project/mps/) from
   Ravenbrook Ltd. for memory management. The Memory Pool System is very stable and performant.
 
-  - [Windows (32-bit), MPS](storm_mps.zip)
-  - [Linux (64-bit), MPS](storm_mps.tar.gz)
+  - [Windows (32-bit), MPS](storm_win32_mps.zip)
+  - [Linux (64-bit), MPS](storm_amd64_mps.tar.gz)
+  - [Linux (64-bit), MPS](storm_arm64_mps.tar.gz)
 
 - SMM releases
 
@@ -53,8 +55,8 @@ currently in the experimental stage.
   This option is currently experimental, but seems to work well in many cases. It is slower than the
   MPS garbage collector.
 
-  - [Windows (32-bit), SMM](storm_smm.zip)
-  - [Linux (64-bit), SMM](storm_smm.tar.gz)
+  - [Windows (32-bit), SMM](storm_win32_smm.zip)
+  - [Linux (64-bit), SMM](storm_amd64_smm.tar.gz)
 
 
 

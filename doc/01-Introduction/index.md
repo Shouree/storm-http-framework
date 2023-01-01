@@ -5,11 +5,14 @@ This portion of the documentation serves as a guide for getting Storm up and run
 machine, as well as illustrating some of the important concepts in Storm by taking a closer look at
 the examples included in the download.
 
-Storm currently works on Windows (X86, 32-bit), Linux (X86, 64-bit) and Linux (ARM, 64-bit).
+Storm currently works on Windows (X86, 32-bit), Linux (X86, and ARM, 64-bit).
 
 
 Downloading and Installing Storm
 ----------------------------------
+
+If you are running Debian or Ubuntu, Storm might be available in your system's package manager. If
+this is the case, you can simply run `sudo apt install storm-lang`.
 
 First, download Storm from [here](md://Introduction/Downloads) and unpack the archive somewhere convenient. The
 archive contains two folders and one executable file:
