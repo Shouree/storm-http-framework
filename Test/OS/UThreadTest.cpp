@@ -339,8 +339,7 @@ BEGIN_TEST(UThreadExTest, OS) {
 
 static nat counter = 0;
 
-// Note: Not static to make the symbol available to the debug information in more cases.
-void recurseInner(nat depth = 0) {
+static void recurseInner(nat depth = 0) {
 	if (depth >= 3) // One extra since the last frame disappears sometimes...
 		UThread::leave();
 	else
@@ -354,17 +353,16 @@ static void recurseBase() {
 	recurseInner(0);
 }
 
-// Count the number of frames that contain "recurseInner".
-static size_t countFn(::StackTrace &trace, const String &function) {
-	String formatted = format(trace);
+// Count the number of frames that contain "recurseInner". Looks at an IP that is close to the start
+// of 'recurseInner'. That way we don't have to rely on debug information for this to work.
+static size_t countFn(::StackTrace &trace, const void *functionAddr) {
+	const size_t MAX_DISTANCE = 256;
+	size_t addr = (size_t)functionAddr;
 	size_t count = 0;
-	size_t at = 0;
-	while (true) {
-		at = formatted.find(function, at);
-		if (at >= formatted.size())
-			break;
-		at++;
-		count++;
+	for (nat i = 0; i < trace.count(); i++) {
+		size_t here = (size_t)trace[i].fnBase + trace[i].offset;
+		if (addr <= here && here <= addr + MAX_DISTANCE)
+			count++;
 	}
 	return count;
 }
@@ -384,7 +382,7 @@ BEGIN_TEST(UThreadTracesTest, OS) {
 	for (size_t i = 0; i < traces.size(); i++) {
 		// PLN(L"Thread " << i);
 		// PLN(format(traces[i]));
-		if (countFn(traces[i], L"recurseInner") >= 3)
+		if (countFn(traces[i], address(recurseInner)) >= 3)
 			numUThreads++;
 	}
 
