@@ -21,7 +21,7 @@ cat - > storm-other.tar.gz
 # Make sure the repo is cloned.
 if [[ ! -e storm ]]
 then
-    git clone git://fprg.se/storm.git
+    git clone git@storm-lang.org:storm.git
     cd storm
 else
     cd storm

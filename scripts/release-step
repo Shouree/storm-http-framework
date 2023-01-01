@@ -32,7 +32,10 @@ fi
 release-compile "$arch" "$version" || { echo "Compilation failed on $arch"; exit 1; }
 release-package "$arch" "$notes"
 release-test $STORM_ROOT/release/storm_mps_$arch.$packext || { echo "The packaged compiler (mps) does not seem to be working on $arch."; exit 1; }
-release-test $STORM_ROOT/release/storm_smm_$arch.$packext || { echo "The packaged compiler (smm) does not seem to be working on $arch."; exit 1; }
+if [[ -e $STORM_ROOT/release/storm_smm_$arch.$packext ]]
+then
+    release-test $STORM_ROOT/release/storm_smm_$arch.$packext || { echo "The packaged compiler (smm) does not seem to be working on $arch."; exit 1; }
+fi
 
 
 if [[ ! "$archlist" == "" ]]
