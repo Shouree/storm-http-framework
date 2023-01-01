@@ -17,7 +17,12 @@ notes="$4"
 export notes
 
 arch="${archlist%%!*}"
-archlist="${archlist#*!}"
+if [[ $archlist == *!* ]]
+then
+    archlist="${archlist#*!}"
+else
+    archlist=""
+fi
 
 echo "----- Building for ${arch}... -----"
 
