@@ -46,6 +46,13 @@ class Behavior on Ui {
  * Behavior config. Communicates with the painter efficiently.
  */
 class BehaviorConfig on Render {
+	init() {
+		init {
+			// Default is to allow stepping.
+			step = true;
+		}
+	}
+
 	// Return an action to mark.
 	Str? mark() { data; }
 
