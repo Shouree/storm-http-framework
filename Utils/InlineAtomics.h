@@ -426,8 +426,8 @@ inline void shortUnalignedAtomicWrite(volatile nat &v, nat value) {
 #include "Assert.h"
 
 // Notify that unaligned access has occurred. In a function to allow better optimizations.
-__attribute__((noreturn)) inline void notifyUnaligned() {
-	assert(false, "Unaligned atomic access not supported on ARM.");
+inline void notifyUnaligned() {
+	debugAssertFailed("Unaligned atomic access not supported on ARM.");
 }
 
 inline size_t unalignedAtomicRead(volatile size_t &v) {
