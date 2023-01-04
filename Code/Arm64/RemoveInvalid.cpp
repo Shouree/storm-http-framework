@@ -35,6 +35,7 @@ namespace code {
 			TRANSFORM(mov),
 			TRANSFORM(lea),
 			TRANSFORM(swap),
+			TRANSFORM(test),
 			TRANSFORM(cmp),
 			TRANSFORM(setCond),
 			TRANSFORM(icast),
@@ -521,6 +522,35 @@ namespace code {
 			}
 		}
 
+		void RemoveInvalid::testTfm(Listing *to, Instr *instr, Nat line) {
+			// Similar to "bitmaskTfm" but does not attempt to save result back to memory.
+
+			Operand src = instr->src();
+			if (src.type() == opConstant) {
+				bool large = src.size().size64() > 4;
+				if (encodeBitmask(src.constant(), large) == 0) {
+					// Not supported, read from memory.
+					src = largeConstant(src);
+				}
+			}
+
+			if (src.type() != opRegister) {
+				Reg t = unusedReg(used->at(line), src.size());
+				used->at(line)->put(t);
+				loadRegister(to, t, src);
+				src = t;
+			}
+
+			Operand dest = instr->dest();
+			if (dest.type() != opRegister) {
+				Reg t = unusedReg(used->at(line), dest.size());
+				loadRegister(to, t, dest);
+				*to << instr->alter(t, src);
+			} else {
+				*to << instr->alterSrc(src);
+			}
+		}
+
 		void RemoveInvalid::setCondTfm(Listing *to, Instr *instr, Nat line) {
 			Operand dest = instr->dest();
 			if (dest.type() == opRegister) {
@@ -647,7 +677,7 @@ namespace code {
 					// Supported through special case.
 				} else if (allOnes(value, large)) {
 					// Supported through special case.
-				} else if (encodeBitmask(src.constant(), large) == 0) {
+				} else if (encodeBitmask(value, large) == 0) {
 					// Not supported, spill to memory.
 					instr = instr->alterSrc(largeConstant(src));
 				}

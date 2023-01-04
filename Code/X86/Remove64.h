@@ -43,6 +43,7 @@ namespace code {
 			void sbbTfm(Listing *to, Instr *instr, RegSet *used);
 			void bxorTfm(Listing *to, Instr *instr, RegSet *used);
 			void cmpTfm(Listing *to, Instr *instr, RegSet *used);
+			void testTfm(Listing *to, Instr *instr, RegSet *used);
 			void mulTfm(Listing *to, Instr *instr, RegSet *used);
 			void idivTfm(Listing *to, Instr *instr, RegSet *used);
 			void udivTfm(Listing *to, Instr *instr, RegSet *used);

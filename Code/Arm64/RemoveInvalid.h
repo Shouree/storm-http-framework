@@ -102,6 +102,7 @@ namespace code {
 			void leaTfm(Listing *to, Instr *instr, Nat line);
 			void swapTfm(Listing *to, Instr *instr, Nat line);
 			void cmpTfm(Listing *to, Instr *instr, Nat line);
+			void testTfm(Listing *to, Instr *instr, Nat line);
 			void setCondTfm(Listing *to, Instr *instr, Nat line);
 			void icastTfm(Listing *to, Instr *instr, Nat line);
 			void ucastTfm(Listing *to, Instr *instr, Nat line);

@@ -22,6 +22,7 @@ namespace code {
 			IMM_REG(sbb),
 			IMM_REG(bxor),
 			IMM_REG(cmp),
+			IMM_REG(test),
 
 			TRANSFORM(beginBlock),
 

@@ -41,11 +41,7 @@ namespace storm {
 	static void enumOverlaps(InlineParams p) {
 		if (p.result->needed()) {
 			Operand result = p.result->location(p.state);
-			// TODO: Use 'test' op-code when it is implemented.
-			Var t = p.state->l->createVar(p.state->block, Size::sInt);
-			*p.state->l << mov(t, p.param(0));
-			*p.state->l << band(t, p.param(1));
-			*p.state->l << cmp(t, intConst(0));
+			*p.state->l << test(p.param(0), p.param(1));
 			*p.state->l << setCond(result, ifNotEqual);
 		}
 	}

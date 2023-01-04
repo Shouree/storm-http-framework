@@ -265,6 +265,21 @@ namespace code {
 			immRegInstr(to, op8, op, instr->dest(), instr->src());
 		}
 
+		void testOut(Output *to, Instr *instr) {
+			ImmRegInstr8 op8 = {
+				0xF6, 7,
+				0x84,
+				0x84 // TEST is symmetric
+			};
+			ImmRegInstr op = {
+				0x0, 0xFF, // Not supported
+				0xF7, 0,
+				0x85,
+				0x85 // TEST is symmetric
+			};
+			immRegInstr(to, op8, op, instr->dest(), instr->src());
+		}
+
 		void pushOut(Output *to, Instr *instr) {
 			const Operand &src = instr->src();
 			assert(src.size() != Size::sLong);
@@ -972,6 +987,7 @@ namespace code {
 			OUTPUT(sbb),
 			OUTPUT(bxor),
 			OUTPUT(cmp),
+			OUTPUT(test),
 			OUTPUT(push),
 			OUTPUT(pop),
 			OUTPUT(pushFlags),

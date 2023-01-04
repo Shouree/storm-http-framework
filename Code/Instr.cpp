@@ -301,6 +301,10 @@ namespace code {
 		return instrDest(e, op::bnot, dest);
 	}
 
+	Instr *test(EnginePtr e, Operand dest, Operand src) {
+		return instrDestSrc(e, op::test, dest, src);
+	}
+
 	Instr *add(EnginePtr e, Operand dest, Operand src) {
 		return instrDestSrc(e, op::add, dest, src);
 	}

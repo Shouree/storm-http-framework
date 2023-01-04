@@ -19,6 +19,7 @@ namespace code {
 			TRANSFORM(sbb),
 			TRANSFORM(bxor),
 			TRANSFORM(cmp),
+			TRANSFORM(test),
 			TRANSFORM(mul),
 			TRANSFORM(idiv),
 			TRANSFORM(udiv),
@@ -164,6 +165,41 @@ namespace code {
 			// *to << jmp(end, ifNotEqual);
 			// *to << cmp(low32(instr->dest()), low32(instr->src()));
 			// *to << end;
+		}
+
+		void Remove64::testTfm(Listing *to, Instr *instr, RegSet *used) {
+			// We only care about SF and ZF (sign and zero) here.
+
+			Reg dest = unusedReg(used);
+
+			bool preserved = false;
+			if (dest == noReg) {
+				*to << push(ebx);
+				dest = ebx;
+				preserved = true;
+			} else {
+				dest = asSize(dest, Size::sInt);
+			}
+
+			*to << mov(dest, low32(instr->dest()));
+			*to << test(dest, low32(instr->src()));
+			*to << pushFlags();
+			*to << mov(dest, high32(instr->dest()));
+			*to << test(dest, high32(instr->src()));
+			*to << pushFlags();
+
+			// Clear ZF if it was not set both times.
+			*to << mov(dest, intRel(ptrStack, Offset::sInt));
+			*to << bor(dest, intConst(~(1 << 6)));
+			*to << band(intRel(ptrStack, Offset()), dest);
+
+			*to << popFlags();
+			*to << pop(dest); // We can not use add here, as it modifies flags.
+
+			if (preserved) {
+				*to << pop(ebx);
+			}
+
 		}
 
 		static Long CODECALL mul(Long a, Long b) {

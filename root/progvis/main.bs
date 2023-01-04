@@ -496,7 +496,7 @@ void main() on Compiler {
 }
 
 void debug() on Compiler {
-	named{progvis}.compile();
+	// named{progvis}.compile();
 
 	if (url = examplesDir()) {
 		// progvis:check:check([url / "test" / "livelock.c"]);
@@ -507,11 +507,12 @@ void debug() on Compiler {
 		// win.open(url / "atomics.c");
 		// win.open(url / "test" / "atomic_stack.c");
 		// win.open(url / "pointers" / "string.c");
+		win.open(url / "pointers" / "locals.c");
 		// win.open(url / "concurrency" / "lock_sema.c");
 		// win.open(url / "test" / "error.c");
 		// win.open(url / "test" / "multi_locks.c");
 		// win.open(url / "test" / "step_error.c");
-		win.open(url / "test" / "livelock.c");
+		// win.open(url / "test" / "livelock.c");
 		win.waitForClose();
 	}
 }

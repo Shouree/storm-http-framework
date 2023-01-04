@@ -133,6 +133,7 @@ namespace code {
 	PROXY2(band, Operand, Operand);
 	PROXY2(bxor, Operand, Operand);
 	PROXY1(bnot, Operand);
+	PROXY2(test, Operand, Operand);
 	PROXY2(add, Operand, Operand);
 	PROXY2(adc, Operand, Operand);
 	PROXY2(sub, Operand, Operand);

@@ -304,6 +304,21 @@ namespace code {
 			immRegInstr(to, op8, op, instr->dest(), instr->src());
 		}
 
+		void testOut(Output *to, Instr *instr) {
+			ImmRegInstr8 op8 = {
+				opCode(0xF6), 0,
+				opCode(0x84),
+				opCode(0x84), // TEST is symmetric, order does not matter
+			};
+			ImmRegInstr op = {
+				opCode(0x00), 0xFF, // not supported
+				opCode(0xF7), 0,
+				opCode(0x85),
+				opCode(0x85), // TEST is symmetric, order does not matter
+			};
+			immRegInstr(to, op8, op, instr->dest(), instr->src());
+		}
+
 		static void shiftOp(Output *to, const Operand &dest, const Operand &src, byte subOp) {
 			RmFlags flags = wide(dest);
 			if (dest.size() == Size::sByte)
@@ -737,6 +752,7 @@ namespace code {
 			OUTPUT(sbb),
 			OUTPUT(bxor),
 			OUTPUT(cmp),
+			OUTPUT(test),
 			OUTPUT(shl),
 			OUTPUT(shr),
 			OUTPUT(sar),

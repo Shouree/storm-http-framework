@@ -153,6 +153,7 @@ namespace code {
 	Instr *STORM_FN STORM_NAME(band, and)(EnginePtr e, Operand dest, Operand src);
 	Instr *STORM_FN STORM_NAME(bxor, xor)(EnginePtr e, Operand dest, Operand src);
 	Instr *STORM_FN STORM_NAME(bnot, not)(EnginePtr e, Operand dest);
+	Instr *STORM_FN test(EnginePtr e, Operand dest, Operand src);
 	Instr *STORM_FN add(EnginePtr e, Operand dest, Operand src);
 	Instr *STORM_FN adc(EnginePtr e, Operand dest, Operand src);
 	Instr *STORM_FN sub(EnginePtr e, Operand dest, Operand src);

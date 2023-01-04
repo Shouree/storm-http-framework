@@ -881,6 +881,20 @@ namespace code {
 			}
 		}
 
+		void testOut(Output *to, Instr *instr) {
+			Operand src = instr->src();
+			Operand dst = instr->dest();
+			Nat dstReg = intRegZR(dst.reg());
+			bool is64 = dst.size().size64() > 4;
+			if (src.type() == opConstant) {
+				Word op = src.constant();
+				putBitmask(to, 0xE4, 31, dstReg, is64, op);
+			} else {
+				Nat opCode = is64 ? 0x750 : 0x350;
+				putData3(to, opCode, 31, dstReg, intRegZR(src.reg()), 0);
+			}
+		}
+
 		void bxorOut(Output *to, Instr *instr) {
 			Operand src = instr->src();
 			Operand dst = instr->dest();
@@ -1174,6 +1188,7 @@ namespace code {
 			OUTPUT(bor),
 			OUTPUT(bxor),
 			OUTPUT(bnot),
+			OUTPUT(test),
 			OUTPUT(shl),
 			OUTPUT(shr),
 			OUTPUT(sar),
