@@ -45,6 +45,7 @@ namespace storm {
 			Var t = p.state->l->createVar(p.state->block, Size::sInt);
 			*p.state->l << mov(t, p.param(0));
 			*p.state->l << band(t, p.param(1));
+			*p.state->l << cmp(t, intConst(0));
 			*p.state->l << setCond(result, ifNotEqual);
 		}
 	}
