@@ -170,6 +170,8 @@ namespace storm {
 
 			putLocation(state, last, exprs->last()->largePos());
 			executeExpr(exprs->last(), state, to);
+
+			putLocation(state, last, pos.lastCh());
 		}
 
 		Int ExprBlock::castPenalty(Value to) {

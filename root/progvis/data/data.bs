@@ -239,6 +239,32 @@ class Primitive extends Atom {
 }
 
 /**
+ * Special case for String. It assumes that it is at offset zero as it is a reference type.
+ */
+class String extends Primitive {
+	// Create.
+	init() {
+		init(named{core:Str}) {}
+	}
+
+	// Traverse.
+	void traverse(World:Traversal t, unsafe:RawPtr object, Nat offset) : override {
+		if (offset == 0) {
+			if (s = object.asObject() as Str) {
+				value = s;
+				if (value.empty)
+					value = " ";
+			} else {
+				value = "?";
+			}
+		} else {
+			value = "<invalid>";
+		}
+	}
+}
+
+
+/**
  * Special case for thread ID:s. This visualizes the ThreadId class, which is itself essentially an
  * integer. We need to handle this specially since we need to translate the thread ID inside the
  * summary function. We could also chose to visualize thread ID:s with "pointers" to the thread.
