@@ -73,7 +73,7 @@ private TextColor[] highlightSource(Url file, PkgReader reader, Str text) on Com
 		parser.parseApprox(fileReader.info.contents, fileReader.info.url, fileReader.info.start);
 
 		Str:Iter end = fileReader.info.contents.end;
-		var next = fileReader.next(ReaderQuery:qParser);
+		var next = fileReader.next(ReaderQuery:parser);
 		if (next)
 			end = next.info.start;
 

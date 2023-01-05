@@ -42,16 +42,16 @@ namespace storm {
 	 */
 	enum ReaderQuery {
 		// We are reading syntax, ie. we intend to call 'readSyntaxRules' or 'readSyntaxProductions'.
-		qSyntax = 0x01,
+		STORM_NAME(qSyntax, syntax) = 0x01,
 
 		// We are reading types, ie. we intend to call 'readTypes' or 'resolveTypes'.
-		qTypes = 0x02,
+		STORM_NAME(qTypes, types) = 0x02,
 
 		// We are reading functions, ie. we intend to call 'readFunctions'.
-		qFunctions = 0x04,
+		STORM_NAME(qFunctions, functions) = 0x04,
 
 		// We are intending to query information for interactive parsing.
-		qParser = 0x08,
+		STORM_NAME(qParser, parser) = 0x08,
 	};
 
 	BITMASK_OPERATORS(ReaderQuery);
