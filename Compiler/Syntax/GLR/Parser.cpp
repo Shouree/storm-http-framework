@@ -342,16 +342,29 @@ namespace storm {
 				// See if we can 'shift' through a nonterminal at this position.
 				typedef Map<Nat, Nat>::Iter Iter;
 				for (Iter i = actions->begin(), e = actions->end(); i != e; ++i) {
-					Nat prod = i.k();
+					Nat rule = i.k();
 					Nat to = i.v();
 
-					// Skip null terminals, they are already skipped.
-					if (Syntax::specialProd(prod) == Syntax::prodESkip)
+					// Don't worry about null terminals, they are already skipped.
+					if (Syntax::specialRule(rule) == Syntax::ruleESkip)
 						continue;
 
 					InfoErrors errors = infoSuccess();
-					errors += infoShifts(Item(syntax, prod).length(syntax));
-					Nat tree = store->push(now->pos, prod, errors, 0).id();
+					// Pick the smallest length of a production as a penalty here:
+					Nat minLength = 10000; // Default penalty if none present. Small enough to not overflow easily.
+					Nat minProd = Syntax::prodEpsilon; // Sane default if none is present?
+					{
+						RuleInfo *info = syntax->ruleInfo(rule);
+						for (Nat i = 0; i < info->count(); i++) {
+							Nat len = Item(syntax, info->at(i)).length(syntax);
+							if (i == 0 || minLength > len) {
+								len = minLength;
+								minProd = info->at(i);
+							}
+						}
+					}
+					errors += infoShifts(minLength);
+					Nat tree = store->push(now->pos, minProd, errors, 0).id();
 					StackItem *item = new (this) StackItem(to, currentPos, now, tree);
 					stacks->put(0, store, item);
 				}
