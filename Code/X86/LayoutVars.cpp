@@ -180,12 +180,19 @@ namespace code {
 		// Zero the memory of a variable. 'initReg' should be true if we need to set <reg> to 0 before
 		// using it as our zero. 'initReg' will be set to false, so that it is easy to use zeroVar
 		// in a loop, causing only the first invocation to emit '<reg> := 0'.
-		static void zeroVar(Listing *dest, Offset start, Size size, Reg reg, bool &initReg) {
+		static void zeroVar(Listing *dest, Offset start, Size size, Reg &reg, bool &initReg, Reg &restore) {
 			nat s32 = size.size32();
 			if (s32 == 0)
 				return;
 
 			if (initReg) {
+				if (reg == noReg) {
+					// This happens whenever we are out of free registers.
+					restore = ptrA;
+					*dest << push(restore);
+					reg = ptrA;
+				}
+
 				*dest << bxor(reg, reg);
 				initReg = false;
 			}
@@ -211,6 +218,7 @@ namespace code {
 
 			block = init;
 
+			Reg saved = noReg;
 			bool initReg = true;
 
 			Array<Var> *vars = dest->allVars(init);
@@ -220,7 +228,12 @@ namespace code {
 				Var v = vars->at(i - 1);
 
 				if (!dest->isParam(v))
-					zeroVar(dest, layout->at(v.key()), v.size(), freeReg, initReg);
+					zeroVar(dest, layout->at(v.key()), v.size(), freeReg, initReg, saved);
+			}
+
+			// ZeroVar might preserve register.
+			if (!initReg && saved != noReg) {
+				*dest << pop(saved);
 			}
 
 			// If the block was empty, we don't need to update the info.
@@ -417,7 +430,10 @@ namespace code {
 		void LayoutVars::beginBlockTfm(Listing *dest, Listing *src, Nat line) {
 			Instr *instr = src->at(line);
 			// Note: register is added in the previous pass.
-			initBlock(dest, instr->src().block(), instr->dest().reg());
+			Reg tmpReg = noReg;
+			if (instr->dest().type() == opRegister)
+				tmpReg = instr->dest().reg();
+			initBlock(dest, instr->src().block(), tmpReg);
 		}
 
 		void LayoutVars::endBlockTfm(Listing *dest, Listing *src, Nat line) {

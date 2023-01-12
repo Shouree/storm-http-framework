@@ -133,7 +133,8 @@ namespace code {
 			// We need to tell the next step what register(s) are free.
 			Reg r = unusedReg(line);
 			if (r != noReg)
-				*dest << instr->alterDest(r);
+				instr = instr->alterDest(r);
+			*dest << instr;
 		}
 
 		void RemoveInvalid::leaTfm(Listing *dest, Instr *instr, Nat line) {
