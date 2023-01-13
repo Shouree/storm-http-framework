@@ -52,6 +52,7 @@ namespace os {
 			break;
 		case resultErrorPtr:
 			throwPtrError(fn, env);
+			break;
 		}
 	}
 
@@ -106,12 +107,12 @@ namespace os {
 	void FutureBase::error() {
 		try {
 			throw;
-		} catch (const PtrThrowable *) {
+		} catch (const PtrThrowable *ex) {
 			// Save the exception pointer directly. It may be GC:d.
 			nat p = atomicCAS(resultPosted, resultEmpty, resultErrorPtr);
 			assert(p == resultEmpty, L"A future may not be used more than once! this=" + ::toHex(this));
 			(void)p; // Avoid warning in release mode.
-			savePtrError();
+			savePtrError(ex);
 		} catch (...) {
 			// Fall back on exception_ptr or similar.
 			nat p = atomicCAS(resultPosted, resultEmpty, resultError);
@@ -317,7 +318,7 @@ namespace os {
 		}
 	}
 
-	void FutureBase::savePtrError() {
+	void FutureBase::savePtrError(const PtrThrowable *) {
 		__try {
 			throw;
 		} __except (filter(GetExceptionInformation(), true)) {
@@ -364,7 +365,7 @@ namespace os {
 		new (exceptionData) std::exception_ptr(std::current_exception());
 	}
 
-	void FutureBase::savePtrError() {
+	void FutureBase::savePtrError(const PtrThrowable *) {
 		std::exception_ptr ptr = std::current_exception();
 
 		// Store the exception type.
@@ -417,11 +418,15 @@ namespace os {
 		exceptionData = std::current_exception();
 	}
 
-	void FutureBase::savePtrError() {
+	void FutureBase::savePtrError(const PtrThrowable *exception) {
 		exceptionData = std::current_exception();
+		ptrException = const_cast<PtrThrowable *>(exception);
 	}
 
-	void FutureBase::cleanError() {}
+	void FutureBase::cleanError() {
+		ptrException = null;
+		exceptionData = std::exception_ptr();
+	}
 
 
 #endif

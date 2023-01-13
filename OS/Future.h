@@ -80,7 +80,7 @@ namespace os {
 		void saveError();
 
 		// Save the current exception, knowing it is a pointer.
-		void savePtrError();
+		void savePtrError(const PtrThrowable *exception);
 
 		// Perform any cleanup needed.
 		void cleanError();
