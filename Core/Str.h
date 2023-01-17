@@ -9,7 +9,7 @@ namespace storm {
 	/**
 	 * The string type used in Storm.
 	 *
-	 * Strings are immutable sequences of unicode codepoints. The implementation stores string in
+	 * Strings are immutable sequences of unicode codepoints. The implementation stores strings in
 	 * UTF-16, but hides this fact by disallowing low-level access to the underlying representation.
 	 *
 	 * Note: We may want to enforce proper normalization of strings to avoid weird results.

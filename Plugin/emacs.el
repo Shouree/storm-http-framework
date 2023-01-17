@@ -48,7 +48,6 @@
 
 ;; Mark errors in compilation-mode properly.
 (require 'compile)
-(require 'cl)
 
 ;; Compilation mode assumes that error messages are in screen columns. This is typically not the
 ;; case (for C++ or Storm).
@@ -64,23 +63,23 @@
 
 ;; compile.el was updated in emacs 27. In the new version, the old way of adding custom hooks no
 ;; longer work properly. Instead, it provides a documented way of adding hooks.
-(pushnew (if (> emacs-major-version 26)
-	     ;; For new emacs
-	     `(storm ,storm-error-regexp
-		     2 ;; File
-		     (storm-compute-line-begin . storm-compute-line-end) ;; Lines
-		     (storm-compute-col-begin . storm-compute-col-end) ;; Columns
-		     2 ;; Error type
-		     )
-	   ;; For old emacs
-	   `(storm ,storm-error-regexp
-		  2 ;; File
-		  storm-old-compute-line ;; Function to call (line)
-		  3 ;; Column (likely not used due to hook)
-		  nil ;; Type (likely not used due to hook)
-		  )
-	   )
-	 compilation-error-regexp-alist-alist)
+(cl-pushnew (if (> emacs-major-version 26)
+		;; For new emacs
+		`(storm ,storm-error-regexp
+			2 ;; File
+			(storm-compute-line-begin . storm-compute-line-end) ;; Lines
+			(storm-compute-col-begin . storm-compute-col-end) ;; Columns
+			2 ;; Error type
+			)
+	      ;; For old emacs
+	      `(storm ,storm-error-regexp
+		      2 ;; File
+		      storm-old-compute-line ;; Function to call (line)
+		      3 ;; Column (likely not used due to hook)
+		      nil ;; Type (likely not used due to hook)
+		      )
+	      )
+	    compilation-error-regexp-alist-alist)
 (add-to-list 'compilation-error-regexp-alist 'storm)
 
 ;; Old-style lookup function. Only works for emacs <= 25.
@@ -247,9 +246,9 @@
     (when (listp response)
       (setq storm-buffer-last-point (point))
       (when (>= (length response) 3)
-	(let ((file-id (first  response))
-	      (kind    (second response))
-	      (value   (third  response)))
+	(let ((file-id (nth 0 response))
+	      (kind    (nth 1 response))
+	      (value   (nth 2 response)))
 	  (cond ((not (eq storm-buffer-id file-id))
 		 'noindent)
 		((eq kind 'level)
@@ -438,7 +437,7 @@
 
     ;; Remove any markers so that they do not slow things down...
     (while (consp free)
-      (set-marker (third (car free)) nil)
+      (set-marker (caddr (car free)) nil)
       (setq free (cdr free)))
     list))
 
@@ -462,15 +461,15 @@
 (defmacro storm-check-edits (pos min-pos max-pos edits)
   "Update 'pos' according to the history in 'edits'. Consumes entries from 'edits'."
   `(while (and (consp ,edits)
-	       (<= (first (first ,edits)) ,pos))
-     (let* ((entry (first ,edits))
-	    (offset (first entry))
-	    (skip (second entry))
-	    (marker (third entry)))
+	       (<= (car (car ,edits)) ,pos))
+     (let* ((entry (car ,edits))
+	    (offset (nth 0 entry))
+	    (skip   (nth 1 entry))
+	    (marker (nth 2 entry)))
        (when (> skip 0)
-	 (setq ,min-pos (min (first entry) ,max-pos)))
+	 (setq ,min-pos (min (car entry) ,max-pos)))
        (setq ,pos (+ (marker-position marker) (- ,pos offset skip)))
-       (setq ,edits (rest ,edits)))))
+       (setq ,edits (cdr ,edits)))))
 
 (defun storm-on-color (params)
   "Handle the color-message."
@@ -491,13 +490,13 @@
 
 	      (storm-check-edits start-pos lowest highest edits)
 	      (while (consp at)
-		(setq end-pos (+ start-pos (first at)))
+		(setq end-pos (+ start-pos (car at)))
 		(storm-check-edits end-pos lowest highest edits)
 
 		(storm-set-color
 		 (max lowest start-pos)
 		 (min highest end-pos)
-		 (storm-find-color (second at)))
+		 (storm-find-color (cadr at)))
 
 		(setq start-pos end-pos)
 		(setq at (nthcdr 2 at)))))))
@@ -510,8 +509,8 @@
       (if (eq old 'unknown)
 	  (let ((r (storm-query (list 'supported ext))))
 	    (when (listp r)
-	      (puthash ext (second r) storm-mode-types)
-	      (second r)))
+	      (puthash ext (cadr r) storm-mode-types)
+	      (cadr r)))
 	old))))
 
 
@@ -605,7 +604,7 @@
   "Send a message to the Storm process and await a result for a maximum of 1 second. The 
    response is expected to start with the same symbol as the sent message."
 
-  (setq storm-process-query (first message))
+  (setq storm-process-query (car message))
   (storm-send message)
 
   (unless timeout
@@ -677,14 +676,14 @@
   (storm-include-params-i storm-mode-include))
 
 (defun storm-include-params-i (list)
-  (if (endp list)
+  (if (null list)
       'nil
-    (let* ((first (first list))
+    (let* ((first (car list))
 	   (path  (car first))
 	   (pkg   (cdr first)))
       (append
        (list "-I" pkg (expand-file-name path))
-       (storm-include-params-i (rest list))))))
+       (storm-include-params-i (cdr list))))))
 
 (defun storm-start-compiler ()
   "Start the Storm compiler."
@@ -769,7 +768,7 @@
 (defun storm-decode-messages (string)
   "Decode all messages in 'string'. Returns (t remaining) if we managed to parse something,
    or (nil remaining) if we failed parsing things."
-  (let ((null-char (position #x00 string))
+  (let ((null-char (cl-position #x00 string))
 	(failed 'nil))
     (while (and (not failed)
 		(numberp null-char))
@@ -785,7 +784,7 @@
 		(message (cdr result)))
 	    (setq string (substring string consumed))
 	    (storm-handle-message message)
-	    (setq null-char (position #x00 string))))))
+	    (setq null-char (cl-position #x00 string))))))
 
     ;; Figure out the result.
     (if failed
@@ -802,16 +801,16 @@
 (defun storm-handle-message-i (msg)
   "Handle a message"
   (if (consp msg)
-      (let* ((header (first msg))
+      (let* ((header (car msg))
 	     (found (gethash header storm-messages)))
 	(when (eq header storm-process-wait)
 	  (setq storm-process-wait nil))
 	(if (eq header storm-process-query)
 	    (progn
-	      (setq storm-process-query (rest msg))
+	      (setq storm-process-query (cdr msg))
 	      t)
 	  (if found
-	      (funcall found (rest msg))
+	      (funcall found (cdr msg))
 	    (format "The header %S is not supported." header))))
     "Invalid message format. Expected a list."))
 
@@ -1152,9 +1151,9 @@
 		  (list 'documentation name default-directory)
 		name))
 	 (doc (storm-query msg 3))) ;; Allow 3 s timeout for compilation.
-    (if (or (null doc) (null (first doc)))
+    (if (or (null doc) (null (car doc)))
 	(message "\"%s\" does not exist." name)
-      (storm-show-doc msg (first doc) no-history))))
+      (storm-show-doc msg (car doc) no-history))))
 
 
 (defun storm-show-doc (msg doc no-history)
@@ -1175,7 +1174,7 @@
   "Limit the length of 'seq' to 'max' elements."
   (if (<= max 0)
       nil
-    (if (endp seq)
+    (if (null seq)
 	nil
       (cons (car seq)
 	    (limit (cdr seq) (1- max))))))
@@ -1194,15 +1193,15 @@
 	(storm-insert-link (cdr vis) (car vis) nil)
 	(insert " "))
       (storm-insert-face name 'bold)
-      (unless (endp params)
+      (unless (null params)
 	(insert "(")
-	(storm-insert-param (first params))
-	(mapc (lambda (x) (insert ", ") (storm-insert-param x)) (rest params))
+	(storm-insert-param (car params))
+	(mapc (lambda (x) (insert ", ") (storm-insert-param x)) (cdr params))
 	(insert ")"))
-      (unless (endp notes)
+      (unless (null notes)
 	(insert " ")
-	(storm-insert-note (first notes))
-	(mapc (lambda (x) (insert ", ") (storm-insert-note x)) (rest notes)))
+	(storm-insert-note (car notes))
+	(mapc (lambda (x) (insert ", ") (storm-insert-note x)) (cdr notes)))
       (insert ":\n\n")
       (when pos
 	(insert "At: ")
@@ -1258,16 +1257,16 @@
 (defun storm-doc-fwd ()
   (interactive)
   (when storm-doc-next
-    (setq storm-doc-prev (cons (first storm-doc-next) (limit storm-doc-prev storm-doc-history)))
-    (setq storm-doc-next (rest storm-doc-next))
-    (storm-doc (first storm-doc-prev) t)))
+    (setq storm-doc-prev (cons (car storm-doc-next) (limit storm-doc-prev storm-doc-history)))
+    (setq storm-doc-next (cdr storm-doc-next))
+    (storm-doc (car storm-doc-prev) t)))
 
 (defun storm-doc-back ()
   (interactive)
   (when (and storm-doc-prev (> (length storm-doc-prev) 1))
-    (setq storm-doc-next (cons (first storm-doc-prev) (limit storm-doc-next storm-doc-history)))
-    (setq storm-doc-prev (rest storm-doc-prev))
-    (storm-doc (first storm-doc-prev) t)))
+    (setq storm-doc-next (cons (car storm-doc-prev) (limit storm-doc-next storm-doc-history)))
+    (setq storm-doc-prev (cdr storm-doc-prev))
+    (storm-doc (car storm-doc-prev) t)))
 
 
 (defun storm-insert-param (param)
@@ -1302,7 +1301,7 @@
 	  (storm-insert-link type-name type-ref t))
 	(when ref
 	  (insert "&")))
-    (insert (first param))))
+    (insert (car param))))
 
 (defvar storm-doc-history 20 "Number of history entries for documentation in Storm.")
 (defvar storm-doc-prev nil "History for the documentation from Storm.")
