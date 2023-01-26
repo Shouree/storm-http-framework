@@ -26,6 +26,9 @@ class Presentation on Render {
 	TextStyle headingStyle;
 	TextStyle contentStyle;
 
+	// Default heading alignment.
+	Cardinal headingAlign;
+
 	// Default animation time.
 	Duration animationTime;
 
@@ -51,6 +54,7 @@ class Presentation on Render {
 			myBackground = Slide(bgLayout);
 			headingStyle = defaultHeadingStyle;
 			contentStyle = defaultContentStyle;
+			headingAlign = west;
 			animationTime = 200 ms;
 		}
 
