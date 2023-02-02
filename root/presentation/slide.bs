@@ -96,6 +96,16 @@ class Slide on Render {
 		return null;
 	}
 
+	// Get element.
+	Element elementAt(Nat id) {
+		elements[id];
+	}
+
+	// Element count.
+	Nat elementCount() {
+		elements.count;
+	}
+
 private:
 	// Add an element if we know about it.
 	void addElement(Component c) {

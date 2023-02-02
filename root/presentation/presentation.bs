@@ -230,6 +230,14 @@ class Presentation on Render {
 		}
 	}
 
+	// Get the slide that a cursor refers to.
+	Slide? slide(Cursor c) {
+		if (c.slide < slides.count)
+			return slides[c.slide];
+		else
+			return null;
+	}
+
 	// Get the duration of a specific animation. Returns 0 ms if no animation is used for the
 	// specified state.
 	Duration duration(Cursor s) {
