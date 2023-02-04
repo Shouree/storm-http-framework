@@ -63,6 +63,11 @@ class Slide on Render {
 			e.setupRepaint(callback);
 	}
 
+	// Force update to the layout when some element has changed.
+	void updateLayout(Presentation p) {
+		layout.pos(Rect(p.size));
+	}
+
 	// Draw this slide. 'step' is the animation number currently being played and 'time' determines
 	// the length of the current animation.
 	void draw(Graphics g, Nat step, Duration time) {

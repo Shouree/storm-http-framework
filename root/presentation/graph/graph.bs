@@ -17,10 +17,14 @@ class BarGraph extends Element {
 	// Data sets to plot.
 	package GraphData[] data;
 
+	// Animation state of the length of bars.
+	package Float barLength;
+
 	// Create.
 	init(Presentation p) {
 		init() {
 			axis(p.contentStyle);
+			barLength = 1.0;
 		}
 	}
 
@@ -156,7 +160,7 @@ class BarGraph extends Element {
 
 		// Draw data.
 		for (d in data) {
-			d.draw(g, graph, labels, axis);
+			d.draw(g, graph, labels, axis, barLength);
 		}
 
 		// Draw the axis itself.
@@ -469,21 +473,26 @@ class GraphData on Render {
 	}
 
 	// Draw this graph.
-	void draw(Graphics g, Rect graph, GraphLabel[] labels, GraphAxis axis) {
+	void draw(Graphics g, Rect graph, GraphLabel[] labels, GraphAxis axis, Float lengthScale) {
 		for (i, label in labels) {
 			if (i < values.count) {
-				drawBar(g, graph, label, values[i], axis);
+				drawBar(g, graph, label, values[i], axis, lengthScale);
 			}
 		}
 	}
 
 	// Draw a single bar.
-	private void drawBar(Graphics g, Rect graph, GraphLabel label, Value value, GraphAxis axis) {
+	private void drawBar(Graphics g, Rect graph, GraphLabel label, Value value, GraphAxis axis, Float scale) {
+		if (scale <= 0.0)
+			return;
+
 		Float y = label.offset + graph.p0.y;
 		y += offset * label.height;
 
 		Float from = graph.p0.x + label.indent;
 		Float to = axis.coordToPx(graph, value.point);
+		if (scale < 1.0)
+			to = from + (to - from)*scale;
 
 		Float height = (label.height - axis.barMargin) / 2;
 		if (height <= 0.0)
@@ -511,6 +520,31 @@ class GraphData on Render {
 			}
 		}
 	}
+}
+
+
+/**
+ * Grow the bars in the table.
+ */
+class GrowBarsAnimation extends Animation {
+	init(Nat step) {
+		init(step) {}
+	}
+
+	Bool before(Element element, Graphics g, Nat cStep, Duration time) : override {
+		if (element as BarGraph) {
+			if (cStep < step) {
+				element.barLength = 0;
+			} else if (cStep == step) {
+				element.barLength = smoothVal(time);
+			} else {
+				element.barLength = 1;
+			}
+		}
+		true;
+	}
+
+	void after(Element element, Graphics g, Nat cStep, Duration time) : override {}
 }
 
 
