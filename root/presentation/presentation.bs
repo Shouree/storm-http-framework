@@ -20,7 +20,11 @@ class Presentation on Render {
 	Size size;
 
 	// Border around slides.
-	Size border;
+	Size topLeftBorder;
+	Size bottomRightBorder;
+	assign border(Size border) {
+		topLeftBorder = bottomRightBorder = border;
+	}
 
 	// Default text styles.
 	TextStyle headingStyle;
@@ -50,7 +54,8 @@ class Presentation on Render {
 		init() {
 			title = title;
 			size = size;
-			border = border;
+			topLeftBorder = border;
+			bottomRightBorder = border;
 			myBackground = Slide(bgLayout);
 			headingStyle = defaultHeadingStyle;
 			contentStyle = defaultContentStyle;

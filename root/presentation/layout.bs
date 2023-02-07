@@ -9,13 +9,61 @@ use ui;
 
 
 /**
- * Custom root element. Adds a border, but a different size than layout:Border.
+ * Custom root element. Adds a border, but a different size than layout:Border, and allows different
+ * size on different edges.
  */
 class SlideBorder extends layout:Border {
 	init(Presentation p) {
 		init() {}
 
-		border = p.border;
+		topLeft = p.topLeftBorder;
+		bottomRight = p.bottomRightBorder;
+	}
+
+	// The one and only component inside here.
+	private Component? child;
+
+	// Size of the border.
+	Size topLeft;
+	Size bottomRight;
+
+	// Set border size.
+	void border(Float w, Float h) {
+		topLeft = bottomRight = Size(w, h);
+	}
+
+	// Add/set the child.
+	Layout:Info add(Component c) {
+		child = c;
+		Layout:Info();
+	}
+
+	// Compute the minimum size.
+	Size minSize() {
+		Size s;
+		if (c = child)
+			s = c.minSize;
+		s + topLeft + bottomRight;
+	}
+
+	// Re-compute the layout.
+	void layout() {
+		unless (c = child)
+			return;
+
+		Rect p = pos;
+
+		p.p0 += topLeft;
+		p.p1 -= bottomRight;
+
+		c.pos = p;
+	}
+
+	// Traverse.
+	void findAll(fn(Component)->void fn) : override {
+		super:findAll(fn);
+		if (child)
+			child.findAll(fn);
 	}
 }
 
