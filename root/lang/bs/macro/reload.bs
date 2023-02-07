@@ -60,6 +60,8 @@ void reloadBsUrl(Package pkg, Url url) on Compiler {
 	if (body.hasError)
 		body.throwError;
 
+	// Note: WithPos is required to ensure that private members are visible.
+	scope = scope.withPos(SrcPos(url, 0, 0));
 	reloadContents(pkg, scope, body.tree.transform(scope));
 }
 
