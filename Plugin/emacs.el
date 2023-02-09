@@ -279,9 +279,20 @@
 ;; Commands.
 
 (defun storm-insert-indent (arg)
+  "Insert character and update indentation after doing so. Much like electric-indent in Emacs."
   (interactive "*P")
-  (self-insert-command (prefix-numeric-value arg))
-  (storm-indent-line))
+  ;; Note: If paren highlighting is active, the self-insert-command will block for some
+  ;; time. Because of this, we will temporarily unset the blink function and then call it manually
+  ;; later on.
+  (let ((old-blink-paren blink-paren-function)
+	(blink-paren-function nil))
+    (self-insert-command (prefix-numeric-value arg))
+    (storm-indent-line)
+    ;; Blink paren if applicable.
+    (and (eq (char-syntax (c-last-command-char)) ?\)) ;; is it a close paren character?
+	 old-blink-paren ;; something to call?
+	 (save-excursion
+	  (funcall old-blink-paren)))))
 
 (defun storm-debug-tree ()
   "Output debug information containing the syntax tree for the current buffer."
