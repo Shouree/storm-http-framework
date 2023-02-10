@@ -384,12 +384,17 @@
     (setq storm-buffer-edits nil)
     (setq storm-buffer-last-point (point))
 
-    ;; Tell Storm what is happening.
-    (storm-send (list 'open
-		      storm-buffer-id
-		      (buffer-file-name)
-		      (buffer-substring-no-properties (point-min) (point-max))
-		      (point)))))
+    ;; Tell Storm what is happening. If the Storm process is not running, just start it now.  After
+    ;; the process is started, this function will be called again to register the buffer.  As such,
+    ;; we don't queue a message if it is not started as that would result in two open messages for
+    ;; the same buffer.
+    (if (storm-running-p)
+	(storm-send (list 'open
+			  storm-buffer-id
+			  (buffer-file-name)
+			  (buffer-substring-no-properties (point-min) (point-max))
+			  (point)))
+      (storm-start))))
 
 (defun storm-buffer-killed ()
   "Called when a buffer is going to be killed."
