@@ -171,6 +171,9 @@ class List extends Element {
 	// Pre-formatted text snippnets used if the list is numbered.
 	private Text[] numbers;
 
+	// Cached base-lines of all elements. Used to format bullets properly.
+	private Float[] baselines;
+
 	// Create.
 	init(Str[] text, Font f, Float lineSpace, Brush brush) {
 		init() {
@@ -183,7 +186,10 @@ class List extends Element {
 		}
 
 		for (x in text) {
-			elements << Text(x, f);
+			Text t(x, f);
+			elements << t;
+
+			baselines << t.lineInfo[0].baseline;
 		}
 	}
 
@@ -249,7 +255,8 @@ class List extends Element {
 
 		for (i, e in elements) {
 			if (i >= numbers.count) {
-				Point delta(margin - padding - bulletSize, (fontHeight - bulletSize) * 2 / 3);
+				// Point delta(margin - padding - bulletSize, (fontHeight - bulletSize) * 2 / 3);
+				Point delta(margin - padding - bulletSize, baselines[i]*0.6 - bulletSize*0.5);
 				Rect ball(at + delta, Size(bulletSize));
 				g.fillOval(ball, brush);
 			} else {

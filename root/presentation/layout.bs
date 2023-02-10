@@ -406,6 +406,18 @@ class Group extends layout:Layout {
 				c.setupAnimations(p);
 		}
 
+		// Setup repaint.
+		void setupRepaint(Fn<void> callback) {
+			for (c in children)
+				c.setupRepaint(callback);
+		}
+
+		// Cleanup.
+		void cleanup() {
+			for (c in children)
+				c.cleanup();
+		}
+
 		// Extract animations.
 		Animation[] animations() : override {
 			var here = Animation[](super:animations());
@@ -435,6 +447,7 @@ class Group extends layout:Layout {
 	}
 }
 
+
 /**
  * Layout that draws a background behind an element.
  */
@@ -460,8 +473,8 @@ class WithBackground extends Group {
 		margin = Size(w, h);
 	}
 
-	// Set the border.
-	void border(Color c) {
+	// Set the background color.
+	void background(Color c) {
 		background.border(c);
 	}
 
@@ -478,6 +491,100 @@ class WithBackground extends Group {
 		super:layout(p);
 
 		background.pos = pos;
+	}
+}
+
+
+/**
+ * Layout that adds a border to another element.
+ */
+class WithBorder extends Group {
+	// Margin to apply to the element.
+	private Size margin;
+
+	// Border element.
+	private Border border;
+
+	// Create.
+	init(Color color) {
+		init() {
+			margin = Size(5, 5);
+			border(SolidBrush(color));
+		}
+
+		add(ElementWrap(border));
+	}
+
+	// Create, specify brush.
+	init(Brush brush) {
+		init() {
+			margin = Size(5, 5);
+			border(SolidBrush(color));
+		}
+
+		add(ElementWrap(border));
+	}
+
+	// Set the margin.
+	void margin(Float w, Float h) {
+		margin = Size(w, h);
+	}
+
+	// Set the border color.
+	void border(Color c) {
+		border(SolidBrush(c));
+	}
+	void border(Brush brush) {
+		border.brush = brush;
+	}
+
+	// Set the line width.
+	void width(Float w) {
+		border.width = w;
+	}
+
+	// Minimum size.
+	Size minSize() : override {
+		super:minSize() + margin*2;
+	}
+
+	// Re-compute layout.
+	void layout() : override {
+		Rect p = pos;
+		p.p0 += margin;
+		p.p1 -= margin;
+		super:layout(p);
+
+		border.pos = pos;
+	}
+
+	private class Border extends Element {
+		// Brush to use.
+		Brush brush;
+
+		// Line width.
+		Float width;
+
+		// Create.
+		init(Brush brush) {
+			init() {
+				brush = brush;
+				width = 1;
+			}
+		}
+
+		// Min size.
+		Size minSize() {
+			Size(width);
+		}
+
+		// Draw.
+		void draw(Graphics g) : override {
+			g.push();
+			g.lineWidth(width);
+			g.draw(pos, brush);
+			g.pop();
+		}
 	}
 }
 
