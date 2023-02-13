@@ -110,7 +110,7 @@ namespace gui {
 			l->SetFontWeight(DWRITE_FONT_WEIGHT(effect.integer()), range);
 			break;
 		case TextEffect::tFamily:
-			l->SetFontFamilyName(effect.family().c_str(), range);
+			l->SetFontFamilyName(effect.family()->c_str(), range);
 			break;
 		case TextEffect::tScaleSize:
 			l->SetFontSize(effect.d0 * font->pxHeight(), range);
