@@ -1,0 +1,19 @@
+use lang.bs;
+
+SConst => formattedStr() : "f" #keyword - "\"" #string - SFmtStr fmt - "\"" #string;
+
+FormatBuilder SFmtStr();
+SFmtStr => FormatBuilder() : (SFmtPart(me))*;
+
+void SFmtPart(FormatBuilder b) #string;
+SFmtPart => b : "[^\"\\\n}]*" -> add;
+SFmtPart => b : "}" -> add;
+SFmtPart => b : "\\[nrt]" -> add;
+SFmtPart => b : "\\" - "\"" -> add;
+SFmtPart : "\\" - SFmtAction(b, fmt) - "{" - SFmtStr fmt - "}";
+
+void SFmtAction(FormatBuilder base, FormatBuilder content);
+SFmtAction => italic(base, content) : "i";
+SFmtAction => bold(base, content) : "b";
+// SFmtAction => font(base, content) : "f[" - SExpr - "]";
+// SFmtAction => color(base, content) : "c[" - SExpr - "]";

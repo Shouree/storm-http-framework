@@ -1,0 +1,60 @@
+
+/**
+ * A formatted string literal for easy creation of Text objects.
+ */
+class FormatStr {
+	// Concatenated string.
+	private Str string;
+
+	// All text effects to apply.
+	private TextEffect[] effects;
+
+	// Create.
+	init(Str string, TextEffect[] effects) {
+		init() {
+			string = string;
+			effects = effects;
+		}
+	}
+
+	// Create a Text object from the formatted string.
+	Text text(Font font) {
+		Text t(string);
+		// Apply formatting.
+		for (e in effects)
+			t.effect(e);
+		t;
+	}
+}
+
+
+/**
+ * Builder class for the format. Called from syntax.
+ */
+class FormatBuilder {
+	// String buffer for the string.
+	private StrBuf buffer;
+
+	// Number of characters in buffer.
+	private Nat bufferLen;
+
+	// Create.
+	init() {
+		init() {}
+	}
+
+	// Add part of a string.
+	void add(SStr str) {
+		Str x = str.v.unescape();
+		buffer << x;
+		bufferLen += strLen(x);
+	}
+
+	// Compute number of characters in string 's'.
+	private Nat strLen(Str s) {
+		Nat l = 0;
+		for (var x = s.begin; x != s.end; ++x)
+			l++;
+		l;
+	}
+}
