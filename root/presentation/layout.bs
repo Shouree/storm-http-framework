@@ -519,7 +519,7 @@ class WithBorder extends Group {
 	init(Brush brush) {
 		init() {
 			margin = Size(5, 5);
-			border(SolidBrush(color));
+			border(brush);
 		}
 
 		add(ElementWrap(border));
@@ -535,12 +535,12 @@ class WithBorder extends Group {
 		border(SolidBrush(c));
 	}
 	void border(Brush brush) {
-		border.brush = brush;
+		border.setBrush(brush);
 	}
 
 	// Set the line width.
 	void width(Float w) {
-		border.width = w;
+		border.setWidth(w);
 	}
 
 	// Minimum size.
@@ -584,6 +584,13 @@ class WithBorder extends Group {
 			g.lineWidth(width);
 			g.draw(pos, brush);
 			g.pop();
+		}
+
+		void setBrush(Brush b) {
+			brush = b;
+		}
+		void setWidth(Float w) {
+			width = w;
 		}
 	}
 }
