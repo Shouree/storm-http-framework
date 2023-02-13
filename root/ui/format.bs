@@ -43,18 +43,14 @@ class FormatBuilder {
 		init() {}
 	}
 
-	// Add part of a string.
+	// Add a string.
 	void add(SStr str) {
-		Str x = str.v.unescape();
-		buffer << x;
-		bufferLen += strLen(x);
+		add(str.v.unescape());
 	}
 
-	// Compute number of characters in string 's'.
-	private Nat strLen(Str s) {
-		Nat l = 0;
-		for (var x = s.begin; x != s.end; ++x)
-			l++;
-		l;
+	// Add a string.
+	void add(Str str) {
+		buffer << str;
+		bufferLen += str.end - str.begin;
 	}
 }
