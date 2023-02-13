@@ -38,7 +38,7 @@ namespace gui {
 		return true;
 	}
 
-	CairoText::EffectResult CairoText::addEffect(void *layout, const TextEffect &effect, Str *myText, Graphics *) {
+	CairoText::EffectResult CairoText::addEffect(void *layout, const TextEffect &effect, Font *, Str *myText, Graphics *) {
 		return pango::addEffect((PangoLayout *)layout, effect, myText);
 	}
 

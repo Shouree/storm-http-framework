@@ -22,30 +22,38 @@ namespace gui {
 	 * Text effect.
 	 */
 
-	TextEffect::TextEffect() : type(tNone), from(0), to(0), d0(0), d1(0), d2(0), d3(0) {}
+	TextEffect::TextEffect() : type(tNone), from(0), to(0), d0(0), d1(0), d2(0), d3(0), ptr(null) {}
 
-	TextEffect::TextEffect(Type type, Str::Iter begin, Str::Iter end, Float d0, Float d1, Float d2, Float d3)
+	TextEffect::TextEffect(Type type, Str::Iter begin, Str::Iter end, Float d0, Float d1, Float d2, Float d3, void *ptr)
 		: type(type), from(begin.offset()), to(end.offset()),
-		  d0(d0), d1(d1), d2(d2), d3(d3) {}
+		  d0(d0), d1(d1), d2(d2), d3(d3), ptr(ptr) {}
 
 	TextEffect TextEffect::color(Str::Iter begin, Str::Iter end, Color color) {
-		return TextEffect(tColor, begin, end, color.r, color.g, color.b, color.a);
+		return TextEffect(tColor, begin, end, color.r, color.g, color.b, color.a, null);
 	}
 
 	TextEffect TextEffect::underline(Str::Iter begin, Str::Iter end, Bool enable) {
-		return TextEffect(tUnderline, begin, end, enable ? 1.0f : 0.0f, 0, 0, 0);
+		return TextEffect(tUnderline, begin, end, enable ? 1.0f : 0.0f, 0, 0, 0, null);
 	}
 
 	TextEffect TextEffect::strikeOut(Str::Iter begin, Str::Iter end, Bool enable) {
-		return TextEffect(tStrikeOut, begin, end, enable ? 1.0f : 0.0f, 0, 0, 0);
+		return TextEffect(tStrikeOut, begin, end, enable ? 1.0f : 0.0f, 0, 0, 0, null);
 	}
 
 	TextEffect TextEffect::italic(Str::Iter begin, Str::Iter end, Bool enable) {
-		return TextEffect(tItalic, begin, end, enable ? 1.0f : 0.0f, 0, 0, 0);
+		return TextEffect(tItalic, begin, end, enable ? 1.0f : 0.0f, 0, 0, 0, null);
 	}
 
 	TextEffect TextEffect::weight(Str::Iter begin, Str::Iter end, Int weight) {
-		return TextEffect(tWeight, begin, end, Float(weight), 0, 0, 0);
+		return TextEffect(tWeight, begin, end, Float(weight), 0, 0, 0, null);
+	}
+
+	TextEffect TextEffect::family(Str::Iter begin, Str::Iter end, Str *family) {
+		return TextEffect(tFamily, begin, end, 0, 0, 0, 0, family);
+	}
+
+	TextEffect TextEffect::scaleSize(Str::Iter begin, Str::Iter end, Float size) {
+		return TextEffect(tScaleSize, begin, end, size, 0, 0, 0, null);
 	}
 
 	StrBuf &STORM_FN operator <<(StrBuf &to, const TextEffect &e) {
@@ -64,6 +72,10 @@ namespace gui {
 			return to << S("italic: ") << e.boolean();
 		case TextEffect::tWeight:
 			return to << S("weight: ") << e.integer();
+		case TextEffect::tFamily:
+			return to << S("family: ") << e.family();
+		case TextEffect::tScaleSize:
+			return to << S("scale size: ") << e.d0;
 		default:
 			return to << S("<unknown effect>");
 		}
@@ -137,7 +149,7 @@ namespace gui {
 			myEffects = new (this) Array<TextEffect>();
 
 		// Try to apply it now.
-		TextMgr::EffectResult r = mgr->addEffect(layout, effect, myText, null);
+		TextMgr::EffectResult r = mgr->addEffect(layout, effect, myFont, myText, null);
 		if (r == TextMgr::eApplied) {
 			// Applied now, update!
 			insertEffect(effect);
@@ -281,7 +293,7 @@ namespace gui {
 		if (myEffects && appliedEffects < myEffects->count()) {
 
 			while (appliedEffects < myEffects->count()) {
-				TextMgr::EffectResult r = mgr->addEffect(layout, myEffects->at(appliedEffects), myText, g);
+				TextMgr::EffectResult r = mgr->addEffect(layout, myEffects->at(appliedEffects), myFont, myText, g);
 				if (r == TextMgr::eApplied) {
 					// Clear it out and merge it back in.
 					TextEffect effect = myEffects->at(appliedEffects);

@@ -144,6 +144,17 @@ namespace gui {
 			case TextEffect::tWeight:
 				attr = pango_attr_weight_new(PangoWeight(effect.integer()));
 				break;
+			case TextEffect::tFamily:
+				attr = pango_attr_family_new(effect.family()->utf8_str());
+				break;
+			case TextEffect::tScaleSize:
+				attr = pango_attr_scale_new(effect.d0);
+				break;
+			default:
+#ifdef DEBUG
+				WARNING(L"Unknown effect type: " << TO_S(myText, effect));
+#endif
+				break;
 			}
 
 			if (attr) {

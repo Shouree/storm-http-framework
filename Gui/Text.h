@@ -55,6 +55,12 @@ namespace gui {
 
 			// Set weight. The data d0 is the weight.
 			STORM_NAME(tWeight, weight),
+
+			// Set font family. 'ptr' contains the name.
+			STORM_NAME(tFamily, family),
+
+			// Set font size. 'd0' contains the size.
+			STORM_NAME(tScaleSize, scaleSize),
 		};
 
 		// Effect type.
@@ -74,9 +80,20 @@ namespace gui {
 		Float d2;
 		Float d3;
 
+		// Pointer data.
+		UNKNOWN(PTR_GC) void *ptr;
+
 		// Is this effect empty?
 		inline Bool STORM_FN empty() const { return type == tNone; }
 		inline Bool STORM_FN any() const { return !empty(); }
+
+		// Helper to get the font family.
+		inline MAYBE(Str *) STORM_FN family() const {
+			if (type == tFamily)
+				return (Str *)ptr;
+			else
+				return null;
+		}
 
 		// Helper to get a color.
 		inline Color STORM_FN color() const {
@@ -107,10 +124,12 @@ namespace gui {
 		static TextEffect STORM_FN strikeOut(Str::Iter begin, Str::Iter end, Bool enable);
 		static TextEffect STORM_FN italic(Str::Iter begin, Str::Iter end, Bool enable);
 		static TextEffect STORM_FN weight(Str::Iter begin, Str::Iter end, Int weight);
+		static TextEffect STORM_FN family(Str::Iter begin, Str::Iter end, Str *family);
+		static TextEffect STORM_FN scaleSize(Str::Iter begin, Str::Iter end, Float size);
 
 	private:
 		// Constructor for all factory methods.
-		TextEffect(Type type, Str::Iter begin, Str::Iter end, Float d0, Float d1, Float d2, Float d3);
+		TextEffect(Type type, Str::Iter begin, Str::Iter end, Float d0, Float d1, Float d2, Float d3, void *ptr);
 	};
 
 	// Output an effect.
@@ -189,6 +208,16 @@ namespace gui {
 		// Set font weight.
 		inline void STORM_FN weight(Str::Iter begin, Str::Iter end, Int weight) {
 			effect(TextEffect::weight(begin, end, weight));
+		}
+
+		// Set font family.
+		inline void STORM_FN family(Str::Iter begin, Str::Iter end, Str *family) {
+			effect(TextEffect::family(begin, end, family));
+		}
+
+		// Set font size. The size is expressed as a scale factor of the original font.
+		inline void STORM_FN scaleSize(Str::Iter begin, Str::Iter end, Float size) {
+			effect(TextEffect::scaleSize(begin, end, size));
 		}
 
 		// Get text effects.

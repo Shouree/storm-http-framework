@@ -42,7 +42,7 @@ namespace gui {
 		return true;
 	}
 
-	SkiaPangoMgr::EffectResult SkiaPangoMgr::addEffect(void *layout, const TextEffect &effect, Str *myText, Graphics *) {
+	SkiaPangoMgr::EffectResult SkiaPangoMgr::addEffect(void *layout, const TextEffect &effect, Font *, Str *myText, Graphics *) {
 		PangoText *t = (PangoText *)layout;
 		EffectResult r = pango::addEffect(t->pango, effect, myText);
 

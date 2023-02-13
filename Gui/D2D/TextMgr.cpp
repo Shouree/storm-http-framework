@@ -79,7 +79,7 @@ namespace gui {
 		return true;
 	}
 
-	D2DText::EffectResult D2DText::addEffect(void *layout, const TextEffect &effect, Str *, Graphics *graphics) {
+	D2DText::EffectResult D2DText::addEffect(void *layout, const TextEffect &effect, Font *font, Str *text, Graphics *graphics) {
 
 		IDWriteTextLayout *l = (IDWriteTextLayout *)layout;
 		DWRITE_TEXT_RANGE range = { effect.from, effect.to - effect.from };
@@ -108,6 +108,17 @@ namespace gui {
 			break;
 		case TextEffect::tWeight:
 			l->SetFontWeight(DWRITE_FONT_WEIGHT(effect.integer()), range);
+			break;
+		case TextEffect::tFamily:
+			l->SetFontFamilyName(effect.family().c_str(), range);
+			break;
+		case TextEffect::tScaleSize:
+			l->SetFontSize(effect.d0 * font->pxHeight(), range);
+			break;
+		default:
+#ifdef DEBUG
+			WARNING(L"Unknown effect: " << TO_S(text, effect));
+#endif
 			break;
 		}
 

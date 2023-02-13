@@ -34,7 +34,7 @@ namespace gui {
 		virtual bool updateBorder(void *layout, Size border);
 
 		// Add a new effect to the layout. Note: "graphics" may be null if we are not currently rendering.
-		virtual EffectResult addEffect(void *layout, const TextEffect &effect, Str *text, MAYBE(Graphics *) graphics);
+		virtual EffectResult addEffect(void *layout, const TextEffect &effect, Font *font, Str *text, MAYBE(Graphics *) graphics);
 
 		// Get the actual size of the layout.
 		virtual Size size(void *layout);
