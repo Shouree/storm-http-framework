@@ -55,25 +55,25 @@ class Heading extends Element {
 	Brush brush;
 
 	// Create.
-	init(Str text, Font f, Brush brush) {
+	init(FormatStr text, Font f, Brush brush) {
 		init() {
-			text(text, f);
+			text = text.text(f);
 			brush = brush;
 		}
 	}
 
 	// Create, specifying a solid color.
-	init(Str text, Font f, Color color) {
+	init(FormatStr text, Font f, Color color) {
 		init() {
-			text(text, f);
+			text = text.text(f);
 			brush = SolidBrush(color);
 		}
 	}
 
 	// Create from the supplied text style.
-	init(Str text, TextStyle style) {
+	init(FormatStr text, TextStyle style) {
 		init() {
-			text(text, style.font);
+			text = text.text(style.font);
 			brush = style.fill;
 		}
 	}
@@ -89,8 +89,8 @@ class Heading extends Element {
 	}
 }
 
-Heading heading(Presentation p, Str text) on Render { Heading(text, p.headingStyle); }
-Heading subHeading(Presentation p, Str text) on Render { Heading(text, p.contentStyle); }
+Heading heading(Presentation p, FormatStr text) on Render { Heading(text, p.headingStyle); }
+Heading subHeading(Presentation p, FormatStr text) on Render { Heading(text, p.contentStyle); }
 
 
 /**
@@ -111,9 +111,9 @@ class Paragraph extends Element {
 	}
 
 	// Create.
-	init(Str text, Font f, Brush brush) {
+	init(FormatStr text, Font f, Brush brush) {
 		init() {
-			text(text, f);
+			text = text.text(f);
 			brush = brush;
 		}
 	}
@@ -134,13 +134,13 @@ class Paragraph extends Element {
 }
 
 // Create a paragraph, specifying a solid color.
-Paragraph par(Str t, Font f, Color c) on Render { Paragraph(t, f, SolidBrush(c)); }
+Paragraph par(FormatStr t, Font f, Color c) on Render { Paragraph(t, f, SolidBrush(c)); }
 
 // Create a paragraph with a pre-defined style.
-Paragraph par(Str t, TextStyle style) on Render { Paragraph(t, style.font, style.fill); }
+Paragraph par(FormatStr t, TextStyle style) on Render { Paragraph(t, style.font, style.fill); }
 
 // Create a paragraph with the default style.
-Paragraph par(Presentation p, Str t) on Render { par(t, p.contentStyle); }
+Paragraph par(Presentation p, FormatStr t) on Render { par(t, p.contentStyle); }
 
 
 /**

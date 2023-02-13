@@ -1,13 +1,15 @@
+use lang:bs;
+use lang:bs:macro;
 
 /**
  * A formatted string literal for easy creation of Text objects.
  */
 class FormatStr {
 	// Concatenated string.
-	private Str string;
+	package Str string;
 
 	// All text effects to apply.
-	private TextEffect[] effects;
+	package TextEffect[] effects;
 
 	// Create.
 	init(Str string, TextEffect[] effects) {
@@ -17,14 +19,28 @@ class FormatStr {
 		}
 	}
 
-	// Create a Text object from the formatted string.
-	Text text(Font font) {
-		Text t(string);
-		// Apply formatting.
-		for (e in effects)
-			t.effect(e);
-		t;
+	// Allow casting from regular strings.
+	cast(Str string) {
+		init() {
+			string = string;
+		}
 	}
+
+	// Create a copy with additional effects.
+	FormatStr extend(TextEffect[] add) {
+		var copy = Array<TextEffect>(effects);
+		copy.append(add);
+		FormatStr(string, copy);
+	}
+}
+
+// Create a Text object from the formatted string.
+Text text(FormatStr from, Font font) on Render {
+	Text t(from.string, font);
+	// Apply formatting.
+	for (e in from.effects)
+		t.effect(e);
+	t;
 }
 
 
@@ -38,13 +54,22 @@ class FormatBuilder {
 	// Number of characters in buffer.
 	private Nat bufferLen;
 
+	// Text effects.
+	TextEffect[] effects;
+
+	// Dynamic effects.
+	lang:bs:Expr[] dynamicEffects;
+
+	// Dummy string to get iterators from.
+	private Str:Iter dummy;
+
 	// Create.
 	init() {
 		init() {}
 	}
 
 	// Add a string.
-	void add(SStr str) {
+	void add(lang:SStr str) {
 		add(str.v.unescape());
 	}
 
@@ -52,5 +77,181 @@ class FormatBuilder {
 	void add(Str str) {
 		buffer << str;
 		bufferLen += str.end - str.begin;
+	}
+
+	// Make 'content' italic.
+	void italic(FormatBuilder content) {
+		var old = merge(content);
+		addEffect(old, TextEffect:italic(dummy, dummy, true));
+	}
+
+	// Make 'content' bold.
+	void bold(FormatBuilder content) {
+		var old = merge(content);
+		addEffect(old, TextEffect:weight(dummy, dummy, 800));
+	}
+
+	// Make 'content' underlined.
+	void underline(FormatBuilder content) {
+		var old = merge(content);
+		addEffect(old, TextEffect:underline(dummy, dummy, true));
+	}
+
+	// Make 'content' strike-out.
+	void strikeOut(FormatBuilder content) {
+		var old = merge(content);
+		addEffect(old, TextEffect:strikeOut(dummy, dummy, true));
+	}
+
+	// Set weight.
+	void weight(FormatBuilder content, Int weight) {
+		var old = merge(content);
+		addEffect(old, TextEffect:weight(dummy, dummy, weight));
+	}
+
+	void weight(lang:bs:Block block, FormatBuilder content, lang:bs:Expr expr) {
+		var old = merge(content);
+		addEffect(block, old, "weight", expr);
+	}
+
+	// Make 'content' a different scale.
+	void scale(FormatBuilder content, Float scale) {
+		var old = merge(content);
+		addEffect(old, TextEffect:scale(dummy, dummy, scale));
+	}
+
+	void scale(lang:bs:Block block, FormatBuilder content, lang:bs:Expr expr) {
+		var old = merge(content);
+		addEffect(block, old, "scale", expr);
+	}
+
+	// Make 'content' a different color.
+	void color(FormatBuilder content, Float r, Float g, Float b) {
+		var old = merge(content);
+		addEffect(old, TextEffect:color(dummy, dummy, Color(r, g, b)));
+	}
+
+	void color(lang:bs:Block block, FormatBuilder content, lang:bs:Expr expr) {
+		var old = merge(content);
+		addEffect(block, old, "color", expr);
+	}
+
+	// Make 'content' a different fomt family.
+	void font(FormatBuilder content, Str family) {
+		var old = merge(content);
+		addEffect(old, TextEffect:family(dummy, dummy, family));
+	}
+
+	void font(lang:bs:Block block, FormatBuilder content, lang:bs:Expr expr) {
+		var old = merge(content);
+		addEffect(block, old, "family", expr);
+	}
+
+	// Add effect, and update 'from' and 'to'.
+	private void addEffect(Nat old, TextEffect e) {
+		e.from = old;
+		e.to = bufferLen;
+		effects << e;
+	}
+
+	// Add a dynamic effect.
+	private void addEffect(lang:bs:Block block, Nat old, Str name, lang:bs:Expr expr) {
+		dynamicEffects << createAddExpr(block, old, bufferLen, name, expr);
+	}
+
+	// Merge content into 'buffer'. Returns old 'bufferLen' for convenience.
+	private Nat merge(FormatBuilder other) {
+		Nat oldLen = bufferLen;
+		add(other.buffer.toS);
+
+		for (e in other.effects) {
+			e.from += oldLen;
+			e.to += oldLen;
+			effects << e;
+		}
+
+		oldLen;
+	}
+
+	// Get the content.
+	Str toS() {
+		buffer.toS;
+	}
+}
+
+// Helper for creating syntax objects.
+private lang:bs:Expr createAddExpr(lang:bs:Block block, Nat from, Nat to, Str name, lang:bs:Expr expr) {
+	var pos = expr.pos;
+	var c = ExprBlock(pos, block);
+
+	var ctorName = core:lang:SrcName(pos);
+	ctorName.add("core");
+	ctorName.add("Str");
+	ctorName.add("Iter");
+
+	var iterExpr = namedExpr(block, ctorName, Actuals());
+
+	var fullName = core:lang:SrcName(pos);
+	fullName.add("ui");
+	fullName.add("TextEffect");
+	fullName.add(name);
+
+	var actuals = Actuals();
+	actuals.add(iterExpr);
+	actuals.add(iterExpr);
+	actuals.add(expr);
+	var effectExpr = namedExpr(block, fullName, actuals);
+
+	var tmpVar = Var(c, lang:SStr("tmp"), effectExpr);
+	c.add(tmpVar);
+
+	var tmpAccess = LocalVarAccess(pos, tmpVar.var);
+	var assign = assignOperator(lang:SStr("="), 100);
+	c.add(Operator(c, namedExpr(c, pos, "from", tmpAccess), assign, NumLiteral(pos, from.long)));
+	c.add(Operator(c, namedExpr(c, pos, "to", tmpAccess), assign, NumLiteral(pos, to.long)));
+	c.add(tmpAccess);
+
+	c;
+}
+
+// Generate syntax for creating a FormatStr.
+lang:bs:Expr formattedStr(lang:SrcPos pos, lang:bs:Block block, FormatBuilder builder) on Compiler {
+	FormatStrRef object(FormatStr(builder.toS, builder.effects));
+
+	if (builder.dynamicEffects.any) {
+		// If we have dynamic effects, we need to add them here.
+		var exprArray = ArrayInit(pos, block, builder.dynamicEffects);
+		var extendCall = namedExpr(block, pos, "extend", object, Actuals(exprArray));
+		extendCall;
+	} else {
+		object;
+	}
+}
+
+
+/**
+ * Reference to a FormatStr.
+ */
+class FormatStrRef extends Expr {
+	private FormatStr object;
+
+	init(FormatStr object) {
+		init(lang:SrcPos()) { object = object; }
+	}
+
+	lang:ExprResult result() {
+		lang:ExprResult(lang:Value(named{FormatStr}));
+	}
+
+	void code(lang:CodeGen state, lang:CodeResult result) {
+		if (result.needed) {
+			var v = result.location(state);
+			state.l << core:asm:mov(v, core:asm:objPtr(object));
+			result.created(state);
+		}
+	}
+
+	Str toS() {
+		"<formatted text>";
 	}
 }

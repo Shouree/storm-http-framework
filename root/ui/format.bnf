@@ -1,19 +1,38 @@
 use lang.bs;
 
-SConst => formattedStr() : "f" #keyword - "\"" #string - SFmtStr fmt - "\"" #string;
+optional delimiter = SDelimiter;
+required delimiter = SRequiredDelimiter;
 
-FormatBuilder SFmtStr();
-SFmtStr => FormatBuilder() : (SFmtPart(me))*;
+SConst => formattedStr(pos, block, fmt) : "f" #keyword - "\"" #string - SFmtStr(block) fmt - "\"" #string;
 
-void SFmtPart(FormatBuilder b) #string;
+FormatBuilder SFmtStr(Block block);
+SFmtStr => FormatBuilder() : (SFmtPart(block, me))*;
+
+void SFmtPart(Block block, FormatBuilder b) #string;
 SFmtPart => b : "[^\"\\\n}]*" -> add;
 SFmtPart => b : "}" -> add;
 SFmtPart => b : "\\[nrt]" -> add;
 SFmtPart => b : "\\" - "\"" -> add;
-SFmtPart : "\\" - SFmtAction(b, fmt) - "{" - SFmtStr fmt - "}";
+SFmtPart : "\\" - SFmtAction(block, b, fmt) - "{" - SFmtStr(block) fmt - "}";
 
-void SFmtAction(FormatBuilder base, FormatBuilder content);
+void SFmtAction(Block block, FormatBuilder base, FormatBuilder content);
 SFmtAction => italic(base, content) : "i";
 SFmtAction => bold(base, content) : "b";
-// SFmtAction => font(base, content) : "f[" - SExpr - "]";
-// SFmtAction => color(base, content) : "c[" - SExpr - "]";
+SFmtAction => underline(base, content) : "u";
+SFmtAction => strikeOut(base, content) : "x";
+SFmtAction[100] => weight(base, content, weight) : "w\[", SIntConst weight, "]";
+SFmtAction[100] => scale(base, content, scale) : "s\[", SFloatConst scale, "]";
+SFmtAction[100] => color(base, content, r, g, b) : "c\[", SFloatConst r, ",", SFloatConst g, ",", SFloatConst b, "]";
+SFmtAction[100] => font(base, content, font) : "f\[", "'", "[^']*" font, "'", "]";
+
+// Dynamic versions of effects that accept parameters from surrounding context.
+SFmtAction => weight(base, block, content, expr) : "w\[" - SExpr(block) expr - "]";
+SFmtAction => scale(base, block, content, expr) : "s\[" - SExpr(block) expr - "]";
+SFmtAction => font(base, block, content, expr) : "f\[" - SExpr(block) expr - "]";
+SFmtAction => color(base, block, content, expr) : "c\[" - SExpr(block) expr - "]";
+
+Float SFloatConst();
+SFloatConst => toFloat(x) : "-?[0-9]+\.?[0-9]*" x;
+
+Int SIntConst();
+SIntConst => toInt(x) : "-?[0-9]+" x;
