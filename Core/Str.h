@@ -130,6 +130,9 @@ namespace storm {
 			Iter STORM_FN operator ++(int dummy);
 			Iter STORM_FN operator +(Nat steps) const;
 
+			// Compute difference.
+			Nat STORM_FN operator -(const Iter &o) const;
+
 			// Compare.
 			Bool STORM_FN operator ==(const Iter &o) const;
 			Bool STORM_FN operator !=(const Iter &o) const;

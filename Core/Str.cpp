@@ -785,6 +785,39 @@ namespace storm {
 		return tmp;
 	}
 
+	Nat Str::Iter::operator -(const Iter &o) const {
+		const Str *owner = this->owner;
+		Nat thisPos = this->pos;
+		Nat otherPos = o.pos;
+
+		// If one of the iterators is the at-end operator, make it into a "proper" end for the
+		// string in the other iterator.
+		if (!owner)
+			owner = o.owner;
+		if (!owner)
+			return 0;
+
+		// Now, the other owner must either be null or the same as 'owner' now. Otherwise, we are
+		// comparing different strings.
+		if (o.owner != owner && o.owner != null)
+			return 0;
+
+		if (!this->owner)
+			thisPos = owner->data->count - 1;
+		if (!o.owner)
+			otherPos = owner->data->count - 1;
+
+		Nat diff = 0;
+		for (Nat at = otherPos; at < thisPos; diff++) {
+			if (utf16::leading(owner->data->v[at]))
+				at += 2;
+			else
+				at += 1;
+		}
+
+		return diff;
+	}
+
 	Bool Str::Iter::operator ==(const Iter &o) const {
 		if (atEnd() || o.atEnd())
 			return atEnd() == o.atEnd();
