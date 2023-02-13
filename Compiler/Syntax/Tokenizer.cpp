@@ -2,6 +2,7 @@
 #include "Tokenizer.h"
 #include "Compiler/Exception.h"
 #include "Core/StrBuf.h"
+#include "Decl.h"
 
 namespace storm {
 	namespace syntax {
@@ -39,7 +40,8 @@ namespace storm {
 				return new (str) Str();
 
 			Str *r = new (str) Str(start() + 1, start() + len - 1);
-			return r->unescape(Char('"'));
+			// This is the same function as is used by the "real" grammar.
+			return unescapeStr(r);
 		}
 
 		Str *Token::toS() const {
