@@ -83,6 +83,11 @@ namespace storm {
 		Str *STORM_FN escape(Char extra) const;
 		Str *STORM_FN escape(Char extra, Char extra2) const;
 
+		// Version of 'unescape' that keeps sequences of '\\' intact. This is useful when using this
+		// 'unescape' as a first pass for other languages (e.g. regex where . and [ also needs to be
+		// escaped at a later stage).
+		Str *STORM_FN unescapeKeepBackslash(Char extra) const;
+
 		// Starts/ends with?
 		Bool STORM_FN startsWith(const Str *s) const;
 		Bool STORM_FN endsWith(const Str *s) const;

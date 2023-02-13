@@ -162,7 +162,7 @@ namespace storm {
 		}
 
 		Str *unescapeStr(Str *s) {
-			return s->unescape(Char('"'));
+			return s->unescapeKeepBackslash(Char('"'));
 		}
 
 

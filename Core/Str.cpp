@@ -360,6 +360,7 @@ namespace storm {
 		return r;
 	}
 
+	template <bool useEscape>
 	static bool unescape(const wchar *&src, wchar *&out, Char extra, Char extra2) {
 		switch (src[1]) {
 		case 'n':
@@ -393,6 +394,13 @@ namespace storm {
 			*out++ = wchar((a << 4) | b);
 			return true;
 		}
+		case '\\':
+			if (useEscape) {
+				*out++ = '\\';
+				src++;
+				return true;
+			}
+			// fall thru
 		default:
 			if (extra.leading() != 0) {
 				if (src[1] == extra.leading() && src[2] == extra.trailing()) {
@@ -400,11 +408,11 @@ namespace storm {
 					*out++ = extra.trailing();
 					src += 2;
 					return true;
-				} else if (src[1] == extra.trailing()) {
-					*out++ = extra.trailing();
-					src++;
-					return true;
 				}
+			} else if (extra.trailing() != 0 && src[1] == extra.trailing()) {
+				*out++ = extra.trailing();
+				src++;
+				return true;
 			}
 
 			if (extra2.leading() != 0) {
@@ -413,11 +421,11 @@ namespace storm {
 					*out++ = extra2.trailing();
 					src += 2;
 					return true;
-				} else if (src[1] == extra2.trailing()) {
-					*out++ = extra2.trailing();
-					src++;
-					return true;
 				}
+			} else if (extra2.trailing() != 0 && src[1] == extra2.trailing()) {
+				*out++ = extra2.trailing();
+				src++;
+				return true;
 			}
 
 			return false;
@@ -437,11 +445,33 @@ namespace storm {
 		GcArray<wchar> *buf = runtime::allocArray<wchar>(engine(), &wcharArrayType, data->count);
 		wchar *to = buf->v;
 
-		for (const wchar *from = data->v; *from; from++) {
+		for (const wchar *from = data->v; from < data->v + data->count - 1; from++) {
 			wchar ch = *from;
 			if (ch == '\\') {
-				if (!storm::unescape(from, to, extra, extra2))
+				if (!storm::unescape<true>(from, to, extra, extra2))
 					*to++ = '\\';
+			} else {
+				*to++ = ch;
+			}
+		}
+
+		return new (this) Str(buf->v);
+	}
+
+	Str *Str::unescapeKeepBackslash(Char extra) const {
+		GcArray<wchar> *buf = runtime::allocArray<wchar>(engine(), &wcharArrayType, data->count);
+		wchar *to = buf->v;
+
+		for (const wchar *from = data->v; from < data->v + data->count - 1; from++) {
+			wchar ch = *from;
+			if (ch == '\\') {
+				if (!storm::unescape<false>(from, to, extra, Char())) {
+					*to++ = '\\';
+					if (from[1] == '\\') {
+						*to++ = '\\';
+						from++;
+					}
+				}
 			} else {
 				*to++ = ch;
 			}
@@ -462,6 +492,9 @@ namespace storm {
 			return true;
 		} else if (ch == Char('\v')) {
 			*to << L"\\v";
+			return true;
+		} else if (ch == Char('\\')) {
+			*to << L"\\\\";
 			return true;
 		} else if (ch == Char('\0')) {
 			*to << L"\\0";

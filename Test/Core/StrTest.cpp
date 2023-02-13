@@ -100,6 +100,8 @@ BEGIN_TEST(StrConvTest, Core) {
 	CHECK_EQ((new (e) Str(L"AF"))->hexToNat(), 0xAF);
 	CHECK_EQ(::toS((new (e) Str(L"\\x70"))->unescape()), L"\x70");
 	CHECK_EQ(::toS((new (e) Str(L"\\n"))->unescape()), L"\n");
+	CHECK_EQ(::toS((new (e) Str(L"\\\\n"))->unescape()), L"\\n");
+	CHECK_EQ(::toS((new (e) Str(L"\\\\n"))->unescapeKeepBackslash(Char())), L"\\\\n");
 	CHECK_EQ(::toS((new (e) Str(L"\n"))->escape()), L"\\n");
 
 	CHECK_EQ(::toS((new (e) Str(L"\\\""))->unescape(Char('"'))), L"\"");
