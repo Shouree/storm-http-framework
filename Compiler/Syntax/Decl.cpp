@@ -259,7 +259,7 @@ namespace storm {
 			if (src) {
 				return new (this) DelimToken(type, src);
 			} else {
-				throw new (this) SyntaxError(pos, TO_S(this, S("No ") << name << (" delimiter was declared in this file.")));
+				throw new (this) SyntaxError(pos, TO_S(this, S("No ") << name << S(" delimiter was declared in this file.")));
 			}
 		}
 
