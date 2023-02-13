@@ -400,11 +400,11 @@ namespace storm {
 					*out++ = extra.trailing();
 					src += 2;
 					return true;
+				} else if (src[1] == extra.trailing()) {
+					*out++ = extra.trailing();
+					src++;
+					return true;
 				}
-			} else if (src[1] == extra.trailing()) {
-				*out++ = extra.trailing();
-				src++;
-				return true;
 			}
 
 			if (extra2.leading() != 0) {
@@ -413,11 +413,11 @@ namespace storm {
 					*out++ = extra2.trailing();
 					src += 2;
 					return true;
+				} else if (src[1] == extra2.trailing()) {
+					*out++ = extra2.trailing();
+					src++;
+					return true;
 				}
-			} else if (src[1] == extra2.trailing()) {
-				*out++ = extra2.trailing();
-				src++;
-				return true;
 			}
 
 			return false;
