@@ -69,8 +69,8 @@ class FormatBuilder {
 	}
 
 	// Add a string.
-	void add(lang:SStr str) {
-		add(str.v.unescape());
+	void addUnescape(Str str) {
+		add(str.unescape());
 	}
 
 	// Add a string.

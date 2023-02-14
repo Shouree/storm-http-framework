@@ -11,7 +11,7 @@ SFmtStr => FormatBuilder() : (SFmtPart(block, me))*;
 void SFmtPart(Block block, FormatBuilder b) #string;
 SFmtPart => b : "[^\"\\\n}]*" -> add;
 SFmtPart => b : "}" -> add;
-SFmtPart => b : "\\[nrt]" -> add;
+SFmtPart => b : "\\[nrt]" -> addUnescape;
 SFmtPart => b : "\\" - "\"" -> add;
 SFmtPart : "\\" - SFmtAction(block, b, fmt) - "{" - SFmtStr(block) fmt - "}";
 
