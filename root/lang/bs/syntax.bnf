@@ -592,6 +592,9 @@ SCtorStmt => v : SStmt(block) v;
 SCtorStmt[20] => InitBlock(pos, block, params) : "init" #keyword, SMaybeActuals(block) params, ";";
 SCtorStmt[20] => InitBlock(pos, block, params, init) : "init" #keyword, SMaybeActuals(block) params, "{"[, (SInitializer(block) init, ";", )* ]+ "}";
 
+// Initializing the class using another constructor.
+SCtorStmt[20] => DelegateCall(pos, block, params) : "self" #keyword, SFnActuals(block) params, ";";
+
 // Special knowledge about "super(...)" to initialize the parent class.
 SCtorStmt[20] => SuperCall(pos, block, params) : "super" #keyword, SFnActuals(block) params, ";";
 

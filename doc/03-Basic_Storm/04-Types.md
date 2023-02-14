@@ -64,7 +64,7 @@ steps. First, the constructor of the super class is called as follows:
 
 After calling `super` in this manner (which has to be done at the top-level, not inside any other
 blocks such as if-statements), the `this` parameter is available in the function. If no superclass
-is present, this step can be omitted.However, as only the super class is initialized, `this` will
+is present, this step can be omitted. However, as only the super class is initialized, `this` will
 have the type of the parent class and not the current class until the object is fully
 initialized. The second stage of the initialization is done using the init block as follows:
 
@@ -88,10 +88,16 @@ constructor. Parameters to the constructor can be provided as follows:
 Note that `init {}` and `init() {}` are not equivalent. The first one does not explicitly try to
 call the constructor of the superclass, and is allowed after an explicit `super` call. The second
 one indicates that the constructor should be called, and is therefore not allowed after an explicit
-call to `super`.
+call to `super`. If no explicit initialization is necessary, both `super` and `init` (or one of
+them) can be omitted.
 
-Finally, if no explicit initialization is necessary, both `super` and `init` (or only one of them)
-can be omitted.
+Finally, instead of initializing the object using `super` and `init`, the constructor may instead
+delegate initialization to another constructor entirely. This is done as follows:
+
+`self(<parameters>)`
+
+This causes the suitable constructor to be called. As with `super` and `init`, the variable `this`
+is not available until after `self` has been called.
 
 The constructor acts a little special when working with actors that have not been declared to be
 executed on a specific thread (using the `on ?` syntax). These constructors need to take a `Thread`

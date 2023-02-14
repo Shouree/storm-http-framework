@@ -259,5 +259,42 @@ namespace storm {
 			void initVarDefault(CodeGen *s, MemberVar *var);
 		};
 
+
+		/**
+		 * Delegate initialization to another constructor. Can not be used together with separate
+		 * 'super' or 'init' calls.
+		 */
+		class DelegateCall : public Expr {
+			STORM_CLASS;
+		public:
+			// Create.
+			STORM_CTOR DelegateCall(SrcPos pos, CtorBody *block, Actuals *params);
+
+			// Result.
+			virtual ExprResult STORM_FN result();
+
+			// Code.
+			virtual void STORM_FN code(CodeGen *s, CodeResult *r);
+
+			// To string.
+			virtual void STORM_FN toS(StrBuf *to) const;
+
+			// Don't isolate the delegate call.
+			virtual Bool STORM_FN isolate();
+
+		private:
+			// Member of.
+			Value thisPtr;
+
+			// This parameter.
+			LocalVar *thisVar;
+
+			// Block.
+			CtorBody *block;
+
+			// Actual parameters to the other constructor.
+			Actuals *params;
+		};
+
 	}
 }

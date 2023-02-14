@@ -307,10 +307,10 @@ namespace storm {
 			if (hiddenThread) {
 				actuals->push(params->code(0, s, ctor->params->at(0), block->scope));
 				actuals->push(block->threadParam->var.v);
-				for (nat i = 2; i < values->params->count(); i++)
+				for (Nat i = 2; i < values->params->count(); i++)
 					actuals->push(params->code(i - 1, s, ctor->params->at(i), block->scope));
 			} else {
-				for (nat i = 0; i < values->params->count(); i++)
+				for (Nat i = 0; i < values->params->count(); i++)
 					actuals->push(params->code(i, s, ctor->params->at(i), block->scope));
 			}
 
@@ -653,6 +653,74 @@ namespace storm {
 			code::Var loc = result->location(s);
 			*s->l << mov(ptrA, dest);
 			*s->l << mov(ptrRel(ptrA, v->offset()), loc);
+		}
+
+
+		DelegateCall::DelegateCall(SrcPos pos, CtorBody *block, Actuals *params) : Expr(pos), block(block), params(params) {
+			if (block->superCalled || block->initDone) {
+				throw new (this) SyntaxError(pos, S("It is not possible to use 'self' together with either 'super'")
+											S(" or 'init' constructs in the constructor."));
+			}
+			block->superCalled = true;
+			block->initDone = true;
+
+			// Look at the hidden "this" parameter.
+			thisVar = block->variable(new (this) SimplePart(S(" this")));
+			thisPtr = thisVar->result;
+
+			// Add the regular "this" parameter for the remainder of the constructor.
+			LocalVar *created = new (this) ThisVar(thisPtr, thisVar->pos, true);
+			created->constant = true;
+			block->add(created);
+
+			// Update 'params'.
+			this->params->addFirst(new (this) LocalVarAccess(pos, thisVar));
+		}
+
+		ExprResult DelegateCall::result() {
+			return ExprResult();
+		}
+
+		void DelegateCall::code(CodeGen *s, CodeResult *r) {
+			RunOn runOn = thisPtr.type->runOn();
+			bool hiddenThread = runOn.state == RunOn::runtime;
+
+			// Find something to call.
+			BSNamePart *values = new (this) BSNamePart(Type::CTOR, pos, params);
+
+			if (hiddenThread)
+				values->insert(storm::thisPtr(Thread::stormType(engine())), 1);
+
+			Function *ctor = as<Function>(thisPtr.type->find(values, block->scope));
+			if (!ctor) {
+				Str *msg = TO_S(engine(), S("No constructor (") << values
+								<< S(") found in ") << thisPtr.type->identifier() << S("."));
+				throw new (this) SyntaxError(pos, msg);
+			}
+
+			Array<code::Operand> *actuals = new (this) Array<code::Operand>();
+			actuals->reserve(values->params->count());
+
+			if (hiddenThread) {
+				actuals->push(params->code(0, s, ctor->params->at(0), block->scope));
+				actuals->push(block->threadParam->var.v);
+				for (Nat i = 2; i < values->params->count(); i++)
+					actuals->push(params->code(i - 1, s, ctor->params->at(i), block->scope));
+			} else {
+				for (Nat i = 0; i < values->params->count(); i++)
+					actuals->push(params->code(i, s, ctor->params->at(i), block->scope));
+			}
+
+			CodeResult *t = new (this) CodeResult();
+			ctor->localCall(s, actuals, t, false);
+		}
+
+		void DelegateCall::toS(StrBuf *to) const {
+			*to << S("self") << params;
+		}
+
+		Bool DelegateCall::isolate() {
+			return false;
 		}
 
 	}

@@ -176,6 +176,14 @@ class List extends Element {
 
 	// Create.
 	init(Str[] text, Font f, Float lineSpace, Brush brush) {
+		FormatStr[] fmt;
+		for (t in text)
+			fmt << FormatStr(t);
+
+		self(fmt, f, lineSpace, brush);
+	}
+
+	init(FormatStr[] text, Font f, Float lineSpace, Brush brush) {
 		init() {
 			brush = brush;
 			fontHeight = f.pxHeight;
@@ -186,7 +194,7 @@ class List extends Element {
 		}
 
 		for (x in text) {
-			Text t(x, f);
+			Text t = x.text(f);
 			elements << t;
 
 			baselines << t.lineInfo[0].baseline;
@@ -273,12 +281,15 @@ class List extends Element {
 
 // Create a list, specifying a solid color.
 List list(Str[] t, Font f, Color c) on Render { List(t, f, 0, SolidBrush(c)); }
+List list(FormatStr[] t, Font f, Color c) on Render { List(t, f, 0, SolidBrush(c)); }
 
 // Create a list with a pre-defined style.
 List list(Str[] t, TextStyle style) on Render { List(t, style.font, style.space, style.fill); }
+List list(FormatStr[] t, TextStyle style) on Render { List(t, style.font, style.space, style.fill); }
 
 // Create a list with the default style.
 List list(Presentation p, Str[] t) on Render { list(t, p.contentStyle); }
+List list(Presentation p, FormatStr[] t) on Render { list(t, p.contentStyle); }
 
 
 /**
