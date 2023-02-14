@@ -117,12 +117,12 @@ class FormatBuilder {
 	// Make 'content' a different scale.
 	void scale(FormatBuilder content, Float scale) {
 		var old = merge(content);
-		addEffect(old, TextEffect:scale(dummy, dummy, scale));
+		addEffect(old, TextEffect:scaleSize(dummy, dummy, scale));
 	}
 
 	void scale(lang:bs:Block block, FormatBuilder content, lang:bs:Expr expr) {
 		var old = merge(content);
-		addEffect(block, old, "scale", expr);
+		addEffect(block, old, "scaleSize", expr);
 	}
 
 	// Make 'content' a different color.
