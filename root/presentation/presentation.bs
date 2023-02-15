@@ -33,6 +33,11 @@ class Presentation on Render {
 	// Default heading alignment.
 	Cardinal headingAlign;
 
+	// Left- and right margin of content in the caption layout. This is in addition to the border
+	// around the slide itself.
+	Float contentLeftMargin;
+	Float contentRightMargin;
+
 	// Default animation time.
 	Duration animationTime;
 

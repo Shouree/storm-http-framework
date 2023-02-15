@@ -84,12 +84,18 @@ class CaptionLayout extends layout:Layout {
 	// Space below the caption.
 	Float space;
 
+	// Additional margin of the content.
+	Float contentLeftMargin;
+	Float contentRightMargin;
+
 	// Create.
 	init() {
 		init() {
 			// Default spacing.
 			space = 10;
 			align = center;
+			contentLeftMargin = 0;
+			contentRightMargin = 0;
 		}
 	}
 
@@ -114,6 +120,7 @@ class CaptionLayout extends layout:Layout {
 
 		if (content) {
 			Size s = content.minSize;
+			s.w += contentMargin + contentRightMargin;
 			sz.w = max(sz.w, s.w);
 			sz.h += s.h;
 		}
@@ -130,6 +137,8 @@ class CaptionLayout extends layout:Layout {
 		}
 
 		if (content) {
+			p.p0.x += contentLeftMargin;
+			p.p1.x -= contentRightMargin;
 			content.pos = p;
 		}
 	}
@@ -610,7 +619,7 @@ class WithCaption extends Group {
 	private Cardinal textDir;
 
 	// Create.
-	init(Str text, Cardinal where, TextStyle font) {
+	init(FormatStr text, Cardinal where, TextStyle font) {
 		init() {
 			text = Heading(text, font);
 			space = font.space;

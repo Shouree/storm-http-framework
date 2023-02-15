@@ -196,7 +196,7 @@ class RaiseAnimation extends Animation {
 		if (cStep == step & time < duration + offset) {
 			Float t = val(time);
 			g.push(t);
-			Float offset = pow(1 - t, 2);
+			Float offset = 1 - rad((1 - t)*pi/2).cos;
 			g.transform = translate(Point(0, offset * height));
 		}
 

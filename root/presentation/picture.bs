@@ -181,6 +181,9 @@ class Node extends PElement {
 	void text(Str t) {
 		myText = Text(t, myFont);
 	}
+	void text(FormatStr t) {
+		myText = t.text(myFont);
+	}
 
 	// Text alignment.
 	Cardinal textAnchor;

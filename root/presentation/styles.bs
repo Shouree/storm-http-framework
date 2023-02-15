@@ -30,6 +30,8 @@ CaptionLayout content(Presentation p, Str caption) on Render {
 	l.add(component(Heading(caption, p.headingStyle)));
 	l.space = p.headingStyle.space;
 	l.align = p.headingAlign;
+	l.contentLeftMargin = p.contentLeftMargin;
+	l.contentRightMargin = p.contentRightMargin;
 	l;
 }
 
