@@ -171,6 +171,47 @@ class FadeInAnimation extends Animation {
 }
 
 /**
+ * Animation that raises the element slightly while fading in.
+ */
+class RaiseAnimation extends Animation {
+	// Create.
+	init(Nat step) {
+		init(step) {
+			height = 20;
+		}
+	}
+
+	// Create.
+	init(Nat step, Float height) {
+		init(step) {
+			height = height;
+		}
+	}
+
+	// Height to raise.
+	Float height;
+
+	// Set up the animation.
+	Bool before(Element element, Graphics g, Nat cStep, Duration time) : override {
+		if (cStep == step & time < duration + offset) {
+			Float t = val(time);
+			g.push(t);
+			Float offset = pow(1 - t, 2);
+			g.transform = translate(Point(0, offset * height));
+		}
+
+		cStep >= step;
+	}
+
+	// Tear down.
+	void after(Element element, Graphics g, Nat cStep, Duration time) : override {
+		if (cStep == step & time < duration + offset)
+			g.pop();
+	}
+}
+
+
+/**
  * Fade out animation.
  */
 class FadeOutAnimation extends Animation {
