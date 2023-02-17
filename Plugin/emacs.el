@@ -412,15 +412,14 @@
   NOTE: This is called when we set text color of the buffer as well... Inhibit that!"
   (when (and storm-buffer-id (not storm-buffer-no-changes))
     ;; Remember the edit.
-    (let ((marker (make-marker)))
-      (setq storm-buffer-edit-id (1+ storm-buffer-edit-id))
-      (setq storm-buffer-edits
-	    (storm-limit-edit-length
-	     storm-mode-max-edits
-	     (cons (list edit-begin
-			 old-length
-			 (set-marker marker edit-end))
-		   storm-buffer-edits))))
+    (setq storm-buffer-edit-id (1+ storm-buffer-edit-id))
+    (setq storm-buffer-edits
+	  (storm-limit-edit-length
+	   storm-mode-max-edits
+	   (cons (list edit-begin
+		       old-length
+		       edit-end)
+		 storm-buffer-edits)))
 
     ;; Tell Storm.
     (setq storm-buffer-last-point edit-begin)
@@ -481,10 +480,10 @@
      (let* ((entry (car ,edits))
 	    (offset (nth 0 entry))
 	    (skip   (nth 1 entry))
-	    (marker (nth 2 entry)))
+	    (end    (nth 2 entry)))
        (when (> skip 0)
 	 (setq ,min-pos (min (car entry) ,max-pos)))
-       (setq ,pos (+ (marker-position marker) (- ,pos offset skip)))
+       (setq ,pos (+ end (- ,pos offset skip)))
        (setq ,edits (cdr ,edits)))))
 
 (defun storm-on-color (params)
@@ -497,8 +496,7 @@
 	     (buffer    (gethash buffer-id storm-mode-buffers nil)))
 	(when buffer
 	  (with-current-buffer buffer
-	    ;; Make sure we do not act on our own color notifications!
-	    (let ((storm-buffer-no-changes t)
+	    (let ((storm-buffer-no-changes t) ;; To not send changes for color updates!
 		  (edits   (storm-active-edits edit-id))
 		  (lowest  (point-min))
 		  (highest (point-max))
