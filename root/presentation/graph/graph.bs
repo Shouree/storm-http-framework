@@ -30,27 +30,17 @@ class BarGraph extends Element {
 
 	// Set the font used in the axis.
 	void axisStyle(TextStyle style) {
-		axis.textStyle = style;
+		axis.textStyle(style);
 	}
 
 	// Set the label style.
 	void labelStyle(TextStyle style) {
-		axis.labelStyle = style;
+		axis.labelStyle(style);
 	}
 
-	// Set the ticks on the x-axis.
+	// Set the ticks on the non-data axis.
 	void ticks(Float min, Float step, Float max) {
 		axis.ticks(min, step, max);
-	}
-
-	// Set margin on the left.
-	void leftMargin(Float margin) {
-		axis.marginLeft = margin;
-	}
-
-	// Set margin on the right.
-	void rightMargin(Float margin) {
-		axis.marginRight = margin;
 	}
 
 	// Set labels on the y-axis.
@@ -63,7 +53,7 @@ class BarGraph extends Element {
 
 	// Indent a specific label to the right margin. Used to indicate sub-groups.
 	void indentLabel(Nat id) {
-		labels[id].indent = axis.marginLeft;
+		labels[id].indent = axis.marginBefore;
 	}
 
 	// Set the indentation color.
@@ -91,11 +81,6 @@ class BarGraph extends Element {
 		axis.barGroupMargin = v;
 	}
 
-	// Maximum height of a single bar.
-	void barMaxHeight(Float v) {
-		axis.barMaxHeight = v;
-	}
-
 	// Add some data.
 	void data(Float[] values, Color color) {
 		data << GraphData(values, color);
@@ -121,6 +106,37 @@ class BarGraph extends Element {
 			draw(g);
 		after(g, step, time);
 	}
+}
+
+// Helper for creating the bar graph.
+XBarGraph barGraph(Presentation p) {
+	// This was the previous default.
+	XBarGraph(p);
+}
+
+/**
+ * X-axis bar graph.
+ */
+class XBarGraph extends BarGraph {
+	// Create.
+	init(Presentation p) {
+		init(p) {}
+	}
+
+	// Set margin on the left.
+	void leftMargin(Float margin) {
+		axis.marginBefore = margin;
+	}
+
+	// Set margin on the right.
+	void rightMargin(Float margin) {
+		axis.marginAfter = margin;
+	}
+
+	// Maximum height of a single bar.
+	void barMaxHeight(Float v) {
+		axis.barMaxSize = v;
+	}
 
 	// Draw this element.
 	void draw(Graphics g) : override {
@@ -133,46 +149,118 @@ class BarGraph extends Element {
 
 		Float leftMargin;
 		Float height = graph.size.h / numBars;
-		Float barHeight = (height - axis.barGroupMargin) / data.count.int.float;
-		barHeight = min(barHeight, axis.barMaxHeight);
-		height = barHeight * data.count.int.float + axis.barGroupMargin;
+		Float barHeight = (height - axis.barGroupMargin) / data.count.float;
+		barHeight = min(barHeight, axis.barMaxSize);
+		height = barHeight * data.count.float + axis.barGroupMargin;
 
 		Float y;
 		for (label in labels) {
 			Float h = height * label.scale;
-			label.totalHeight = h;
-			label.height = (h - axis.barGroupMargin) / data.count.int.float;
+			label.totalSize = h;
+			label.size = (h - axis.barGroupMargin) / data.count.float;
 			label.offset = y + h / 2;
 			y += h;
 
 			leftMargin = max(leftMargin, label.text.size.w);
 		}
 
-		graph.p0.x += leftMargin + axis.labelMargin;;
+		graph.p0.x += leftMargin + axis.labelMargin;
 
 		// In case we made the graph smaller.
 		graph.p1.y = y + graph.p0.y;
 
 		// Compute offsets for each data set.
 		for (i, d in data) {
-			d.offset = i.int.float - (data.count - 1).int.float / 2;
+			d.offset = i.float - (data.count - 1).float / 2;
 		}
 
 		// Draw data.
 		for (d in data) {
-			d.draw(g, graph, labels, axis, barLength);
+			d.drawX(g, graph, labels, axis, barLength);
 		}
 
 		// Draw the axis itself.
-		axis.draw(g, graph, labels);
+		axis.drawX(g, graph, labels);
 	}
 }
 
-// Helper for creating the bar graph.
-BarGraph barGraph(Presentation p) {
-	BarGraph(p);
+XBarGraph xBarGraph(Presentation p) {
+	XBarGraph(p);
 }
 
+/**
+ * Y-axis bar graph.
+ */
+class YBarGraph extends BarGraph {
+	// Create.
+	init(Presentation p) {
+		init(p) {}
+	}
+
+	// Set margin on the left.
+	void bottomMargin(Float margin) {
+		axis.marginBefore = margin;
+	}
+
+	// Set margin on the right.
+	void topMargin(Float margin) {
+		axis.marginAfter = margin;
+	}
+
+	// Maximum height of a single bar.
+	void barMaxWidth(Float v) {
+		axis.barMaxSize = v;
+	}
+
+	// Draw this element.
+	void draw(Graphics g) : override {
+		Rect graph = pos;
+		graph.p0.x += axis.tickWidth() + axis.labelMargin;
+
+		Float numBars = 0;
+		for (label in labels)
+			numBars += label.scale;
+
+		Float bottomMargin;
+		Float width = graph.size.w / numBars;
+		Float barWidth = (width - axis.barGroupMargin) / data.count.float;
+		barWidth = min(barWidth, axis.barMaxSize);
+		width = barWidth * data.count.float + axis.barGroupMargin;
+
+		Float x;
+		for (label in labels) {
+			Float w = width * label.scale;
+			label.totalSize = w;
+			label.size = (w - axis.barGroupMargin) / data.count.float;
+			label.offset = x + w / 2;
+			x += w;
+
+			bottomMargin = max(bottomMargin, label.text.size.h);
+		}
+
+		graph.p1.y -= bottomMargin + axis.labelMargin;
+
+		// In case we made the graph smaller.
+		graph.p1.x = x + graph.p0.x;
+
+		// Compute offsets for each data set.
+		for (i, d in data) {
+			d.offset = i.float - (data.count - 1).float / 2;
+		}
+
+		// Draw data.
+		for (d in data) {
+			d.drawY(g, graph, labels, axis, barLength);
+		}
+
+		// Draw the axis itself.
+		axis.drawY(g, graph, labels);
+	}
+}
+
+YBarGraph yBarGraph(Presentation p) {
+	YBarGraph(p);
+}
 
 /**
  * Class responsible for drawing the axis itself.
@@ -202,11 +290,14 @@ class GraphAxis on Render {
 	// Text color. Copy so that we can freely modify its opacity!
 	private SolidBrush textBrush;
 
+	// Label color. Copy so that we can modify its opacity.
+	package SolidBrush labelBrush;
+
 	// Margin on the left side (pixels).
-	Float marginLeft;
+	Float marginBefore;
 
 	// Margin on the right side (pixels).
-	Float marginRight;
+	Float marginAfter;
 
 	// Size of the markers.
 	Float markSize;
@@ -220,41 +311,57 @@ class GraphAxis on Render {
 	// Margin between individual bars.
 	Float barMargin;
 
-	// Maximum height of a single bar.
-	Float barMaxHeight;
+	// Maximum size of a single bar.
+	Float barMaxSize;
 
 	// The arrow we will draw.
 	private Path arrow;
 
 	// Create.
 	init(TextStyle style) {
-		Color textColor = black;
-		if (b = style.fill as SolidBrush) {
-			textColor = b.color;
-			textColor.a *= b.opacity;
-		} else {
-			print("WARNING: We ignore non-solid text styles for axis labels in a graph!");
-		}
-
+		var brush = brushColor(style.fill);
 		init() {
 			textStyle = style;
 			labelStyle = style;
 			indentColor = SolidBrush(white * 0.5);
-			textBrush = SolidBrush(textColor);
+			textBrush = SolidBrush(brush);
+			labelBrush = SolidBrush(brush);
 			min = 0;
 			max = 1;
 			step = 1;
-			marginLeft = 0;
-			marginRight = 20;
+			marginBefore = 0;
+			marginAfter = 20;
 			markSize = 4;
 			labelMargin = 4;
 			barGroupMargin = 10;
 			barMargin = 5;
-			barMaxHeight = 40;
+			barMaxSize = 40;
 		}
 
 		ticks(0, 1, 1);
 		arrowSize(10);
+	}
+
+	void textStyle(TextStyle style) {
+		textStyle = style;
+		textBrush = SolidBrush(brushColor(style.fill));
+	}
+
+	void labelStyle(TextStyle style) {
+		labelStyle = style;
+		labelBrush = SolidBrush(brushColor(style.fill));
+	}
+
+	// Helper to find the color of a brush.
+	private Color brushColor(Brush b) : static {
+		Color c = black;
+		if (b as SolidBrush) {
+			c = b.color;
+			c.a *= b.opacity;
+		} else {
+			print("WARNING: We ignore non-solid text styles for labels in a graph!");
+		}
+		c;
 	}
 
 	// Create ticks for the graph.
@@ -281,10 +388,18 @@ class GraphAxis on Render {
 		h;
 	}
 
-	// Draw the axis.
-	void draw(Graphics g, Rect graph, GraphLabel[] labels) {
+	// Compute the width of the tick labels.
+	Float tickWidth() {
+		Float w;
+		for (l in ticks)
+			w = max(w, l.size.w);
+		w;
+	}
+
+	// Draw the axis, assuming X-bars.
+	void drawX(Graphics g, Rect graph, GraphLabel[] labels) {
 		// The Y axis.
-		if (marginLeft > 0.1) {
+		if (marginBefore > 0.1) {
 			g.line(graph.p0, Point(graph.p0.x, graph.p1.y), textStyle.fill);
 		} else {
 			g.line(graph.p0, Point(graph.p0.x, graph.p1.y + markSize / 2), textStyle.fill);
@@ -316,14 +431,14 @@ class GraphAxis on Render {
 				textBrush.opacity = 1;
 
 				if (indentFrom.x != l.indent) {
-					Float y = graph.p0.y + l.offset - l.totalHeight/2;
+					Float y = graph.p0.y + l.offset - l.totalSize/2;
 					if (indentFrom.x > 0) {
 						indentFrom.x += graph.p0.x;
 						Rect bump = Rect(indentFrom, Point(graph.p0.x, y)).normalized;
 						g.fill(bump, indentColor);
 						g.draw(bump, textStyle.fill);
 					} else {
-						indentTo = indentFrom.y + l.totalHeight;
+						indentTo = indentFrom.y + l.totalSize;
 					}
 
 					indentFrom = Point(l.indent, y);
@@ -347,10 +462,10 @@ class GraphAxis on Render {
 		g.pop();
 
 		for (id, text in ticks) {
-			Float y = min + step*id.int.float;
-			Point p(coordToPx(graph, y), graph.p1.y);
+			Float x = min + step*id.float;
+			Point p(xCoordToPx(graph, x), graph.p1.y);
 
-			if (id > 0 | marginLeft > 0.1)
+			if (id > 0 | marginBefore > 0.1)
 				g.line(p - Point(0, markSize/2), p + Point(0, markSize/2), textStyle.fill);
 
 			Size sz = text.size;
@@ -359,12 +474,99 @@ class GraphAxis on Render {
 		}
 	}
 
+	// Draw the axis, assuming X bars.
+	void drawY(Graphics g, Rect graph, GraphLabel[] labels) {
+		Point startPt(graph.p0.x, graph.p1.y);
+
+		// The Y axis.
+		if (marginBefore > 0.1)
+			g.line(startPt, graph.p1, textStyle.fill);
+		else
+			g.line(startPt - Point(markSize / 2, 0), graph.p1, textStyle.fill);
+
+		Point indentFrom(graph.p0.x, 0);
+		Float indentTo;
+
+		for (l in labels) {
+			if (l.scale > 0) {
+				Size sz = l.text.size;
+				Point align = startPt + Point(l.offset, 0);
+
+				g.line(align + Point(0, markSize / 2), align, textStyle.fill);
+
+				textBrush.opacity = l.animationScale;
+
+				align.y += labelMargin;
+				if (l.textScale == 1.0) {
+					align -= Size(sz.w / 2, 0);
+					g.draw(l.text, textBrush, align);
+				} else {
+					g.push();
+					g.transform(scale(l.textScale) * translate(align));
+					g.draw(l.text, textBrush, Point(-sz.w / 2, 0));
+					g.pop();
+				}
+
+				textBrush.opacity = 1;
+
+				if (indentFrom.y != l.indent) {
+					Float x = graph.p0.x + l.offset - l.totalSize/2;
+					if (indentFrom.y > 0) {
+						indentFrom.y = graph.p1.y - indentFrom.y;
+						Rect bump = Rect(indentFrom, Point(x, graph.p1.y)).normalized;
+						g.fill(bump, indentColor);
+						g.draw(bump, textStyle.fill);
+					} else {
+						indentTo = indentFrom.x + l.totalSize;
+					}
+
+					indentFrom = Point(x, l.indent);
+				}
+			}
+		}
+
+		if (indentFrom.y > 0) {
+			indentFrom.y = graph.p1.y - indentFrom.y;
+			Rect bump = Rect(indentFrom, Point(indentTo, graph.p1.y)).normalized;
+			g.fill(bump, indentColor);
+			g.draw(bump, textStyle.fill);
+		}
+
+		// The X axis.
+		g.line(graph.p0, startPt, textStyle.fill);
+
+		g.push();
+		g.transform(rotate(-90 deg) * translate(graph.p0));
+		g.draw(arrow, textStyle.fill);
+		g.pop();
+
+		for (id, text in ticks) {
+			Float y = min + step*id.float;
+			Point p(graph.p0.x, yCoordToPx(graph, y));
+
+			if (id > 0 | marginBefore > 0.1)
+				g.line(p - Point(markSize/2, 0), p + Point(markSize/2, 0), textStyle.fill);
+
+			Size sz = text.size;
+			p -= Size(labelMargin + sz.w, sz.h / 2);
+			g.draw(text, textStyle.fill, p);
+		}
+	}
+
 	// Compute the pixel value of a coordinate (x coordinate)
-	Float coordToPx(Rect graph, Float y) {
-		Float l = graph.p0.x + marginLeft;
-		Float r = graph.p1.x - marginRight;
+	Float xCoordToPx(Rect graph, Float y) {
+		Float l = graph.p0.x + marginBefore;
+		Float r = graph.p1.x - marginAfter;
 		Float step = (r - l) / (max - min);
 		l + step*(y - min);
+	}
+
+	// Compute the pixel value of a coordinate (y coordinate)
+	Float yCoordToPx(Rect graph, Float y) {
+		Float t = graph.p0.y + marginAfter;
+		Float b = graph.p1.y - marginBefore;
+		Float step = (t - b) / (max - min);
+		b + step*(y - min);
 	}
 
 	// Set the arrow size.
@@ -385,17 +587,17 @@ class GraphLabel on Render {
 	// The title of this label.
 	Text text;
 
-	// Y-offset of this label.
+	// X/Y-offset of this label.
 	Float offset;
 
 	// Label indentation (i.e. start bars at this x-offset).
 	Float indent;
 
-	// Height of each bar in this label.
-	Float height;
+	// Size of each bar in this label.
+	Float size;
 
 	// Total height of all bars in this label.
-	Float totalHeight;
+	Float totalSize;
 
 	// Scale of this label (used to show/hide parts of the graph). Not shown if zero.
 	Float scale() {
@@ -473,28 +675,28 @@ class GraphData on Render {
 	}
 
 	// Draw this graph.
-	void draw(Graphics g, Rect graph, GraphLabel[] labels, GraphAxis axis, Float lengthScale) {
+	void drawX(Graphics g, Rect graph, GraphLabel[] labels, GraphAxis axis, Float lengthScale) {
 		for (i, label in labels) {
 			if (i < values.count) {
-				drawBar(g, graph, label, values[i], axis, lengthScale);
+				drawBarX(g, graph, label, values[i], axis, lengthScale);
 			}
 		}
 	}
 
 	// Draw a single bar.
-	private void drawBar(Graphics g, Rect graph, GraphLabel label, Value value, GraphAxis axis, Float scale) {
-		if (scale <= 0.0)
+	private void drawBarX(Graphics g, Rect graph, GraphLabel label, Value value, GraphAxis axis, Float lengthScale) {
+		if (lengthScale <= 0.0)
 			return;
 
 		Float y = label.offset + graph.p0.y;
-		y += offset * label.height;
+		y += offset * label.size;
 
 		Float from = graph.p0.x + label.indent;
-		Float to = axis.coordToPx(graph, value.point);
-		if (scale < 1.0)
-			to = from + (to - from)*scale;
+		Float to = axis.xCoordToPx(graph, value.point);
+		if (lengthScale < 1.0)
+			to = from + (to - from)*lengthScale;
 
-		Float height = (label.height - axis.barMargin) / 2;
+		Float height = (label.size - axis.barMargin) / 2;
 		if (height <= 0.0)
 			return;
 
@@ -510,14 +712,71 @@ class GraphData on Render {
 			if (anchor.x + sz.w * scale > graph.p1.x)
 				anchor.x = to - axis.labelMargin - sz.w * scale;
 
-			if (scale == 1) {
-				g.draw(text, axis.labelStyle.fill, anchor);
+			axis.labelBrush.opacity = lengthScale;
+
+			if (scale == 1.0) {
+				g.draw(text, axis.labelBrush, anchor);
 			} else {
 				g.push();
 				g.transform(scale(scale) * translate(anchor));
-				g.draw(text, axis.labelStyle.fill, Point());
+				g.draw(text, axis.labelBrush, Point());
 				g.pop();
 			}
+
+			axis.labelBrush.opacity = 1.0;
+		}
+	}
+
+	// Draw this graph.
+	void drawY(Graphics g, Rect graph, GraphLabel[] labels, GraphAxis axis, Float lengthScale) {
+		for (i, label in labels) {
+			if (i < values.count) {
+				drawBarY(g, graph, label, values[i], axis, lengthScale);
+			}
+		}
+	}
+
+	// Draw a single bar.
+	private void drawBarY(Graphics g, Rect graph, GraphLabel label, Value value, GraphAxis axis, Float lengthScale) {
+		if (lengthScale <= 0.0)
+			return;
+
+		Float x = label.offset + graph.p0.x;
+		x += offset * label.size;
+
+		Float from = graph.p1.y - label.indent;
+		Float to = axis.yCoordToPx(graph, value.point);
+		if (lengthScale < 1.0)
+			to = from + (to - from)*lengthScale;
+
+		Float width = (label.size - axis.barMargin) / 2;
+		if (width <= 0.0)
+			return;
+
+		Rect bar(Point(x - width, from), Point(x + width, to));
+		g.draw(bar, axis.labelStyle.fill);
+		g.fill(bar, color);
+
+		if (text = value.label) {
+			Float scale = label.textScale;
+
+			Size sz = text.size;
+			Point anchor(x - sz.w*scale/2, to - axis.labelMargin - sz.h*scale);
+			if (anchor.y < graph.p0.y)
+				anchor.y = to + axis.labelMargin;
+
+			axis.labelBrush.opacity = lengthScale;
+
+			if (scale == 1.0) {
+				g.draw(text, axis.labelBrush, anchor);
+			} else {
+				g.push();
+				g.transform(scale(scale) * translate(anchor));
+				g.draw(text, axis.labelBrush, Point());
+				g.pop();
+			}
+
+			axis.labelBrush.opacity = 1.0;
 		}
 	}
 }
