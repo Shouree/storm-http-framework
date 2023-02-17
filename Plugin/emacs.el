@@ -33,8 +33,8 @@
 (defvar-local storm-buffer-edit-id 0 "The ID of the next edit operation for the current buffer.")
 (defvar-local storm-buffer-edits nil
   "List of the last few edits to this buffer. This is so we can handle 'late' coloring messages from Storm.
-   The entries of this list has the form (offset skip marker) where offset is the character offset where the edit started,
-   skip is the number of characters erased (if any) and marker is a marker placed at offset + skip.")
+   The entries of this list has the form (offset skip end) where offset is the character offset where the edit started,
+   skip is the number of characters erased (if any) and end is the offset where the insertion ended.")
 (defvar-local storm-buffer-no-changes nil "Inhibit change notifications for the current buffer.")
 (defvar-local storm-buffer-last-point 0 "Remembers where Storm thinks the point is located in this buffer.")
 
@@ -441,19 +441,13 @@
 (defun storm-limit-edit-length (max-length list)
   "Limit the length of the list 'list' containing edits."
   (let ((at list)
-	(pos 1)
-	(free nil))
+	(pos 1))
     (while (consp at)
       (when (= pos max-length)
-	(setq free (cdr at))
 	(setcdr at nil))
       (setq at (cdr at))
       (setq pos (1+ pos)))
 
-    ;; Remove any markers so that they do not slow things down...
-    (while (consp free)
-      (set-marker (caddr (car free)) nil)
-      (setq free (cdr free)))
     list))
 
 
