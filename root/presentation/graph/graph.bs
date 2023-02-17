@@ -20,11 +20,18 @@ class BarGraph extends Element {
 	// Animation state of the length of bars.
 	package Float barLength;
 
+	// Legend, if we have one.
+	private Legend? legend;
+
+	// Legend anchor pos.
+	private Cardinal legendAnchor;
+
 	// Create.
 	init(Presentation p) {
 		init() {
 			axis(p.contentStyle);
 			barLength = 1.0;
+			legendAnchor = northEast;
 		}
 	}
 
@@ -92,6 +99,29 @@ class BarGraph extends Element {
 			d.labels(fn, axis.labelStyle.font);
 	}
 
+	// Set size of the arrow.
+	void arrowSize(Float size) {
+		axis.arrowSize = size;
+	}
+
+	// Create a legend.
+	void legend(Cardinal anchor, Str[] labels) {
+		legend(axis.textStyle, anchor, labels);
+	}
+	void legend(TextStyle style, Cardinal anchor, Str[] labels) {
+		legendAnchor = anchor;
+
+		Legend l(style);
+		for (i, label in labels) {
+			if (i < data.count)
+				l.series(label, data[i].color);
+		}
+
+		l.pos = Rect(Point(), l.minSize);
+
+		legend = l;
+	}
+
 	// Get the minimum size of the layout.
 	Size minSize() {
 		Size(0, 0);
@@ -105,6 +135,17 @@ class BarGraph extends Element {
 		if (before(g, step, time))
 			draw(g);
 		after(g, step, time);
+	}
+
+	// Helper to draw the legend.
+	protected void drawLegend(Graphics g, Rect graph) {
+		if (legend) {
+			// Adjust to position the legend at a reasonable location.
+			graph.p0.x += axis.arrowSize;
+			graph.p1.y -= axis.arrowSize;
+			legend.pos = legendAnchor.align(graph, legend.pos.size);
+			legend.draw(g);
+		}
 	}
 }
 
@@ -181,6 +222,9 @@ class XBarGraph extends BarGraph {
 
 		// Draw the axis itself.
 		axis.drawX(g, graph, labels);
+
+		// Draw legend if necessary.
+		drawLegend(g, graph);
 	}
 }
 
@@ -255,6 +299,9 @@ class YBarGraph extends BarGraph {
 
 		// Draw the axis itself.
 		axis.drawY(g, graph, labels);
+
+		// Draw legend if necessary.
+		drawLegend(g, graph);
 	}
 }
 
@@ -316,6 +363,9 @@ class GraphAxis on Render {
 
 	// The arrow we will draw.
 	private Path arrow;
+
+	// Size of the arrow.
+	private Float arrowSz;
 
 	// Create.
 	init(TextStyle style) {
@@ -571,6 +621,7 @@ class GraphAxis on Render {
 
 	// Set the arrow size.
 	assign arrowSize(Float size) {
+		arrowSz = size;
 		arrow.clear();
 
 		Float height = size * 2 / 3;
@@ -578,6 +629,8 @@ class GraphAxis on Render {
 		arrow.line(Point(0, 0));
 		arrow.line(Point(-size, height));
 	}
+
+	Float arrowSize() { arrowSz; }
 }
 
 /**
@@ -780,6 +833,102 @@ class GraphData on Render {
 		}
 	}
 }
+
+
+/**
+ * Element for the legend. Usable both inside the BarGraph itself, and as a separate element for
+ * convenience.
+ */
+class Legend extends Element {
+	// Text style.
+	TextStyle style;
+
+	// Text elements in the legend.
+	private Text[] labels;
+
+	// Colors for each label.
+	private Brush[] colors;
+
+	// Size of the squares.
+	private Float sqSize;
+
+	// Margin.
+	private Size margin;
+
+	// Fill background.
+	Brush fill;
+
+	// Border color.
+	Brush border;
+
+	// Create.
+	init(TextStyle style) {
+		init {
+			style = style;
+			fill = SolidBrush(white);
+			border = style.fill;
+			margin(8, 6);
+		}
+	}
+
+	// Set margin.
+	void margin(Float w, Float h) {
+		margin = Size(w, h);
+	}
+
+	// Set fill color.
+	void fill(Color c) {
+		fill = SolidBrush(c);
+	}
+
+	// Set border color.
+	void border(Color c) {
+		border = SolidBrush(c);
+	}
+
+	// Add a series.
+	void series(Str label, Color color) { series(label, SolidBrush(color)); }
+	void series(Str label, Brush brush) {
+		var text = Text(label, style.font);
+		labels << text;
+		colors << brush;
+
+		sqSize = sqSize.max(text.lineInfo[0].baseline);
+	}
+
+	// Minimum size.
+	Size minSize() {
+		Size sz;
+		for (l in labels) {
+			sz.w = max(sz.w, l.size.w);
+			sz.h += l.size.h;
+		}
+
+		sz.w += sqSize * 1.5;
+		return sz + margin*2;
+	}
+
+	// Draw.
+	void draw(Graphics g) : override {
+		Rect p = pos;
+		g.fill(p, fill);
+		g.draw(p, border);
+
+		Point at = p.p0 + margin;
+		for (i, l in labels) {
+			Float h = l.size.h;
+			Rect box(at + Point(0, (h - sqSize) / 2), Size(sqSize));
+
+			g.fill(box, colors[i]);
+			g.draw(box, border);
+
+			g.draw(l, style.fill, at + Point(sqSize * 1.5, 0));
+
+			at.y += h;
+		}
+	}
+}
+
 
 
 /**
