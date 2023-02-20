@@ -264,7 +264,7 @@ class List extends Element {
 		for (i, e in elements) {
 			if (i >= numbers.count) {
 				// Point delta(margin - padding - bulletSize, (fontHeight - bulletSize) * 2 / 3);
-				Point delta(margin - padding - bulletSize, baselines[i]*0.6 - bulletSize*0.5);
+				Point delta(margin - padding - bulletSize, baselines[i]*0.65 - bulletSize*0.5);
 				Rect ball(at + delta, Size(bulletSize));
 				g.fillOval(ball, brush);
 			} else {
