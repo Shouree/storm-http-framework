@@ -67,13 +67,12 @@ class Picture extends Element {
 		if (before(g, step, time)) {
 			// Center the block according to the current position and draw everything.
 			Point offset = pos.p0 - boundingBox.p0*scale + (pos.size - boundingBox.size*scale)/2;
-			g.push();
-			g.transform = scale(scale) * translate(offset);
+			layer(g) {
+				g.transform = scale(scale) * translate(offset);
 
-			for (e in elements)
-				e.draw(this, g, step, time);
-
-			g.pop();
+				for (e in elements)
+					e.draw(this, g, step, time);
+			}
 		}
 		after(g, step, time);
 	}
@@ -754,13 +753,13 @@ class PathElem extends PElement {
 
 	// Draw.
 	void draw(Graphics g) {
-		g.push();
-		g.transform = translate(offset);
-		if (fillPath)
-			g.fill(path, brush);
-		else
-			g.draw(path, brush);
-		g.pop();
+		layer(g) {
+			g.transform = translate(offset);
+			if (fillPath)
+				g.fill(path, brush);
+			else
+				g.draw(path, brush);
+		}
 	}
 
 	// Fill the path?

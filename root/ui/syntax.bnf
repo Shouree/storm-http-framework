@@ -23,3 +23,7 @@ SWindowLayout => layout : SLayoutRoot @layout;
 
 // Allow type declarations in the layout.
 SWindowLayout..SLayout => LayoutDeclBlock(block, name) : SType type, SName name #varName, ("(", SParamList(block.block) params, ")",)? "{" [, SLayoutContent(me),]+ "}" = SLayoutMemberDecl;
+
+
+// Helper to manage layers in the Graphics object nicely.
+SStmt => graphicsLayer(pos, block, g, params, contents) : "layer" #keyword, "(", SExpr(block) g, (",", SExpr(block) params,)* ")", SBlock(block) contents;

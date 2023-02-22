@@ -265,3 +265,31 @@ class LayoutDeclBlock extends LayoutBlock {
 		init(block, sub, resultAcc, preWrap);
 	}
 }
+
+
+/**
+ * Block for push:ing and pop:ing layers using layer(g, ...) {} syntax.
+ *
+ * Expands to:
+ * try {
+ *     layer.push(<params>)
+ *     {...}
+ *     layer.pop()
+ * } catch (Exception x) {
+ *     layer.pop()
+ *     throw x;
+ * }
+ */
+Expr graphicsLayer(SrcPos pos, Block context, Expr graphics, Expr[] params, Expr contents) {
+	pattern(context) {
+		var g = ${graphics};
+		try {
+			g.push(@{params});
+			${contents};
+			g.pop();
+		} catch (Exception e) {
+			g.pop();
+			throw e;
+		}
+	};
+}
