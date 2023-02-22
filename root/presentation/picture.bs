@@ -704,3 +704,110 @@ class FancyArrow extends Arrow {
 		path.close();
 	}
 }
+
+
+/**
+ * A generic path.
+ *
+ * Exposes an interface similar to the Path class, but allows easy embedding into a Picture
+ * environment.
+ */
+class PathElem extends PElement {
+	// Offset of the element.
+	private Point offset;
+
+	// The path to draw.
+	private Path path;
+
+	// Brush to use.
+	private Brush brush;
+
+	// Fill the path?
+	private Bool fillPath;
+
+	// Create.
+	init(Brush brush) {
+		init() {
+			brush = brush;
+		}
+	}
+
+	// Set color.
+	void color(Color c) {
+		brush = SolidBrush(c);
+	}
+
+	// Set the offset.
+	void at(Float x, Float y) {
+		at(Point(x, y));
+	}
+
+	// Set the offset.
+	void at(Point pt) {
+		offset = pt;
+	}
+
+	// Get the bounding box.
+	Rect boundingBox() : override {
+		path.bound + offset;
+	}
+
+	// Draw.
+	void draw(Graphics g) {
+		g.push();
+		g.transform = translate(offset);
+		if (fillPath)
+			g.fill(path, brush);
+		else
+			g.draw(path, brush);
+		g.pop();
+	}
+
+	// Fill the path?
+	void fill() {
+		fillPath = true;
+	}
+
+	// Clear the path.
+	void clear() {
+		path.clear();
+	}
+
+	// Start a new segment.
+	void start(Point pt) {
+		path.start(pt);
+	}
+
+	// Add a line segment.
+	void line(Point to) {
+		path.line(to);
+	}
+
+	// Add a point.
+	void point(Point to) {
+		path.point(to);
+	}
+
+	// Add a bezier segment.
+	void bezier(Point c1, Point to) {
+		path.bezier(c1, to);
+	}
+
+	// Add a bezier segment.
+	void bezier(Point c1, Point c2, Point to) {
+		path.bezier(c1, c2, to);
+	}
+
+	// Close the segment.
+	void close() {
+		path.close();
+	}
+}
+
+// Create a path.
+PathElem path(Presentation p) {
+	PathElem(p.contentStyle.fill);
+}
+PathElem path(Brush b) {
+	PathElem(b);
+}
