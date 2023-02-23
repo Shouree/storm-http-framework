@@ -14,6 +14,7 @@ class RangeFor extends Breakable {
 	init(SrcPos pos, Block parent, SStr name, Expr container) {
 		init(pos, parent) {
 			valName = name.v;
+			containerExpr = container;
 		}
 
 		createCode(container);
@@ -23,6 +24,7 @@ class RangeFor extends Breakable {
 		init(pos, parent) {
 			keyName = key.v;
 			valName = value.v;
+			containerExpr = container;
 		}
 
 		createCode(container);
@@ -92,6 +94,17 @@ class RangeFor extends Breakable {
 			throw InternalError("The loop was not initialized properly");
 	}
 
+	void toS(StrBuf to) {
+		to << "for (";
+		if (keyName)
+			to << keyName << ", ";
+		to << valName << " in " << containerExpr << ") ";
+		if (loopBlock)
+			to << loopBlock;
+		else
+			to << "<empty>";
+	}
+
 private:
 
 	// Names of the key and value variables.
@@ -106,6 +119,9 @@ private:
 
 	// The loop itself. This is always the last expression in this block.
 	Breakable? loop;
+
+	// Copy of the container expression for printing.
+	Expr containerExpr;
 
 
 	void createCode(Expr container) {
