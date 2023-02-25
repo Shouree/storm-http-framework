@@ -272,6 +272,7 @@ class GrowAnimation extends Animation {
 	}
 }
 
+
 /**
  * Shrink vertically.
  */
@@ -293,6 +294,91 @@ class ShrinkAnimation extends Animation {
 
 			Point center = element.pos.center;
 			g.transform(scale(Point(1, scale), center));
+			return true;
+		}
+
+		cStep < step;
+	}
+
+	// Tear down.
+	void after(Element element, Graphics g, Nat cStep, Duration time) : override {
+		if (cStep == step & time < duration + offset)
+			g.pop();
+	}
+}
+
+
+/**
+ * Zoom in.
+ */
+class ZoomInAnimation extends Animation {
+	// Create.
+	init(Nat step) {
+		init(step) {}
+	}
+	init(Nat step, Point center) {
+		init(step) {
+			center = center;
+		}
+	}
+
+	// Center point, if specified.
+	Point? center;
+
+	// Set up the animation.
+	Bool before(Element element, Graphics g, Nat cStep, Duration time) : override {
+		if (cStep == step & time < duration + offset) {
+			Float scale = smoothVal(time);
+			g.push(scale);
+
+			// The font drawing does not seem to like zero scaling, at least in the Y direction
+			// neither on Windows nor on Linux.
+			scale = max(scale, 0.05);
+
+			Point center = if (c = this.center) { c; } else { element.pos.center; };
+			g.transform(scale(Point(scale, scale), center));
+		}
+
+		cStep >= step;
+	}
+
+	// Tear down.
+	void after(Element element, Graphics g, Nat cStep, Duration time) : override {
+		if (cStep == step & time < duration + offset)
+			g.pop();
+	}
+}
+
+
+/**
+ * Zoom out vertically.
+ */
+class ZoomOutAnimation extends Animation {
+	// Create.
+	init(Nat step) {
+		init(step) {}
+	}
+	init(Nat step, Point center) {
+		init(step) {
+			center = center;
+		}
+	}
+
+	// Center point, if specified.
+	Point? center;
+
+	// Set up the animation.
+	Bool before(Element element, Graphics g, Nat cStep, Duration time) : override {
+		if (cStep == step & time < duration + offset) {
+			Float scale = 1 - smoothVal(time);
+			g.push(scale);
+
+			// The font drawing does not seem to like zero scaling, at least in the Y direction
+			// neither on Windows nor on Linux.
+			scale = max(scale, 0.05);
+
+			Point center = if (c = this.center) { c; } else { element.pos.center; };
+			g.transform(scale(Point(scale, scale), center));
 			return true;
 		}
 
