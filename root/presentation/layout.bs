@@ -120,7 +120,7 @@ class CaptionLayout extends layout:Layout {
 
 		if (content) {
 			Size s = content.minSize;
-			s.w += contentMargin + contentRightMargin;
+			s.w += contentLeftMargin + contentRightMargin;
 			sz.w = max(sz.w, s.w);
 			sz.h += s.h;
 		}
