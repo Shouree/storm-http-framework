@@ -186,6 +186,15 @@ class ProgThread on Render {
 		frames.last.pos;
 	}
 
+	// Get all position data.
+	SrcPos[] allPos() {
+		SrcPos[] p;
+		p.reserve(frames.count);
+		for (f in frames)
+			p << f.pos;
+		p;
+	}
+
 	// To string.
 	void toS(StrBuf to) : override {
 		to << "Thread " << threadId;

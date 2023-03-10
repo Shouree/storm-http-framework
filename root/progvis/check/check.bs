@@ -285,6 +285,8 @@ class Checker on Render {
 			world.update();
 			var found = lookup.find(world.summary);
 			if (found == lookup.end) {
+				// TODO: If this happens, we could search backwards for a "divergent point" for
+				// easier debugging. Probably quicker than manually tracking down the problem...
 				throw CheckError("Failed to replay the program into the desired state.");
 			} else if (found.v !is to) {
 				throw CheckError("Failed to replay the program into the desired state.");

@@ -118,8 +118,8 @@ class ThreadView extends DataView {
 			frames.pop();
 
 		if (thread.alive) {
-			if (pos = thread.pos)
-				source.display(pos);
+			if (thread.pos.any)
+				source.display(thread.pos.last);
 			else
 				source.displayEmpty();
 

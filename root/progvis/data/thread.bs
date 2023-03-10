@@ -18,7 +18,7 @@ class Thread extends Data {
 	Bool crashed;
 	Bool afterReturn;
 	Bool barriersAvailable;
-	SrcPos? pos;
+	SrcPos[] pos; // All stack frames.
 
 	// Create.
 	init(ProgThread thread) {
@@ -36,7 +36,7 @@ class Thread extends Data {
 			sleeping = original.sleeping;
 			crashed = original.crashed;
 			afterReturn = original.afterReturn;
-			pos = original.pos;
+			pos = original.allPos;
 		}
 	}
 
@@ -53,7 +53,7 @@ class Thread extends Data {
 		if (src.frames.any)
 			afterReturn = src.frames.last.returned;
 		barriersAvailable = src.barriersAvailable;
-		pos = src.pos;
+		pos = src.allPos;
 
 		if (!alive & !crashed) {
 			// Remove frames, but not if we crashed (makes it easier to find the crash).
@@ -99,9 +99,9 @@ class Thread extends Data {
 	// Summary.
 	protected void putSummary(StrBuf to, SummaryData data) : override {
 		// Location of the thread.
-		if (pos) {
-			if (file = pos.file) {
-				to << file.title << ":" << pos.start << "-" << pos.end << ".";
+		for (p in pos) {
+			if (file = p.file) {
+				to << file.title << ":" << p.start << "-" << p.end << ".";
 			}
 		}
 
