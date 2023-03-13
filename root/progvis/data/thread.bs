@@ -36,7 +36,7 @@ class Thread extends Data {
 			sleeping = original.sleeping;
 			crashed = original.crashed;
 			afterReturn = original.afterReturn;
-			pos = original.allPos;
+			pos = original.pos.clone;
 		}
 	}
 
