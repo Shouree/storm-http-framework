@@ -664,9 +664,11 @@
   (add-to-list 'compilation-finish-functions 'storm-compilation-finished)
   ;; Make sure not to run multiple compilations.
   (unless storm-running-compile
-    (let ((default-directory (storm-parent-directory (file-name-directory storm-mode-compiler))))
+    (let* ((default-directory (storm-parent-directory (file-name-directory storm-mode-compiler)))
+	   (mm-command (if (null mymake-command) "mymake" mymake-command))
+	   (command (concat mm-command " Main -ne")))
       (setq storm-running-compile
-	    (compilation-start "mm Main -ne")))))
+	    (compilation-start command)))))
 
 (defun storm-compilation-finished (buffer exit-status)
   "Called whenever a compilation buffer has finished."
