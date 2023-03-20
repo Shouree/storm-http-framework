@@ -79,7 +79,7 @@ Str toStorm(ConstPtr<Byte> chars) {
 	Nat offset = chars.offset - sPtr.current * 2;
 	Nat size = chars.base.readSize * chars.base.readCount;
 	StrBuf buf;
-	while (offset <= size) {
+	while (offset < size) {
 		Byte b = chars.base.readByte(offset);
 		if (b == 0) {
 			foundNull = true;

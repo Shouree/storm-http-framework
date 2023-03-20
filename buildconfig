@@ -55,3 +55,4 @@ Main -a -f progvis.debug
 #Main -a -i ../External/icer2019 -f icer2019.main
 #Main -a -i ../External/sigcse2020 -f sigcse2020.debug
 #Main -a ../External/koli2022
+#Main -a ../External/defence

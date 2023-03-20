@@ -2,3 +2,14 @@
 Int rand() {
 	core:rand(0, 65535);
 }
+
+// Seeding the random number generator.
+void srand(Nat seed) {
+	// We don't do anything with the seed.
+}
+
+// Also: the time() call as that is often used to seed the random number generator.
+Nat time(progvis:lang:cpp:Ptr<Nat> tloc) {
+	// We ignore "tloc" entirely here.
+	return 0;
+}
