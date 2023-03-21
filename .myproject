@@ -139,7 +139,8 @@ flags+=/Zi /Fd<path|buildDir>
 linkFlags+=/DEBUG /INCREMENTAL:NO /PDB:<path|execDir><titleNoExt|output>.pdb
 
 [unix]
-flags=-std=c++11
+flags=-std=c++11 -pipe
+cflags+=-pipe
 flags+=<opt>
 
 

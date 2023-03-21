@@ -271,14 +271,19 @@ namespace code {
 					if (info.src.type() == opRegister) {
 						tmpReg = info.src.reg();
 					} else {
-						TODO(L"Use a suitable temporary register!");
-						// Note: We can probably use x8 since we set the result later. We should check though.
-						tmpReg = ptrr(8);
+						// TODO: If we have an additional register available, we could use that as
+						// 'tmpReg' here and avoid calling the slow version of memcpy below.
+						tmpReg = reg2;
+						reg2 = noReg;
 						*dest << mov(tmpReg, info.src);
 					}
 					Operand dst = xRel(sz, sp, Offset(layout->stackOffset(i)));
 					Operand src = xRel(sz, tmpReg, Offset(0));
-					inlineMemcpy(dest, dst, src, reg1, reg2);
+
+					if (reg2 != noReg)
+						inlineMemcpy(dest, dst, src, reg1, reg2);
+					else
+						inlineSlowMemcpy(dest, dst, src, reg1);
 				}
 			}
 
