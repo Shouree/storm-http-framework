@@ -271,6 +271,15 @@ namespace code {
 		return SrcPos((Url *)opPtr, start, end);
 	}
 
+	Operand Operand::replaceRegister(Reg replace) const {
+		if (type() == opRegister)
+			return Operand(asSize(replace, size()));
+		else if (type() == opRelative)
+			return Operand(asSize(replace, Size::sPtr), opOffset, opSize);
+		else
+			return *this;
+	}
+
 	wostream &operator <<(wostream &to, const Operand &o) {
 		if (o.type() != opRegister
 			&& o.type() != opCondFlag

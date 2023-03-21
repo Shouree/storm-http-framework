@@ -378,9 +378,9 @@ namespace code {
 				// If the destination utilizes 'a' or 'd' registers, use the old versions.
 				if (op.type() == opRelative) {
 					if (same(op.reg(), ptrA))
-						op = xRel(op.size(), oldA, op.offset());
+						op = op.replaceRegister(oldA);
 					else if (same(op.reg(), ptrD))
-						op = xRel(op.size(), oldD, op.offset());
+						op = op.replaceRegister(oldD);
 				}
 
 				*dest << mov(op, destA);

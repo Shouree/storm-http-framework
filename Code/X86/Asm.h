@@ -155,6 +155,14 @@ namespace code {
 			Preserve(const Reg *preserve, size_t preserveCount, RegSet *used, Listing *dest);
 
 			void restore();
+
+			// Check current location of preserved register.
+			Operand location(Reg reg) const;
+			Operand location(const Operand &op) const;
+
+			// Update usage of relative registers. The register 'tmp' might be used as a temporary.
+			Operand updateRelative(const Operand &src, Reg tmp) const;
+
 		private:
 			Listing *dest;
 			Array<Nat> *srcReg;

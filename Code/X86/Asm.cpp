@@ -251,6 +251,49 @@ namespace code {
 			}
 		}
 
+		Operand Preserve::location(const Operand &op) const {
+			if (op.type() == opRegister)
+				return location(op.reg());
+			else
+				return op;
+		}
+
+		Operand Preserve::location(Reg reg) const {
+			Operand result = reg;
+
+			Nat stackOffset = 0;
+			for (Nat i = srcReg->count(); i > 0; i--) {
+				Reg dst = (Reg)destReg->at(i - 1);
+
+				if (same((Reg)srcReg->at(i - 1), reg)) {
+					if (dst == noReg) {
+						result = xRel(size(reg), ptrStack, Offset::sPtr * stackOffset);
+					} else {
+						result = dst;
+					}
+					break;
+				}
+
+				if (dst == noReg)
+					stackOffset++;
+			}
+
+			return result;
+		}
+
+		Operand Preserve::updateRelative(const Operand &op, Reg tmp) const {
+			if (op.type() != opRelative)
+				return op;
+
+			Operand loc = location(op.reg());
+			if (loc.type() != opRegister) {
+				*dest << mov(tmp, loc);
+				loc = tmp;
+			}
+
+			return op.replaceRegister(loc.reg());
+		}
+
 		nat registerId(Reg r) {
 			switch (r) {
 			case al:

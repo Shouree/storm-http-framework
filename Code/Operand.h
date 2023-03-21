@@ -156,6 +156,9 @@ namespace code {
 		MAYBE(Object *) STORM_FN obj() const;
 		MAYBE(TObject *) STORM_FN tObj() const;
 
+		// Replace the register in this operand. If no register, this is a no-op.
+		Operand STORM_FN replaceRegister(Reg replace) const;
+
 		/**
 		 * Debug.
 		 */

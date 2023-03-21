@@ -70,6 +70,11 @@ namespace code {
 
 			// Save the result somewhere
 			if (dest != Operand(rax)) {
+
+				// Need to consider that 'dest' might depend on something that we preserved
+				// previously. ptrC is always free as it is clobbered by the function call.
+				dest = preserve.updateRelative(dest, ptrC);
+
 				*to << mov(high32(dest), high32(rax));
 				*to << mov(low32(dest), low32(rax));
 			}

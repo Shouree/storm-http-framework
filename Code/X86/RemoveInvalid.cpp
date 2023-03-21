@@ -186,9 +186,10 @@ namespace code {
 		}
 
 		void RemoveInvalid::idivTfm(Listing *to, Instr *instr, Nat line) {
+			Operand src = instr->src();
 			Operand dest = instr->dest();
-			bool srcConst = instr->src().type() == opConstant;
-			bool destEax = false;
+			Bool destEax = false;
+			Bool srcConst = src.type() == opConstant;
 
 			if (dest.type() == opRegister && same(dest.reg(), ptrA)) {
 				destEax = true;
@@ -200,43 +201,53 @@ namespace code {
 				}
 			}
 
-			// The 64-bit transform has been executed before, so we are sure that size is <= sInt
+			// Note: 64-bit transform has already made sure that we are not dealing with 64-bit
+			// values.
 			bool isByte = dest.size() == Size::sByte;
-			Operand newSrc = instr->src();
 
 			RegSet *used = this->used->at(line);
-
-			// Clear eax and edx.
-			if (!destEax && used->has(eax))
-				*to << push(eax);
-			if (!isByte && used->has(edx))
-				*to << push(edx);
-
-			// TODO: if 'src' is 'eax', then we're screwed.
-
-			// Move dest into eax first.
-			if (isByte)
-				*to << bxor(eax, eax);
-			*to << mov(asSize(eax, dest.size()), dest);
-
-			if (srcConst) {
-				if (used->has(ebx))
-					*to << push(ebx);
-				*to << mov(ebx, instr->src());
-				newSrc = ebx;
+			// If dest is a register, we don't need to preserve it.
+			if (dest.type() == opRegister) {
+				used = new (this) RegSet(*used);
+				used->remove(dest.reg());
 			}
 
-			// Note: we do not need to clear edx here, AsmOut will do that for us, ie. we treat edx
-			// as an output-only register.
-			*to << instr->alter(asSize(eax, dest.size()), newSrc);
-			*to << mov(dest, asSize(eax, dest.size()));
+			// Registers we need to preserve. edx is only relevant for 32-bit values, and ecx is
+			// only relevant when we need a constant.
+			Reg toPreserve[3] = { eax };
+			size_t preserveCount = 1;
+			if (!isByte)
+				toPreserve[preserveCount++] = edx;
+			if (srcConst)
+				toPreserve[preserveCount++] = ecx;
 
-			if (srcConst && used->has(ebx))
-				*to << pop(ebx);
-			if (!isByte && used->has(edx))
-				*to << pop(edx);
-			if (!destEax && used->has(eax))
-				*to << pop(eax);
+			Preserve preserved(toPreserve, preserveCount, used, to);
+
+			// Note: if src uses eax, it will be preserved at this point.
+			src = preserved.location(src);
+
+			// Now, we can trash eax without issues.
+			if (!destEax)
+				*to << mov(isByte ? al : eax, dest);
+
+			// We need to move constants into memory. We can use ecx.
+			if (srcConst) {
+				Reg reg = isByte ? cl : ecx;
+				*to << mov(reg, src);
+				src = reg;
+			}
+
+			// Now, emit the instruction:
+			*to << instr->alter(isByte ? al : eax, src);
+
+			// Finally, we can move the result to the right position.
+			if (!destEax) {
+				// edx is always free, it was just clobbered by the div instruction
+				dest = preserved.updateRelative(dest, ptrD);
+				*to << mov(dest, isByte ? al : eax);
+			}
+
+			preserved.restore();
 		}
 
 		void RemoveInvalid::udivTfm(Listing *dest, Instr *instr, Nat line) {
@@ -244,55 +255,85 @@ namespace code {
 		}
 
 		void RemoveInvalid::imodTfm(Listing *to, Instr *instr, Nat line) {
+			Operand src = instr->src();
 			Operand dest = instr->dest();
-			bool srcConst = instr->src().type() == opConstant;
-			bool eaxDest = dest.type() == opRegister && same(dest.reg(), ptrA);
+			Bool destEax = false;
+			Bool destEdx = false;
+			Bool srcConst = src.type() == opConstant;
+
 			bool isByte = dest.size() == Size::sByte;
 
-			Operand newSrc = instr->src();
-			RegSet *used = this->used->at(line);
+			if (dest.type() == opRegister) {
+				if (same(dest.reg(), ptrA)) {
+					destEax = true;
 
-			// Clear eax and edx if needed.
-			if (!eaxDest && used->has(eax))
-				*to << push(eax);
-			if (!isByte && used->has(edx))
-				*to << push(edx);
-
-			// TODO: if 'src' is 'eax', then we're screwed.
-
-			// Move dest into eax first.
-			if (isByte)
-				*to << bxor(eax, eax);
-			*to << mov(asSize(eax, dest.size()), dest);
-
-			if (srcConst) {
-				if (used->has(ebx))
-					*to << push(ebx);
-				*to << mov(ebx, instr->src());
-				newSrc = ebx;
+					if (!srcConst) {
+						// Supported, but we need to shift ah into al.
+						*to << instr;
+						*to << shr(eax, byteConst(8));
+						return;
+					}
+				} else if (same(dest.reg(), ptrD)) {
+					destEdx = true;
+				}
 			}
 
-			// Note: we do not need to clear edx here, AsmOut will do that for us, ie. we treat edx
-			// as an output-only register.
-			if (instr->op() == op::imod)
-				*to << idiv(asSize(eax, dest.size()), newSrc);
-			else
-				*to << udiv(asSize(eax, dest.size()), newSrc);
+			// Note: 64-bit transform has already made sure that we are not dealing with 64-bit
+			// values.
 
+			RegSet *used = this->used->at(line);
+			// If dest is a register, we don't need to preserve it.
+			if (dest.type() == opRegister) {
+				used = new (this) RegSet(*used);
+				used->remove(dest.reg());
+			}
+
+			// Registers we need to preserve. edx is only relevant for 32-bit values, and ecx is
+			// only relevant when we need a constant.
+			Reg toPreserve[3] = { eax };
+			size_t preserveCount = 1;
+			if (!isByte)
+				toPreserve[preserveCount++] = edx;
+			if (srcConst)
+				toPreserve[preserveCount++] = ecx;
+
+			Preserve preserved(toPreserve, preserveCount, used, to);
+
+			// Note: if src uses eax, it will be preserved at this point.
+			src = preserved.location(src);
+
+			// Now, we can trash eax without issues.
+			if (!destEax)
+				*to << mov(isByte ? al : eax, dest);
+
+			// We need to move constants into memory. We can use ecx.
+			if (srcConst) {
+				Reg reg = isByte ? cl : ecx;
+				*to << mov(reg, src);
+				src = reg;
+			}
+
+			// Now, emit the instruction:
+			if (instr->op() == op::imod)
+				*to << idiv(isByte ? al : eax, src);
+			else
+				*to << udiv(isByte ? al : eax, src);
+
+			// Finally, we can move the result to the right position.
 			if (isByte) {
 				*to << shr(eax, byteConst(8));
-				*to << mov(dest, asSize(eax, dest.size()));
-			} else {
+				if (!destEax) {
+					// edx is always free, it was just clobbered by the div instruction
+					dest = preserved.updateRelative(dest, ptrD);
+					*to << mov(dest, al);
+				}
+			} else if (!destEdx) {
+				// eax is always free, it was just clobbered by the div instruction
+				dest = preserved.updateRelative(dest, ptrA);
 				*to << mov(dest, edx);
 			}
 
-
-			if (srcConst && used->has(ebx))
-				*to << pop(ebx);
-			if (!isByte && used->has(edx))
-				*to << pop(edx);
-			if (!eaxDest && used->has(eax))
-				*to << pop(eax);
+			preserved.restore();
 		}
 
 		void RemoveInvalid::umodTfm(Listing *dest, Instr *instr, Nat line) {
