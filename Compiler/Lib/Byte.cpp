@@ -50,8 +50,8 @@ namespace storm {
 		add(inlinedFunction(engine, Value(this), S("+"), vv, fnPtr(engine, &numAdd))->makePure());
 		add(inlinedFunction(engine, Value(this), S("-"), vv, fnPtr(engine, &numSub))->makePure());
 		add(inlinedFunction(engine, Value(this), S("*"), vv, fnPtr(engine, &numMul))->makePure());
-		add(inlinedFunction(engine, Value(this), S("/"), vv, fnPtr(engine, &numIDiv))->makePure());
-		add(inlinedFunction(engine, Value(this), S("%"), vv, fnPtr(engine, &numIMod))->makePure());
+		add(inlinedFunction(engine, Value(this), S("/"), vv, fnPtr(engine, &numUDiv))->makePure());
+		add(inlinedFunction(engine, Value(this), S("%"), vv, fnPtr(engine, &numUMod))->makePure());
 
 		add(inlinedFunction(engine, b, S("=="), vv, fnPtr(engine, &numCmp<ifEqual>))->makePure());
 		add(inlinedFunction(engine, b, S("!="), vv, fnPtr(engine, &numCmp<ifNotEqual>))->makePure());
@@ -69,8 +69,8 @@ namespace storm {
 		add(inlinedFunction(engine, Value(this), S("+="), rv, fnPtr(engine, &numInc<Byte>))->makePure());
 		add(inlinedFunction(engine, Value(this), S("-="), rv, fnPtr(engine, &numDec<Byte>))->makePure());
 		add(inlinedFunction(engine, Value(this), S("*="), rv, fnPtr(engine, &numScale<Byte>))->makePure());
-		add(inlinedFunction(engine, Value(this), S("/="), rv, fnPtr(engine, &numIDivScale<Byte>))->makePure());
-		add(inlinedFunction(engine, Value(this), S("%="), rv, fnPtr(engine, &numIModEq<Byte>))->makePure());
+		add(inlinedFunction(engine, Value(this), S("/="), rv, fnPtr(engine, &numUDivScale<Byte>))->makePure());
+		add(inlinedFunction(engine, Value(this), S("%="), rv, fnPtr(engine, &numUModEq<Byte>))->makePure());
 
 		// Bitwise operators.
 		add(inlinedFunction(engine, Value(this), S("&"), vv, fnPtr(engine, &numAnd))->makePure());

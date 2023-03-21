@@ -331,7 +331,7 @@ namespace code {
 
 		void RemoveInvalid::idivTfm(Listing *dest, Instr *instr, Nat line) {
 			RegSet *used = new (this) RegSet(*this->used->at(line));
-			const Operand &op = instr->dest();
+			Operand op = instr->dest();
 			bool small = op.size() == Size::sByte;
 
 			// If 'src' is a constant, we need to move it into a register.
@@ -344,9 +344,12 @@ namespace code {
 			// Make sure ptrD can be trashed (not needed if we're working with bytes).
 			Reg oldD = noReg;
 			if (!small && used->has(ptrD)) {
-				oldD = asSize(unusedReg(used), Size::sPtr);
-				*dest << mov(oldD, ptrD);
-				used->put(oldD);
+				// Don't re-route ptrD if we write to it.
+				if (op.type() != opRegister || same(op.reg(), ptrD)) {
+					oldD = asSize(unusedReg(used), Size::sPtr);
+					*dest << mov(oldD, ptrD);
+					used->put(oldD);
+				}
 			}
 
 			if (op.type() == opRegister && same(op.reg(), ptrA)) {
@@ -356,9 +359,12 @@ namespace code {
 				// We need to put op into 'ptrA'.
 				Reg oldA = noReg;
 				if (used->has(ptrA)) {
-					oldA = asSize(unusedReg(used), Size::sPtr);
-					*dest << mov(oldA, ptrA);
-					used->put(oldA);
+					// Don't bother if we are going to write to ptrA anyway.
+					if (op.type() != opRegister || same(op.reg(), ptrD)) {
+						oldA = asSize(unusedReg(used), Size::sPtr);
+						*dest << mov(oldA, ptrA);
+						used->put(oldA);
+					}
 				}
 
 				Reg destA = asSize(ptrA, op.size());
@@ -368,6 +374,15 @@ namespace code {
 				} else {
 					*dest << instr->alterDest(destA);
 				}
+
+				// If the destination utilizes 'a' or 'd' registers, use the old versions.
+				if (op.type() == opRelative) {
+					if (same(op.reg(), ptrA))
+						op = xRel(op.size(), oldA, op.offset());
+					else if (same(op.reg(), ptrD))
+						op = xRel(op.size(), oldD, op.offset());
+				}
+
 				*dest << mov(op, destA);
 
 				if (oldA != noReg) {
@@ -386,7 +401,7 @@ namespace code {
 
 		void RemoveInvalid::imodTfm(Listing *dest, Instr *instr, Nat line) {
 			RegSet *used = new (this) RegSet(*this->used->at(line));
-			const Operand &op = instr->dest();
+			Operand op = instr->dest();
 			bool small = op.size() == Size::sByte;
 
 			// If 'src' is a constant, we need to move it into a register.
@@ -399,17 +414,23 @@ namespace code {
 			// Make sure ptrD can be trashed (unless we're working with 8 bit numbers).
 			Reg oldD = noReg;
 			if (!small && used->has(ptrD)) {
-				oldD = asSize(unusedReg(used), Size::sPtr);
-				*dest << mov(oldD, ptrD);
-				used->put(oldD);
+				// Don't re-route ptrD if we write to it.
+				if (op.type() != opRegister || same(op.reg(), ptrD)) {
+					oldD = asSize(unusedReg(used), Size::sPtr);
+					*dest << mov(oldD, ptrD);
+					used->put(oldD);
+				}
 			}
 
 			// We need to put op into 'ptrA'.
 			Reg oldA = noReg;
 			if (used->has(ptrA)) {
-				oldA = asSize(unusedReg(used), Size::sPtr);
-				*dest << mov(oldA, ptrA);
-				used->put(oldA);
+				// Don't re-route ptrD if we write to it.
+				if (op.type() != opRegister || same(op.reg(), ptrA)) {
+					oldA = asSize(unusedReg(used), Size::sPtr);
+					*dest << mov(oldA, ptrA);
+					used->put(oldA);
+				}
 			}
 
 			Reg destA = asSize(ptrA, op.size());
@@ -427,6 +448,14 @@ namespace code {
 				// We need to shift the register a bit (we are not able to access AH in this implementation).
 				*dest << shr(eax, byteConst(8));
 				destD = al;
+			}
+
+			// If the destination utilizes 'a' or 'd' registers, use the old versions.
+			if (op.type() == opRelative) {
+				if (same(op.reg(), ptrA))
+					op = xRel(op.size(), oldA, op.offset());
+				else if (same(op.reg(), ptrD))
+					op = xRel(op.size(), oldD, op.offset());
 			}
 
 			if (op.type() != opRegister || op.reg() != destD)

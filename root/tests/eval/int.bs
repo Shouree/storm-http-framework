@@ -15,6 +15,9 @@ Int iInc10() { Int i = 5; i += 5i; i; }
 Int iDec10() { Int i = 15; i -= 5i; i; }
 Int iInc12() { Int i = 10; i++; ++i; }
 Int iInc11() { Int i = 10; ++i; i++; }
+Int iMulEq8() { Int i = 4; i *= 2; i; }
+Int iDivEq8() { Int i = 16; i /= 2; i; }
+Int iModEq5() { Int i = 15; i %= 10; i; }
 Int iDec8() { Int i = 10; i--; --i; }
 Int iDec9() { Int i = 10; --i; i--; }
 Int iAssign10() { Int i = 10; Int j = 5; j = i; j; }
@@ -54,6 +57,9 @@ Nat nDiv6() { 12n / 2n; }
 Nat nMod2() { 12n % 10n; }
 Nat nInc1() { Nat i = 0; i += 1; i; }
 Nat nDec1() { Nat i = 6; i -= 5; i; }
+Nat nMulEq8() { Nat i = 4; i *= 2; i; }
+Nat nDivEq8() { Nat i = 16; i /= 2; i; }
+Nat nModEq5() { Nat i = 15; i %= 10; i; }
 Nat nInc8() { Nat i = 6; i++; ++i; }
 Nat nInc7() { Nat i = 6; ++i; i++; }
 Nat nDec4() { Nat i = 6; i--; --i; }
@@ -93,9 +99,14 @@ Byte bAdd23() { 21b + 2b; }
 Byte bSub11() { 15b - 4b; }
 Byte bMul10() { 2b * 5b; }
 Byte bDiv7() { 15b / 2b; }
+Byte bDiv50() { 200b / 4b; }
+Byte bDiv25() { Byte i = 200b; i /= 8b; i; }
 Byte bMod5() { 15b % 10b; }
 Byte bInc2() { Byte i = 0; i += 2; i; }
 Byte bDec2() { Byte i = 6; i -= 4; i; }
+Byte bMulEq8() { Byte i = 4; i *= 2; i; }
+Byte bDivEq8() { Byte i = 16; i /= 2; i; }
+Byte bModEq8() { Byte i = 18; i %= 10; i; }
 Byte bInc18() { Byte i = 16; i++; ++i; }
 Byte bInc17() { Byte i = 16; ++i; i++; }
 Byte bDec14() { Byte i = 16; i--; --i; }
@@ -130,6 +141,9 @@ Long lDiv60() { 120l / 2l; }
 Long lMod20() { 120l % 100l; }
 Long lInc14() { Long i = 10; i += 4; i; }
 Long lDec16() { Long i = 18; i -= 2; i; }
+Long lMulEq8() { Long i = 4; i *= 2; i; }
+Long lDivEq8() { Long i = 16; i /= 2; i; }
+Long lModEq5() { Long i = 15; i %= 10; i; }
 Long lInc28() { Long i = 26; i++; ++i; }
 Long lInc27() { Long i = 26; ++i; i++; }
 Long lDec24() { Long i = 26; i--; --i; }
@@ -171,6 +185,9 @@ Word wDiv160() { 320w / 2w; }
 Word wMod120() { 1120w % 1000w; }
 Word wInc114() { Word i = 110; i += 4; i; }
 Word wDec116() { Word i = 118; i -= 2; i; }
+Word wMulEq8() { Word i = 4; i *= 2; i; }
+Word wDivEq8() { Word i = 16; i /= 2; i; }
+Word wModEq8() { Word i = 18; i %= 10; i; }
 Word wInc128() { Word i = 126; i++; ++i; }
 Word wInc127() { Word i = 126; ++i; i++; }
 Word wDec124() { Word i = 126; i--; --i; }

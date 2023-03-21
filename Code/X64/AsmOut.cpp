@@ -422,6 +422,7 @@ namespace code {
 
 			if (instr->size() == Size::sByte) {
 				// Sign extend al into ax.
+				to->putByte(0x66);
 				to->putByte(0x98);
 				modRm(to, opCode(0xF6), rmByte, 7, instr->src());
 			} else if (instr->size() == Size::sInt) {
