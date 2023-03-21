@@ -128,7 +128,7 @@ class FormatBuilder {
 	// Make 'content' a different color.
 	void color(FormatBuilder content, Float r, Float g, Float b) {
 		var old = merge(content);
-		addEffect(old, TextEffect:color(dummy, dummy, Color(r, g, b)));
+		addEffect(old, TextEffect:color(dummy, dummy, graphics:Color(r, g, b)));
 	}
 
 	void color(lang:bs:Block block, FormatBuilder content, lang:bs:Expr expr) {
