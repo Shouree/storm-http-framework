@@ -20,8 +20,10 @@ DATABASE ProgvisDB {
 		user INTEGER
 	);
 
-	// Problems in the system. There are two types of problems: one that only consists of a piece of
-	// code, and one that has an interface + an implementation.
+	// Problems in the system. Each problem corresponds to an initial problem submitted by some
+	// user. This initial submission contains an implementation of some data structure, a test for
+	// the data structure, and a reference implementation. Users will then improve the
+	// implementation and the test, so they are expected to be "poor" initially.
 	TABLE problems(
 		// ID of this problem.
 		id INTEGER PRIMARY KEY,
@@ -29,49 +31,88 @@ DATABASE ProgvisDB {
 		author INTEGER,
 		// Title of the problem.
 		title TEXT,
-		// What is the current state of this problem? I.e. what is the next thing to modify.
-		// 0 = modify the main program, 1 = modify the implementation.
-		next INTEGER,
-		// Source code of the main program (to code table).
-		main INTEGER,
-		// Source code of the implementation (to code table).
+		// Implementation (foreign key to code)
 		impl INTEGER,
-		// Source code of the reference implementation (to code table).
+		// Test (foreign key to code)
+		test INTEGER,
+		// Reference implementation (foreign key to code)
 		refimpl INTEGER,
-		// Improved version of a previous problem, if any.
-		improved INTEGER ALLOW NULL,
+		// Is there currently an error in the implementation? (should be the case)
+		hasError INTEGER,
 		// Created (time string in UTC)
 		created TEXT
-		);
-	INDEX ON problems(author);
-	INDEX ON problems(improved);
+	);
 
-	// A piece of code for some problem.
+	// Improvements to implementations.
+	TABLE implementations(
+		// ID of this implementation.
+		id INTEGER PRIMARY KEY,
+		// Version of the implementation (increasing for each user+problem), ID:s are not guaranteed to be increasing on SQLite.
+		version INTEGER DEFAULT 1,
+		// Author.
+		author INTEGER,
+		// Code (foreign to code).
+		code INTEGER,
+		// Created.
+		created TEXT
+	);
+	INDEX ON implementations(author);
+
+	// Improvements to tests.
+	TABLE tests(
+		// ID of this test.
+		id INTEGER PRIMARY KEY,
+		// Version of the test (increasing for each user+problem), ID:s are not guaranteed to be increasing on SQLite.
+		version INTEGER DEFAULT 1,
+		// Author.
+		author INTEGER,
+		// Code (foreign to code).
+		code INTEGER,
+		// Created.
+		created TEXT
+	);
+	INDEX ON tests(author);
+
+	// Known combinations of success/failure between tests.
+	// We don't aim to test all combinations, but only the latest version of each users' submission.
+	TABLE autoresults(
+		// Implementation tested.
+		impl INTEGER,
+		// Test used.
+		test INTEGER,
+		// Any errors found? String is type of error found.
+		error TEXT ALLOW NULL,
+		// PK declaration.
+		PRIMARY KEY(impl, test);
+	);
+
+	// Code stored in the system.
 	TABLE code(
-		// ID of this piece of code.
+		// ID of this code.
 		id INTEGER PRIMARY KEY,
 		// Program source code.
 		src TEXT,
-		// Language (= file extension) of the problem.
+		// Language (= file extension).
 		language TEXT
-		);
+	);
 
-	// Incorrect sequences to problems of type 1 that were found by users.
-	TABLE solutions(
-		// ID of this solution.
+	// Log attempts at finding bugs in the code.
+	TABLE attempts(
+		// ID of the sequence.
 		id INTEGER PRIMARY KEY,
-		// Solution author (foreign key to users)
+		// Author.
 		author INTEGER,
-		// Problem (foreign key to problems)
-		problem INTEGER,
-		// Type of error found.
-		type TEXT,
-		// Sequence found.
+		// ID of the implementation used (refers to code).
+		impl INTEGER,
+		// ID of the test used (refers to code).
+		test INTEGER,
+		// Sequence of advanced threads.
 		sequence TEXT,
-		// Created (time string in UTC)
+		// Error found at the end, if any.
+		error TEXT ALLOW NULL,
+		// Timestamp.
 		created TEXT
-		);
-	INDEX ON solutions(problem);
+	);
 
 }
 
@@ -113,186 +154,37 @@ class Database {
 		WITH db: UPDATE users SET displayName = newName WHERE id == userId;
 	}
 
-	// Convert from 'currentError' to the DB representation.
-	private Int toNext(Bool currentError) {
-		if (currentError) {
-			1;
-		} else {
-			0;
-		}
-	}
-
-	// Convert from 'next' to CurrentError.
-	private Bool fromNext(Int value) {
-		value != 0;
-	}
-
-	// Get a list of problems in the system. Excludes problems that the user has already
-	// solved. 'currentError' indicates whether to return problems where the implementation is
-	// broken, or where the main is too weak.
-	ProblemDetails[] unsolvedProblems(Int forUser, Bool currentError) {
-		ProblemDetails[] result;
-		Int nextV = toNext(currentError);
-		var x = WITH db: SELECT problems.id AS id, displayName, title FROM problems
-			JOIN users ON problems.author == users.id
-			WHERE author != forUser AND next == nextV
-			ORDER BY problems.id;
-		for (row in x) {
-			var problemId = row.id;
-
-			var solved = (WITH db: SELECT ONE id FROM problems WHERE improved == problemId AND author == forUser);
-			if (solved.empty) {
-				result << ProblemDetails(problemId, row.title, row.displayName, false, currentError,
-										countImproved(problemId),
-										countSolved(problemId, currentError));
-			}
-		}
-
-		result;
-	}
-
-	// Get users' solved problems.
-	ProblemDetails[] solvedProblems(Int forUser) {
-		ProblemDetails[] result;
-		var x = WITH db: SELECT problems.id AS id, displayName, title, next FROM problems
-			JOIN users ON problems.author == users.id
-			WHERE author != forUser
-			ORDER BY problems.id;
-		for (row in x) {
-			var problemId = row.id;
-
-			var solved = (WITH db: SELECT ONE id FROM problems WHERE improved == problemId AND author == forUser);
-			if (solved.any) {
-				result << ProblemDetails(problemId, row.title, row.displayName, false, fromNext(row.next),
-										countImproved(problemId),
-										countSolved(problemId, fromNext(row.next)));
-			}
-		}
-
-		result;
-	}
-
-	// Get a list of the user's own problems.
-	ProblemDetails[] ownProblems(Int forUser) {
-		ProblemDetails[] result;
-		var x = WITH db: SELECT problems.id AS id, displayName, title, next FROM problems
-			JOIN users ON problems.author == users.id
-			WHERE author == forUser
-			ORDER BY problems.id;
-		for (row in x) {
-			result << ProblemDetails(row.id, row.title, row.displayName, true, fromNext(row.next),
-									countImproved(row.id),
-									countSolved(row.id, fromNext(row.next)));
-		}
-		result;
-	}
-
-	private Nat countImproved(Int problemId) {
-		WITH db: COUNT FROM problems WHERE improved == problemId;
-	}
-
-	private Nat countSolved(Int problemId, Bool currentError) {
-		if (currentError)
-			WITH db: COUNT FROM solutions WHERE problem == problemId;
-		else
-			0;
-	}
-
-	ProblemInfo? parentTo(Int problemId, Int userId) {
-		if (p = WITH db: SELECT ONE improved FROM problems WHERE id == problemId) {
-			if (improvedId = p.improved) {
-				if (x = WITH db: SELECT ONE problems.id AS id, author, displayName, title, next FROM problems
-					JOIN users ON problems.author == users.id
-					WHERE problems.id == improvedId) {
-					return ProblemInfo(x.id, x.title, x.displayName, x.author == userId, fromNext(x.next));
-				}
-			}
-		}
-		null;
-	}
-
-	Bool solvedProblem(Int userId, Int problemId) {
-		var result = WITH db: SELECT ONE id FROM problems WHERE improved == problemId AND userId == author;
-		result.any;
-	}
-
-	ProblemInfo[] improvementsTo(Int problemId, Int userId) {
-		ProblemInfo[] result;
-		var x = WITH db: SELECT problems.id AS id, author, displayName, title, next FROM problems
-			JOIN users ON problems.author == users.id
-			WHERE improved == problemId;
-		for (row in x) {
-			result << ProblemInfo(row.id, row.title, row.displayName, row.author == userId, fromNext(row.next));
-		}
-		result;
-	}
-
-	Solution[] solutionsTo(Int problemId) {
-		Solution[] result;
-		var x = WITH db: SELECT solutions.id AS id, displayName, type, sequence FROM solutions
-			JOIN users ON users.id == solutions.author
-			WHERE problem == problemId;
-		for (row in x) {
-			result << Solution(row.id, problemId, row.displayName, row.type, row.sequence);
-		}
-		result;
-	}
-
-	Int createProblem(Int userId, Str title, Code main, Code impl, Code refImpl, Bool currentError) {
-		Int mainId = createCode(main);
+	// Create a new problem.
+	Int createProblem(Int userId, Str title, Code impl, Code test, Code refImpl, Bool hasError) {
 		Int implId = createCode(impl);
+		Int testId = createCode(test);
 		Int refId = createCode(refImpl);
-		Int next = toNext(currentError);
-		WITH db: INSERT INTO problems(author, title, next, main, impl, refimpl, created)
-			VALUES (userId, title, next, mainId, implId, refId, CURRENT DATETIME);
+		Int error = if (hasError) { 1; } else { 0; };
+		WITH db: INSERT INTO problems(author, title, impl, test, refimpl, hasError, created)
+			VALUES (userId, title, implId, testId, refId, error, CURRENT DATETIME);
 	}
 
-	Int improvedProblem(Int userId, Int originalId, Str title, Code? main, Code? impl, Bool currentError) {
-		unless (original = WITH db: SELECT ONE main, impl, refimpl FROM problems WHERE id == originalId)
-			throw ServerError("Problem ${originalId} does not exist.");
+	// Store a sequence of an attempted "solution"
+	Int postAttempt(Int userId, Int implId, Int testId, Str sequence, Str? error) {
+		checkImplId(implId);
+		checkTestId(testId);
 
-		// Check if this user has submitted a problem with similar enough code before.
-		for (row in WITH db: SELECT main, impl FROM problems WHERE improved == originalId AND author == userId) {
-			if (main)
-				compareCode(row.main, main);
-			if (impl)
-				compareCode(row.impl, impl);
-		}
-
-		Int mainId = original.main;
-		if (main)
-			mainId = createCode(main);
-		Int implId = original.impl;
-		if (impl)
-			implId = createCode(impl);
-		Int next = toNext(currentError);
-		WITH db: INSERT INTO problems(author, title, next, main, impl, refimpl, improved, created)
-			VALUES (userId, title, next, mainId, implId, ${original.refimpl}, originalId, CURRENT DATETIME);
+		WITH db: INSERT INTO attempts(author, impl, test, sequence, error, created)
+			VALUES (userId, implId, testId, sequence, error, CURRENT DATETIME);
 	}
 
-	// Compare code for equality to disallow submitting multiple instances of essentially the same
-	// solution to hoard points. Throws on failure.
-	private void compareCode(Int original, Code newCode) {
-		unless (code = WITH db: SELECT ONE src FROM code WHERE id == original)
-			return;
-
-		if (codeSignature(code.src) == newCode.signature)
-			throw ServerError("This solution is almost identical to another solution you submitted to this problem.");
+	// Compute the points of all users in the database.
+	Int->Int allScores() {
+		Int->Int result;
+		return result;
 	}
+
+	/**
+	 * Utils
+	 */
 
 	private Int createCode(Code code) {
 		WITH db: INSERT INTO code(src, language) VALUES (${code.src}, ${code.language});
-	}
-
-	Problem problemDetails(Int problemId, Int userId) {
-		var x = WITH db: SELECT ONE problems.id AS id, author, displayName, title, next, main, impl, refimpl FROM problems
-			JOIN users ON problems.author == users.id
-			WHERE problems.id == problemId;
-		unless (x)
-			throw ServerError("Problem ${problemId} does not exist.");
-
-		Problem(x.id, x.title, x.displayName, x.author == userId, fromNext(x.next),
-				getCode(x.main), getCode(x.impl), getCode(x.refimpl));
 	}
 
 	private Code getCode(Int codeId) {
@@ -303,92 +195,26 @@ class Database {
 		Code(code.src, code.language);
 	}
 
-	Int createSolution(Int userId, Int problemId, Str type, Str sequence) {
-		unless (author = WITH db: SELECT ONE author FROM problems WHERE id == problemId)
-			throw ServerError("No problem with the id ${problemId}!");
-
-		// Note: We could check so that we don't solve our own problems here. In the new scheme,
-		// this is not as important, so we skip it for now at least.
-		// if (author.author == server.userId)
-		// 	throw ServerError("Can not solve your own problem!");
-
-		// Avoid duplicates.
-		if (existing = WITH db: SELECT ONE id FROM solutions WHERE problem == problemId AND author == userId AND type == ${type}) {
-			WITH db: UPDATE solutions SET sequence = ${sequence} WHERE id = ${existing.id};
-			existing.id;
-		} else {
-			WITH db: INSERT INTO solutions(author, problem, type, sequence, created)
-				VALUES (userId, problemId, ${type}, ${sequence}, CURRENT DATETIME);
-		}
+	// Validate implementation ID.
+	private void checkImplId(Int implId) {
+		unless (WITH db: SELECT ONE id FROM implementations WHERE id == implId)
+			throw ServerError("No implementation with id ${id}.");
 	}
 
-	// Compute the points of all users in the database.
-	Int->Int allScores() {
-		Int->Int result;
+	// Validate test ID.
+	private void checkTestId(Int testId) {
+		unless (WITH db: SELECT ONE id FROM tests WHERE id == testId)
+			throw ServerError("No test with id ${id}.");
+	}
 
-		// Points given to a user who...
+	// Compare code for equality to disallow submitting multiple instances of essentially the same
+	// solution to hoard points. Throws on failure.
+	private void compareCode(Int original, Code newCode) {
+		unless (code = WITH db: SELECT ONE src FROM code WHERE id == original)
+			return;
 
-		// ...finds an error in a "debug" problem.
-		Int debugFoundError = 10;
-		// ...submits a solution to a "debug" problem.
-		Int debugSubmit = 10;
-		// ...submits a solution to a "debug" problem, and solves all issues.
-		Int debugSolve = 50;
-
-		// ...modifies "main" to expose an error.
-		Int testFindError = 100;
-
-		// Divider if the "parent" problem was the user's own.
-		Int selfPenalty = 3; // reduce by 66% to avoid making intentionally bad solutions.
-
-		WITH db {
-			var improvements = SELECT p.author AS author, parent.author AS pAuthor, p.next AS next, parent.next AS pNext
-				FROM problems p
-				JOIN problems parent ON parent.id == p.improved;
-			for (row in improvements) {
-				// Score for this row.
-				Int rowScore = 0;
-
-				// Penalty for solving one's own problem?
-				Int penalty = 1;
-				if (row.author == row.pAuthor)
-					penalty = selfPenalty;
-
-				if (fromNext(row.pNext)) {
-					// If the parent problem was a "debug" problem:
-
-					// They improved it:
-					rowScore += debugSubmit / penalty;
-
-					// If it no longer has errors, they fixed all errors:
-					if (!fromNext(row.next))
-						rowScore += debugSolve / penalty;
-				} else {
-					// If the parent problem was a "test" problem:
-
-					// The current one should contain errors, but we check for safety:
-					if (fromNext(row.next))
-						rowScore += testFindError / penalty;
-				}
-
-				// Update the user's score!
-				result[row.author] += rowScore;
-			}
-
-			// Also look at solutions!
-			var solutions = SELECT solutions.author AS sAuthor, problems.author AS pAuthor
-				FROM solutions
-				JOIN problems ON problems.id == solutions.problem;
-			for (row in solutions) {
-				Int points = debugFoundError;
-				if (row.pAuthor == row.sAuthor)
-					points /= selfPenalty;
-
-				result[row.sAuthor] += points;
-			}
-		}
-
-		result;
+		if (codeSignature(code.src) == newCode.signature)
+			throw ServerError("This solution is almost identical to another solution you submitted to this problem.");
 	}
 }
 

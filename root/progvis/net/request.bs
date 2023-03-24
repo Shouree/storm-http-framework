@@ -108,141 +108,21 @@ private value ScorePair {
 }
 
 /**
- * Ask for problems..
- */
-class UnsolvedRequest : extends Request, serializable {
-	// Only problems with an error currently.
-	Bool currentError;
-
-	init(Bool currentError) {
-		init {
-			currentError = currentError;
-		}
-	}
-
-	Response? execute(ServerConn server, Database db) : override {
-		ProblemResponse(db.unsolvedProblems(server.userId, currentError));
-	}
-}
-
-/**
- * Ask for solved problems.
- */
-class SolvedProblemsRequest : extends Request, serializable {
-	Response? execute(ServerConn server, Database db) : override {
-		ProblemResponse(db.solvedProblems(server.userId));
-	}
-}
-
-/**
- * Ask for a user's own problems.
- */
-class OwnProblemsRequest : extends Request, serializable {
-	Response? execute(ServerConn server, Database db) : override {
-		ProblemResponse(db.ownProblems(server.userId));
-	}
-}
-
-/**
- * Ask for more detailed stats of a problem.
- */
-class StatsRequest : extends Request, serializable {
-	// Problem we are interested in.
-	Int problem;
-
-	// Include improvments?
-	Bool improvements;
-
-	// Include solutions.
-	Bool solutions;
-
-	init(Int problem, Bool improvements, Bool solutions) {
-		init {
-			problem = problem;
-			improvements = improvements;
-			solutions = solutions;
-		}
-	}
-
-	init(Problem problem, Bool improvements, Bool solutions) {
-		init {
-			problem = problem.id;
-			improvements = improvements;
-			solutions = solutions;
-		}
-	}
-
-	Response? execute(ServerConn server, Database db) : override {
-		ProblemInfo[] improved;
-		if (improvements)
-			improved = db.improvementsTo(problem, server.userId);
-		Solution[] solution;
-		if (solutions)
-			solution = db.solutionsTo(problem);
-		ProblemInfo? parent = db.parentTo(problem, server.userId);
-		Bool solved = db.solvedProblem(server.userId, problem);
-		StatsResponse(parent, solved, improved, solution);
-	}
-}
-
-/**
- * Ask for details about a problem (including source).
- */
-class DetailsRequest : extends Request, serializable {
-	Int problemId;
-
-	init(Int id) {
-		init { problemId = id; }
-	}
-
-	Response? execute(ServerConn server, Database db) : override {
-		DetailsResponse(db.problemDetails(problemId, server.userId));
-	}
-}
-
-/**
- * Submit a solution to a problem.
- */
-class PostSolutionRequest : extends Request, serializable {
-	// Solution to this problem.
-	Int problemId;
-
-	// Type of solution.
-	Str type;
-
-	// Solution data.
-	Str solution;
-
-	init(Int problemId, Str type, Str solution) {
-		init {
-			problemId = problemId;
-			type = type;
-			solution = solution;
-		}
-	}
-
-	Response? execute(ServerConn server, Database db) : override {
-		var id = db.createSolution(server.userId, problemId, type, solution);
-		PostSolutionResponse(id);
-	}
-}
-
-/**
  * Publish a new problem.
  */
 class NewProblemRequest : extends Request, serializable {
 	Str title;
-	Code main;
 	Code impl;
+	Code test;
 	Code refImpl;
 
 	// Is there a concurrency error in the combination main + impl currently?
 	Bool currentError;
 
-	init(Str title, Code main, Code impl, Code refImpl, Bool currentError) {
+	init(Str title, Code impl, Code test, Code refImpl, Bool currentError) {
 		init {
 			title = title;
-			main = main;
+			test = test;
 			impl = impl;
 			refImpl = refImpl;
 			currentError = currentError;
@@ -250,34 +130,7 @@ class NewProblemRequest : extends Request, serializable {
 	}
 
 	Response? execute(ServerConn server, Database db) : override {
-		Int id = db.createProblem(server.userId, title, main, impl, refImpl, currentError);
-		NewProblemResponse(id);
-	}
-}
-
-/**
- * Publish an improvement to an existing problem.
- */
-class ImprovedProblemRequest : extends Request, serializable {
-	Int originalId;
-	Str title;
-	Code? main;
-	Code? impl;
-
-	Bool currentError;
-
-	init(Int originalId, Str title, Code? main, Code? impl, Bool currentError) {
-		init {
-			originalId = originalId;
-			title = title;
-			main = main;
-			impl = impl;
-			currentError = currentError;
-		}
-	}
-
-	Response? execute(ServerConn server, Database db) : override {
-		Int id = db.improvedProblem(server.userId, originalId, title, main, impl, currentError);
+		Int id = db.createProblem(server.userId, title, impl, test, refImpl, currentError);
 		NewProblemResponse(id);
 	}
 }

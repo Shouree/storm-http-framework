@@ -13,13 +13,13 @@ dialog UploadDlg {
 		Label nameLbl("Name:", HAlign:right, VAlign:center) {}
 		Edit name("Name your problem") { colspan: 2; }
 		nextLine;
-		Label mainLbl("Test program:", HAlign:right, VAlign:center) {}
-		Edit mainName("") {}
-		Button mainButton("Select...") {}
-		nextLine;
 		Label implLbl("Implementation:", HAlign:right, VAlign:center) {}
 		Edit implName("") {}
 		Button implButton("Select...") {}
+		nextLine;
+		Label mainLbl("Test program:", HAlign:right, VAlign:center) {}
+		Edit mainName("") {}
+		Button mainButton("Select...") {}
 		nextLine;
 		Label refLbl("Reference implementation:", HAlign:right, VAlign:center) {}
 		Edit refName("") {}
@@ -41,26 +41,9 @@ dialog UploadDlg {
 		defaultChoice(uploadButton);
 		uploadButton.onClick = &this.upload();
 
-		mainButton.onClick = &this.pickMain();
 		implButton.onClick = &this.pickImpl();
+		testButton.onClick = &this.pickTest();
 		refButton.onClick = &this.pickRef();
-	}
-
-	void pickMain() {
-		unless (f = pickFile())
-			return;
-
-		mainName.text = f.format;
-
-		Str title = f.title;
-		Str ext = f.ext;
-
-		Url impl = f.parent / (title + "_impl." + ext);
-		Url ref = f.parent / (title + "_ref." + ext);
-		if (impl.exists())
-			implName.text = impl.format;
-		if (ref.exists())
-			refName.text = ref.format;
 	}
 
 	void pickImpl() {
@@ -68,6 +51,23 @@ dialog UploadDlg {
 			return;
 
 		implName.text = f.format;
+
+		Str title = f.title;
+		Str ext = f.ext;
+
+		Url test = f.parent / (title + "_test." + ext);
+		Url ref = f.parent / (title + "_ref." + ext);
+		if (test.exists())
+			testName.text = test.format;
+		if (ref.exists())
+			refName.text = ref.format;
+	}
+
+	void pickTest() {
+		unless (f = pickFile())
+			return;
+
+		testName.text = f.format;
 	}
 
 	void pickRef() {
@@ -95,13 +95,13 @@ dialog UploadDlg {
 			return;
 		}
 
-		unless (main = loadCode(mainName.text)) {
-			showMessage(this, "File not found", "The file for the test program does not exist!");
+		unless (impl = loadCode(implName.text)) {
+			showMessage(this, "File not found", "The file for the implementation does not exist!");
 			return;
 		}
 
-		unless (impl = loadCode(implName.text)) {
-			showMessage(this, "File not found", "The file for the implementation does not exist!");
+		unless (test = loadCode(testName.text)) {
+			showMessage(this, "File not found", "The file for the test program does not exist!");
 			return;
 		}
 
@@ -115,7 +115,7 @@ dialog UploadDlg {
 		for (x in children)
 			x.enabled = false;
 
-		(spawn checkCode(name.text, main, impl, ref)).detach();
+		(spawn checkCode(name.text, test, impl, ref)).detach();
 	}
 
 	private progvis:net:Code? loadCode(Str path) {
@@ -130,9 +130,9 @@ dialog UploadDlg {
 		return progvis:net:Code(contents, url.ext);
 	}
 
-	void checkCode(Str name, progvis:net:Code main, progvis:net:Code impl, progvis:net:Code ref) {
+	void checkCode(Str name, progvis:net:Code impl, progvis:net:Code test, progvis:net:Code ref) {
 		MemoryProtocol memory;
-		Url m = main.put("main", memory);
+		Url m = test.put("test", memory);
 		Url i = impl.put("impl", memory);
 		Url r = ref.put("ref", memory);
 
@@ -159,7 +159,7 @@ dialog UploadDlg {
 		}
 
 		try {
-			client.query(NewProblemRequest(name, main, impl, ref, currentError));
+			client.query(NewProblemRequest(name, impl, test, ref, currentError));
 		} catch (Exception e) {
 			error(e.message);
 			return;
