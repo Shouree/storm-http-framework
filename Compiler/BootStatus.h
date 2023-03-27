@@ -26,6 +26,9 @@ namespace storm {
 
 		// Finalizing in progress.
 		bootShutdown,
+
+		// No 'world' anymore.
+		bootLateShutdown,
 	};
 
 }

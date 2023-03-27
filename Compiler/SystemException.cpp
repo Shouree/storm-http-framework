@@ -5,6 +5,7 @@
 #include "Code/Arena.h"
 #include "Code/Binary.h"
 #include "Gc/CodeTable.h"
+#include "Engine.h"
 
 #ifdef POSIX
 #include "Gc/Fault.h"
@@ -25,10 +26,17 @@ namespace storm {
 			return null;
 
 		code::Binary *b = code::codeBinary(fde->codeStart());
-		if (!b)
+		Engine *e = null;
+		if (b)
+			e = &b->engine();
+
+		if (!e)
+			e = runtime::someEngineUnsafe();
+
+		if (e && e->has(bootLateShutdown))
 			return null;
 
-		return &b->engine();
+		return e;
 	}
 
 
@@ -75,8 +83,6 @@ namespace storm {
 		// Try to find an engine based on the code that called the instruction, so that we can
 		// extract an Engine object to instantiate the exception.
 		Engine *e = findEngine(info->si_addr);
-		if (!e)
-			e = runtime::someEngineUnsafe();
 
 		if (e) {
 			switch (info->si_code) {
@@ -188,14 +194,22 @@ namespace storm {
 
 	static Engine *findEngine(LPEXCEPTION_POINTERS info) {
 		void *code = codeTable().find(instructionPtr(info->ContextRecord));
+		Engine *e = null;
+
 		if (code) {
 			code::Binary *b = code::codeBinary(code);
 			if (b) {
-				return &b->engine();
+				e = &b->engine();
 			}
 		}
 
-		return runtime::someEngineUnsafe();
+		if (!e)
+			e = runtime::someEngineUnsafe();
+
+		if (e && e->has(bootLateShutdown))
+				return null;
+
+		return e;
 	}
 
 	static void throwAccessError(LPEXCEPTION_POINTERS info) {

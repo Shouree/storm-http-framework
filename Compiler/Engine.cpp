@@ -216,6 +216,7 @@ namespace storm {
 		// to compile some destructors during shutdown...
 		gc.collect();
 
+		advance(bootLateShutdown);
 		// We need to remove the root this array implies before the Gc is destroyed.
 		world.clear();
 
