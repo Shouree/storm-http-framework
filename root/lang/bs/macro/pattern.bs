@@ -222,7 +222,7 @@ class PatternExprSrc extends SPatternExpr {
 
 
 // Insert a previously generated Expr here.
-Expr insertExpr(SrcPos pos, Block block, SPatternExpr pattern) {
+Expr insertExpr(SrcPos pos, Block block, SPatternExpr pattern) on Compiler {
 	if (pattern as PatternExprSrc) {
 		pattern.expr(block);
 	} else {
@@ -233,7 +233,7 @@ Expr insertExpr(SrcPos pos, Block block, SPatternExpr pattern) {
 }
 
 // Insert a previously generated Array<Expr> here.
-void insertActuals(SrcPos pos, Actuals actuals, Block block, SPatternExpr pattern) {
+void insertActuals(SrcPos pos, Actuals actuals, Block block, SPatternExpr pattern) on Compiler {
 	if (pattern as PatternExprSrc) {
 		for (x in pattern.array(block)) {
 			actuals.add(x);
@@ -244,7 +244,7 @@ void insertActuals(SrcPos pos, Actuals actuals, Block block, SPatternExpr patter
 }
 
 // Insert a previously generated Array<Expr> here.
-void insertExprs(SrcPos pos, Array<Expr> into, Block block, SPatternExpr pattern) {
+void insertExprs(SrcPos pos, Array<Expr> into, Block block, SPatternExpr pattern) on Compiler {
 	if (pattern as PatternExprSrc) {
 		for (x in pattern.array(block)) {
 			into.push(x);
@@ -254,7 +254,7 @@ void insertExprs(SrcPos pos, Array<Expr> into, Block block, SPatternExpr pattern
 	}
 }
 
-void insertExprs(SrcPos pos, ExprBlock block, SPatternExpr pattern) {
+void insertExprs(SrcPos pos, ExprBlock block, SPatternExpr pattern) on Compiler {
 	if (pattern as PatternExprSrc) {
 		for (x in pattern.array(block)) {
 			block.add(x);

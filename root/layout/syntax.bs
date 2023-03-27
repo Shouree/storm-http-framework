@@ -33,13 +33,13 @@ class LayoutRoot on Compiler {
 }
 
 // Create a new root block.
-LayoutRoot createRoot(Block parent) {
+LayoutRoot createRoot(Block parent) on Compiler {
 	LayoutRoot(ExprBlock(SrcPos(), parent));
 }
 
 // Sane default for maybe actuals.
 // Idea: provide syntax: "foo or Actuals()" equivalent to this?
-private Actuals sane(Actuals? params) {
+private Actuals sane(Actuals? params) on Compiler {
 	if (params)
 		params;
 	else
@@ -48,7 +48,7 @@ private Actuals sane(Actuals? params) {
 
 // Apply a property to the object denoted in Expr. Attempts to call a function first, and then
 // attempts an assignment if possible.
-private Expr? applyProperty(Block block, Expr expr, SStr name, Actuals params) {
+private Expr? applyProperty(Block block, Expr expr, SStr name, Actuals params) on Compiler {
 	Expr e = namedExpr(block, name, expr, params);
 	// Did we find it already?
 	unless (e as UnresolvedName) {

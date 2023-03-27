@@ -219,7 +219,7 @@ class InterpolatedItem on Compiler {
 }
 
 // Create string interpolation expressions.
-Expr interpolateStr(Block parent, Expr first, InterpolatedItem item, Str second) {
+Expr interpolateStr(Block parent, Expr first, InterpolatedItem item, Str second) on Compiler {
 	var r = if (first as ConcatExpr) {
 		first;
 	} else {
@@ -247,22 +247,22 @@ Expr interpolateStr(Block parent, Expr first, InterpolatedItem item, Str second)
 }
 
 // Set width of the output.
-void setWidth(SrcPos pos, InterpolatedItem item, Str nr) {
+void setWidth(SrcPos pos, InterpolatedItem item, Str nr) on Compiler {
 	item.modify(pos, "width", Actuals(intConstant(pos, nr)));
 }
 
 // Set to left align.
-void setLeft(SrcPos pos, InterpolatedItem item) {
+void setLeft(SrcPos pos, InterpolatedItem item) on Compiler {
 	item.modify(pos, "left", Actuals());
 }
 
 // Set to right align.
-void setRight(SrcPos pos, InterpolatedItem item) {
+void setRight(SrcPos pos, InterpolatedItem item) on Compiler {
 	item.modify(pos, "right", Actuals());
 }
 
 // Set fill character.
-void setFill(SrcPos pos, InterpolatedItem item, Str fill) {
+void setFill(SrcPos pos, InterpolatedItem item, Str fill) on Compiler {
 	var cp = NumLiteral(pos, fill.begin.v.codepoint.long);
 	SrcName charName(pos);
 	charName.add("core");
@@ -272,20 +272,20 @@ void setFill(SrcPos pos, InterpolatedItem item, Str fill) {
 }
 
 // Set to hex.
-void setHex(SrcPos pos, InterpolatedItem item) {
+void setHex(SrcPos pos, InterpolatedItem item) on Compiler {
 	item.wrap(pos, "hex");
 }
 
 // Set significant digits.
-void setSignificant(SrcPos pos, InterpolatedItem item, Str digits) {
+void setSignificant(SrcPos pos, InterpolatedItem item, Str digits) on Compiler {
 	item.modify(pos, "significant", Actuals(intConstant(pos, digits)));
 }
 
-void setDecimals(SrcPos pos, InterpolatedItem item, Str digits) {
+void setDecimals(SrcPos pos, InterpolatedItem item, Str digits) on Compiler {
 	item.modify(pos, "fixed", Actuals(intConstant(pos, digits)));
 }
 
-void setScientific(SrcPos pos, InterpolatedItem item, Str digits) {
+void setScientific(SrcPos pos, InterpolatedItem item, Str digits) on Compiler {
 	item.modify(pos, "scientific", Actuals(intConstant(pos, digits)));
 }
 

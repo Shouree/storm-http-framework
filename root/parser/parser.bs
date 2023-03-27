@@ -168,7 +168,7 @@ private Scope addIncludes(Scope scope, NameSet[] add) on Compiler {
 
 
 // Create the overloads needed for the parser.
-MultiDecl parserOverloads(Parser parser) {
+MultiDecl parserOverloads(Parser parser) on Compiler {
 	MultiDecl([parser, ParserOverload(parser)]);
 }
 
