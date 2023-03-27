@@ -78,6 +78,9 @@ namespace gui {
 		// Forward WM_COMMAND messages to the right window.
 		bool onCommand(const Message &msg);
 
+		// Forward WM_NOTIFY.
+		bool onNotify(const Message &msg);
+
 		// Update DPI.
 		virtual void updateDpi(Bool move);
 #endif

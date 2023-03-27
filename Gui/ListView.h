@@ -1,6 +1,7 @@
 #pragma once
 #include "Window.h"
 #include "Exception.h"
+#include "Core/Set.h"
 
 namespace gui {
 
@@ -33,6 +34,23 @@ namespace gui {
 		// Count number of elements.
 		Nat STORM_FN count() const;
 
+		// Selection callback. Called with index, selected whenever selected state of some item changes.
+		MAYBE(Fn<void, Nat, Bool> *) onSelect;
+
+		// Activate callback. Called when an item is double-clicked.
+		MAYBE(Fn<void, Nat> *) onActivate;
+
+		// Allow multiselect?
+		void STORM_ASSIGN multiSelect(Bool v);
+		Bool STORM_FN multiSelect() const { return multiSel; }
+
+		// Get selected indices.
+		Set<Nat> *STORM_FN selection();
+		void STORM_ASSIGN selection(Set<Nat> *v);
+
+#ifdef GUI_WIN32
+		virtual bool onNotify(NMHDR *header);
+#endif
 #ifdef GUI_GTK
 		virtual GtkWidget *fontWidget();
 #endif
@@ -63,11 +81,17 @@ namespace gui {
 		// Data to show.
 		Array<Row> *rows;
 
+		// Selected items (before creation).
+		Set<Nat> *selected;
+
 		// For GTK: TreeStore object.
 		UNKNOWN(PTR_NOGC) GtkListStore *gtkStore;
 
 		// Header visible?
 		Bool showHeader;
+
+		// Allow multiselect.
+		Bool multiSel;
 
 		// Add to model.
 		void modelAdd(Array<Str *> *row);

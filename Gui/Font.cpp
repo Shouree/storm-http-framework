@@ -263,6 +263,10 @@ namespace gui {
 	}
 
 	Size Font::stringSize(const Str *str, Nat dpi) {
+		return stringSize(str->c_str(), dpi);
+	}
+
+	Size Font::stringSize(const wchar *str, Nat dpi) {
 		HFONT font = handle(dpi);
 
 		HDC dc = GetDC(NULL);
@@ -271,7 +275,7 @@ namespace gui {
 
 		// We need to consider each line separately.
 		SIZE total = {0, 0};
-		const wchar *start = str->c_str();
+		const wchar *start = str;
 		const wchar *at;
 		for (at = start; *at; at++) {
 			if (*at != '\n')

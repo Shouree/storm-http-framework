@@ -10,6 +10,10 @@
 // We don't want Windows.h to define min and max as macros!
 #define NOMINMAX
 
+// Target Windows Vista and above.
+#define WINVER 0x0600
+#define _WIN32_WINNT 0x0600
+
 #include <Windows.h>
 
 // Sometimes it re-defines 'small' to 'char', no good!

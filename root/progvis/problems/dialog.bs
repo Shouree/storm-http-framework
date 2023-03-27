@@ -9,6 +9,7 @@ dialog ProblemsDlg {
 
 	layout Grid {
 		expandCol: 0;
+		expandRow: 0;
 		ListView list(["A", "B", "C"]) {}
 	}
 
@@ -19,13 +20,27 @@ dialog ProblemsDlg {
 			list.add(["Row ${i}", "B", "C"]);
 		}
 
-		spawn remove();
+		list.multiSelect = true;
+
+		// spawn remove();
+		spawn check();
 	}
 
 	void remove() {
 		for (Nat i = 0; i < 30; i++) {
 			sleep(1 s);
 			list.remove(0);
+		}
+	}
+
+	void check() {
+		for (Nat i = 0; i < 10; i++) {
+			sleep(5 s);
+			print(list.selection.toS);
+			Set<Nat> x;
+			x.put(8);
+			x.put(20);
+			list.selection(x);
 		}
 	}
 }

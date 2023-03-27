@@ -95,6 +95,11 @@ namespace gui {
 		// is the notification code specified by the message (eg BN_CLICK).
 		virtual bool onCommand(nat type);
 
+		// Called when a WM_NOTIFY has been sent to (by) us. Return 'true' if it is handled. The
+		// parameter is the header for notify as sent in the message. This can be casted to a
+		// relevant struct to receive more information.
+		virtual bool onNotify(NMHDR *data);
+
 		// Get the current DPI for this window. Only makes sense on Windows.
 		virtual Nat currentDpi();
 

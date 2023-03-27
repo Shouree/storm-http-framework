@@ -1,6 +1,13 @@
 #include "stdafx.h"
 #include "ListView.h"
 #include "GtkSignal.h"
+#include "Container.h"
+#include "Win32Dpi.h"
+
+#ifdef WIN32
+#include <uxtheme.h>
+#pragma comment (lib, "uxtheme.lib")
+#endif
 
 namespace gui {
 
@@ -57,6 +64,199 @@ namespace gui {
 		clearData();
 	}
 
+#ifdef GUI_WIN32
+
+	static void addRow(HWND hwnd, Array<Str *> *row, Nat index) {
+		LVITEM item;
+		item.mask = LVIF_TEXT;
+		item.iItem = index;
+		item.iSubItem = 0;
+		item.pszText = (LPWSTR)row->at(0)->c_str();
+
+		// In case 'index' is too large (happens when we insert initially).
+		item.iItem = ListView_InsertItem(hwnd, &item);
+
+		for (Nat i = 1; i < row->count(); i++) {
+			item.iSubItem = i;
+			item.pszText = (LPWSTR)row->at(i)->c_str();
+			ListView_SetItem(hwnd, &item);
+		}
+	}
+
+	bool ListView::create(ContainerBase *parent, nat id) {
+		DWORD flags = controlFlags | LVS_REPORT;
+		if (!showHeader)
+			flags |= LVS_NOCOLUMNHEADER;
+		if (!multiSel)
+			flags |= LVS_SINGLESEL;
+		if (!Window::createEx(WC_LISTVIEW, flags, WS_EX_CLIENTEDGE, parent->handle().hwnd(), id))
+			return false;
+
+		HWND hwnd = handle().hwnd();
+
+		SetWindowTheme(hwnd, S("Explorer"), NULL);
+
+		ListView_SetExtendedListViewStyle(hwnd, LVS_EX_FULLROWSELECT);
+
+		for (Nat i = 0; i < cols->count(); i++) {
+			LVCOLUMN column;
+			column.mask = LVCF_FMT | LVCF_TEXT;
+			column.fmt = LVCFMT_LEFT;
+			column.pszText = (LPWSTR)cols->at(i)->c_str();
+
+			ListView_InsertColumn(hwnd, i, &column);
+
+			ListView_SetColumnWidth(hwnd, i, LVSCW_AUTOSIZE);
+			column.cxMin = ListView_GetColumnWidth(hwnd, i);
+			column.mask = LVCF_MINWIDTH;
+			ListView_SetColumn(hwnd, i, &column);
+		}
+
+		for (Nat i = 0; i < rows->count(); i++)
+			addRow(hwnd, rows->at(i).cols, i);
+
+		// Finally, do some resizing to account for data.
+		for (Nat i = 0; i < cols->count(); i++)
+			ListView_SetColumnWidth(hwnd, i, LVSCW_AUTOSIZE);
+
+		if (selected) {
+			selection(selected);
+			selected = null;
+		}
+
+		return true;
+	}
+
+	bool ListView::onNotify(NMHDR *header) {
+		switch (header->code) {
+		case LVN_ITEMCHANGED: {
+			NMLISTVIEW *view = (NMLISTVIEW *)header;
+			bool oldState = (view->uOldState & LVIS_SELECTED) != 0;
+			bool newState = (view->uNewState & LVIS_SELECTED) != 0;
+
+			if (oldState != newState && onSelect) {
+				onSelect->call(Nat(view->iItem), newState);
+			}
+			break;
+		}
+		case LVN_ITEMACTIVATE: {
+			NMITEMACTIVATE *activate = (NMITEMACTIVATE *)header;
+			if (onActivate)
+				onActivate->call(activate->iItem);
+			break;
+		}
+		}
+
+		return true;
+	}
+
+	void ListView::modelAdd(Array<Str *> *row) {
+		if (!created())
+			return;
+
+		HWND hwnd = handle().hwnd();
+		Nat index = rows->count() - 1;
+		addRow(hwnd, row, index);
+
+		// Update size.
+		Font *font = this->font();
+		for (Nat i = 0; i < cols->count(); i++) {
+			Size sz = font->stringSize(row->at(i));
+			int width = ListView_GetColumnWidth(hwnd, i);
+			if (sz.w > width)
+				ListView_SetColumnWidth(hwnd, i, int(sz.w));
+		}
+	}
+
+	void ListView::modelRemove(Nat id) {
+		if (!created())
+			return;
+
+		ListView_DeleteItem(handle().hwnd(), id);
+	}
+
+	void ListView::modelClear() {
+		if (!created())
+			return;
+
+		ListView_DeleteAllItems(handle().hwnd());
+	}
+
+	void ListView::clearData() {
+		// nothing needed here
+	}
+
+	void ListView::multiSelect(Bool v) {
+		multiSel = v;
+		if (created()) {
+			LONG_PTR old = GetWindowLong(handle().hwnd(), GWL_STYLE);
+			if (multiSel)
+				old &= ~LVS_SINGLESEL;
+			else
+				old |= LVS_SINGLESEL;
+			SetWindowLong(handle().hwnd(), GWL_STYLE, old);
+		}
+	}
+
+	void ListView::selection(Set<Nat> *sel) {
+		if (!created()) {
+			selected = sel;
+			return;
+		}
+
+		HWND hwnd = handle().hwnd();
+		for (Nat i = 0; i < rows->count(); i++) {
+			LVITEM item;
+			item.iItem = i;
+			item.iSubItem = 0;
+			item.mask = LVIF_STATE;
+			item.state = sel->has(i) ? LVIS_SELECTED : 0;
+			item.stateMask = LVIS_SELECTED;
+			ListView_SetItem(hwnd, &item);
+		}
+	}
+
+	Set<Nat> *ListView::selection() {
+		if (!created()) {
+			if (!selected)
+				selected = new (this) Set<Nat>();
+			return selected;
+		}
+
+		Set<Nat> *result = new (this) Set<Nat>();
+		HWND hwnd = handle().hwnd();
+		for (Nat i = 0; i < rows->count(); i++) {
+			LVITEM item;
+			item.iItem = i;
+			item.iSubItem = 0;
+			item.mask = LVIF_STATE;
+			item.stateMask = LVIS_SELECTED;
+			ListView_GetItem(hwnd, &item);
+
+			if (item.state & LVIS_SELECTED)
+				result->put(i);
+		}
+		return result;
+	}
+
+	Size ListView::minSize() {
+		if (!created())
+			return Size(10, 10);
+
+		HWND hwnd = handle().hwnd();
+
+		Nat width = 0;
+		for (Nat i = 0; i < cols->count(); i++) {
+			LVCOLUMN column;
+			column.mask = LVCF_MINWIDTH;
+			ListView_GetColumn(hwnd, i, &column);
+			width += column.cxMin;
+		}
+
+		return Size(Float(width), 30);
+	}
+
+#endif
 #ifdef GUI_GTK
 
 	bool ListView::create(ContainerBase *parent, nat id) {

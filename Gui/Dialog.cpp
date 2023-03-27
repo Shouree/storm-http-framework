@@ -63,7 +63,8 @@ namespace gui {
 			if (type == 0) {
 				// Accelerator. Check for IDOK or IDCANCEL.
 				if (id == IDOK) {
-					defaultButton->onCommand(BN_CLICKED);
+					if (defaultButton)
+						defaultButton->onCommand(BN_CLICKED);
 					return msgResult(TRUE);
 				} else if (id == IDCANCEL) {
 					close();

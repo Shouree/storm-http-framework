@@ -137,6 +137,10 @@ namespace gui {
 			if (onCommand(msg))
 				return msgResult(0);
 			break;
+		case WM_NOTIFY:
+			if (onNotify(msg))
+				return msgResult(0);
+			break;
 		}
 
 		return Window::onMessage(msg);
@@ -155,6 +159,17 @@ namespace gui {
 			return false;
 
 		return i.v()->onCommand(type);
+	}
+
+	bool Container::onNotify(const Message &msg) {
+		NMHDR *data = (NMHDR *)msg.lParam;
+		nat id = data->idFrom;
+
+		IdMap::Iter i = ids->find(id);
+		if (i == ids->end())
+			return false;
+
+		return i.v()->onNotify(data);
 	}
 
 	void Container::updateDpi(Bool move) {

@@ -420,6 +420,10 @@ namespace gui {
 		return false;
 	}
 
+	bool Window::onNotify(NMHDR *data) {
+		return false;
+	}
+
 	Nat Window::currentDpi() {
 		if (myRoot)
 			return myRoot->currentDpi();

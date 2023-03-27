@@ -80,6 +80,9 @@ namespace gui {
 
 		// Get the size of a string at a given DPI.
 		Size stringSize(const Str *str, Nat dpi);
+
+		// Get the string size for a C-string.
+		Size stringSize(const wchar *str, Nat dpi);
 #endif
 #ifdef GUI_GTK
 		// Get a Pango font description.
