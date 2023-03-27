@@ -21,7 +21,7 @@ namespace gui {
 		myHandle(invalid), myParent(null), myRoot(null),
 		myVisible(true), myEnabled(true), drawing(false), mouseInside(false),
 		gdkWindow(null), gTimer(null),
-		myPos(0, 0, 40, 40) /* large enought to not generate warnings in Gtk+ */ {
+		myPos(0, 0, 40, 40) /* large enough to not generate warnings in Gtk+ */ {
 
 		myText = new (this) Str(L"");
 		myFont = app(engine())->defaultFont;
@@ -830,18 +830,24 @@ namespace gui {
 		Size s(drawAlloc.width, drawAlloc.height);
 		myPos.size(s);
 
-		if (myPainter) {
-			int scale = gtk_widget_get_scale_factor(draw);
-			myPainter->uiResize(s * scale, scale);
-		}
-		onResize(s);
+		// GTK sends us this signal quite often, so filter out dummy draws.
+		if (lastWidth != drawAlloc.width || lastHeight != drawAlloc.height) {
+			lastWidth = drawAlloc.width;
+			lastHeight = drawAlloc.height;
 
-		// Queue a repaint for this window. Otherwise, resizing windows that partially contain some
-		// continuous rendering will not always be updated properly. We're probably in a race with
-		// Gtk when we just update a part of the window.
-		GdkWindow *window = gtk_widget_get_window(handle().widget());
-		if (window) {
-			gdk_window_invalidate_rect(window, NULL, false);
+			if (myPainter) {
+				int scale = gtk_widget_get_scale_factor(draw);
+				myPainter->uiResize(s * scale, scale);
+			}
+			onResize(s);
+
+			// Queue a repaint for this window. Otherwise, resizing windows that partially contain some
+			// continuous rendering will not always be updated properly. We're probably in a race with
+			// Gtk when we just update a part of the window.
+			GdkWindow *window = gtk_widget_get_window(handle().widget());
+			if (window) {
+				gdk_window_invalidate_rect(window, NULL, false);
+			}
 		}
 	}
 

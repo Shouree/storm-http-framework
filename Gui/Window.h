@@ -249,6 +249,10 @@ namespace gui {
 		// Painter.
 		Painter *myPainter;
 
+		// Last allocated width and height. Used to filter out duplicate allocate messages.
+		int lastWidth;
+		int lastHeight;
+
 		// In Gtk+, widgets are usually not rendered in separate windows. When we're using OpenGL
 		// rendering, we need separate windows for the widget being drawn to, and any child
 		// widgets. This variable represents the created window.
