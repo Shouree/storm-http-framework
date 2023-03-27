@@ -145,6 +145,7 @@ dialog SettingsDlg {
 			RadioButton medium("Medium", 1) {}
 			RadioButton large("Large", 1) {}
 			RadioButton huge("Huge", 1) {}
+			RadioButton gigantic("Gigantic", 1) {}
 		}
 		nextLine;
 		Label("Editor to use to open the code run inside Progvis (leave blank for default):") { colspan: 2; }
@@ -181,8 +182,10 @@ dialog SettingsDlg {
 			medium.checked = true;
 		else if (settings.zoom < 1.3)
 			large.checked = true;
-		else
+		else if (settings.zoom < 1.6)
 			huge.checked = true;
+		else
+			gigantic.checked = true;
 
 		defaultChoice = ok;
 		ok.onClick = &this.onSave();
@@ -197,8 +200,10 @@ dialog SettingsDlg {
 			toEdit.zoom = 1.0;
 		else if (large.checked)
 			toEdit.zoom = 1.25;
-		else
+		else if (huge.checked)
 			toEdit.zoom = 1.5;
+		else
+			toEdit.zoom = 1.75;
 
 		{
 			Str p = program.text;
