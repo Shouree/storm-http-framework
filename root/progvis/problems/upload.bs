@@ -17,9 +17,9 @@ dialog UploadDlg {
 		Edit implName("") {}
 		Button implButton("Select...") {}
 		nextLine;
-		Label mainLbl("Test program:", HAlign:right, VAlign:center) {}
-		Edit mainName("") {}
-		Button mainButton("Select...") {}
+		Label testLbl("Test program:", HAlign:right, VAlign:center) {}
+		Edit testName("") {}
+		Button testButton("Select...") {}
 		nextLine;
 		Label refLbl("Reference implementation:", HAlign:right, VAlign:center) {}
 		Edit refName("") {}
@@ -130,7 +130,7 @@ dialog UploadDlg {
 		return progvis:net:Code(contents, url.ext);
 	}
 
-	void checkCode(Str name, progvis:net:Code impl, progvis:net:Code test, progvis:net:Code ref) {
+	void checkCode(Str name, progvis:net:Code test, progvis:net:Code impl, progvis:net:Code ref) {
 		MemoryProtocol memory;
 		Url m = test.put("test", memory);
 		Url i = impl.put("impl", memory);
@@ -191,168 +191,168 @@ dialog UploadDlg {
 /**
  * Dialog for uploading solutions to problems.
  */
-dialog SolutionUploadDlg {
-	layout Grid {
-		expandCol: 1;
-		Label nameLbl("Name:", HAlign:right, VAlign:center) {}
-		Edit name("Name your problem") { colspan: 2; }
-		nextLine;
-		Label status("Checking your solution...") { colspan: 3; }
-		nextLine;
-		Progress progress { col: 0; colspan: 2; }
-		Button uploadButton("Upload") { col: 2; }
-	}
+// dialog SolutionUploadDlg {
+// 	layout Grid {
+// 		expandCol: 1;
+// 		Label nameLbl("Name:", HAlign:right, VAlign:center) {}
+// 		Edit name("Name your problem") { colspan: 2; }
+// 		nextLine;
+// 		Label status("Checking your solution...") { colspan: 3; }
+// 		nextLine;
+// 		Progress progress { col: 0; colspan: 2; }
+// 		Button uploadButton("Upload") { col: 2; }
+// 	}
 
-	private Client client;
-	private Problem original;
-	private progvis:net:Code? newMain;
-	private progvis:net:Code? newImpl;
-	private ImprovedProblemRequest? request;
+// 	private Client client;
+// 	private Problem original;
+// 	private progvis:net:Code? newMain;
+// 	private progvis:net:Code? newImpl;
+// 	private ImprovedProblemRequest? request;
 
-	// Cancel auto-grading.
-	private Bool cancel;
+// 	// Cancel auto-grading.
+// 	private Bool cancel;
 
-	init(Client client, Problem original, progvis:net:Code? newMain, progvis:net:Code? newImpl) {
-		init("Submit your solution", Size(400, 10)) {
-			client = client;
-			original = original;
-			newMain = newMain;
-			newImpl = newImpl;
-			cancel = false;
-		}
+// 	init(Client client, Problem original, progvis:net:Code? newMain, progvis:net:Code? newImpl) {
+// 		init("Submit your solution", Size(400, 10)) {
+// 			client = client;
+// 			original = original;
+// 			newMain = newMain;
+// 			newImpl = newImpl;
+// 			cancel = false;
+// 		}
 
-		name.text = original.title;
+// 		name.text = original.title;
 
-		progress.wait();
-		uploadButton.enabled = false;
-		defaultChoice = uploadButton;
-		uploadButton.onClick = &this.upload();
+// 		progress.wait();
+// 		uploadButton.enabled = false;
+// 		defaultChoice = uploadButton;
+// 		uploadButton.onClick = &this.upload();
 
-		(spawn checkCode()).detach();
-	}
+// 		(spawn checkCode()).detach();
+// 	}
 
-	void onDestroy(Int code) : override {
-		cancel = true;
-	}
+// 	void onDestroy(Int code) : override {
+// 		cancel = true;
+// 	}
 
-	void upload() {
-		unless (request)
-			return;
+// 	void upload() {
+// 		unless (request)
+// 			return;
 
-		Str n = name.text;
-		if (n.empty) {
-			showMessage(this, "Error", "You need to specify a name for the problem.");
-			return;
-		}
+// 		Str n = name.text;
+// 		if (n.empty) {
+// 			showMessage(this, "Error", "You need to specify a name for the problem.");
+// 			return;
+// 		}
 
-		request.title = n;
+// 		request.title = n;
 
-		try {
-			client.query(request);
-			close(1);
-		} catch (Exception e) {
-			showMessage(this, "Error", e.message);
-		}
-	}
+// 		try {
+// 			client.query(request);
+// 			close(1);
+// 		} catch (Exception e) {
+// 			showMessage(this, "Error", e.message);
+// 		}
+// 	}
 
-	void checkCode() {
-		MemoryProtocol memory;
-		Url m = (if (newMain) { newMain; } else { original.main; }).put("main", memory);
-		Url i = (if (newImpl) { newImpl; } else { original.impl; }).put("impl", memory);
-		Url r = original.ref.put("ref", memory);
+// 	void checkCode() {
+// 		MemoryProtocol memory;
+// 		Url m = (if (newMain) { newMain; } else { original.main; }).put("main", memory);
+// 		Url i = (if (newImpl) { newImpl; } else { original.impl; }).put("impl", memory);
+// 		Url r = original.ref.put("ref", memory);
 
-		UiProgress progress(this);
+// 		UiProgress progress(this);
 
-		if (newMain.any) {
-			try {
-				if (error = progvis:check:check([m, r], progress)) {
-					error("The test program does not follow the specification of the problem.");
-					return;
-				}
-			} catch (core:lang:CodeError e) {
-				if (file = e.pos.file) {
-					if (file == m) {
-						error("Error while compiling your test program with the reference implementation:\n" + e.message, e.pos);
-						return;
-					}
-				}
-				error("Error while compiling your test program with the reference implementation:\n" + e.message);
-			}
-		}
+// 		if (newMain.any) {
+// 			try {
+// 				if (error = progvis:check:check([m, r], progress)) {
+// 					error("The test program does not follow the specification of the problem.");
+// 					return;
+// 				}
+// 			} catch (core:lang:CodeError e) {
+// 				if (file = e.pos.file) {
+// 					if (file == m) {
+// 						error("Error while compiling your test program with the reference implementation:\n" + e.message, e.pos);
+// 						return;
+// 					}
+// 				}
+// 				error("Error while compiling your test program with the reference implementation:\n" + e.message);
+// 			}
+// 		}
 
-		if (newImpl) {
-			// Check if the new implementation is different from the original one.
-			if (newImpl.signature == original.impl.signature) {
-				error("You have not modified the implementation. Make some modifications and click \"Reload\" before submitting.");
-				return;
-			}
-		}
+// 		if (newImpl) {
+// 			// Check if the new implementation is different from the original one.
+// 			if (newImpl.signature == original.impl.signature) {
+// 				error("You have not modified the implementation. Make some modifications and click \"Reload\" before submitting.");
+// 				return;
+// 			}
+// 		}
 
-		if (cancel)
-			return;
+// 		if (cancel)
+// 			return;
 
-		Bool currentError = false;
-		try {
-			if (error = progvis:check:check([m, i], progress)) {
-				currentError = true;
-			} else {
-				currentError = false;
-			}
-		} catch (core:lang:CodeError e) {
-			error("Error while compiling the implementation:\n" + e.message, e.pos);
-		}
+// 		Bool currentError = false;
+// 		try {
+// 			if (error = progvis:check:check([m, i], progress)) {
+// 				currentError = true;
+// 			} else {
+// 				currentError = false;
+// 			}
+// 		} catch (core:lang:CodeError e) {
+// 			error("Error while compiling the implementation:\n" + e.message, e.pos);
+// 		}
 
-		if (newMain.any) {
-			if (currentError) {
-				done("You found an error, click \"Upload\" to proceed!");
-			} else {
-				error("Your test program did not find an error in the current implementation, try again!");
-			}
-			size = minSize();
-		} else {
-			if (currentError) {
-				// We allow uploading the problems again, but with reduced reward. Thus, one student
-				// may solve one issue, but another may solve another issue. We check so that the
-				// code is not identical as the first part here.
-				done("Your solution does not solve all errors with this test program.\nYou may still upload your solution, but you will not receive full points for it.");
-			} else {
-				done("You fixed the current issues, click \"Upload\" to proceed!");
-			}
-		}
+// 		if (newMain.any) {
+// 			if (currentError) {
+// 				done("You found an error, click \"Upload\" to proceed!");
+// 			} else {
+// 				error("Your test program did not find an error in the current implementation, try again!");
+// 			}
+// 			size = minSize();
+// 		} else {
+// 			if (currentError) {
+// 				// We allow uploading the problems again, but with reduced reward. Thus, one student
+// 				// may solve one issue, but another may solve another issue. We check so that the
+// 				// code is not identical as the first part here.
+// 				done("Your solution does not solve all errors with this test program.\nYou may still upload your solution, but you will not receive full points for it.");
+// 			} else {
+// 				done("You fixed the current issues, click \"Upload\" to proceed!");
+// 			}
+// 		}
 
-		if (uploadButton.enabled)
-			request = ImprovedProblemRequest(original.id, "", newMain, newImpl, currentError);
-	}
+// 		if (uploadButton.enabled)
+// 			request = ImprovedProblemRequest(original.id, "", newMain, newImpl, currentError);
+// 	}
 
-	class UiProgress extends progvis:check:Progress {
-		init(SolutionUploadDlg owner) {
-			init { owner = owner; }
-		}
+// 	class UiProgress extends progvis:check:Progress {
+// 		init(SolutionUploadDlg owner) {
+// 			init { owner = owner; }
+// 		}
 
-		SolutionUploadDlg owner;
+// 		SolutionUploadDlg owner;
 
-		void progress(Nat depth, Nat states, Nat edges, Nat unexplored) : override {
-			if (owner.cancel)
-				throw progvis:program:ExitError();
-		}
-	}
+// 		void progress(Nat depth, Nat states, Nat edges, Nat unexplored) : override {
+// 			if (owner.cancel)
+// 				throw progvis:program:ExitError();
+// 		}
+// 	}
 
-	private void error(Str message, core:lang:SrcPos pos) {
-		status.text = "Compilation error, try again.";
-		progvis:CompileErrorDialog(message, pos).show(this);
-	}
+// 	private void error(Str message, core:lang:SrcPos pos) {
+// 		status.text = "Compilation error, try again.";
+// 		progvis:CompileErrorDialog(message, pos).show(this);
+// 	}
 
-	void error(Str message) {
-		status.text = message;
-		progress.visible = false;
-		size = minSize();
-	}
+// 	void error(Str message) {
+// 		status.text = message;
+// 		progress.visible = false;
+// 		size = minSize();
+// 	}
 
-	void done(Str message) {
-		status.text = message;
-		progress.visible = false;
-		uploadButton.enabled = true;
-		size = minSize();
-	}
+// 	void done(Str message) {
+// 		status.text = message;
+// 		progress.visible = false;
+// 		uploadButton.enabled = true;
+// 		size = minSize();
+// 	}
 
-}
+// }

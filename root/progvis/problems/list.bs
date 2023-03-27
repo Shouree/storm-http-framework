@@ -1,0 +1,81 @@
+use ui;
+use core:geometry;
+use core:io;
+use progvis:net;
+use graphics;
+
+class List extends Window {
+	private ListPainter painter;
+
+	init() {
+		init();
+
+		painter(painter);
+	}
+
+	Bool onClick(Bool down, Point pt, MouseButton button) : override {
+		if (down & button == MouseButton:left) {
+			painter.onClick(pt);
+		}
+		true;
+	}
+
+	Bool onMouseVScroll(Point at, Int delta) : override {
+		painter.onVScroll(at, delta);
+		true;
+	}
+}
+
+class ListPainter extends ui:Painter {
+	private Size size;
+	private Size viewport;
+
+	init() {
+		init();
+
+		bgColor = Color(0.8, 0.8, 0.8);
+	}
+
+	Bool render(Size me, Graphics g) : override {
+		Bool repaint = false;
+
+		// size = me;
+
+		// tabs.render(me, g);
+
+		// viewport = Size(me.w, me.h - tabs.height);
+
+		// if (table) {
+		// 	g.transform = translate(Point(0, tabs.height - scroll));
+		// 	Rect view(Point(0, scroll), viewport);
+		// 	g.push(view);
+
+		// 	// Scroll bar.
+		// 	Float scrollWidth = 12;
+		// 	{
+		// 		Float viewHeight = view.size.h - 6;
+		// 		Float tableHeight = table.height;
+		// 		Float scaledSize = (viewHeight / tableHeight).min(1);
+		// 		Float scaledOffset = scroll / tableHeight;
+		// 		Size sz(scrollWidth - 6, scaledSize * viewHeight);
+		// 		Point origin(view.p1.x - scrollWidth + 3, scaledOffset * viewHeight);
+		// 		origin += Point(0, scroll + 3); // To compensate for the transform. 3 is half the border around it.
+		// 		g.fill(Rect(origin, sz), Size(3), scrollBrush);
+		// 	}
+
+		// 	// Table.
+		// 	view.p1.x -= scrollWidth;
+		// 	repaint |= table.render(view, g);
+
+		// 	g.pop();
+		// } else {
+		// 	g.draw(loading, tableText, me / 2 - loading.size / 2);
+		// }
+
+		repaint;
+	}
+
+	void onClick(Point pt) {}
+
+	void onVScroll(Point pt, Int delta) {}
+}

@@ -1,200 +1,31 @@
 use ui;
-use layout;
 use core:geometry;
-use progvis:net;
 use core:io;
+use progvis:net;
+use graphics;
 
 dialog ProblemsDlg {
-
-	private Painter painter;
-
 	public Action? action;
 
-	init(Client client, progvis:Settings settings) {
-		Callback cb(client, settings);
-
-		ProblemData data;
-		data.add("To debug", UnsolvedView(client, cb, true));
-		data.add("To test", UnsolvedView(client, cb, false));
-		data.add("Solved", SolvedView(client, cb));
-		data.add("My problems", OwnView(client, cb));
-
-		init("Problems", Size(600, 500)) {
-			painter(data);
-		}
-
-		cb.target = this;
-
-		painter(painter);
+	layout Grid {
+		expandCol: 0;
+		ListView list(["A", "B", "C"]) {}
 	}
-
-	Bool onClick(Bool down, Point pt, MouseButton button) : override {
-		if (down & button == MouseButton:left) {
-			painter.onClick(pt);
-		}
-		true;
-	}
-
-	Bool onMouseVScroll(Point at, Int delta) : override {
-		painter.onVScroll(at, delta);
-		true;
-	}
-
-	// Called from 'Callback' to indicate that we should close ourselves.
-	void done(Action action) {
-		this.action = action;
-		close(1);
-	}
-}
-
-
-/**
- * Callback for the dialog.
- */
-class Callback on Ui {
-	private Client client;
-	private progvis:Settings settings;
-	ProblemsDlg? target;
 
 	init(Client client, progvis:Settings settings) {
-		init {
-			client = client;
+		init("Problems", Size(600, 500)) {}
+
+		for (Nat i = 0; i < 50; i++) {
+			list.add(["Row ${i}", "B", "C"]);
 		}
+
+		spawn remove();
 	}
 
-	// Open a particular problem.
-	void solveProblem(Int problemId) {
-		unless (target)
-			return;
-
-		var d = details(problemId);
-		if (d.currentError) {
-			target.done(DebugAction(settings, d));
-		} else {
-			target.done(TestAction(settings, d));
+	void remove() {
+		for (Nat i = 0; i < 30; i++) {
+			sleep(1 s);
+			list.remove(0);
 		}
-	}
-
-	// Show a solution to a problem.
-	void showSolution(Solution solution) {
-		unless (target)
-			return;
-
-		var d = details(solution.problemId);
-		target.done(ShowSolutionAction(settings, d, solution));
-	}
-
-	// Get the problem we are to show from the server.
-	private Problem details(Int id) {
-		if (x = client.query(DetailsRequest(id)) as DetailsResponse)
-			x.problem;
-		else
-			throw InternalError("Incorrect response received.");
-	}
-
-}
-
-
-/**
- * Action to take when the ProblemsDlg is closed.
- *
- * Allows creating a suitable behavior for the main Ui.
- */
-class Action on Ui {
-	// The problem to solve.
-	Problem problem;
-
-	// Code for the main program on disk.
-	Url mainCode;
-
-	// Code for the implementation on disk.
-	Url implCode;
-
-	// Create.
-	init(progvis:Settings settings, Problem problem) {
-		init {
-			problem = problem;
-			mainCode = saveCode(settings, problem.id, "", problem.main);
-			implCode = saveCode(settings, problem.id, "_impl", problem.impl);
-		}
-	}
-
-	// Create a behavior.
-	progvis:Behavior behavior(progvis:MainWin window, Client client) : abstract;
-
-	// Return a list of files to open.
-	Url[] files() {
-		[mainCode, implCode];
-	}
-
-	// Save source code to disk, and retrieve an URL for it.
-	private Url saveCode(progvis:Settings settings, Int problemId, Str suffix, Code code) : static {
-		Url file = settings.downloadFile("${problemId,f08}${suffix}.${code.language}");
-		Utf8Output out(file.write());
-		out.autoFlush = false;
-		out.write(code.src);
-		out.flush();
-		out.close();
-		return file;
-	}
-}
-
-
-/**
- * Debug a problem.
- */
-class DebugAction extends Action {
-	init(progvis:Settings settings, Problem problem) {
-		init(settings, problem) {}
-	}
-
-	Url[] files() : override {
-		// To prevent modifications to the main file, we put it in an in-memory store.
-		MemoryProtocol mem;
-		Url main = problem.main.put("main", mem);
-		[implCode, main];
-	}
-
-	progvis:Behavior behavior(progvis:MainWin window, Client client) : override {
-		return progvis:DebugProblemBehavior(window, client, this);
-	}
-}
-
-
-/**
- * Test a problem (change the main function).
- */
-class TestAction extends Action {
-	init(progvis:Settings settings, Problem problem) {
-		init(settings, problem) {}
-	}
-
-	Url[] files() : override {
-		// To prevent modifications to the implementation, we put it in an in-memory store.
-		MemoryProtocol mem;
-		Url impl = problem.impl.put("impl", mem);
-		[mainCode, impl];
-	}
-
-	progvis:Behavior behavior(progvis:MainWin window, Client client) : override {
-		return progvis:TestBehavior(window, client, problem, mainCode, implCode);
-	}
-}
-
-
-/**
- * Show a solution.
- */
-class ShowSolutionAction extends Action {
-	Str solution;
-
-	init(progvis:Settings settings, Problem problem, Solution solution) {
-		init(settings, problem) {
-			solution = solution.steps;
-		}
-	}
-
-	progvis:Behavior behavior(progvis:MainWin window, Client client) : override {
-		return progvis:ReplayBehavior(window, solution);
 	}
 }

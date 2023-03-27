@@ -78,3 +78,13 @@ class NewProblemResponse : extends Response, serializable {
 		init { id = id; }
 	}
 }
+
+/**
+ * Reply to the problem list query.
+ */
+class ProblemListResponse : extends Response, serializable {
+	ProblemInfo[] data;
+	init(ProblemInfo[] data) {
+		init { data = data; }
+	}
+}

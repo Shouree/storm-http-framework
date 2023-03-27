@@ -16,19 +16,19 @@ class ProblemInfo : serializable {
 	Str title;
 	Str author;
 
-	// Is this my problem?
-	Bool myProblem;
-
 	// Is the next step to modify the implementation?
-	Bool currentError;
+	Bool hasError;
 
-	init(Int id, Str title, Str author, Bool myProblem, Bool currentError) {
+	// Does the current user have any solutions to this problem?
+	Bool attempted;
+
+	init(Int id, Str title, Str author, Bool hasError, Bool attempted) {
 		init {
 			id = id;
 			title = title;
 			author = author;
-			myProblem = myProblem;
-			currentError = currentError;
+			hasError = hasError;
+			attempted = attempted;
 		}
 	}
 
@@ -37,36 +37,9 @@ class ProblemInfo : serializable {
 		id < o.id;
 	}
 
-	Str typeStr() {
-		if (currentError)
-			"Debug";
-		else
-			"Test";
-	}
-}
-
-/**
- * A problem with improved and solved stats.
- */
-class ProblemDetails : extends ProblemInfo, serializable {
-	// Number of improvements.
-	Nat improvements;
-
-	// Number of solutions. Only relevant if 'currentError = true'
-	Nat solutions;
-
-	init(Int id, Str title, Str author, Bool myProblem, Bool currentError, Nat improvements, Nat solutions) {
-		init(id, title, author, myProblem, currentError) {
-			improvements = improvements;
-			solutions = solutions;
-		}
-	}
-
-	Str improvedStr() {
-		if (currentError)
-			solutions.toS + "+" + improvements.toS;
-		else
-			improvements.toS;
+	// To string.
+	void toS(StrBuf to) : override {
+		to << "{id: " << id << ", title: " << title << ", author: " << author << ", hasError: " << hasError << ", attempted: " << attempted << "}";
 	}
 }
 
@@ -94,30 +67,6 @@ class Problem : extends ProblemInfo, serializable {
 	}
 }
 
-/**
- * A solution to a problem. I.e. a recorded sequence of steps that illustrates some error.
- */
-class Solution : serializable {
-	// ID of this solution.
-	Int id;
-
-	// Solution to what problem?
-	Int problemId;
-
-	// Author of the solution.
-	Str author;
-
-	// Type of error found.
-	Str type;
-
-	// Sequence of steps in the solution.
-	Str steps;
-
-	// Create.
-	init(Int id, Int problemId, Str author, Str type, Str steps) {
-		init { id = id; problemId = problemId; author = author; type = type; steps = steps; }
-	}
-}
 
 /**
  * A piece of code, indicating a language as well.

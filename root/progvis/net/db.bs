@@ -47,6 +47,8 @@ DATABASE ProgvisDB {
 	TABLE implementations(
 		// ID of this implementation.
 		id INTEGER PRIMARY KEY,
+		// Problem ID (foreign to problems).
+		problem INTEGER,
 		// Version of the implementation (increasing for each user+problem), ID:s are not guaranteed to be increasing on SQLite.
 		version INTEGER DEFAULT 1,
 		// Author.
@@ -62,6 +64,8 @@ DATABASE ProgvisDB {
 	TABLE tests(
 		// ID of this test.
 		id INTEGER PRIMARY KEY,
+		// Problem ID (foreign to problems).
+		problem INTEGER,
 		// Version of the test (increasing for each user+problem), ID:s are not guaranteed to be increasing on SQLite.
 		version INTEGER DEFAULT 1,
 		// Author.
@@ -83,7 +87,7 @@ DATABASE ProgvisDB {
 		// Any errors found? String is type of error found.
 		error TEXT ALLOW NULL,
 		// PK declaration.
-		PRIMARY KEY(impl, test);
+		PRIMARY KEY(impl, test)
 	);
 
 	// Code stored in the system.
@@ -179,6 +183,22 @@ class Database {
 		return result;
 	}
 
+	// Get a list of all problems in the system.
+	ProblemInfo[] problemList(Int userId) {
+		ProblemInfo[] result;
+		WITH db {
+			for (row in SELECT p.id AS id, u.displayName AS author, p.title AS title, p.hasError AS hasError
+					 FROM problems p
+					 JOIN users u ON p.author == u.id) {
+				Bool attempted =
+					(SELECT ONE id FROM implementations WHERE problem == ${row.id}).any |
+					(SELECT ONE id FROM tests WHERE problem == ${row.id}).any;
+				result << ProblemInfo(row.id, row.title, row.author, row.hasError != 0, attempted);
+			}
+		}
+		result;
+	}
+
 	/**
 	 * Utils
 	 */
@@ -198,13 +218,13 @@ class Database {
 	// Validate implementation ID.
 	private void checkImplId(Int implId) {
 		unless (WITH db: SELECT ONE id FROM implementations WHERE id == implId)
-			throw ServerError("No implementation with id ${id}.");
+			throw ServerError("No implementation with id ${implId}.");
 	}
 
 	// Validate test ID.
 	private void checkTestId(Int testId) {
 		unless (WITH db: SELECT ONE id FROM tests WHERE id == testId)
-			throw ServerError("No test with id ${id}.");
+			throw ServerError("No test with id ${testId}.");
 	}
 
 	// Compare code for equality to disallow submitting multiple instances of essentially the same

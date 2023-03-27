@@ -107,6 +107,7 @@ private value ScorePair {
 	}
 }
 
+
 /**
  * Publish a new problem.
  */
@@ -132,5 +133,17 @@ class NewProblemRequest : extends Request, serializable {
 	Response? execute(ServerConn server, Database db) : override {
 		Int id = db.createProblem(server.userId, title, impl, test, refImpl, currentError);
 		NewProblemResponse(id);
+	}
+}
+
+
+/**
+ * Request for all problems.
+ */
+class ProblemListRequest : extends Request, serializable {
+	init() {}
+
+	Response? execute(ServerConn server, Database db) : override {
+		ProblemListResponse(db.problemList(server.userId));
 	}
 }

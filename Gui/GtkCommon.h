@@ -38,5 +38,6 @@ namespace gui {
 struct PangoContext;
 struct GdkWindow;
 struct GdkDisplay;
+struct GtkListStore;
 
 #endif

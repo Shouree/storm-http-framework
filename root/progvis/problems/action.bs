@@ -1,0 +1,48 @@
+use ui;
+use core:geometry;
+use core:io;
+use progvis:net;
+
+/**
+ * Action to take when the ProblemsDlg is closed.
+ *
+ * Allows creating a suitable behavior for the main Ui.
+ */
+class Action on Ui {
+	// The problem to solve.
+	Problem problem;
+
+	// Code for the main program on disk.
+	Url mainCode;
+
+	// Code for the implementation on disk.
+	Url implCode;
+
+	// Create.
+	init(progvis:Settings settings, Problem problem) {
+		init {
+			problem = problem;
+			mainCode = saveCode(settings, problem.id, "", problem.main);
+			implCode = saveCode(settings, problem.id, "_impl", problem.impl);
+		}
+	}
+
+	// Create a behavior.
+	progvis:Behavior behavior(progvis:MainWin window, Client client) : abstract;
+
+	// Return a list of files to open.
+	Url[] files() {
+		[mainCode, implCode];
+	}
+
+	// Save source code to disk, and retrieve an URL for it.
+	private Url saveCode(progvis:Settings settings, Int problemId, Str suffix, Code code) : static {
+		Url file = settings.downloadFile("${problemId,f08}${suffix}.${code.language}");
+		Utf8Output out(file.write());
+		out.autoFlush = false;
+		out.write(code.src);
+		out.flush();
+		out.close();
+		return file;
+	}
+}

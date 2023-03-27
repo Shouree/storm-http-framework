@@ -84,11 +84,11 @@ class DebugProblemBehavior extends Behavior {
 			return;
 		}
 
-		try {
-			client.query(PostSolutionRequest(problem.id, error.type, operations.toS));
-		} catch (Exception e) {
-			showMessage(window, "Error", "Failed to post the result: " + e.message);
-		}
+		// try {
+		// 	client.query(PostSolutionRequest(problem.id, error.type, operations.toS));
+		// } catch (Exception e) {
+		// 	showMessage(window, "Error", "Failed to post the result: " + e.message);
+		// }
 
 		window.updateBehavior(ImproveBehavior(window, client, problem, mainCode, implCode));
 	}
@@ -216,12 +216,12 @@ class ImproveBehavior extends UploadableBehavior {
 	}
 
 	protected Bool doSubmit() : override {
-		Code implCode(window.currentSource(), problem.impl.language);
-		progvis:problems:SolutionUploadDlg dlg(client, problem, null, implCode);
-		if (dlg.show(window) >= 0) {
-			window.updateBehavior(DefaultBehavior(window));
-			return true;
-		}
+		// Code implCode(window.currentSource(), problem.impl.language);
+		// progvis:problems:SolutionUploadDlg dlg(client, problem, null, implCode);
+		// if (dlg.show(window) >= 0) {
+		// 	window.updateBehavior(DefaultBehavior(window));
+		// 	return true;
+		// }
 		return false;
 	}
 
@@ -261,12 +261,12 @@ class TestBehavior extends UploadableBehavior {
 	}
 
 	protected Bool doSubmit() : override {
-		Code mainCode(window.currentSource(), problem.main.language);
-		progvis:problems:SolutionUploadDlg dlg(client, problem, mainCode, null);
-		if (dlg.show(window) >= 0) {
-			window.updateBehavior(DefaultBehavior(window));
-			return true;
-		}
+		// Code mainCode(window.currentSource(), problem.main.language);
+		// progvis:problems:SolutionUploadDlg dlg(client, problem, mainCode, null);
+		// if (dlg.show(window) >= 0) {
+		// 	window.updateBehavior(DefaultBehavior(window));
+		// 	return true;
+		// }
 		return false;
 	}
 
