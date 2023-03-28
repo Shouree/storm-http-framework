@@ -261,6 +261,15 @@ namespace gui {
 
 	static void updateSelection(GtkTreeView *tree, GtkTreeModel *model, Set<Nat> *selection);
 
+	struct SelectData {
+		Engine *engine;
+		GtkWidget *widget;
+	};
+
+	static void freeSelectData(gpointer pointer) {
+		delete (SelectData *)pointer;
+	}
+
 	bool ListView::create(ContainerBase *parent, nat id) {
 		gint columns = gint(cols->count());
 		// We store the row ID as the first column. This lets us support sort orders easily in the
@@ -306,13 +315,86 @@ namespace gui {
 		}
 
 		initWidget(parent, scrolled);
-		// signals...
+
+		Signal<void, ListView, GtkTreePath *, GtkTreeViewColumn *>::Connect<&ListView::rowActivated>::to(tree, "row-activated", engine());
+		SelectData *data = new SelectData;
+		data->engine = &engine();
+		data->widget = tree;
+		gtk_tree_selection_set_select_function(selection, &ListView::selectFunction, data, &freeSelectData);
+
 		return true;
+	}
+
+	gboolean ListView::selectFunction(GtkTreeSelection *selection,
+									GtkTreeModel *model,
+									GtkTreePath *path,
+									gboolean currently_selected,
+									gpointer data) {
+
+		SelectData *d = (SelectData *)data;
+		App *app = gui::app(*d->engine);
+
+		GtkWidget *at = d->widget;
+		Window *win = null;
+		while ((win = app->findWindow(Handle(at))) == null) {
+			at = gtk_widget_get_parent(at);
+			if (!at) {
+				WARNING(L"Unknown window: " << d->widget);
+				return TRUE;
+			}
+		}
+
+		ListView *me = as<ListView>(win);
+		if (me)
+			me->rowSelected(selection, model, path, currently_selected);
+
+		return TRUE;
+	}
+
+	void ListView::rowSelected(GtkTreeSelection *selection, GtkTreeModel *model, GtkTreePath *path, gboolean current) {
+		if (onSelect) {
+			GtkTreeIter iter;
+			gtk_tree_model_get_iter(model, &iter, path);
+
+			GValue value = {};
+			gtk_tree_model_get_value(model, &iter, 0, &value);
+			Nat row = g_value_get_uint(&value);
+			g_value_unset(&value);
+
+			// About to toggle to selected?
+			if (current == 0) {
+				if (row == lastSelected) {
+					row = -1;
+					return;
+				}
+				lastSelected = row;
+			}
+
+			onSelect->call(row, current == 0);
+		}
+	}
+
+	void ListView::rowActivated(GtkTreePath *path, GtkTreeViewColumn *column) {
+		if (onActivate) {
+			GtkTreeModel *model = GTK_TREE_MODEL(gtkStore);
+
+			GtkTreeIter iter;
+			gtk_tree_model_get_iter(model, &iter, path);
+
+			GValue value = {};
+			gtk_tree_model_get_value(model, &iter, 0, &value);
+			Nat row = g_value_get_uint(&value);
+			g_value_unset(&value);
+
+			onActivate->call(row);
+		}
 	}
 
 	void ListView::modelAdd(Array<Str *> *row, Nat id) {
 		if (!gtkStore)
 			return;
+
+		lastSelected = -1;
 
 		GtkTreeIter iter;
 		gtk_list_store_append(gtkStore, &iter);
@@ -325,6 +407,8 @@ namespace gui {
 	void ListView::modelRemove(Nat id) {
 		if (!gtkStore)
 			return;
+
+		lastSelected = -1;
 
 		GtkTreeModel *model = GTK_TREE_MODEL(gtkStore);
 
@@ -347,6 +431,8 @@ namespace gui {
 	void ListView::modelClear() {
 		if (!gtkStore)
 			return;
+
+		lastSelected = -1;
 
 		gtk_list_store_clear(gtkStore);
 	}

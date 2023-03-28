@@ -93,6 +93,10 @@ namespace gui {
 		// Allow multiselect.
 		Bool multiSel;
 
+		// For GTK: sometimes select row events are duplicated. Remember the last event so that we
+		// can destroy it.
+		Nat lastSelected;
+
 		// Add to model. Always at the end, id indicates ID assigned.
 		void modelAdd(Array<Str *> *row, Nat id);
 
@@ -111,6 +115,20 @@ namespace gui {
 
 		// Get the list store used.
 		GtkListStore *model() const;
+
+		// Click callback.
+		void rowActivated(GtkTreePath *path, GtkTreeViewColumn *column);
+
+		// Selection callback.
+		void rowSelected(GtkTreeSelection *selection, GtkTreeModel *model, GtkTreePath *path, gboolean selected);
+
+		// Callback for selection.
+		static gboolean selectFunction(GtkTreeSelection *selection,
+									GtkTreeModel *model,
+									GtkTreePath *path,
+									gboolean currently_selected,
+									gpointer data);
+
 #endif
 	};
 
