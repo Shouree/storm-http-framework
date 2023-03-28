@@ -3,6 +3,7 @@
 #include "Compiler/Engine.h"
 #include "Compiler/Exception.h"
 #include "Compiler/Lib/Fn.h"
+#include "Compiler/Lib/Maybe.h"
 #include "Core/Join.h"
 
 namespace storm {
@@ -98,8 +99,15 @@ namespace storm {
 			ptrType = thisPtr(fnType(formals));
 		}
 
-		Function *FnPtr::acceptableFn(Value t) {
+		Function *FnPtr::acceptableFn(Value &t) {
 			FnType *ptrType = as<FnType>(t.type);
+			// Check if wrapped in a maybe type?
+			if (!ptrType) {
+				if (MaybeType *maybeType = as<MaybeType>(t.type)) {
+					t = maybeType->param();
+					ptrType = as<FnType>(t.type);
+				}
+			}
 			if (!ptrType)
 				return null;
 			if (ptrType->params->empty())

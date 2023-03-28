@@ -55,8 +55,9 @@ namespace storm {
 			// Initialize 'target' and 'type'.
 			void findTarget(const Scope &scope, SrcName *name, Array<SrcName *> *formal, MAYBE(Expr *) dot);
 
-			// Find an acceptable function for the result type 't'. Returns 'null' if none is found.
-			MAYBE(Function *) acceptableFn(Value t);
+			// Find an acceptable function for the result type 't'. Returns 'null' if none is
+			// found. May modify "t" to account for wrapped maybes, etc.
+			MAYBE(Function *) acceptableFn(Value &t);
 
 			// Generate code.
 			void code(CodeGen *state, CodeResult *r, Value type, Function *target);
