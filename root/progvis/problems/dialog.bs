@@ -23,6 +23,7 @@ dialog ProblemsDlg {
 			row: 0; col: 1;
 			FirstTryPanel firstTry {}
 		}
+		TabView tabs { row: 0; col: 1; }
 		FillBox(400, 200) { row: 0; col: 1; }
 	}
 
@@ -37,10 +38,16 @@ dialog ProblemsDlg {
 
 		list.onSelect = &this.onListSelect;
 
+		initial.visible = false;
+		tabs.add("A", Button("Test 1"));
+		tabs.add("B", Label("Test 2"));
+
 		(spawn populateList()).detach();
 	}
 
 	private void populateList() {
+		sleep(500 ms);
+
 		unless (response = client.query(ProblemListRequest()) as ProblemListResponse) {
 			showMessage(this, "Connection error", "Failed to retrieve list of problems.");
 			close(-1);

@@ -281,7 +281,11 @@ namespace gui {
 		// Assume we will need a vertical scroll bar.
 		width += dpiSystemMetrics(SM_CXVSCROLL, currentDpi());
 
-		return Size(Float(width), 30);
+		// Convert back to DPI independent units. That is what we let the rest of Storm see.
+		Size result(Float(width), 30);
+		result = dpiFromPx(currentDpi(), result);
+		result.h = 30;  // Always 30 units in DPI independent mode.
+		return result;
 	}
 
 #endif

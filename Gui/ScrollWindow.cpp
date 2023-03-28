@@ -21,7 +21,7 @@ namespace gui {
 	}
 
 	void ScrollWindow::windowDestroyed() {
-		Window::windowDestroyed();
+		ContainerBase::windowDestroyed();
 
 		if (child->created())
 			child->handle(invalid);
@@ -46,7 +46,7 @@ namespace gui {
 #ifdef GUI_WIN32
 
 	void ScrollWindow::parentCreated(nat id) {
-		Window::parentCreated(id);
+		ContainerBase::parentCreated(id);
 
 		// Create the child with id 1.
 		child->parentCreated(1);
@@ -58,7 +58,7 @@ namespace gui {
 	void ScrollWindow::updateDpi(Bool move) {
 		if (child)
 			child->updateDpi(true);
-		Window::updateDpi(move);
+		ContainerBase::updateDpi(move);
 	}
 
 	void ScrollWindow::minSize(Size sz) {
@@ -99,7 +99,7 @@ namespace gui {
 			size.h = Float(rect.bottom - rect.top) * scale;
 		}
 
-		Window::resized(size);
+		ContainerBase::resized(size);
 
 		Size sz = child->minSize();
 		if (!hScroll) {
@@ -151,7 +151,7 @@ namespace gui {
 			return msgResult(onWheel(GET_WHEEL_DELTA_WPARAM(msg.wParam), SB_HORZ));
 		}
 
-		return Window::onMessage(msg);
+		return ContainerBase::onMessage(msg);
 	}
 
 	LRESULT ScrollWindow::onScroll(WPARAM param, int which) {
