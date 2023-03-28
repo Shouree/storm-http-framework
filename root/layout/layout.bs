@@ -144,3 +144,58 @@ class Stack extends Layout {
 		}
 	}
 }
+
+
+/**
+ * A layout that fits the contained element according to a cardinal direction.
+ */
+class Anchor extends Layout {
+	// Our component.
+	private Component? component;
+
+	// Where do we place the component?
+	private Cardinal anchor;
+
+	// Shift the origin.
+	Float xShift;
+	Float yShift;
+
+	// Create.
+	init(Cardinal anchor) {
+		init() {
+			anchor = anchor;
+		}
+	}
+
+	// Add a component.
+	Layout:Info add(Component c) : override {
+		component = c;
+		Layout:Info();
+	}
+
+	// Minimum size.
+	Size minSize() : override {
+		if (component) {
+			component.minSize;
+		} else {
+			Size();
+		}
+	}
+
+	// Re-compute the layout.
+	void layout() : override {
+		if (component) {
+			Rect p = pos;
+			Point a = anchor.pick(p) + Size(xShift, yShift);
+			Size sz = min(component.minSize(), p.size);
+			component.pos = anchor.place(a, sz);
+		}
+	}
+
+	// Traverse.
+	void findAll(fn(Component)->void fn) : override {
+		super:findAll(fn);
+		if (component)
+			component.findAll(fn);
+	}
+}
