@@ -21,9 +21,6 @@ dialog ProblemsDlg {
 		}
 
 		list.multiSelect = true;
-
-		// spawn remove();
-		spawn check();
 	}
 
 	void remove() {

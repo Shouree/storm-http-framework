@@ -40,9 +40,10 @@ namespace gui {
 					<< cols->count() << S(" columns.")));
 		}
 
+		Nat id = rows->count();
 		*rows << Row(row);
-		modelAdd(row);
-		return rows->count() - 1;
+		modelAdd(row, id);
+		return id;
 	}
 
 	Nat ListView::count() const {
@@ -150,12 +151,11 @@ namespace gui {
 		return true;
 	}
 
-	void ListView::modelAdd(Array<Str *> *row) {
+	void ListView::modelAdd(Array<Str *> *row, Nat index) {
 		if (!created())
 			return;
 
 		HWND hwnd = handle().hwnd();
-		Nat index = rows->count() - 1;
 		addRow(hwnd, row, index);
 
 		// Update size.
@@ -259,12 +259,17 @@ namespace gui {
 #endif
 #ifdef GUI_GTK
 
+	static void updateSelection(GtkTreeView *tree, GtkTreeModel *model, Set<Nat> *selection);
+
 	bool ListView::create(ContainerBase *parent, nat id) {
 		gint columns = gint(cols->count());
-		GType *types = new GType[columns];
-		for (gint i = 0; i < columns; i++)
+		// We store the row ID as the first column. This lets us support sort orders easily in the
+		// future and makes selection easier to handle.
+		GType *types = new GType[columns + 1];
+		types[0] = G_TYPE_UINT;
+		for (gint i = 1; i < columns + 1; i++)
 			types[i] = G_TYPE_STRING;
-		gtkStore = gtk_list_store_newv(columns, types);
+		gtkStore = gtk_list_store_newv(columns + 1, types);
 		delete[] types;
 
 		GtkWidget *tree = gtk_tree_view_new_with_model(GTK_TREE_MODEL(gtkStore));
@@ -275,7 +280,7 @@ namespace gui {
 			GtkTreeViewColumn *col = gtk_tree_view_column_new_with_attributes(
 				cols->at(i)->utf8_str(),
 				renderer,
-				"text", gint(i),
+				"text", gint(i + 1),
 				NULL);
 			gtk_tree_view_column_set_resizable(col, true);
 			gtk_tree_view_append_column(GTK_TREE_VIEW(tree), col);
@@ -283,7 +288,7 @@ namespace gui {
 
 		// Add initial data.
 		for (Nat i = 0; i < rows->count(); i++) {
-			modelAdd(rows->at(i).cols);
+			modelAdd(rows->at(i).cols, i);
 		}
 
 		gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(tree), showHeader);
@@ -292,19 +297,28 @@ namespace gui {
 		GtkWidget *scrolled = gtk_scrolled_window_new(NULL, NULL);
 		gtk_container_add(GTK_CONTAINER(scrolled), tree);
 
+		GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
+		gtk_tree_selection_set_mode(selection, multiSel ? GTK_SELECTION_MULTIPLE : GTK_SELECTION_SINGLE);
+
+		if (selected) {
+			updateSelection(GTK_TREE_VIEW(tree), GTK_TREE_MODEL(gtkStore), selected);
+			selected = null;
+		}
+
 		initWidget(parent, scrolled);
 		// signals...
 		return true;
 	}
 
-	void ListView::modelAdd(Array<Str *> *row) {
+	void ListView::modelAdd(Array<Str *> *row, Nat id) {
 		if (!gtkStore)
 			return;
 
 		GtkTreeIter iter;
 		gtk_list_store_append(gtkStore, &iter);
+		gtk_list_store_set(gtkStore, &iter, 0, guint(id), -1);
 		for (Nat c = 0; c < row->count(); c++) {
-			gtk_list_store_set(gtkStore, &iter, c, row->at(c)->utf8_str(), -1);
+			gtk_list_store_set(gtkStore, &iter, c + 1, row->at(c)->utf8_str(), -1);
 		}
 	}
 
@@ -316,9 +330,18 @@ namespace gui {
 
 		GtkTreeIter iter;
 		gtk_tree_model_get_iter_first(model, &iter);
-		for (Nat i = 0; i < id; i++)
-			gtk_tree_model_iter_next(model, &iter);
-		gtk_list_store_remove(gtkStore, &iter);
+
+		GValue value = {};
+		do {
+			gtk_tree_model_get_value(model, &iter, 0, &value);
+			Nat rowId = g_value_get_uint(&value);
+			g_value_unset(&value);
+
+			if (rowId == id) {
+				gtk_list_store_remove(gtkStore, &iter);
+				break;
+			}
+		} while (gtk_tree_model_iter_next(model, &iter));
 	}
 
 	void ListView::modelClear() {
@@ -335,6 +358,68 @@ namespace gui {
 		}
 	}
 
+	void ListView::multiSelect(Bool v) {
+		multiSel = v;
+
+		if (created()) {
+			GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(fontWidget()));
+			gtk_tree_selection_set_mode(selection, multiSel ? GTK_SELECTION_MULTIPLE : GTK_SELECTION_SINGLE);
+		}
+	}
+
+	static void captureSelected(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *iter, gpointer data) {
+		Set<Nat> *result = (Set<Nat> *)data;
+
+		GValue value = {};
+		gtk_tree_model_get_value(model, iter, 0, &value);
+		result->put(g_value_get_uint(&value));
+		g_value_unset(&value);
+	}
+
+	Set<Nat> *ListView::selection() {
+		if (!created()) {
+			if (!selected)
+				selected = new (this) Set<Nat>();
+			return selected;
+		}
+
+		Set<Nat> *result = new (this) Set<Nat>();
+		GtkTreeSelection *selection = gtk_tree_view_get_selection(viewWidget());
+
+		// Note: It is OK to pass 'result' to this function even though it is GCd. It resides on the stack.
+		gtk_tree_selection_selected_foreach(selection, &captureSelected, result);
+
+		return result;
+	}
+
+	static void updateSelection(GtkTreeView *tree, GtkTreeModel *model, Set<Nat> *selection) {
+		GValue value = {};
+		GtkTreeIter iter;
+		GtkTreeSelection *treeSel = gtk_tree_view_get_selection(tree);
+		gtk_tree_model_get_iter_first(model, &iter);
+
+		do {
+			gtk_tree_model_get_value(model, &iter, 0, &value);
+			Nat id = g_value_get_uint(&value);
+			g_value_unset(&value);
+
+			if (selection->has(id))
+				gtk_tree_selection_select_iter(treeSel, &iter);
+			else
+				gtk_tree_selection_unselect_iter(treeSel, &iter);
+
+		} while (gtk_tree_model_iter_next(model, &iter));
+	}
+
+	void ListView::selection(Set<Nat> *sel) {
+		if (!created()) {
+			selected = sel;
+			return;
+		}
+
+		updateSelection(viewWidget(), GTK_TREE_MODEL(gtkStore), sel);
+	}
+
 	Size ListView::minSize() {
 		gint w = 0, h = 0;
 
@@ -348,6 +433,10 @@ namespace gui {
 
 	GtkWidget *ListView::fontWidget() {
 		return gtk_bin_get_child(GTK_BIN(handle().widget()));
+	}
+
+	GtkTreeView *ListView::viewWidget() const {
+		return GTK_TREE_VIEW(gtk_bin_get_child(GTK_BIN(handle().widget())));
 	}
 
 #endif

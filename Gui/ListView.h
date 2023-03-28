@@ -84,7 +84,7 @@ namespace gui {
 		// Selected items (before creation).
 		Set<Nat> *selected;
 
-		// For GTK: TreeStore object.
+		// List store used in Gtk.
 		UNKNOWN(PTR_NOGC) GtkListStore *gtkStore;
 
 		// Header visible?
@@ -93,8 +93,8 @@ namespace gui {
 		// Allow multiselect.
 		Bool multiSel;
 
-		// Add to model.
-		void modelAdd(Array<Str *> *row);
+		// Add to model. Always at the end, id indicates ID assigned.
+		void modelAdd(Array<Str *> *row, Nat id);
 
 		// Remove from model.
 		void modelRemove(Nat id);
@@ -104,6 +104,14 @@ namespace gui {
 
 		// Clear any local allocations.
 		void clearData();
+
+#ifdef GUI_GTK
+		// Get the TreeView itself.
+		GtkTreeView *viewWidget() const;
+
+		// Get the list store used.
+		GtkListStore *model() const;
+#endif
 	};
 
 
