@@ -9,21 +9,33 @@ dialog ProblemsDlg {
 	public Action? action;
 	private Client client;
 	private progvis:Settings settings;
+	private ProblemInfo[] problems;
+	private Int currentProblemId;
 
 	layout Grid {
-		expandCol: 0;
+		expandCol: 1;
 		expandRow: 0;
-		ListView list(["Problem", "Author", "Status"]) {}
+		ListView list(["Problem", "Author", "Status"]) { row: 0; col: 0; }
+		FillBox(250, 200) { row: 0; col: 0; }
+
+		Label initial("Select a problem in the list to the left to start", HAlign:center, VAlign:center) { row: 0; col: 1; }
+		Anchor(center) {
+			row: 0; col: 1;
+			FirstTryPanel firstTry {}
+		}
+		FillBox(400, 200) { row: 0; col: 1; }
 	}
 
 	init(Client client, progvis:Settings settings) {
 		init("Problems", Size(600, 500)) {
 			client = client;
 			settings = settings;
+			currentProblemId = -1;
 		}
 
+		firstTry.visible = false;
+
 		list.onSelect = &this.onListSelect;
-		list.onActivate = &this.onListActivate;
 
 		(spawn populateList()).detach();
 	}
@@ -35,17 +47,46 @@ dialog ProblemsDlg {
 			return;
 		}
 
-		for (row in response.data) {
+		problems = response.data;
+		for (row in problems) {
 			Str status = if (row.attempted) { "Attempted"; } else { "New"; };
 			list.add([row.title, row.author, status]);
 		}
 	}
 
 	private void onListSelect(Nat id, Bool selected) {
-		print("SELECT ${id}, ${selected}");
+		unless (selected)
+			return;
+
+		ProblemInfo info = problems[id];
+		unless (currentProblemId != info.id)
+			return;
+
+		currentProblemId = info.id;
+
+		initial.visible = false;
+		if (info.attempted) {
+			// Show attempted panel.
+		} else {
+			// Show "start to solve" panel.
+			firstTry.visible = true;
+		}
 	}
 
-	private void onListActivate(Nat id) {
-		print("ACTIVATE ${id}");
+}
+
+window FirstTryPanel extends Container {
+	layout Grid {
+		Label("You have not solved this problem before.", HAlign:center) {}
+		nextLine;
+		Label("Click the button below to start solving it!", HAlign:center) {}
+		nextLine;
+		FillBox(10, 20) {}
+		nextLine;
+		Anchor(center) { Button ok("Solve") {} }
+	}
+
+	init() {
+		init() {}
 	}
 }
