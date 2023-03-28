@@ -4,10 +4,10 @@
 #include "Container.h"
 #include "Win32Dpi.h"
 
-#ifdef WIN32
-#include <uxtheme.h>
-#pragma comment (lib, "uxtheme.lib")
-#endif
+// #ifdef WIN32
+// #include <uxtheme.h>
+// #pragma comment (lib, "uxtheme.lib")
+// #endif
 
 namespace gui {
 
@@ -95,9 +95,13 @@ namespace gui {
 
 		HWND hwnd = handle().hwnd();
 
-		SetWindowTheme(hwnd, S("Explorer"), NULL);
+		// Note: Looks nicer, but has visual artifacts when resizing columns in a list that is not entirely full.
+		// SetWindowTheme(hwnd, S("Explorer"), NULL);
 
 		ListView_SetExtendedListViewStyle(hwnd, LVS_EX_FULLROWSELECT);
+
+		// Note: If we want to have a non-left aligned column first, we need to add a dummy element
+		// as the first element and then remove it (that is what MSDN says).
 
 		for (Nat i = 0; i < cols->count(); i++) {
 			LVCOLUMN column;
@@ -106,13 +110,30 @@ namespace gui {
 			column.pszText = (LPWSTR)cols->at(i)->c_str();
 
 			ListView_InsertColumn(hwnd, i, &column);
+		}
 
-			ListView_SetColumnWidth(hwnd, i, LVSCW_AUTOSIZE);
-			column.cxMin = ListView_GetColumnWidth(hwnd, i);
+		// Add a temporary last column, then autosize the columns based on the headers. The last
+		// column makes it so that it won't fill the entire width of the control.
+		{
+			LVCOLUMN column;
+			column.mask = LVCF_FMT | LVCF_TEXT;
+			column.fmt = LVCFMT_LEFT;
+			column.pszText = (LPWSTR)S("");
+			ListView_InsertColumn(hwnd, cols->count(), &column);
+		}
+
+		for (Nat i = 0; i < cols->count(); i++) {
+			ListView_SetColumnWidth(hwnd, i, LVSCW_AUTOSIZE_USEHEADER);
+
+			LVCOLUMN column;
 			column.mask = LVCF_MINWIDTH;
+			column.cxMin = ListView_GetColumnWidth(hwnd, i);
 			ListView_SetColumn(hwnd, i, &column);
 		}
 
+		ListView_DeleteColumn(hwnd, cols->count());
+
+		// Add data.
 		for (Nat i = 0; i < rows->count(); i++)
 			addRow(hwnd, rows->at(i).cols, i);
 
@@ -160,9 +181,13 @@ namespace gui {
 
 		// Update size.
 		Font *font = this->font();
+		Nat dpi = currentDpi();
+		Nat padding = dpiSystemMetrics(SM_CXEDGE, dpi) * 6; // from StackOverflow.
 		for (Nat i = 0; i < cols->count(); i++) {
-			Size sz = font->stringSize(row->at(i));
+			Size sz = font->stringSize(row->at(i), dpi);
+			sz.w += padding;
 			int width = ListView_GetColumnWidth(hwnd, i);
+			// int hspace = ListView_GetItemSpacing(hwnd,
 			if (sz.w > width)
 				ListView_SetColumnWidth(hwnd, i, int(sz.w));
 		}
@@ -252,6 +277,9 @@ namespace gui {
 			ListView_GetColumn(hwnd, i, &column);
 			width += column.cxMin;
 		}
+
+		// Assume we will need a vertical scroll bar.
+		width += dpiSystemMetrics(SM_CXVSCROLL, currentDpi());
 
 		return Size(Float(width), 30);
 	}
