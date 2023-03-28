@@ -3,41 +3,49 @@ use core:geometry;
 use core:io;
 use progvis:net;
 use graphics;
+use lang:bs:macro;
 
 dialog ProblemsDlg {
 	public Action? action;
+	private Client client;
+	private progvis:Settings settings;
 
 	layout Grid {
 		expandCol: 0;
 		expandRow: 0;
-		ListView list(["A", "B", "C"]) {}
+		ListView list(["Problem", "Author", "Status"]) {}
 	}
 
 	init(Client client, progvis:Settings settings) {
-		init("Problems", Size(600, 500)) {}
-
-		for (Nat i = 0; i < 50; i++) {
-			list.add(["Row ${i}", "B", "C"]);
+		init("Problems", Size(600, 500)) {
+			client = client;
+			settings = settings;
 		}
 
-		list.multiSelect = true;
+		list.onSelect = &this.onListSelect;
+		list.onActivate = &this.onListActivate;
+
+		(spawn populateList()).detach();
 	}
 
-	void remove() {
-		for (Nat i = 0; i < 30; i++) {
-			sleep(1 s);
-			list.remove(0);
+	private void populateList() {
+		unless (response = client.query(ProblemListRequest()) as ProblemListResponse) {
+			showMessage(this, "Connection error", "Failed to retrieve list of problems.");
+			close(-1);
+			return;
+		}
+
+		for (row in response.data) {
+			Str status = if (row.attempted) { "Attempted"; } else { "New"; };
+			list.add([row.title, row.author, status]);
 		}
 	}
 
-	void check() {
-		for (Nat i = 0; i < 10; i++) {
-			sleep(5 s);
-			print(list.selection.toS);
-			Set<Nat> x;
-			x.put(8);
-			x.put(20);
-			list.selection(x);
-		}
+	private void onListSelect(Nat id, Bool selected) {
+		print("SELECT ${id}, ${selected}");
+	}
+
+	private void onListActivate(Nat id) {
+		print("ACTIVATE ${id}");
 	}
 }
