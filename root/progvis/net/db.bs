@@ -80,11 +80,11 @@ DATABASE ProgvisDB {
 	// Known combinations of success/failure between tests.
 	// We don't aim to test all combinations, but only the latest version of each users' submission.
 	TABLE autoresults(
-		// Implementation tested.
+		// Implementation tested (implementations table). -1 means the original implementation.
 		impl INTEGER,
-		// Test used.
+		// Test used (tests table). -1 means the original test.
 		test INTEGER,
-		// Any errors found? String is type of error found.
+		// Any errors found? String is type of error found. NULL means no error was found.
 		error TEXT ALLOW NULL,
 		// PK declaration.
 		PRIMARY KEY(impl, test)
@@ -199,6 +199,49 @@ class Database {
 		result;
 	}
 
+	// Get an initial problem. i.e. exactly what is stored in the problems table. No user contributions.
+	Problem initialProblem(Int problemId) {
+		var result = WITH db: SELECT ONE title, impl, test, refimpl, hasError FROM problems WHERE id == problemId;
+		unless (result)
+			throw ServerError("Problem ${problemId} does not exist.");
+
+		var impl = getCode(result.impl);
+		var test = getCode(result.test);
+		var ref = getCode(result.refimpl);
+		Problem(problemId, result.title, -1, -1, result.hasError > 0, impl, test, ref);
+	}
+
+	// Add a new attempt.
+	Int newAttempt(Int userId, Int implId, Int testId, Str sequence, Str? error) {
+		WITH db: INSERT INTO attempts(author, impl, test, sequence, error, created)
+			VALUES (userId, implId, testId, sequence, error, CURRENT DATETIME);
+	}
+
+	// Add a new implementation.
+	Int newImplementation(Int userId, Int problemId, Code code, Int testId, Str? error) {
+		WITH db {
+			Int ver = 1;
+			if (r = SELECT ONE version FROM implementations WHERE problem == problemId AND author == userId ORDER BY version DESC)
+				ver = r.version + 1;
+
+			Int codeId = createCode(code);
+
+			Int implId = INSERT INTO implementations(problem, version, author, code, created)
+				VALUES (problemId, ver, userId, codeId, CURRENT DATETIME);
+
+			// Also add to the autotable, so we don't have to check it ourselves.
+			try {
+				INSERT INTO autoresults(impl, test, error)
+					VALUES (implId, problemId, error);
+			} catch (Exception e) {
+				// We *might* race with the automatic grading here, so be a bit robust.
+				print("Warning: Inserting into autoresults failed: ${e.message}");
+			}
+
+			return implId;
+		}
+	}
+
 	/**
 	 * Utils
 	 */
@@ -212,7 +255,7 @@ class Database {
 		unless (code)
 			throw ServerError("Code ${codeId} does not exist.");
 
-		Code(code.src, code.language);
+		Code(codeId, code.src, code.language);
 	}
 
 	// Validate implementation ID.

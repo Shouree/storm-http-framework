@@ -88,3 +88,25 @@ class ProblemListResponse : extends Response, serializable {
 		init { data = data; }
 	}
 }
+
+/**
+ * Response with an individual problem.
+ */
+class ProblemResponse : extends Response, serializable {
+	Problem problem;
+	init(Problem problem) {
+		init { problem = problem; }
+	}
+}
+
+
+/**
+ * Response for submitting a new item in the database.
+ */
+class NewItemResponse : extends Response, serializable {
+	Int id;
+
+	init(Int id) {
+		init { id = id; }
+	}
+}

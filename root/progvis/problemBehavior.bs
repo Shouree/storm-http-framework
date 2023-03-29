@@ -33,7 +33,7 @@ class DebugProblemBehavior extends Behavior {
 	private MainWin window;
 	private Client client;
 	private Problem problem;
-	private Url mainCode;
+	private Url testCode;
 	private Url implCode;
 	private StrBuf operations;
 	private Bool done;
@@ -43,13 +43,14 @@ class DebugProblemBehavior extends Behavior {
 			window = window;
 			client = client;
 			problem = action.problem;
-			mainCode = action.mainCode;
+			testCode = action.testCode;
 			implCode = action.implCode;
 		}
 	}
 
 	ProblemPanel? panel() : override {
 		ProblemPanel p("Find an error in \"${problem.title}\"!");
+		p.button("Restart", &this.onRestartClicked());
 		p.button("Open main", &this.onOpenMain());
 		p.button("Open implementation", &this.onOpenImpl());
 		p;
@@ -60,7 +61,11 @@ class DebugProblemBehavior extends Behavior {
 	}
 
 	private void onOpenMain() {
-		(spawn window.openEditor(mainCode)).detach();
+		(spawn window.openEditor(testCode)).detach();
+	}
+
+	private void onRestartClicked() {
+		(spawn window.onRestart()).detach();
 	}
 
 	void onProgramError(ProgramError error) : override {
@@ -72,25 +77,9 @@ class DebugProblemBehavior extends Behavior {
 	}
 
 	private void submitError(ProgramError error) {
-		StrBuf msg;
-		msg << "You found an error of type: " << error.type << "\n";
-		msg << error.message << "\n";
-		msg << "\n";
-		msg << "Do you wish to submit this error and try to fix it?";
-		var result = showYesNoQuestion(window, "You found an error!", msg.toS, "Yes", "No");
+		(spawn submitAttempt(operations.toS, error.type)).detach();
 
-		if (result != MessageResponse:yes) {
-			window.updateBehavior(RevisitBehavior(window, "Looking at problem \"${problem.title}\""));
-			return;
-		}
-
-		// try {
-		// 	client.query(PostSolutionRequest(problem.id, error.type, operations.toS));
-		// } catch (Exception e) {
-		// 	showMessage(window, "Error", "Failed to post the result: " + e.message);
-		// }
-
-		window.updateBehavior(ImproveBehavior(window, client, problem, mainCode, implCode));
+		window.updateBehavior(ImproveBehavior(window, client, problem, testCode, implCode, error.type));
 	}
 
 	void onUserAction(Str action) : override {
@@ -98,7 +87,17 @@ class DebugProblemBehavior extends Behavior {
 	}
 
 	void onRestart() : override {
+		// Save the solution!
+		Str ops = operations.toS();
+		if (ops.any) {
+			(spawn submitAttempt(ops, null)).detach();
+		}
+
 		operations = StrBuf();
+	}
+
+	private void submitAttempt(Str operations, Str? error) {
+		client.query(NewAttemptRequest(problem.impl.id, problem.test.id, operations, error));
 	}
 
 	Str? allowSpawnThread() : override { "Can not spawn new threads this way when solving problems."; }
@@ -114,15 +113,15 @@ class DebugProblemBehavior extends Behavior {
 class UploadableBehavior extends DefaultBehavior {
 	protected Client client;
 	protected Problem problem;
-	protected Url mainCode;
+	protected Url testCode;
 	protected Url implCode;
 	protected Bool submitted;
 
-	init(MainWin window, Client client, Problem problem, Url mainCode, Url implCode) {
+	init(MainWin window, Client client, Problem problem, Url testCode, Url implCode) {
 		init(window) {
 			client = client;
 			problem = problem;
-			mainCode = mainCode;
+			testCode = testCode;
 			implCode = implCode;
 			submitted = false;
 		}
@@ -188,7 +187,7 @@ class UploadableBehavior extends DefaultBehavior {
 	}
 
 	protected void doOpenMain() {
-		window.openEditor(mainCode);
+		window.openEditor(testCode);
 	}
 }
 
@@ -197,13 +196,14 @@ class UploadableBehavior extends DefaultBehavior {
  * Behavior that lets the user modify the problem and submit an improved version.
  */
 class ImproveBehavior extends UploadableBehavior {
-	init(MainWin window, Client client, Problem problem, Url mainCode, Url implCode) {
-		init(window, client, problem, mainCode, implCode) {}
+	init(MainWin window, Client client, Problem problem, Url testCode, Url implCode, Str errorType) {
+		init(window, client, problem, testCode, implCode) {}
 
 		StrBuf msg;
-		msg << "To solve the problem you found:\n";
+		msg << "You found a problem of type: " << errorType << "\n\n";
+		msg << "The next step is to fix the problem you found:\n";
 		msg << "1. Select \"Open impl.\" if you have not done so already.\n";
-		msg << "2. Save the file in your editor.\n";
+		msg << "2. Modify the code and save the file in your editor.\n";
 		msg << "3. Select \"Reload\" to load your changes and see if they work.\n";
 		msg << "4. Repeat 2-3 as necessary.\n";
 		msg << "5. Click \"Submit\" in the green box when you are done.\n";
@@ -216,12 +216,12 @@ class ImproveBehavior extends UploadableBehavior {
 	}
 
 	protected Bool doSubmit() : override {
-		// Code implCode(window.currentSource(), problem.impl.language);
-		// progvis:problems:SolutionUploadDlg dlg(client, problem, null, implCode);
-		// if (dlg.show(window) >= 0) {
-		// 	window.updateBehavior(DefaultBehavior(window));
-		// 	return true;
-		// }
+		Code implCode(window.currentSource(), problem.impl.language);
+		progvis:problems:SolutionUploadDlg dlg(client, problem, null, implCode);
+		if (dlg.show(window) >= 0) {
+			window.updateBehavior(DefaultBehavior(window));
+			return true;
+		}
 		return false;
 	}
 
@@ -236,8 +236,8 @@ class ImproveBehavior extends UploadableBehavior {
  * Behavior similar to "ImproveBehavior" above, but that modifies the main file.
  */
 class TestBehavior extends UploadableBehavior {
-	init(MainWin window, Client client, Problem problem, Url mainCode, Url implCode) {
-		init(window, client, problem, mainCode, implCode) {}
+	init(MainWin window, Client client, Problem problem, Url testCode, Url implCode) {
+		init(window, client, problem, testCode, implCode) {}
 
 		(spawn infoMessage()).detach();
 	}
@@ -261,8 +261,8 @@ class TestBehavior extends UploadableBehavior {
 	}
 
 	protected Bool doSubmit() : override {
-		// Code mainCode(window.currentSource(), problem.main.language);
-		// progvis:problems:SolutionUploadDlg dlg(client, problem, mainCode, null);
+		// Code testCode(window.currentSource(), problem.main.language);
+		// progvis:problems:SolutionUploadDlg dlg(client, problem, testCode, null);
 		// if (dlg.show(window) >= 0) {
 		// 	window.updateBehavior(DefaultBehavior(window));
 		// 	return true;

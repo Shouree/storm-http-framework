@@ -3,14 +3,11 @@ use core:geometry;
 use core:io;
 use progvis:net;
 use graphics;
-use lang:bs:macro;
 
 dialog ProblemsDlg {
 	public Action? action;
-	private Client client;
-	private progvis:Settings settings;
+	private ProblemState state;
 	private ProblemInfo[] problems;
-	private Int currentProblemId;
 
 	layout Grid {
 		expandCol: 1;
@@ -21,40 +18,49 @@ dialog ProblemsDlg {
 		Label initial("Select a problem in the list to the left to start", HAlign:center, VAlign:center) { row: 0; col: 1; }
 		Anchor(center) {
 			row: 0; col: 1;
-			FirstTryPanel firstTry {}
+			FirstTryPanel firstTry(state) {}
 		}
-		TabView tabs { row: 0; col: 1; }
+		ExplorePanel explore(state) { row: 0; col: 1; }
 		FillBox(400, 200) { row: 0; col: 1; }
 	}
 
 	init(Client client, progvis:Settings settings) {
+		// Note: This 'state' variable will be available to the layout.
+		// This is not the intention. Rather, the layout should have some more structured way to
+		// access external resources like this.
+		ProblemState state(client, settings);
+
 		init("Problems", Size(600, 500)) {
-			client = client;
-			settings = settings;
-			currentProblemId = -1;
+			state = state;
 		}
 
 		firstTry.visible = false;
+		explore.visible = false;
+		state.target = this;
 
 		list.onSelect = &this.onListSelect;
 
-		initial.visible = false;
-		tabs.add("A", Button("Test 1"));
-		tabs.add("B", Label("Test 2"));
+		state.add(&this.onNewProblem);
 
 		(spawn populateList()).detach();
 	}
 
-	private void populateList() {
-		sleep(500 ms);
+	// Called by the state object to close the dialog and perform some action.
+	void done(Action action) {
+		print("Got an action!");
+		this.action = action;
+		close(1);
+	}
 
-		unless (response = client.query(ProblemListRequest()) as ProblemListResponse) {
+	private void populateList() {
+		unless (response = state.query(ProblemListRequest()) as ProblemListResponse) {
 			showMessage(this, "Connection error", "Failed to retrieve list of problems.");
 			close(-1);
 			return;
 		}
 
 		problems = response.data;
+		problems.sort();
 		for (row in problems) {
 			Str status = if (row.attempted) { "Attempted"; } else { "New"; };
 			list.add([row.title, row.author, status]);
@@ -66,20 +72,89 @@ dialog ProblemsDlg {
 			return;
 
 		ProblemInfo info = problems[id];
-		unless (currentProblemId != info.id)
-			return;
+		state.problem = info;
+	}
 
-		currentProblemId = info.id;
-
+	private void onNewProblem(ProblemInfo info) {
 		initial.visible = false;
 		if (info.attempted) {
 			// Show attempted panel.
+			firstTry.visible = false;
+			explore.visible = true;
 		} else {
 			// Show "start to solve" panel.
+			explore.visible = false;
 			firstTry.visible = true;
 		}
 	}
 
+}
+
+/**
+ * Callback for the problem dialog.
+ */
+package class ProblemState on Ui {
+	private Client client;
+	private progvis:Settings settings;
+	private Int currentProblem;
+	private Array<Fn<void, ProblemInfo>> callbacks;
+
+	ProblemsDlg? target;
+
+	init(Client client, progvis:Settings settings) {
+		init {
+			client = client;
+			settings = settings;
+			currentProblem = -1;
+		}
+	}
+
+	Response query(Request request) {
+		client.query(request);
+	}
+
+	void message(Str message) {
+		if (target) {
+			showMessage(target, "Error", message);
+		}
+	}
+
+	void add(Fn<void, ProblemInfo> fn) {
+		callbacks << fn;
+	}
+
+	assign problem(ProblemInfo info) {
+		if (info.id != currentProblem) {
+			currentProblem = info.id;
+			// Trigger callbacks.
+			for (x in callbacks)
+				x.call(info);
+		}
+	}
+
+	Int problem() { currentProblem; }
+
+	void solveProblem(Problem problem) {
+		if (hasError = problem.hasError) {
+			solveProblem(problem, hasError);
+		} else {
+			message("TODO: We need to check for errors locally!");
+		}
+	}
+
+	private void solveProblem(Problem problem, Bool hasError) {
+		if (hasError) {
+			done(DebugAction(settings, problem));
+		} else {
+			done(TestAction(settings, problem));
+		}
+	}
+
+	void done(Action action) {
+		if (target) {
+			target.done(action);
+		}
+	}
 }
 
 window FirstTryPanel {
@@ -93,13 +168,52 @@ window FirstTryPanel {
 		Anchor(center) { Button ok("Solve") {} }
 	}
 
-	init() {
-		init() {}
+	private ProblemState state;
+
+	init(ProblemState state) {
+		init() {
+			state = state;
+		}
+
+		ok.onClick = &this.onOk;
+	}
+
+	private void onOk() {
+		ok.enabled = false;
+		(spawn fetchProblem()).detach();
+	}
+
+	private void fetchProblem() {
+		try {
+			unless (response = state.query(InitialProblemRequest(state.problem)) as ProblemResponse) {
+				state.message("Failed to fetch the problem.");
+				ok.enabled = true;
+				return;
+			}
+
+			state.solveProblem(response.problem);
+		} catch (Exception e) {
+			state.message("Failed to fetch the problem: " + e.message());
+			ok.enabled = true;
+		}
 	}
 }
 
 class ExplorePanel extends TabView {
-	init() {
+	init(ProblemState state) {
 		init() {}
+
+		add("Overview", CodeOverviewPanel());
+		add("Explore tests", ExploreTestsPanel());
+		add("Explore implementations", ExploreImplPanel());
 	}
+}
+
+window CodeOverviewPanel {
+}
+
+window ExploreTestsPanel {
+}
+
+window ExploreImplPanel {
 }

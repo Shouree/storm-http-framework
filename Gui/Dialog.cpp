@@ -63,9 +63,12 @@ namespace gui {
 			if (type == 0) {
 				// Accelerator. Check for IDOK or IDCANCEL.
 				if (id == IDOK) {
-					if (defaultButton)
+					// Only close the dialog when RETURN is pressed if there is a default
+					// button. This mirrors behavior on Gtk.
+					if (defaultButton) {
 						defaultButton->onCommand(BN_CLICKED);
-					return msgResult(TRUE);
+						return msgResult(TRUE);
+					}
 				} else if (id == IDCANCEL) {
 					close();
 					return msgResult(TRUE);

@@ -12,18 +12,18 @@ class Action on Ui {
 	// The problem to solve.
 	Problem problem;
 
-	// Code for the main program on disk.
-	Url mainCode;
-
 	// Code for the implementation on disk.
 	Url implCode;
+
+	// Code for the test program on disk.
+	Url testCode;
 
 	// Create.
 	init(progvis:Settings settings, Problem problem) {
 		init {
 			problem = problem;
-			mainCode = saveCode(settings, problem.id, "", problem.main);
-			implCode = saveCode(settings, problem.id, "_impl", problem.impl);
+			implCode = saveCode(settings, problem, "", problem.impl);
+			testCode = saveCode(settings, problem, "_test", problem.test);
 		}
 	}
 
@@ -32,12 +32,18 @@ class Action on Ui {
 
 	// Return a list of files to open.
 	Url[] files() {
-		[mainCode, implCode];
+		[testCode, implCode];
 	}
 
 	// Save source code to disk, and retrieve an URL for it.
-	private Url saveCode(progvis:Settings settings, Int problemId, Str suffix, Code code) : static {
-		Url file = settings.downloadFile("${problemId,f08}${suffix}.${code.language}");
+	private Url saveCode(progvis:Settings settings, Problem problem, Str suffix, Code code) : static {
+		Str title = "${problem.id,f06}";
+		if (problem.implId >= 0)
+			title += "_p${problem.implId,f03}";
+		if (problem.testId >= 0)
+			title += "_t${problem.testId,f03}";
+
+		Url file = settings.downloadFile("${title}${suffix}.${code.language}");
 		Utf8Output out(file.write());
 		out.autoFlush = false;
 		out.write(code.src);
@@ -46,3 +52,63 @@ class Action on Ui {
 		return file;
 	}
 }
+
+
+/**
+ * Action to debug a problem.
+ */
+class DebugAction extends Action {
+	init(progvis:Settings settings, Problem problem) {
+		init(settings, problem) {}
+	}
+
+	Url[] files() : override {
+		// To prevent modifications to the test code, we put it in an in-memory store.
+		MemoryProtocol mem;
+		Url test = problem.test.put("test", mem);
+		[implCode, test];
+	}
+
+	progvis:Behavior behavior(progvis:MainWin window, Client client) : override {
+		return progvis:DebugProblemBehavior(window, client, this);
+	}
+}
+
+
+/**
+ * Test a problem (change the main function).
+ */
+class TestAction extends Action {
+	init(progvis:Settings settings, Problem problem) {
+		init(settings, problem) {}
+	}
+
+	Url[] files() : override {
+		// To prevent modifications to the implementation, we put it in an in-memory store.
+		MemoryProtocol mem;
+		Url impl = problem.impl.put("impl", mem);
+		[testCode, impl];
+	}
+
+	progvis:Behavior behavior(progvis:MainWin window, Client client) : override {
+		return progvis:TestBehavior(window, client, problem, testCode, implCode);
+	}
+}
+
+
+/**
+ * Show a solution.
+ */
+// class ShowSolutionAction extends Action {
+// 	Str solution;
+
+// 	init(progvis:Settings settings, Problem problem, Solution solution) {
+// 		init(settings, problem) {
+// 			solution = solution.steps;
+// 		}
+// 	}
+
+// 	progvis:Behavior behavior(progvis:MainWin window, Client client) : override {
+// 		return progvis:ReplayBehavior(window, solution);
+// 	}
+// }

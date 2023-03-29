@@ -45,23 +45,45 @@ class ProblemInfo : serializable {
 
 
 /**
- * Representation of a problem, including code.
+ * Representation of something that we can attempt to solve. Includes the code necessary for the
+ * client to solve the problem. Also contains information about the origins of the source code so
+ * that a solution can be submitted.
  */
-class Problem : extends ProblemInfo, serializable {
-	// Main program.
-	Code main;
+class Problem : serializable {
+	// ID of the problem we are solving.
+	Int id;
 
-	// Implementation of the data structure.
+	// Title of the problem.
+	Str title;
+
+	// If positive: ID of the implementation we are using.
+	Int implId;
+
+	// If positive: ID of the test we are using.
+	Int testId;
+
+	// Does the implementation + test expose an error? If null, then the state is unknown.
+	Bool? hasError;
+
+	// Implementation.
 	Code impl;
 
-	// Reference implementation of the data structure.
+	// Test program.
+	Code test;
+
+	// Reference implementation.
 	Code ref;
 
 	// Create.
-	init(Int id, Str title, Str author, Bool myProblem, Bool currentError, Code main, Code impl, Code ref) {
-		init(id, title, author, myProblem, currentError) {
-			main = main;
+	init(Int id, Str title, Int implId, Int testId, Bool? hasError, Code impl, Code test, Code ref) {
+		init {
+			id = id;
+			title = title;
+			implId = implId;
+			testId = testId;
+			hasError = hasError;
 			impl = impl;
+			test = test;
 			ref = ref;
 		}
 	}
@@ -72,6 +94,9 @@ class Problem : extends ProblemInfo, serializable {
  * A piece of code, indicating a language as well.
  */
 class Code : serializable {
+	// ID in the database.
+	Int id;
+
 	// Source code.
 	Str src;
 
@@ -81,6 +106,16 @@ class Code : serializable {
 	// Create.
 	init(Str src, Str language) {
 		init {
+			id = -1;
+			src = src;
+			language = language;
+		}
+	}
+
+	// Create.
+	init(Int id, Str src, Str language) {
+		init {
+			id = id;
 			src = src;
 			language = language;
 		}

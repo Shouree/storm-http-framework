@@ -147,3 +147,76 @@ class ProblemListRequest : extends Request, serializable {
 		ProblemListResponse(db.problemList(server.userId));
 	}
 }
+
+
+/**
+ * Request an initial problem.
+ */
+class InitialProblemRequest : extends Request, serializable {
+	Int id;
+
+	init(Int id) {
+		init { id = id; }
+	}
+
+	Response? execute(ServerConn server, Database db) : override {
+		ProblemResponse(db.initialProblem(id));
+	}
+}
+
+
+/**
+ * Save a sequence of operations as a solution attempt.
+ */
+class NewAttemptRequest : extends Request, serializable {
+	Int implCodeId;
+	Int testCodeId;
+	Str sequence;
+	Str? error;
+
+	init(Int implId, Int testId, Str sequence, Str? error) {
+		init() {
+			implCodeId = implId;
+			testCodeId = testId;
+			sequence = sequence;
+			error = error;
+		}
+	}
+
+	Response? execute(ServerConn server, Database db) : override {
+		NewItemResponse(db.newAttempt(server.userId, implCodeId, testCodeId, sequence, error));
+	}
+
+}
+
+
+/**
+ * Save a new implementation for a user.
+ */
+class NewImplementation : extends Request, serializable {
+	// ID of the problem.
+	Int problemId;
+
+	// New implementation.
+	Code newImpl;
+
+	// Id of the test used, or -1 if the original test case was used.
+	Int testId;
+
+	// What error (if any) was found? NULL means no error was found.
+	Str? error;
+
+	// Create.
+	init(Int problemId, Code newImpl, Int testId, Str? error) {
+		init() {
+			problemId = problemId;
+			newImpl = newImpl;
+			testId = testId;
+			error = error;
+		}
+	}
+
+	Response? execute(ServerConn server, Database db) : override {
+		NewItemResponse(db.newImplementation(server.userId, problemId, newImpl, testId, error));
+	}
+}
