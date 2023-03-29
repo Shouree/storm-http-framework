@@ -47,6 +47,7 @@ namespace gui {
 			// Actually not supported...
 			break;
 		}
+		flags |= SS_NOPREFIX; // Don't treat & characters specially.
 		return createEx(WC_STATIC, flags, 0, parent->handle().hwnd(), id);
 	}
 

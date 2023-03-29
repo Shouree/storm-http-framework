@@ -25,7 +25,13 @@ namespace gui {
 
 		child->attachParent(this);
 
-		tabAdded(child, title, children->count() - 1);
+		if (created()) {
+			// We need to tell the child to create itself before we add the tab. Otherwise the Gtk
+			// code will not work.
+			child->parentCreated(children->count());
+
+			tabAdded(child, title, children->count() - 1);
+		}
 	}
 
 #ifdef GUI_WIN32
@@ -137,6 +143,68 @@ namespace gui {
 		item.pszText = (LPWSTR)title->c_str();
 		item.lParam = id;
 		TabCtrl_InsertItem(handle().hwnd(), id, &item);
+	}
+
+#endif
+#ifdef GUI_GTK
+
+	Size TabView::minSize() {
+		gint w = 0, h = 0;
+
+		if (created()) {
+			gtk_widget_get_preferred_width(handle().widget(), &w, NULL);
+			gtk_widget_get_preferred_height(handle().widget(), &h, NULL);
+		}
+
+		return Size(Float(w), Float(h));
+	}
+
+	void TabView::parentCreated(nat id) {
+		// Tell our children to create themselves first. This makes it possible for us to add them
+		// directly later on.
+		for (Nat i = 0; i < children->count(); i++)
+			children->at(i)->parentCreated(i + 1);
+
+		Window::parentCreated(id);
+		// Handle size?
+	}
+
+	bool TabView::create(ContainerBase *parent, nat id) {
+		GtkWidget *widget = gtk_notebook_new();
+
+		initWidget(parent, widget);
+
+		for (Nat i = 0; i < children->count(); i++)
+			tabAdded(children->at(i), titles->at(i), i);
+
+		return true;
+	}
+
+	void TabView::moveChild(GtkWidget *child, Rect pos) {
+		// We don't honor requests from children.
+	}
+
+	void TabView::selected(Nat tab) {
+		currentSelected = tab;
+	}
+
+	void TabView::addChild(GtkWidget *child, Rect pos) {
+		// We don't do anything here.
+	}
+
+	void TabView::tabAdded(Window *child, Str *title, Nat id) {
+		GtkNotebook *notebook = GTK_NOTEBOOK(handle().widget());
+		gtk_notebook_append_page(notebook, child->handle().widget(), gtk_label_new(title->utf8_str()));
+	}
+
+	void TabView::pos(Rect r) {
+		// We don't need to do anything special on Gtk.
+		ContainerBase::pos(r);
+	}
+
+	void TabView::resized(Size size) {
+		// We don't need to do anything special on Gtk.
+		ContainerBase::resized(size);
 	}
 
 #endif
