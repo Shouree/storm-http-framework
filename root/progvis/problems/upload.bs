@@ -238,7 +238,7 @@ dialog SolutionUploadDlg {
 		(spawn doUpload(request)).detach();
 	}
 
-	private void doUpload() {
+	private void doUpload(Request request) {
 		try {
 			client.query(request);
 			close(1);

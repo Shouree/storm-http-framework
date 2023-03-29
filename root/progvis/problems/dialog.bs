@@ -62,7 +62,7 @@ dialog ProblemsDlg {
 		problems = response.data;
 		problems.sort();
 		for (row in problems) {
-			Str status = if (row.attempted) { "Attempted"; } else { "New"; };
+			Str status = if (row.attempted) { "Started"; } else { "New"; };
 			list.add([row.title, row.author, status]);
 		}
 	}
