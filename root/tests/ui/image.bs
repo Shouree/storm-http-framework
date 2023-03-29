@@ -4,7 +4,7 @@ use graphics;
 use core:geometry;
 use core:io;
 
-window ImageViewer {
+frame ImageViewer {
 	layout Grid grid {
 		wrapCols: 3;
 		expandCol: 0;

@@ -7,8 +7,9 @@ required delimiter = SRequiredDelimiter;
 
 // Provide a new type definition keyword: 'window'.
 // TODO: We might want to update this grammar to support decorators.
-SClass => createWindow(pos, env, name, body) : "window" #keyword ~ SName name #typeName, "{" - [SWindowBody@ body, ]+ "}";
+SClass => createFrame(pos, env, name, body) : "frame" #keyword ~ SName name #typeName, "{" - [SWindowBody@ body, ]+ "}";
 SClass => createDialog(pos, env, name, body) : "dialog" #keyword ~ SName name #typeName, "{" - [SWindowBody@ body, ]+ "}";
+SClass => createWindow(pos, env, name, body) : "window" #keyword ~ SName name #typeName, "{" - [SWindowBody@ body, ]+ "}";
 SClass => createWindow(pos, env, name, parent, body) : "window" #keyword, SName name #typeName, "extends" #keyword, SType parent, "{" - [SWindowBody@ body, ]+ "}";
 
 // Custom class body definition to include some more things!

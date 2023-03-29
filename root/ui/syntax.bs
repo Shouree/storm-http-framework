@@ -4,7 +4,7 @@ use lang:bs;
 use lang:bs:macro;
 
 // Create "classes" for the keyword "window".
-Class createWindow(SrcPos pos, Scope env, SStr name, SWindowBody body) on Compiler {
+Class createFrame(SrcPos pos, Scope env, SStr name, SWindowBody body) on Compiler {
 	Class c = createClass(pos, env, name, body);
 	c.super(name{ui:Frame});
 	c;
@@ -13,6 +13,12 @@ Class createWindow(SrcPos pos, Scope env, SStr name, SWindowBody body) on Compil
 Class createDialog(SrcPos pos, Scope env, SStr name, SWindowBody body) on Compiler {
 	Class c = createClass(pos, env, name, body);
 	c.super(name{ui:Dialog});
+	c;
+}
+
+Class createWindow(SrcPos pos, Scope env, SStr name, SWindowBody body) on Compiler {
+	Class c = createClass(pos, env, name, body);
+	c.super(name{ui:Container});
 	c;
 }
 

@@ -82,7 +82,7 @@ dialog ProblemsDlg {
 
 }
 
-window FirstTryPanel extends Container {
+window FirstTryPanel {
 	layout Grid {
 		Label("You have not solved this problem before.", HAlign:center) {}
 		nextLine;
@@ -93,6 +93,12 @@ window FirstTryPanel extends Container {
 		Anchor(center) { Button ok("Solve") {} }
 	}
 
+	init() {
+		init() {}
+	}
+}
+
+class ExplorePanel extends TabView {
 	init() {
 		init() {}
 	}

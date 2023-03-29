@@ -2,7 +2,7 @@ use ui;
 use layout;
 use core:geometry;
 
-window CheckTest {
+frame CheckTest {
 	layout Grid {
 		wrapCols: 3;
 

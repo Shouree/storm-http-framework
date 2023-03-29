@@ -4,7 +4,7 @@ use core:geometry;
 
 use lang:bs:macro;
 
-window MyWin {
+frame MyWin {
 	// Layout of this window. Actually executed in the scope of 'init', so it is possible to access
 	// variables from there.
 	layout Grid {

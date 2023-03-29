@@ -1,6 +1,6 @@
 use ui; use layout; use core:geometry;
 
-window MyWindow {
+frame MyWindow {
 	layout Grid {
 	wrapCols: 2;
 	expandCol: 0;
