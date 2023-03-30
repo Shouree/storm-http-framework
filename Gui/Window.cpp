@@ -617,7 +617,8 @@ namespace gui {
 
 
 	bool Window::create(ContainerBase *parent, nat id) {
-		initWidget(parent, empty_new());
+		// Create an event box so that we receive events for this window.
+		initWidget(parent, gtk_event_box_new());
 		return true;
 	}
 
@@ -726,7 +727,8 @@ namespace gui {
 			eventWindow = gdk_window_get_effective_parent(eventWindow);
 
 			if (!eventWindow) {
-				WARNING(L"Failed to find a matching parent window!");
+				// This happens as it seems like events for a window are passed to the dialog window
+				// first. As such, we should not warn in this case.
 				return false;
 			}
 		}
@@ -805,25 +807,33 @@ namespace gui {
 			return FALSE;
 		}
 
-		gdouble dx = 0, dy = 0;
-		if (!gdk_event_get_scroll_deltas(event, &dx, &dy)) {
-			dx = 120; dy = 120;
-		}
+		const Int step = 80; // 120
 
 		bool ok = false;
-		switch (s.direction) {
-		case GDK_SCROLL_UP:
-			ok = onMouseVScroll(pt, Int(dx));
-			break;
-		case GDK_SCROLL_DOWN:
-			ok = onMouseVScroll(pt, -Int(dx));
-			break;
-		case GDK_SCROLL_LEFT:
-			ok = onMouseHScroll(pt, -Int(dy));
-			break;
-		case GDK_SCROLL_RIGHT:
-			ok = onMouseHScroll(pt, Int(dy));
-			break;
+		GdkScrollDirection direction;
+		gdouble dx = 0, dy = 0;
+		if (gdk_event_get_scroll_direction(event, &direction)) {
+			switch (s.direction) {
+			case GDK_SCROLL_UP:
+				ok = onMouseVScroll(pt, step);
+				break;
+			case GDK_SCROLL_DOWN:
+				ok = onMouseVScroll(pt, -step);
+				break;
+			case GDK_SCROLL_LEFT:
+				ok = onMouseHScroll(pt, -step);
+				break;
+			case GDK_SCROLL_RIGHT:
+				ok = onMouseHScroll(pt, step);
+				break;
+			}
+		} else if (gdk_event_get_scroll_deltas(event, &dx, &dy)) {
+			Int x(dx * step);
+			if (x != 0)
+				ok |= onMouseHScroll(pt, x);
+			Int y(dy * step);
+			if (y != 0)
+				ok |= onMouseVScroll(pt, y);
 		}
 		return ok ? TRUE : FALSE;
 	}
