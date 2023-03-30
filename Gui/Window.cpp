@@ -807,7 +807,7 @@ namespace gui {
 			return FALSE;
 		}
 
-		const Int step = 80; // 120
+		const Int step = 120;
 
 		bool ok = false;
 		GdkScrollDirection direction;
@@ -815,10 +815,10 @@ namespace gui {
 		if (gdk_event_get_scroll_direction(event, &direction)) {
 			switch (s.direction) {
 			case GDK_SCROLL_UP:
-				ok = onMouseVScroll(pt, step);
+				ok = onMouseVScroll(pt, -step);
 				break;
 			case GDK_SCROLL_DOWN:
-				ok = onMouseVScroll(pt, -step);
+				ok = onMouseVScroll(pt, step);
 				break;
 			case GDK_SCROLL_LEFT:
 				ok = onMouseHScroll(pt, -step);
@@ -830,10 +830,10 @@ namespace gui {
 		} else if (gdk_event_get_scroll_deltas(event, &dx, &dy)) {
 			Int x(dx * step);
 			if (x != 0)
-				ok |= onMouseHScroll(pt, x);
+				ok |= onMouseHScroll(pt, -x);
 			Int y(dy * step);
 			if (y != 0)
-				ok |= onMouseVScroll(pt, y);
+				ok |= onMouseVScroll(pt, -y);
 		}
 		return ok ? TRUE : FALSE;
 	}

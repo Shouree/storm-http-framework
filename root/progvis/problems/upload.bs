@@ -298,7 +298,7 @@ dialog SolutionUploadDlg {
 
 		if (newTest.any) {
 			if (currentError) {
-				done("You found an error, click \"Upload\" to proceed!");
+				done("You found an error, click \"Submit\" to proceed!");
 			} else {
 				error("Your test program did not find an error in the current implementation, try again!");
 			}
@@ -310,7 +310,7 @@ dialog SolutionUploadDlg {
 				// code is not identical as the first part here.
 				done("Your solution does not solve all errors with this test program.\nYou may still upload your solution, but you will not receive full points for it.");
 			} else {
-				done("You fixed the current issues, click \"Upload\" to proceed!");
+				done("You fixed the current issues, click \"Submit\" to proceed!");
 			}
 		}
 
