@@ -261,12 +261,12 @@ class TestBehavior extends UploadableBehavior {
 	}
 
 	protected Bool doSubmit() : override {
-		// Code testCode(window.currentSource(), problem.main.language);
-		// progvis:problems:SolutionUploadDlg dlg(client, problem, testCode, null);
-		// if (dlg.show(window) >= 0) {
-		// 	window.updateBehavior(DefaultBehavior(window));
-		// 	return true;
-		// }
+		Code testCode(window.currentSource(), problem.test.language);
+		progvis:problems:SolutionUploadDlg dlg(client, problem, testCode, null);
+		if (dlg.show(window) >= 0) {
+			window.updateBehavior(DefaultBehavior(window));
+			return true;
+		}
 		return false;
 	}
 

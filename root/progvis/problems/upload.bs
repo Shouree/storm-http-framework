@@ -316,7 +316,7 @@ dialog SolutionUploadDlg {
 
 		if (uploadButton.enabled) {
 			if (newTest) {
-				error("TODO!");
+				request = NewTest(original.id, newTest, original.implId, currentError);
 			} else if (newImpl) {
 				request = NewImplementation(original.id, newImpl, original.testId, currentError);
 			}

@@ -204,7 +204,7 @@ class ExplorePanel extends TabView {
 		init() {}
 
 		add("Overview", CodeOverviewPanel());
-		add("Explore tests", ExploreTestsPanel());
+		add("Explore tests", ExploreTestsPanel(state));
 		add("Explore implementations", ExploreImplPanel());
 	}
 }
@@ -213,6 +213,27 @@ window CodeOverviewPanel {
 }
 
 window ExploreTestsPanel {
+	layout Grid {
+		expandRow: 1;
+		expandCol: 0;
+		expandCol: 1;
+
+		Label("Available tests") {}
+		Label("Your current implementation") {}
+		nextLine;
+		ListView testList(["Author", "Version", "Status"]) {}
+		CodeView code {}
+	}
+
+	ProblemState state;
+
+	init(ProblemState state) {
+		init() {
+			state = state;
+		}
+
+		testList.add(["A", "B", "C"]);
+	}
 }
 
 window ExploreImplPanel {

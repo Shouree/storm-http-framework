@@ -220,3 +220,35 @@ class NewImplementation : extends Request, serializable {
 		NewItemResponse(db.newImplementation(server.userId, problemId, newImpl, testId, error));
 	}
 }
+
+
+/**
+ * Save a new test for a user.
+ */
+class NewTest : extends Request, serializable {
+	// ID of the problem.
+	Int problemId;
+
+	// New test.
+	Code newTest;
+
+	// Id of the implementation used, or -1 if the original implementation was used.
+	Int implId;
+
+	// What error (if any) was found? NULL means no error was found.
+	Str? error;
+
+	// Create.
+	init(Int problemId, Code newTest, Int implId, Str? error) {
+		init() {
+			problemId = problemId;
+			newTest = newTest;
+			implId = implId;
+			error = error;
+		}
+	}
+
+	Response? execute(ServerConn server, Database db) : override {
+		NewItemResponse(db.newTest(server.userId, problemId, newTest, implId, error));
+	}
+}

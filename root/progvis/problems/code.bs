@@ -1,0 +1,75 @@
+use ui;
+use core:geometry;
+use core:io;
+use progvis:net;
+use graphics;
+
+
+class CodeView extends Window {
+	CodePainter painter;
+
+	init() {
+		init() {}
+
+		painter(painter);
+
+		show(Code("int main() {\nint test;\n}\n\n"*8, "c"));
+	}
+
+	void show(Code code) {
+		painter.show(code);
+	}
+
+	Size minSize() : override {
+		Size(70, 100);
+	}
+
+	Bool onMouseVScroll(Point at, Int delta) : override {
+		print("Scrolling! ${delta}");
+		painter.onVScroll(at, delta);
+		true;
+	}
+}
+
+class CodePainter extends Painter {
+	private SolidBrush brush;
+	private Text? code;
+	private Float yOffset;
+
+	init() {
+		init() {
+			brush = SolidBrush(black);
+		}
+
+		bgColor = white;
+	}
+
+	void show(Code code) {
+		MemoryProtocol mem;
+		Url url = code.put("code", mem);
+		this.code = progvis:program:highlightSource(url, code.src, progvis:view:codeFont);
+		yOffset = 0;
+	}
+
+	Bool render(Size me, Graphics g) : override {
+		if (code) {
+			Size codeSz = code.size;
+			yOffset = min(yOffset, codeSz.h - me.h);
+			yOffset = max(yOffset, 0);
+
+			g.draw(code, brush, Point(0, yOffset));
+
+			// Draw scroll bar.
+		}
+
+		Rect border(Point(), me);
+		g.draw(border, brush);
+
+		false;
+	}
+
+	void onVScroll(Point at, Int delta) {
+		yOffset += delta.float;
+		repaint();
+	}
+}

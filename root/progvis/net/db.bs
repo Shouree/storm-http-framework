@@ -232,13 +232,38 @@ class Database {
 			// Also add to the autotable, so we don't have to check it ourselves.
 			try {
 				INSERT INTO autoresults(impl, test, error)
-					VALUES (implId, problemId, error);
+					VALUES (implId, testId, error);
 			} catch (Exception e) {
 				// We *might* race with the automatic grading here, so be a bit robust.
 				print("Warning: Inserting into autoresults failed: ${e.message}");
 			}
 
 			return implId;
+		}
+	}
+
+	// Add a new test.
+	Int newTest(Int userId, Int problemId, Code code, Int implId, Str? error) {
+		WITH db {
+			Int ver = 1;
+			if (r = SELECT ONE version FROM tests WHERE problem == problem AND author == userId ORDER BY version DESC)
+				ver = r.version + 1;
+
+			Int codeId = createCode(code);
+
+			Int testId = INSERT INTO tests(problem, version, author, code, created)
+				VALUES (problemId, ver, userId, codeId, CURRENT DATETIME);
+
+			// Also add to the autotable, so we don't have to check it ourselves.
+			try {
+				INSERT INTO autoresults(impl, test, error)
+					VALUES (implId, testId, error);
+			} catch (Exception e) {
+				// We *might* race with the automatic grading here, so be a bit robust.
+				print("Warning: Inserting into autoresults failed: ${e.message}");
+			}
+
+			return testId;
 		}
 	}
 
