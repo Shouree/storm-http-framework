@@ -685,6 +685,7 @@ namespace gui {
 			return;
 
 		// Note: This might not be entirely correct in nested structures.
+		// Note: Seems to work OK inside a tab control, which seems to consist of multiple windows. Not entirely sure though.
 
 		for (GtkWidget *at = widget; !gtk_widget_get_has_window(at); at = gtk_widget_get_parent(at)) {
 			GtkAllocation delta;
@@ -695,52 +696,64 @@ namespace gui {
 		}
 	}
 
-	// Translate window coordinates to widget coordinates.
-	static bool translatePoint(GtkWidget *eventWidget, GtkWidget *to, gdouble x, gdouble y, Point &out) {
-		GtkAllocation alloc;
-		gtk_widget_get_allocation(to, &alloc);
+	// Translate window coordinates to widget coordinates. Note: Due to how Gtk propagates events,
+	// it might be the case that 'eventWindow' is a child window to whatever window 'to' might be inside.
+	static bool translatePoint(GdkWindow *eventWindow, GtkWidget *to, gdouble x, gdouble y, Point &out) {
+		// Find a widget that has a window by traversing from 'to'.
+		GtkWidget *toParent = to;
+		while (!gtk_widget_get_has_window(toParent)) {
+			toParent = gtk_widget_get_parent(toParent);
 
-		// Make relative to 'to's window.
-		x -= alloc.x;
-		y -= alloc.y;
-
-		// Check if there are any other windows on the way.
-		for (GtkWidget *at = gtk_widget_get_parent(to);
-			 at != null && at != eventWidget;
-			 at = gtk_widget_get_parent(at)) {
-
-			if (gtk_widget_get_has_window(at)) {
-				GtkAllocation diff;
-				gtk_widget_get_allocation(at, &diff);
-
-				// New window, update.
-				x -= diff.x;
-				x -= diff.y;
+			if (!toParent) {
+				WARNING(L"Failed to find a parent widget with a window!");
+				return false;
 			}
 		}
 
-		// If 'eventWidget' does not have a window, we need to update coordinates.
-		if (eventWidget && !gtk_widget_get_has_window(eventWidget)) {
-			GtkAllocation diff;
-			gtk_widget_get_allocation(eventWidget, &diff);
+		GdkWindow *toWindow = gtk_widget_get_window(toParent);
 
-			x += diff.x;
-			y += diff.y;
+		// At this point, we know that 'toParent' is a parent of 'eventWindow'. Try to find it by
+		// traversing from 'eventWindow', and updating coordinates as we go. GdkWindow coordinates
+		// are relative to the parent window, in contrast to widgets.
+		while (eventWindow != toWindow) {
+			// Make coordinates relative the window's parent.
+			gint winX, winY;
+			gdk_window_get_position(eventWindow, &winX, &winY);
+			x += winX;
+			y += winY;
+
+			// Traverse.
+			eventWindow = gdk_window_get_effective_parent(eventWindow);
+
+			if (!eventWindow) {
+				WARNING(L"Failed to find a matching parent window!");
+				return false;
+			}
 		}
+
+		// Now, we have coordinates that are relative to the window owned by "toParent". Now we can
+		// just ask Gtk to convert coordinates for us!
+		gint xDelta, yDelta;
+		gtk_widget_translate_coordinates(toParent, to, 0, 0, &xDelta, &yDelta);
+		x += xDelta;
+		y += yDelta;
+
+		// Finally, we can ask Gtk about the allocation of 'to' and make sure that the coordinate is
+		// inside the rectangle.
+		GtkAllocation toAlloc;
+		gtk_widget_get_allocation(to, &toAlloc);
 
 		out.x = x;
 		out.y = y;
 
-		// PLN(L"Result: " << out.x << ", " << out.y);
-
 		return out.x >= 0.0f && out.y >= 0.0f
-			&& out.x < alloc.width && out.y < alloc.height;
+			&& out.x < toAlloc.width && out.y < toAlloc.height;
 	}
 
 	gboolean Window::onButton(GdkEvent *event) {
 		Point pt;
 		GdkEventButton &b = event->button;
-		if (!translatePoint(handle().widget(), drawWidget(), b.x, b.y, pt))
+		if (!translatePoint(b.window, drawWidget(), b.x, b.y, pt))
 			return FALSE;
 
 		mouse::MouseButton button = mouse::MouseButton(b.button - 1);
@@ -765,7 +778,7 @@ namespace gui {
 	gboolean Window::onMotion(GdkEvent *event) {
 		Point pt;
 		GdkEventMotion &m = event->motion;
-		if (!translatePoint(handle().widget(), drawWidget(), m.x, m.y, pt))
+		if (!translatePoint(m.window, drawWidget(), m.x, m.y, pt))
 			return FALSE;
 
 		return onMouseMove(pt) ? TRUE : FALSE;
@@ -788,8 +801,9 @@ namespace gui {
 	gboolean Window::onScroll(GdkEvent *event) {
 		Point pt;
 		GdkEventScroll &s = event->scroll;
-		if (!translatePoint(handle().widget(), drawWidget(), s.x, s.y, pt))
+		if (!translatePoint(s.window, drawWidget(), s.x, s.y, pt)) {
 			return FALSE;
+		}
 
 		gdouble dx = 0, dy = 0;
 		if (!gdk_event_get_scroll_deltas(event, &dx, &dy)) {
