@@ -25,7 +25,6 @@ class CodeView extends Window {
 	}
 
 	Bool onMouseVScroll(Point at, Int delta) : override {
-		print("Scrolling! ${delta}");
 		painter.onVScroll(at, delta);
 		true;
 	}
@@ -54,12 +53,18 @@ class CodePainter extends Painter {
 	Bool render(Size me, Graphics g) : override {
 		if (code) {
 			Size codeSz = code.size;
-			yOffset = min(yOffset, codeSz.h - me.h);
-			yOffset = max(yOffset, 0);
+			yOffset = max(yOffset, me.h - codeSz.h);
+			yOffset = min(yOffset, 0);
 
 			g.draw(code, brush, Point(0, yOffset));
 
 			// Draw scroll bar.
+			Float ratio = min(1.0, me.h / codeSz.h);
+			Float offset = -yOffset / codeSz.h;
+			Rect barRect(Point(me.w - 10, offset * me.h), Size(6, ratio * me.h));
+			brush.opacity = 0.6;
+			g.fill(barRect, Size(3), brush);
+			brush.opacity = 1;
 		}
 
 		Rect border(Point(), me);
@@ -69,7 +74,7 @@ class CodePainter extends Painter {
 	}
 
 	void onVScroll(Point at, Int delta) {
-		yOffset += delta.float;
+		yOffset -= delta.float;
 		repaint();
 	}
 }
