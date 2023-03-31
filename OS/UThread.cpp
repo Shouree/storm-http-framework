@@ -481,7 +481,7 @@ namespace os {
 
 	void UThreadState::insert(UThreadData *data) {
 		data->owner = this;
-		assert(stacks.contains(&data->stack), L"WRONG THREAD");
+		dbg_assert(stacks.contains(&data->stack), L"WRONG THREAD");
 		atomicIncrement(aliveCount);
 
 		{

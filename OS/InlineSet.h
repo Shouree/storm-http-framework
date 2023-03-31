@@ -86,17 +86,9 @@ namespace os {
 			item->prev = item->next = null;
 		}
 
-		// See if "item" is contained within this set. This operation is slow (linear time).
-		bool contains(T *item) const {
-			for (T *current = first; current != null; current = current->next)
-				if (current == item)
-					return true;
-			return false;
-		}
-
 		// Is the set empty?
 		inline bool empty() const {
-			return first == null && last == null;
+			return atomicRead(first) == null && atomicRead(last) == null;
 		}
 
 		// Any elements in the set?
@@ -113,7 +105,7 @@ namespace os {
 		class iterator {
 		private:
 			friend class InlineSet<T>;
-			iterator(T *at) : at(at), next(null) { if (at) next = at->next; }
+			iterator(T *at) : at(at), next(null) { if (at) next = atomicRead(at->next); }
 			T *at;
 			T *next;
 		public:
@@ -132,7 +124,7 @@ namespace os {
 			inline iterator &operator ++() {
 				at = next;
 				if (next)
-					next = next->next;
+					next = atomicRead(next->next);
 				return *this;
 			}
 
@@ -140,7 +132,7 @@ namespace os {
 				iterator t = *this;
 				at = next;
 				if (next)
-					next = next->next;
+					next = atomicRead(next->next);
 				return t;
 			}
 
@@ -160,12 +152,21 @@ namespace os {
 		};
 
 		inline iterator begin() const {
-			return iterator(first);
+			return iterator(atomicRead(first));
 		}
 
 		inline iterator end() const {
 			return iterator(null);
 		}
+
+		// See if "item" is contained within this set. This operation is slow (linear time).
+		bool contains(T *item) const {
+			for (iterator current = begin(); current != end(); ++current)
+				if (*current == item)
+					return true;
+			return false;
+		}
+
 	private:
 		// Disallow copying.
 		InlineSet(const InlineSet &o);
