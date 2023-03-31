@@ -217,6 +217,7 @@ window ExploreTestsPanel {
 		expandRow: 1;
 		expandCol: 0;
 		expandCol: 1;
+		normalizeCols;
 
 		Label("Available tests") {}
 		Label("Your current implementation") {}

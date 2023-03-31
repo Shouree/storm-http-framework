@@ -6,7 +6,13 @@ use core:geometry;
  * The grid is automatically sized to fit the constraints dictated by the contained components. Each
  * row and column will have their own size. To fill all available space, specify which rows and
  * columns are allowed to grow using 'expandRow' or 'expandCol'. A weight may additionally be
- * specified to allow different rows/columns to grow at different ratios with respect to each other.
+ * specified to allow different rows/columns to grow at different ratios with respect to each
+ * other. There are two modes that can be applied to the expansion. The default is to assign any
+ * extra space (according to the weights) to the expandable rows and columns. This means that they
+ * will have different sizes based on the minimum size, but the additional space is allocated
+ * fairly. The second mode is to base the extra assignment based on the total size of the
+ * elements. That way, given equal weights, the layout will keep them at equal size. This means that
+ * the minimum size of some components might be enlarged to keep the distribution.
  *
  * Elements may also be positioned at absolute grid coordinates by specifying 'row' and 'col',
  * starting at index 0. Additional rows and columns are then created to accomodate all
@@ -114,6 +120,16 @@ class Grid extends Layout {
 		expandCol(insertCol, 1);
 	}
 
+	// Ignore differences in minimum size when allocating space for expandable rows.
+	void normalizeRows() {
+		rowNormalize = true;
+	}
+
+	// Ignore differences in minimum size when allocating space for expandable columns.
+	void normalizeCols() {
+		colNormalize = true;
+	}
+
 	// Compute the minimum size.
 	Size minSize() {
 		update();
@@ -201,6 +217,10 @@ private:
 	Nat[] rowWeights;
 	Nat[] colWeights;
 
+	// Use total width/height instead of minimum width for rows/cols.
+	Bool rowNormalize;
+	Bool colNormalize;
+
 	/**
 	 * Volatile state that can be computed by the data in 'children'. Updated by calling 'refresh'.
 	 */
@@ -231,6 +251,12 @@ private:
 	// Get minimum row heights
 	Float[] rowMin() {
 		Float[] result(rows, 0.0);
+		if (rowNormalize) {
+			Float minSize = normalizedMinSize(1, rowWeights);
+			for (Nat i = 0; i < rows; i++)
+				result[i] = minSize * rowWeights[i].float;
+		}
+
 		Nat width = 1;
 		while (width > 0) {
 			width = minStep(width, 0, result, rowWeights);
@@ -241,6 +267,12 @@ private:
 	// Get minimum column widths.
 	Float[] colMin() {
 		Float[] result(cols, 0);
+		if (colNormalize) {
+			Float minSize = normalizedMinSize(1, colWeights);
+			for (Nat i = 0; i < cols; i++)
+				result[i] = minSize * colWeights[i].float;
+		}
+
 		Nat width = 1;
 		while (width > 0) {
 			width = minStep(width, 1, result, colWeights);
@@ -256,13 +288,12 @@ private:
 			s.w;
 	}
 
-	// Compute one step of the min-width process, or 0 if none. Returns the next larger size to examine.
+	// Compute one step of the min-width process. Returns the next size to examine, or 0 if
+	// none. Returns the next larger size to examine.
 	Nat minStep(Nat current, Nat dim, Float[] result, Nat[] weights) {
 		Nat next = 0;
+		Float space = pick(dim, border);
 		for (c in children) {
-			Float space = pick(dim, border);
-			Float size = pick(dim, c.minSize);
-			Nat pos = c.pos(dim);
 			Nat span = c.span(dim);
 
 			if (span > current) {
@@ -272,38 +303,63 @@ private:
 				} else {
 					next = min(next, span);
 				}
-			} else if (span == current) {
-				// See the current width of the desired columns.
-				Float sum = 0;
+				continue;
+			}
+
+			if (span < current)
+				continue;
+
+			Float size = pick(dim, c.minSize);
+			Nat pos = c.pos(dim);
+
+			// See the current width of the desired columns.
+			Float sum = 0;
+			for (Nat x = 0; x < span; x++)
+				sum += result[x + pos];
+			sum += (span - 1).int.float * space;
+
+			// ... and grow them if necessary.
+			if (sum < size) {
+				// To make it look nicer, we grow according to the weights. Otherwise it will
+				// appear that the weights are not respected if two columns contain small things
+				// and a large thing spanned over the two columns.
+				Nat totalWeight = 0;
 				for (Nat x = 0; x < span; x++)
-					sum += result[x + pos];
-				sum += (span - 1).int.float * space;
+					totalWeight += weights[x + pos];
 
-				// ... and grow them if necessary.
-				if (sum < size) {
-					// To make it look nicer, we grow according to the weights. Otherwise it will
-					// appear that the weights are not respected if two columns contain small things
-					// and a large thing spanned over the two columns.
-					Nat totalWeight = 0;
+				if (totalWeight == 0) {
+					// Just equalize it. We have no other weights.
+					Float grow = (size - sum) / span.int.float;
 					for (Nat x = 0; x < span; x++)
-						totalWeight += weights[x + pos];
-
-					if (totalWeight == 0) {
-						// Just equalize it. We have no other weights.
-						Float grow = (size - sum) / span.int.float;
-						for (Nat x = 0; x < span; x++)
-							result[x + pos] += grow;
-					} else {
-						// Respect the weights.
-						Float grow = (size - sum) / totalWeight.int.float;
-						for (Nat x = 0; x < span; x++)
-							result[x + pos] += grow * weights[x + pos].int.float;
-					}
+						result[x + pos] += grow;
+				} else {
+					// Respect the weights.
+					Float grow = (size - sum) / totalWeight.int.float;
+					for (Nat x = 0; x < span; x++)
+						result[x + pos] += grow * weights[x + pos].int.float;
 				}
 			}
 		}
 		next;
 	}
+
+	// Compute normalized minimum size for one unit of 'weight' so we can assign it to the elements later on.
+	Float normalizedMinSize(Nat dim, Nat[] weights) {
+		Float result = 0;
+		for (c in children) {
+			Nat pos = c.pos(dim);
+			Nat span = c.span(dim);
+
+			Nat weight = 0;
+			for (Nat i = 0; i < span; i++)
+				weight += weights[i + pos];
+
+			if (weight > 0)
+				result = result.max(pick(dim, c.minSize) / weight.float);
+		}
+		result;
+	}
+
 
 	// Adjust rows/colums to fit the specified width/height.
 	Float[] adjust(Float[] elems, Float border, Float total, Nat[] weights) {
