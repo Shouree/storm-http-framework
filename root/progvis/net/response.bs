@@ -99,7 +99,6 @@ class ProblemResponse : extends Response, serializable {
 	}
 }
 
-
 /**
  * Response for submitting a new item in the database.
  */
@@ -108,5 +107,21 @@ class NewItemResponse : extends Response, serializable {
 
 	init(Int id) {
 		init { id = id; }
+	}
+}
+
+/**
+ * List of available tests or available implementations.
+ */
+class ImprovementsResponse : extends Response, serializable {
+	Int problemId;
+
+	Improvement[] data;
+
+	init(Int id, Improvement[] data) {
+		init {
+			problemId = id;
+			data = data;
+		}
 	}
 }

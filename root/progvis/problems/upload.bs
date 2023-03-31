@@ -146,12 +146,12 @@ dialog UploadDlg {
 			return;
 		}
 
-		Bool currentError = false;
+		Error currentError = Error:unknown();
 		try {
 			if (error = progvis:check:check([m, i])) {
-				currentError = true;
+				currentError = Error:error(error.error.type);
 			} else {
-				currentError = false;
+				currentError = Error:success();
 			}
 		} catch (core:lang:CodeError e) {
 			error("Error while compiling the implementation:\n" + e.message, e.pos);
@@ -284,12 +284,12 @@ dialog SolutionUploadDlg {
 		if (cancel)
 			return;
 
-		Str? currentError = null;
+		Error currentError = Error:unknown();
 		try {
-			if (error = progvis:check:check([m, i], progress)) {
-				currentError = error.error.type;
+			if (error = progvis:check:check([m, i])) {
+				currentError = Error:error(error.error.type);
 			} else {
-				currentError = null;
+				currentError = Error:success();
 			}
 		} catch (core:lang:CodeError e) {
 			error("Error while compiling the implementation:\n" + e.message, e.pos);
@@ -297,14 +297,14 @@ dialog SolutionUploadDlg {
 		}
 
 		if (newTest.any) {
-			if (currentError) {
+			if (currentError.any) {
 				done("You found an error, click \"Submit\" to proceed!");
 			} else {
 				error("Your test program did not find an error in the current implementation, try again!");
 			}
 			size = minSize();
 		} else {
-			if (currentError) {
+			if (currentError.any) {
 				// We allow uploading the problems again, but with reduced reward. Thus, one student
 				// may solve one issue, but another may solve another issue. We check so that the
 				// code is not identical as the first part here.

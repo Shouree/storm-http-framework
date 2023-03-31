@@ -12,8 +12,6 @@ class CodeView extends Window {
 		init() {}
 
 		painter(painter);
-
-		show(Code("int main() {\nint test;\n}\n\n"*8, "c"));
 	}
 
 	void show(Code code) {

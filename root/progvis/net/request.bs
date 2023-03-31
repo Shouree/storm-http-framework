@@ -118,15 +118,15 @@ class NewProblemRequest : extends Request, serializable {
 	Code refImpl;
 
 	// Is there a concurrency error in the combination main + impl currently?
-	Bool currentError;
+	Error currentError;
 
-	init(Str title, Code impl, Code test, Code refImpl, Bool currentError) {
+	init(Str title, Code impl, Code test, Code refImpl, Error error) {
 		init {
 			title = title;
 			test = test;
 			impl = impl;
 			refImpl = refImpl;
-			currentError = currentError;
+			currentError = error;
 		}
 	}
 
@@ -203,11 +203,11 @@ class NewImplementation : extends Request, serializable {
 	// Id of the test used, or -1 if the original test case was used.
 	Int testId;
 
-	// What error (if any) was found? NULL means no error was found.
-	Str? error;
+	// What error (if any) was found?
+	Error error;
 
 	// Create.
-	init(Int problemId, Code newImpl, Int testId, Str? error) {
+	init(Int problemId, Code newImpl, Int testId, Error error) {
 		init() {
 			problemId = problemId;
 			newImpl = newImpl;
@@ -236,10 +236,10 @@ class NewTest : extends Request, serializable {
 	Int implId;
 
 	// What error (if any) was found? NULL means no error was found.
-	Str? error;
+	Error error;
 
 	// Create.
-	init(Int problemId, Code newTest, Int implId, Str? error) {
+	init(Int problemId, Code newTest, Int implId, Error error) {
 		init() {
 			problemId = problemId;
 			newTest = newTest;
@@ -250,5 +250,45 @@ class NewTest : extends Request, serializable {
 
 	Response? execute(ServerConn server, Database db) : override {
 		NewItemResponse(db.newTest(server.userId, problemId, newTest, implId, error));
+	}
+}
+
+
+/**
+ * Request information about the current state of a problem.
+ */
+class CurrentStateRequest : extends Request, serializable {
+	// ID of the problem.
+	Int problemId;
+
+	init(Int id) {
+		init { problemId = id; }
+	}
+
+	Response? execute(ServerConn server, Database db) : override {
+		ProblemResponse(db.currentState(server.userId, problemId));
+	}
+}
+
+
+/**
+ * Request information about tests that are available to explore.
+ */
+class ImprovementsRequest : extends Request, serializable {
+	// ID of the problem.
+	Int problemId;
+
+	// Request tests?
+	Bool tests;
+
+	init(Int id, Bool tests) {
+		init {
+			problemId = id;
+			tests = tests;
+		}
+	}
+
+	Response? execute(ServerConn server, Database db) : override {
+		ImprovementsResponse(problemId, db.testImprovements(server.userId, problemId));
 	}
 }

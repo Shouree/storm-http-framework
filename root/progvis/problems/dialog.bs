@@ -30,7 +30,7 @@ dialog ProblemsDlg {
 		// access external resources like this.
 		ProblemState state(client, settings);
 
-		init("Problems", Size(600, 500)) {
+		init("Problems", Size(1200, 700)) {
 			state = state;
 		}
 
@@ -47,12 +47,15 @@ dialog ProblemsDlg {
 
 	// Called by the state object to close the dialog and perform some action.
 	void done(Action action) {
-		print("Got an action!");
 		this.action = action;
 		close(1);
 	}
 
 	private void populateList() {
+		// The list view in Gtk currently insists on selecting a row when it is populated early
+		// enough. We don't want that.
+		sleep(100 ms);
+
 		unless (response = state.query(ProblemListRequest()) as ProblemListResponse) {
 			showMessage(this, "Connection error", "Failed to retrieve list of problems.");
 			close(-1);
@@ -127,23 +130,22 @@ package class ProblemState on Ui {
 		if (info.id != currentProblem) {
 			currentProblem = info.id;
 			// Trigger callbacks.
-			for (x in callbacks)
-				x.call(info);
+			for (x in callbacks) {
+				try {
+					x.call(info);
+				} catch (Exception e) {
+					print("Unhandled exception: ${e}");
+				}
+			}
 		}
 	}
 
 	Int problem() { currentProblem; }
 
 	void solveProblem(Problem problem) {
-		if (hasError = problem.hasError) {
-			solveProblem(problem, hasError);
-		} else {
+		if (problem.error.unknown()) {
 			message("TODO: We need to check for errors locally!");
-		}
-	}
-
-	private void solveProblem(Problem problem, Bool hasError) {
-		if (hasError) {
+		} else if (error = problem.error.any) {
 			done(DebugAction(settings, problem));
 		} else {
 			done(TestAction(settings, problem));
@@ -203,37 +205,123 @@ class ExplorePanel extends TabView {
 	init(ProblemState state) {
 		init() {}
 
-		add("Overview", CodeOverviewPanel());
+		add("Overview", CodeOverviewPanel(state));
 		add("Explore tests", ExploreTestsPanel(state));
 		add("Explore implementations", ExploreImplPanel());
 	}
 }
 
 window CodeOverviewPanel {
-}
-
-window ExploreTestsPanel {
 	layout Grid {
 		expandRow: 1;
 		expandCol: 0;
 		expandCol: 1;
 		normalizeCols;
 
-		Label("Available tests") {}
-		Label("Your current implementation") {}
+		Label implLbl("Your implementation") {}
+		Label testLbl("Your test") {}
 		nextLine;
-		ListView testList(["Author", "Version", "Status"]) {}
-		CodeView code {}
+		CodeView implCode {}
+		CodeView testCode {}
+		nextLine;
+		Grid {
+			colspan: 2;
+			expandCol: 0;
+			Label statusLbl("Status:", VAlign:center) {}
+			Button solve("Investigate") {}
+		}
 	}
 
 	ProblemState state;
+	private Problem? showing;
 
 	init(ProblemState state) {
 		init() {
 			state = state;
 		}
 
-		testList.add(["A", "B", "C"]);
+		solve.onClick = &this.onSolve;
+
+		state.add(&this.onInfo);
+	}
+
+	private void onInfo(ProblemInfo info) {
+		unless (response = state.query(CurrentStateRequest(info.id)) as ProblemResponse)
+			return;
+
+		var problem = response.problem;
+		showing = problem;
+
+		if (problem.implId < 0)
+			implLbl.text = "Original implementation:";
+		else
+			implLbl.text = "Version ${problem.implVersion} of your implementation:";
+
+		if (problem.testId < 0)
+			testLbl.text = "Original test:";
+		else
+			testLbl.text = "Version ${problem.testVersion} of your test:";
+
+		implCode.show(problem.impl);
+		testCode.show(problem.test);
+
+		if (error = problem.error.error) {
+			statusLbl.text = "Status: error of type ${error}";
+			solve.text = "Debug";
+		} else if (problem.error.success) {
+			statusLbl.text = "Status: Test passes";
+			solve.text = "Improve the test";
+		} else {
+			statusLbl.text = "Status: unknown";
+			solve.text = "Check";
+		}
+	}
+
+	private void onSolve() {
+		// If status is unknown, start model checker directly and just submit the result?
+		print("TODO!");
+	}
+}
+
+window ExploreTestsPanel {
+	layout Grid {
+		expandRow: 1;
+		expandCol: 0, 50;
+		expandCol: 1, 60;
+		normalizeCols;
+
+		Label("Available tests") {}
+		Label("Preview of the selected test:") {}
+		nextLine;
+		ListView testList(["Author", "Version", "Status"]) { rowspan: 2; }
+		CodeView code {}
+		nextLine;
+		FillBox(1, 1) {}
+		Grid {
+			expandCol: 0;
+			// Status label?
+			Button solve("Check") {}
+		}
+	}
+
+	ProblemState state;
+	private Int problemId;
+
+	init(ProblemState state) {
+		init() {
+			state = state;
+		}
+
+		solve.onClick = &this.onSolve;
+		state.add(&this.onInfo);
+	}
+
+	private void onInfo(ProblemInfo info) {
+		problemId = info.id;
+	}
+
+	private void onSolve() {
+		// Check status and act accordingly.
 	}
 }
 

@@ -59,11 +59,17 @@ class Problem : serializable {
 	// If positive: ID of the implementation we are using.
 	Int implId;
 
+	// Version of the implementation.
+	Int implVersion;
+
 	// If positive: ID of the test we are using.
 	Int testId;
 
-	// Does the implementation + test expose an error? If null, then the state is unknown.
-	Bool? hasError;
+	// Version of the test.
+	Int testVersion;
+
+	// Does the implementation + test expose an error?
+	Error error;
 
 	// Implementation.
 	Code impl;
@@ -75,13 +81,15 @@ class Problem : serializable {
 	Code ref;
 
 	// Create.
-	init(Int id, Str title, Int implId, Int testId, Bool? hasError, Code impl, Code test, Code ref) {
+	init(Int id, Str title, Int implId, Int implVer, Int testId, Int testVer, Error error, Code impl, Code test, Code ref) {
 		init {
 			id = id;
 			title = title;
 			implId = implId;
+			implVersion = implVer;
 			testId = testId;
-			hasError = hasError;
+			testVersion = testVer;
+			error = error;
 			impl = impl;
 			test = test;
 			ref = ref;
@@ -136,6 +144,87 @@ class Code : serializable {
 	}
 }
 
+/**
+ * Improvement to a problem. Either a test or an implementation, depending on context.
+ */
+class Improvement : serializable {
+	// ID of this improvement.
+	Int id;
+
+	// Version of the improvement.
+	Int version;
+
+	// Author.
+	Str author;
+
+	// Error?
+	Error error;
+
+	// Create.
+	init(Int id, Int version, Str author, Error error) {
+		init {
+			id = id;
+			version = version;
+			author = author;
+			error = error;
+		}
+	}
+}
+
+/**
+ * Error status of a problem.
+ * Represents what type of error a problem has, and if the status is unknown.
+ */
+value Error : serializable {
+	// Error message, if any. Empty string means that all is well. Null means unknown.
+	private Str? data;
+
+	// Internal helper.
+	private init(Str? data) {
+		init { data = data; }
+	}
+
+	Error error(Str type) : static { Error(type); }
+	Error success() : static { Error(""); }
+	Error unknown() : static { Error(null); }
+
+	// Is it a success?
+	Bool success() {
+		if (data)
+			return data.empty;
+		false;
+	}
+
+	// Is it an error?
+	Str? error() {
+		if (data)
+			if (data.any)
+				return data;
+		return null;
+	}
+
+	// Is it unknown?
+	Bool unknown() {
+		data.empty;
+	}
+
+	// Do we have an error?
+	Bool any() {
+		error.any;
+	}
+
+	Str toS() {
+		if (data) {
+			if (data.empty) {
+				return "No error";
+			} else {
+				return "Error: " + data;
+			}
+		} else {
+			return "Unknown";
+		}
+	}
+}
 
 /**
  * A single high-score entry.
