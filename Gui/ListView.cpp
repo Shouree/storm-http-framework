@@ -377,8 +377,18 @@ namespace gui {
 		}
 
 		ListView *me = as<ListView>(win);
-		if (me)
-			me->rowSelected(selection, model, path, currently_selected);
+		if (me) {
+			// Note: We can't throw exceptions throuhg Gtk, so we need to catch them here.
+			try {
+				me->rowSelected(selection, model, path, currently_selected);
+			} catch (const storm::Exception *e) {
+				PLN(L"Unhandled exception in window thread:\n" << e->message());
+			} catch (const ::Exception &e) {
+				PLN(L"Unhandled exception in window thread:\n" << e);
+			} catch (...) {
+				PLN(L"Unhandled exception in window thread: <unknown>");
+			}
+		}
 
 		return TRUE;
 	}
