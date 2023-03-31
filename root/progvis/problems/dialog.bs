@@ -145,7 +145,7 @@ package class ProblemState on Ui {
 	void solveProblem(Problem problem) {
 		if (problem.error.unknown()) {
 			message("TODO: We need to check for errors locally!");
-		} else if (error = problem.error.any) {
+		} else if (problem.error.any) {
 			done(DebugAction(settings, problem));
 		} else {
 			done(TestAction(settings, problem));
