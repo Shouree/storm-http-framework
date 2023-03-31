@@ -869,13 +869,16 @@ namespace gui {
 			}
 			onResize(s);
 
-			// Queue a repaint for this window. Otherwise, resizing windows that partially contain some
-			// continuous rendering will not always be updated properly. We're probably in a race with
-			// Gtk when we just update a part of the window.
-			GdkWindow *window = gtk_widget_get_window(handle().widget());
-			if (window) {
-				gdk_window_invalidate_rect(window, NULL, false);
-			}
+			// Queue a repaint for this window.
+			gtk_widget_queue_draw(handle().widget());
+
+			// // Queue a repaint for this window. Otherwise, resizing windows that partially contain some
+			// // continuous rendering will not always be updated properly. We're probably in a race with
+			// // Gtk when we just update a part of the window.
+			// GdkWindow *window = gtk_widget_get_window(handle().widget());
+			// if (window) {
+			// 	gdk_window_invalidate_rect(window, NULL, false);
+			// }
 		}
 	}
 
@@ -1219,19 +1222,21 @@ namespace gui {
 
 	void Window::update() {
 		if (created()) {
-			GdkWindow *window = gtk_widget_get_window(handle().widget());
-			if (window) {
-				gdk_window_invalidate_rect(window, NULL, true);
-				gdk_window_process_updates(window, true);
-			}
+			gtk_widget_queue_draw(handle().widget());
+			// GdkWindow *window = gtk_widget_get_window(handle().widget());
+			// if (window) {
+			// 	gdk_window_invalidate_rect(window, NULL, true);
+			// 	gdk_window_process_updates(window, true);
+			// }
 		}
 	}
 
 	void Window::repaint() {
 		if (created()) {
-			GdkWindow *window = gtk_widget_get_window(handle().widget());
-			if (window)
-				gdk_window_invalidate_rect(window, NULL, true);
+			gtk_widget_queue_draw(handle().widget());
+			// GdkWindow *window = gtk_widget_get_window(handle().widget());
+			// if (window)
+			// 	gdk_window_invalidate_rect(window, NULL, true);
 		}
 	}
 
