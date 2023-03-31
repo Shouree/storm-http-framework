@@ -182,9 +182,13 @@ void simpleServer() on Network {
 	unless (listener = listen(serverPort))
 		throw ServerError("Failed to listen to ${serverPort}!");
 
-	Database db;
-	if (stream = listener.accept()) {
-		ServerConn client(stream, db);
-		client.run();
+	try {
+		Database db;
+		if (stream = listener.accept()) {
+			ServerConn client(stream, db);
+			client.run();
+		}
+	} catch (Exception e) {
+		print("Uncaught exception from the server: ${e}");
 	}
 }
