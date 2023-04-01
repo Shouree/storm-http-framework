@@ -14,8 +14,25 @@ class CodeView extends Window {
 		painter(painter);
 	}
 
+	init(Str message) {
+		init() {}
+		painter.message(message);
+		painter(painter);
+	}
+
+	void clear() {
+		painter.clear();
+		repaint();
+	}
+
+	void message(Str msg) {
+		painter.message(msg);
+		repaint();
+	}
+
 	void show(Code code) {
 		painter.show(code);
+		repaint();
 	}
 
 	Size minSize() : override {
@@ -32,10 +49,12 @@ class CodePainter extends Painter {
 	private SolidBrush brush;
 	private Text? code;
 	private Float yOffset;
+	private Bool center;
 
 	init() {
 		init() {
 			brush = SolidBrush(black);
+			center = false;
 		}
 
 		bgColor = white;
@@ -45,24 +64,43 @@ class CodePainter extends Painter {
 		MemoryProtocol mem;
 		Url url = code.put("code", mem);
 		this.code = progvis:program:highlightSource(url, code.src, progvis:view:codeFont);
+		this.center = false;
+		yOffset = 0;
+	}
+
+	void message(Str message) {
+		this.code = Text(message, progvis:view:dataFont);
+		this.center = true;
+		yOffset = 0;
+	}
+
+	void clear() {
+		this.code = null;
 		yOffset = 0;
 	}
 
 	Bool render(Size me, Graphics g) : override {
 		if (code) {
 			Size codeSz = code.size;
-			yOffset = max(yOffset, me.h - codeSz.h);
-			yOffset = min(yOffset, 0);
+			// Note: We should *not* need "this." here.
+			if (this.center) {
+				// Just center the text as a message.
+				g.draw(code, brush, Point((me - codeSz) / 2));
+			} else {
+				// Allow scrolling.
+				yOffset = max(yOffset, me.h - codeSz.h);
+				yOffset = min(yOffset, 0);
 
-			g.draw(code, brush, Point(0, yOffset));
+				g.draw(code, brush, Point(4, yOffset));
 
-			// Draw scroll bar.
-			Float ratio = min(1.0, me.h / codeSz.h);
-			Float offset = -yOffset / codeSz.h;
-			Rect barRect(Point(me.w - 10, offset * me.h), Size(6, ratio * me.h));
-			brush.opacity = 0.6;
-			g.fill(barRect, Size(3), brush);
-			brush.opacity = 1;
+				// Draw scroll bar.
+				Float ratio = min(1.0, me.h / codeSz.h);
+				Float offset = -yOffset / codeSz.h;
+				Rect barRect(Point(me.w - 10, offset * me.h), Size(6, ratio * me.h));
+				brush.opacity = 0.6;
+				g.fill(barRect, Size(3), brush);
+				brush.opacity = 1;
+			}
 		}
 
 		Rect border(Point(), me);

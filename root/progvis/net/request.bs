@@ -132,7 +132,7 @@ class NewProblemRequest : extends Request, serializable {
 
 	Response? execute(ServerConn server, Database db) : override {
 		Int id = db.createProblem(server.userId, title, impl, test, refImpl, currentError);
-		NewProblemResponse(id);
+		NewItemResponse(id);
 	}
 }
 
@@ -150,17 +150,54 @@ class ProblemListRequest : extends Request, serializable {
 
 
 /**
- * Request an initial problem.
+ * Request a problem.
  */
-class InitialProblemRequest : extends Request, serializable {
-	Int id;
+class ProblemRequest : extends Request, serializable {
+	Int problemId;
+	Int implId;
+	Int testId;
 
-	init(Int id) {
-		init { id = id; }
+	init(Int problemId) {
+		init {
+			problemId = problemId;
+			implId = -1;
+			testId = -1;
+		}
+	}
+
+	init(Int problemId, Int implId, Int testId) {
+		init {
+			problemId = problemId;
+			implId = implId;
+			testId = testId;
+		}
 	}
 
 	Response? execute(ServerConn server, Database db) : override {
-		ProblemResponse(db.initialProblem(id));
+		ProblemResponse(db.problem(problemId, implId, testId));
+	}
+}
+
+
+/**
+ * Request a problem, but where only one of the improvements is given. The other part is inferred
+ * from the user's current state.
+ */
+class ImprovedProblemRequest : extends Request, serializable {
+	Int problemId;
+	Int improvementId;
+	ImprovementType type;
+
+	init(Int problemId, Int impId, ImprovementType type) {
+		init {
+			problemId = problemId;
+			improvementId = impId;
+			type = type;
+		}
+	}
+
+	Response? execute(ServerConn server, Database db) : override {
+		ProblemResponse(db.improvedProblem(server.userId, problemId, improvementId, type));
 	}
 }
 
@@ -278,17 +315,75 @@ class ImprovementsRequest : extends Request, serializable {
 	// ID of the problem.
 	Int problemId;
 
-	// Request tests?
-	Bool tests;
+	// What to request.
+	ImprovementType type;
 
-	init(Int id, Bool tests) {
+	init(Int id, ImprovementType type) {
 		init {
 			problemId = id;
-			tests = tests;
+			type = type;
 		}
 	}
 
 	Response? execute(ServerConn server, Database db) : override {
-		ImprovementsResponse(problemId, db.testImprovements(server.userId, problemId));
+		var result = if (type == ImprovementType:test) {
+			db.testImprovements(server.userId, problemId);
+		} else {
+			db.implImprovements(server.userId, problemId);
+		};
+		ImprovementsResponse(problemId, result);
+	}
+}
+
+
+/**
+ * Request the code in a particular improvement.
+ */
+class ImprovementCodeRequest : extends Request, serializable {
+	// Id of the improvement.
+	Int improvementId;
+
+	// Test or implementation?
+	ImprovementType type;
+
+	init(Int id, ImprovementType type) {
+		init {
+			improvementId = id;
+			type = type;
+		}
+	}
+
+	Response? execute(ServerConn server, Database db) : override {
+		var result = if (type == ImprovementType:test) {
+			db.testCode(improvementId);
+		} else {
+			db.implCode(improvementId);
+		};
+		CodeResponse(result);
+	}
+}
+
+
+/**
+ * Set current error state of a problem combination.
+ */
+class StoreCheckResult : extends Request, serializable {
+	Int problemId;
+	Int implId;
+	Int testId;
+	Error error;
+
+	init(Int problemId, Int implId, Int testId, Error error) {
+		init {
+			problemId = problemId;
+			implId = implId;
+			testId = testId;
+			error = error;
+		}
+	}
+
+	Response? execute(ServerConn server, Database db) : override {
+		db.addError(problemId, implId, testId, error);
+		Response();
 	}
 }

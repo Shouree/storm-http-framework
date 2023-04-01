@@ -83,11 +83,17 @@ class Client on Network {
 	private ObjIStream input;
 	private ObjOStream output;
 
+	// Lock to ensure that multiple threads do not attempt to read/write to IO at the same time.
+	private core:sync:Lock lock;
+
 	private Str uName;
 	Str username() { uName; }
 
 	// Perform a query to the server.
 	Response query(Request request) {
+		// Make sure that we don't accidentally have multiple UThreads in here.
+		core:sync:Lock:Guard guard(lock);
+
 		request.write(output);
 		output.flush();
 

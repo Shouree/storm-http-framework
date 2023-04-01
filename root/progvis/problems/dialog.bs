@@ -40,8 +40,6 @@ dialog ProblemsDlg {
 
 		list.onSelect = &this.onListSelect;
 
-		state.add(&this.onNewProblem);
-
 		(spawn populateList()).detach();
 	}
 
@@ -75,10 +73,8 @@ dialog ProblemsDlg {
 			return;
 
 		ProblemInfo info = problems[id];
-		state.problem = info;
-	}
+		state.problem = info.id;
 
-	private void onNewProblem(ProblemInfo info) {
 		initial.visible = false;
 		if (info.attempted) {
 			// Show attempted panel.
@@ -97,10 +93,10 @@ dialog ProblemsDlg {
  * Callback for the problem dialog.
  */
 package class ProblemState on Ui {
-	private Client client;
+	public Client client;
 	private progvis:Settings settings;
 	private Int currentProblem;
-	private Array<Fn<void, ProblemInfo>> callbacks;
+	private Array<Fn<void, Int>> callbacks;
 
 	ProblemsDlg? target;
 
@@ -122,25 +118,31 @@ package class ProblemState on Ui {
 		}
 	}
 
-	void add(Fn<void, ProblemInfo> fn) {
+	void add(Fn<void, Int> fn) {
 		callbacks << fn;
 	}
 
-	assign problem(ProblemInfo info) {
-		if (info.id != currentProblem) {
-			currentProblem = info.id;
+	assign problem(Int problemId) {
+		if (problemId != currentProblem) {
+			currentProblem = problemId;
 			// Trigger callbacks.
-			for (x in callbacks) {
-				try {
-					x.call(info);
-				} catch (Exception e) {
-					print("Unhandled exception: ${e}");
-				}
-			}
+			reloadProblem();
 		}
 	}
 
 	Int problem() { currentProblem; }
+
+	void reloadProblem() {
+		// Trigger callbacks.
+		Int problemId = currentProblem;
+		for (x in callbacks) {
+			try {
+				x.call(problemId);
+			} catch (Exception e) {
+				print("Unhandled exception: ${e}");
+			}
+		}
+	}
 
 	void solveProblem(Problem problem) {
 		if (problem.error.unknown()) {
@@ -187,7 +189,7 @@ window FirstTryPanel {
 
 	private void fetchProblem() {
 		try {
-			unless (response = state.query(InitialProblemRequest(state.problem)) as ProblemResponse) {
+			unless (response = state.query(ProblemRequest(state.problem)) as ProblemResponse) {
 				state.message("Failed to fetch the problem.");
 				ok.enabled = true;
 				return;
@@ -206,8 +208,8 @@ class ExplorePanel extends TabView {
 		init() {}
 
 		add("Overview", CodeOverviewPanel(state));
+		add("Explore implementations", ExploreImplPanel(state));
 		add("Explore tests", ExploreTestsPanel(state));
-		add("Explore implementations", ExploreImplPanel());
 	}
 }
 
@@ -221,12 +223,13 @@ window CodeOverviewPanel {
 		Label implLbl("Your implementation") {}
 		Label testLbl("Your test") {}
 		nextLine;
-		CodeView implCode {}
-		CodeView testCode {}
+		CodeView implCode("Loading...") {}
+		CodeView testCode("Loading...") {}
 		nextLine;
-		Grid {
-			colspan: 2;
+		CheckProgress checker { row: 2; col: 0; colspan: 2; }
+		Grid { row: 2; col: 0; colspan: 2;
 			expandCol: 0;
+			expandRow: 0;
 			Label statusLbl("Status:", VAlign:center) {}
 			Button solve("Investigate") {}
 		}
@@ -245,8 +248,8 @@ window CodeOverviewPanel {
 		state.add(&this.onInfo);
 	}
 
-	private void onInfo(ProblemInfo info) {
-		unless (response = state.query(CurrentStateRequest(info.id)) as ProblemResponse)
+	private void onInfo(Int id) {
+		unless (response = state.query(CurrentStateRequest(id)) as ProblemResponse)
 			return;
 
 		var problem = response.problem;
@@ -275,55 +278,340 @@ window CodeOverviewPanel {
 			statusLbl.text = "Status: unknown";
 			solve.text = "Check";
 		}
+
+		// Trigger re-layout to match new size of button texts.
+		resized();
 	}
 
 	private void onSolve() {
-		// If status is unknown, start model checker directly and just submit the result?
-		print("TODO!");
+		if (showing) {
+			if (showing.error.unknown()) {
+				statusLbl.visible = false;
+				solve.visible = false;
+				checker.check(state.client, showing.id, [showing.testId], ImprovementType:test, &this.checkDone);
+			} else {
+				state.solveProblem(showing);
+			}
+		}
+	}
+
+	private void checkDone() {
+		statusLbl.visible = true;
+		solve.visible = true;
+
+		if (showing) {
+			if (state.problem == showing.id)
+				state.reloadProblem();
+		}
 	}
 }
 
-window ExploreTestsPanel {
+window ExploreImprovementPanel {
 	layout Grid {
 		expandRow: 1;
-		expandCol: 0, 50;
+		expandCol: 0, 45;
 		expandCol: 1, 60;
 		normalizeCols;
 
-		Label("Available tests") {}
-		Label("Preview of the selected test:") {}
+		Label lblAvail("Available") {}
+		Label lblPreview("Preview of the selected:") {}
 		nextLine;
-		ListView testList(["Author", "Version", "Status"]) { rowspan: 2; }
+		ListView improvementsView(["Author", "Version", "Status"]) {}
 		CodeView code {}
 		nextLine;
-		FillBox(1, 1) {}
-		Grid {
+		CheckProgress checker { row: 2; col: 1; colspan: 2; }
+		Grid { row: 2; col: 1;
 			expandCol: 0;
-			// Status label?
+			expandCol: 1;
+			expandRow: 0;
+			normalizeCols;
+			Button checkAll("Check all") {}
 			Button solve("Check") {}
 		}
 	}
 
 	ProblemState state;
-	private Int problemId;
+	protected ImprovementType type;
+	protected Int problemId;
+	protected Improvement[] improvements;
+	protected Nat improvementId;
 
-	init(ProblemState state) {
-		init() {
+	init(ProblemState state, ImprovementType type) {
+		init {
 			state = state;
+			type = type;
 		}
 
+		if (type == ImprovementType:test) {
+			lblAvail.text = "Available tests:";
+			lblPreview.text = "Preview of the selected test:";
+		} else {
+			lblAvail.text = "Available implementations:";
+			lblPreview.text = "Preview of the selected implementation:";
+		}
+
+		improvementsView.onSelect = &this.updateCode;
+		checkAll.onClick = &this.onCheckAll;
 		solve.onClick = &this.onSolve;
+		solve.enabled = false;
 		state.add(&this.onInfo);
 	}
 
-	private void onInfo(ProblemInfo info) {
-		problemId = info.id;
+	private void onInfo(Int id) {
+		// If we are reloading the same problem, try to preserve the location of the marker.
+		Bool update = id == problemId;
+
+		if (!update) {
+			problemId = id;
+			code.message("Select an item to the left");
+			improvementsView.clear();
+			improvements.clear();
+			improvementId = 0;
+		}
+
+		unless (response = state.query(ImprovementsRequest(problemId, type)) as ImprovementsResponse)
+			return;
+
+		improvements = response.data;
+
+		if (update) {
+			// These lists can not really shrink, so this is enough.
+			for (row, i in improvements) {
+				if (row < improvementsView.count)
+					improvementsView.update(row, [i.author, i.version.toS, status(i.error)]);
+				else
+					improvementsView.add([i.author, i.version.toS, status(i.error)]);
+			}
+		} else {
+			improvementId = improvements.count;
+
+			for (i in improvements) {
+				improvementsView.add([i.author, i.version.toS, status(i.error)]);
+			}
+		}
+
+		// Update buttons etc.
+		updateCode(improvementId, true);
+	}
+
+	private void updateCode(Nat id, Bool selected) {
+		if (!selected)
+			return;
+
+		improvementId = id;
+		if (id >= improvements.count) {
+			solve.text = "Pick an item";
+			solve.enabled = false;
+			return;
+		}
+
+		unless (response = state.query(ImprovementCodeRequest(improvements[id].id, type)) as CodeResponse)
+			return;
+
+		code.show(response.code);
+		if (solveMsg = solveMessage(improvements[id])) {
+			solve.text = solveMsg;
+			solve.enabled = true;
+		} else {
+			solve.text = "Pick another item";
+			solve.enabled = false;
+		}
 	}
 
 	private void onSolve() {
-		// Check status and act accordingly.
+		var improvement = improvements[improvementId];
+		if (improvement.error.unknown()) {
+			check([improvement.id]);
+		} else if (response = state.query(ImprovedProblemRequest(problemId, improvement.id, type)) as ProblemResponse) {
+			state.solveProblem(response.problem);
+		}
+	}
+
+	private void onCheckAll() {
+		Int[] toCheck;
+		for (i in improvements)
+			if (i.error.unknown)
+				toCheck << i.id;
+
+		if (toCheck.any)
+			check(toCheck);
+	}
+
+	private void check(Int[] check) {
+		checkAll.visible = false;
+		solve.visible = false;
+		checker.check(state.client, problemId, check, type, &this.checkDone);
+	}
+
+	private void checkDone() {
+		checkAll.visible = true;
+		solve.visible = true;
+
+		if (state.problem == problemId) {
+			state.reloadProblem();
+		}
+	}
+
+	// Message to show on the solve button.
+	protected Str? solveMessage(Improvement improvement) : abstract;
+
+	// What to show as "status"?
+	protected Str status(Error error) : abstract;
+}
+
+class ExploreTestsPanel extends ExploreImprovementPanel {
+	init(ProblemState state) {
+		init(state, ImprovementType:test) {}
+	}
+
+	protected Str? solveMessage(Improvement improvement) : override {
+		if (improvement.error.unknown) {
+			return "Check";
+		} else if (improvement.error.success) {
+			return null;
+		} else {
+			return "Improve my implementation";
+		}
+	}
+
+	protected Str status(Error error) : override {
+		if (error.unknown) {
+			return "Not checked yet";
+		} else if (e = error.error) {
+			return "Finds error: " + e;
+		} else {
+			return "Does not find errors";
+		}
 	}
 }
 
-window ExploreImplPanel {
+class ExploreImplPanel extends ExploreImprovementPanel {
+	init(ProblemState state) {
+		init(state, ImprovementType:implementation) {}
+	}
+
+	protected Str? solveMessage(Improvement improvement) : override {
+		if (improvement.error.unknown) {
+			return "Check";
+		} else if (improvement.error.success) {
+			return "Improve my test";
+		} else {
+			return null;
+		}
+	}
+
+	protected Str status(Error error) : override {
+		if (error.unknown) {
+			return "Not checked yet";
+		} else if (e = error.error) {
+			return "Your test found: " + e;
+		} else {
+			return "No errors found by your test";
+		}
+	}
+}
+
+window CheckProgress {
+	layout Grid {
+		expandCol: 1;
+		Label msg("Checking...", VAlign:center) {}
+		Progress progress {}
+		Button cancel("Cancel") {}
+	}
+
+	init() {
+		init() {}
+
+		layout.border = Size(0);
+
+		visible = false;
+		cancel.onClick = &this.onCancel;
+	}
+
+	private CheckCallback callback;
+	private Bool cancelled;
+
+	void check(Client client, Int problem, Int[] improvements, ImprovementType type, Fn<void> doneCb) {
+		if (visible)
+			return;
+
+		visible = true;
+		cancelled = false;
+		callback = CheckCallback();
+
+		if (improvements.count <= 1) {
+			progress.wait();
+		} else {
+			progress.progress = 0.0;
+		}
+		resized();
+
+		(spawn doCheck(client, problem, improvements, type, doneCb)).detach();
+	}
+
+	private void doCheck(Client client, Int problem, Int[] improvements, ImprovementType type, Fn<void> doneCb) {
+		try {
+			Nat count = improvements.count;
+			for (id, improvement in improvements) {
+				if (cancelled)
+					break;
+
+				if (count > 1) {
+					progress.progress = (id + 1).float / count.float;
+					msg.text = "Checking (${id + 1}/${count})...";
+					resized();
+				}
+
+				doCheck(client, problem, improvement, type);
+			}
+		} catch (Exception e) {
+			print("Internal error: " + e.message);
+		}
+
+		visible = false;
+		doneCb.call();
+	}
+
+	private void doCheck(Client client, Int problem, Int improvement, ImprovementType type) {
+		unless (r = client.query(ImprovedProblemRequest(problem, improvement, type)) as ProblemResponse)
+			return;
+
+		var problem = r.problem;
+
+		MemoryProtocol memory;
+		Url test = problem.test.put("test", memory);
+		Url impl = problem.impl.put("impl", memory);
+
+		Error result = Error:unknown();
+		try {
+			if (error = progvis:check:check([test, impl], callback)) {
+				result = Error:error(error.error.type);
+			} else {
+				result = Error:success();
+			}
+		} catch (Exception e) {
+			print("Failed to check a problem: " + e.message);
+			return;
+		}
+
+		sleep(10 s);
+
+		client.query(StoreCheckResult(problem.id, problem.implId, problem.testId, result));
+	}
+
+	private void onCancel() {
+		cancelled = true;
+		callback.setCancel();
+	}
+}
+
+class CheckCallback extends progvis:check:Progress {
+	Bool cancel;
+	void setCancel() {
+		cancel = true;
+	}
+	void progress(Nat depth, Nat states, Nat edges, Nat unexplored) : override {
+		if (cancel)
+			throw progvis:program:ExitError();
+	}
 }

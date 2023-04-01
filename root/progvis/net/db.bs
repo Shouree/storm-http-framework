@@ -215,6 +215,59 @@ class Database {
 		Problem(problemId, result.title, -1, 0, -1, 0, error, impl, test, ref);
 	}
 
+	// Get a problem.
+	Problem problem(Int problemId, Int implId, Int testId) {
+		WITH db {
+			var problem = SELECT ONE title, impl, test, refimpl FROM problems WHERE id == problemId;
+			unless (problem)
+				throw ServerError("Problem ${problemId} does not exist.");
+
+			Int implCodeId = problem.impl;
+			Int implVersion = 0;
+			if (implId >= 0) {
+				if (row = SELECT ONE code, version FROM implementations WHERE id == implId AND problem == problemId) {
+					implCodeId = row.code;
+					implVersion = row.version;
+				}
+			}
+
+			Int testCodeId = problem.test;
+			Int testVersion = 0;
+			if (testId >= 0) {
+				if (row = SELECT ONE code, version FROM tests WHERE id == testId AND problem == problemId) {
+					testCodeId = row.code;
+					testVersion = row.version;
+				}
+			}
+
+			var impl = getCode(implCodeId);
+			var test = getCode(testCodeId);
+			var ref = getCode(problem.refimpl);
+			var error = findError(problemId, implId, testId);
+			Problem(problemId, problem.title,
+					implId, implVersion,
+					testId, testVersion,
+					error,
+					impl, test, ref);
+		}
+	}
+
+	// Get an improved problem.
+	Problem improvedProblem(Int userId, Int problemId, Int improvedId, ImprovementType type) {
+		Int implId = -1;
+		Int testId = -1;
+
+		if (type == ImprovementType:test) {
+			implId = bestImplementation(userId, problemId);
+			testId = improvedId;
+		} else {
+			testId = bestTest(userId, problemId);
+			implId = improvedId;
+		}
+
+		return problem(problemId, implId, testId);
+	}
+
 	// Add a new attempt.
 	Int newAttempt(Int userId, Int implId, Int testId, Str sequence, Str? error) {
 		WITH db: INSERT INTO attempts(author, impl, test, sequence, error, created)
@@ -299,7 +352,8 @@ class Database {
 
 	Improvement[] testImprovements(Int userId, Int problemId) {
 		WITH db {
-			var query = SELECT t.id AS id, u.id AS userId, t.version AS version, u.displayName AS author FROM tests t
+			var query = SELECT t.id AS id, u.id AS userId, t.version AS version, u.displayName AS author
+				FROM tests t
 				JOIN users u ON u.id == t.author
 				WHERE t.problem == problemId
 				ORDER BY t.author ASC, version DESC;
@@ -319,10 +373,7 @@ class Database {
 			}
 
 			// Get the last version of the user's implementation.
-			Int implId = -1;
-			if (r = SELECT ONE id FROM implementations WHERE author == userId AND problem == problemId ORDER BY version DESC) {
-				implId = r.id;
-			}
+			Int implId = bestImplementation(userId, problemId);
 
 			// Update the error part.
 			for (r in result) {
@@ -330,6 +381,71 @@ class Database {
 			}
 
 			return result;
+		}
+	}
+
+	Improvement[] implImprovements(Int userId, Int problemId) {
+		WITH db {
+			var query = SELECT t.id AS id, u.id AS userId, t.version AS version, u.displayName AS author
+				FROM implementations t
+				JOIN users u ON u.id == t.author
+				WHERE t.problem == problemId
+				ORDER BY t.author ASC, version DESC;
+
+			// Note: Due to ordering, this is enough to only grab the highest version for each user.
+			// They are arranged by author first, then by version. So we only need to detect when a
+			// new user appears, and then grab the first row then.
+			Int lastUser = -1;
+			Improvement[] result;
+			for (row in query) {
+				if (row.userId == lastUser)
+					continue;
+
+				lastUser = row.userId;
+
+				result << Improvement(row.id, row.version, row.author, Error:unknown());
+			}
+
+			// Get the last version of the user's test.
+			Int testId = bestTest(userId, problemId);
+
+			// Update error part.
+			for (r in result) {
+				r.error = findError(problemId, r.id, testId);
+			}
+
+			return result;
+		}
+	}
+
+	Code testCode(Int testId) {
+		unless (row = WITH db: SELECT ONE code FROM tests WHERE id == testId)
+			throw ServerError("No test with the id ${testId}.");
+
+		return getCode(row.code);
+	}
+
+	Code implCode(Int implId) {
+		unless (row = WITH db: SELECT ONE code FROM implementations WHERE id == implId)
+			throw ServerError("No implementation with the id ${implId}.");
+
+		return getCode(row.code);
+	}
+
+	// Add an error row. Returns "true" if we inserted the error.
+	Bool addError(Int problemId, Int implId, Int testId, Error error) {
+		try {
+			if (error.unknown)
+				return true;
+
+			// Note: error.error returns NULL when it contains a success (we checked for unknown previously).
+			WITH db: INSERT INTO autoresults(problem, impl, test, error)
+				VALUES (problemId, implId, testId, ${error.error()});
+
+			return true;
+		} catch (SQLError error) {
+			// Happens with duplicates. We ignore it here since we race with the auto-grader.
+			return false;
 		}
 	}
 
@@ -382,20 +498,25 @@ class Database {
 		return Error:success();
 	}
 
-	// Add an error row.
-	private Bool addError(Int problemId, Int implId, Int testId, Error error) {
-		try {
-			if (error.unknown)
-				return true;
+	// Get the user's current best implementation for a problem.
+	private Int bestImplementation(Int userId, Int problemId) {
+		if (r = WITH db: SELECT ONE id FROM implementations
+			WHERE author == userId AND problem == problemId
+			ORDER BY version DESC) {
+			return r.id;
+		} else {
+			return -1;
+		}
+	}
 
-			// Note: error.error returns NULL when it contains a success (we checked for unknown previously).
-			WITH db: INSERT INTO autoresults(problem, impl, test, error)
-				VALUES (problemId, implId, testId, ${error.error()});
-
-			return true;
-		} catch (SQLError error) {
-			// Happens with duplicates. We ignore it here since we race with the auto-grader.
-			return false;
+	// Get the user's current best test for a problem.
+	private Int bestTest(Int userId, Int problemId) {
+		if (r = WITH db: SELECT ONE id FROM tests
+			WHERE author == userId AND problem == problemId
+			ORDER BY version DESC) {
+			return r.id;
+		} else {
+			return -1;
 		}
 	}
 }

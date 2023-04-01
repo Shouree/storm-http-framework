@@ -145,6 +145,15 @@ class Code : serializable {
 }
 
 /**
+ * Type of improvement: test or implementation.
+ */
+enum ImprovementType {
+	test,
+	implementation,
+}
+
+
+/**
  * Improvement to a problem. Either a test or an implementation, depending on context.
  */
 class Improvement : serializable {

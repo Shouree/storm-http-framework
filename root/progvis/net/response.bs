@@ -68,18 +68,6 @@ class LeaderboardResponse : extends Response, serializable {
 }
 
 /**
- * Reply to creating an new exercise.
- */
-class NewProblemResponse : extends Response, serializable {
-	// New problem ID.
-	Int id;
-
-	init(Int id) {
-		init { id = id; }
-	}
-}
-
-/**
  * Reply to the problem list query.
  */
 class ProblemListResponse : extends Response, serializable {
@@ -123,5 +111,16 @@ class ImprovementsResponse : extends Response, serializable {
 			problemId = id;
 			data = data;
 		}
+	}
+}
+
+/**
+ * A piece of code.
+ */
+class CodeResponse : extends Response, serializable {
+	Code code;
+
+	init(Code code) {
+		init { code = code; }
 	}
 }
