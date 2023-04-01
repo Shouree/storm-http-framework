@@ -51,6 +51,15 @@ namespace storm {
 
 		// All values contained in here.
 		Array<EnumValue *> *values;
+
+		// Create the write function required for serialization.
+		Function *createWriteFn(SerializedType *type);
+
+		// Create the read function required for serialization.
+		Function *createReadFn();
+
+		// Create the read ctor required for serialization.
+		Function *createReadCtor();
 	};
 
 	/**

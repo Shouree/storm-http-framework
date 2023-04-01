@@ -4,6 +4,8 @@
 #include "Engine.h"
 #include "Core/Hash.h"
 #include "Function.h"
+#include "Fn.h"
+#include "Serialization.h"
 
 namespace storm {
 
@@ -107,6 +109,16 @@ namespace storm {
 		add(inlinedFunction(engine, nat, S("v"), v, fnPtr(engine, &enumGet))->makePure());
 		add(nativeFunction(engine, nat, S("hash"), v, address(&intHash))->makePure());
 
+		// Serialization:
+		Function *readCtor = createReadCtor();
+		add(readCtor);
+
+		SerializedStdType *typeInfo = new (this) SerializedStdType(this, pointer(readCtor));
+		typeInfo->add(S("v"), StormInfo<Nat>::type(engine));
+		add(createReadFn());
+		add(createWriteFn(typeInfo));
+		add(serializedTypeFn(typeInfo));
+
 		return Type::loadAll();
 	}
 
@@ -178,6 +190,143 @@ namespace storm {
 			}
 		}
 		*to << S("}");
+	}
+
+	Function *Enum::createWriteFn(SerializedType *type) {
+		using namespace code;
+
+		Value me = thisPtr(this);
+		Value objStream(StormInfo<ObjOStream>::type(engine));
+		Value natType(StormInfo<Nat>::type(engine));
+
+		Function *startFn = findStormMemberFn(objStream, S("startValue"),
+											Value(StormInfo<SerializedType>::type(engine)));
+		Function *endFn = findStormMemberFn(objStream, S("end"));
+		Function *natWriteFn = findStormMemberFn(natType, S("write"), objStream);
+
+		Listing *l = new (this) Listing(true, engine.voidDesc());
+		code::Var meVar = l->createParam(me.desc(engine));
+		code::Var streamVar = l->createParam(objStream.desc(engine));
+
+		code::Label lblEnd = l->label();
+
+		*l << prolog();
+
+		// Call "start".
+		*l << fnParam(objStream.desc(engine), streamVar);
+		*l << fnParam(engine.ptrDesc(), objPtr(type));
+		*l << fnCall(startFn->ref(), true, byteDesc(engine), al);
+
+		// See if we need to serialize ourselves.
+		*l << cmp(al, byteConst(0));
+		*l << jmp(lblEnd, ifEqual);
+
+		// Serialize ourselves.
+		*l << mov(ptrA, meVar);
+		*l << fnParam(natType.desc(engine), intRel(ptrA, Offset()));
+		*l << fnParam(objStream.desc(engine), streamVar);
+		*l << fnCall(natWriteFn->ref(), true);
+
+		// Call "end".
+		*l << fnParam(objStream.desc(engine), streamVar);
+		*l << fnCall(endFn->ref(), true);
+
+		// End of function.
+		*l << lblEnd;
+		*l << fnRet();
+
+		Array<Value> *params = new (this) Array<Value>();
+		params->reserve(2);
+		*params << me << objStream;
+		Function *fn = new (this) Function(Value(), new (this) Str(S("write")), params);
+		fn->setCode(new (this) DynamicCode(l));
+		return fn;
+	}
+
+	Function *Enum::createReadFn() {
+		using namespace code;
+
+		Value objStream(StormInfo<ObjIStream>::type(engine));
+		Value natType(StormInfo<Nat>::type(engine));
+
+		Function *readValueFn = null;
+		{
+			Array<Named *> *readFns = objStream.type->findName(new (this) Str(S("readValue")));
+			for (Nat i = 0; i < readFns->count(); i++) {
+				Named *fn = readFns->at(i);
+				if (fn->params->count() == 3
+					&& fn->params->at(0).type == objStream.type
+					&& fn->params->at(1).type == StormInfo<Type>::type(engine)) {
+					readValueFn = as<Function>(fn);
+					break;
+				}
+			}
+		}
+		Function *natReadFn = findStormFn(natType, S("read"), objStream);
+
+		Listing *l = new (this) Listing(false, natType.desc(engine));
+		code::Var streamVar = l->createParam(objStream.desc(engine));
+		code::Var resultVar = l->createVar(l->root(), natType.desc(engine));
+
+		*l << prolog();
+
+		// Call "readValue".
+		*l << lea(ptrA, resultVar);
+		*l << fnParam(objStream.desc(engine), streamVar);
+		*l << fnParam(engine.ptrDesc(), this->typeRef());
+		*l << fnParam(engine.ptrDesc(), ptrA);
+		*l << fnCall(readValueFn->ref(), true);
+
+		// Done!
+		*l << fnRet(resultVar);
+
+		Array<Value> *params = new (this) Array<Value>();
+		params->reserve(1);
+		*params << objStream;
+		Function *fn = new (this) Function(Value(this), new (this) Str(S("read")), params);
+		fn->setCode(new (this) DynamicCode(l));
+		fn->make(fnStatic);
+		return fn;
+	}
+
+	Function *Enum::createReadCtor() {
+		using namespace code;
+
+		Value me = thisPtr(this);
+		Value objStream(StormInfo<ObjIStream>::type(engine));
+		Value natType(StormInfo<Nat>::type(engine));
+
+		Function *natReadFn = findStormFn(natType, S("read"), objStream);
+		Function *endFn = findStormMemberFn(objStream, S("end"));
+
+		Listing *l = new (this) Listing(true, engine.voidDesc());
+		code::Var meVar = l->createParam(me.desc(engine));
+		code::Var streamVar = l->createParam(objStream.desc(engine));
+
+		*l << prolog();
+
+		// Call "read" for a Nat.
+		*l << fnParam(objStream.desc(engine), streamVar);
+		*l << fnCall(natReadFn->ref(), false, natType.desc(engine), eax);
+
+		// Initialize the enum by writing the value to it.
+		*l << mov(ptrC, meVar);
+		*l << mov(intRel(ptrC, Offset()), eax);
+
+		// Call "end".
+		*l << fnParam(objStream.desc(engine), streamVar);
+		*l << fnCall(endFn->ref(), true);
+
+		// Then we are done.
+		*l << fnRet();
+
+		Array<Value> *params = new (this) Array<Value>();
+		params->reserve(2);
+		*params << me << objStream;
+		Function *fn = new (this) Function(Value(), new (this) Str(Type::CTOR), params);
+		fn->setCode(new (this) DynamicCode(l));
+		fn->visibility = typePrivate(engine);
+		return fn;
 	}
 
 	EnumValue::EnumValue(Enum *owner, Str *name, Nat value)
