@@ -150,6 +150,9 @@ namespace gui {
 		// Called when the window is resized.
 		virtual void STORM_FN resized(Size size);
 
+		// Convenience function to trigger uptade of layouts easily.
+		void STORM_FN resized();
+
 		// Key events. Return 'true' if the message was handled and should not propagate further.
 		virtual Bool STORM_FN onKey(Bool pressed, key::Key keycode, mod::Modifiers modifiers);
 		virtual Bool STORM_FN onChar(Nat charCode);

@@ -158,6 +158,10 @@ namespace gui {
 		// Nothing here, override when needed.
 	}
 
+	void Window::resized() {
+		resized(pos().size());
+	}
+
 	void Window::onResize(Size size) {
 		resized(size);
 	}

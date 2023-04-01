@@ -25,6 +25,9 @@ namespace gui {
 		// Add a row. Returns ID of newly created row.
 		Nat STORM_FN add(Array<Str *> *row);
 
+		// Set contents of a row.
+		void STORM_FN update(Nat row, Array<Str *> *data);
+
 		// Remove a row.
 		void STORM_FN remove(Nat id);
 
@@ -100,6 +103,9 @@ namespace gui {
 		// Add to model. Always at the end, id indicates ID assigned.
 		void modelAdd(Array<Str *> *row, Nat id);
 
+		// Update the model.
+		void modelUpdate(Array<Str *> *row, Nat id);
+
 		// Remove from model.
 		void modelRemove(Nat id);
 
@@ -129,6 +135,10 @@ namespace gui {
 									gboolean currently_selected,
 									gpointer data);
 
+#endif
+#ifdef GUI_WIN32
+		// Update size of columns.
+		void updateColSize(Array<Str *> *row);
 #endif
 	};
 

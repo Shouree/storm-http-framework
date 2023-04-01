@@ -46,6 +46,18 @@ namespace gui {
 		return id;
 	}
 
+	void ListView::update(Nat row, Array<Str *> *data) {
+		if (data->count() != cols->count()) {
+			throw new (this) ListViewError(
+				TO_S(this, S("Trying to add ") << data->count()
+					<< S(" columns to a ListView containing ")
+					<< cols->count() << S(" columns.")));
+		}
+
+		rows->at(row) = data;
+		modelUpdate(data, row);
+	}
+
 	Nat ListView::count() const {
 		return rows->count();
 	}
@@ -180,13 +192,40 @@ namespace gui {
 		if (!created())
 			return;
 
+		addRow(handle().hwnd(), row, index);
+		updateColSize(row);
+	}
+
+	void ListView::modelUpdate(Array<Str *> *row, Nat index) {
 		HWND hwnd = handle().hwnd();
-		addRow(hwnd, row, index);
+
+		LVITEM item;
+		item.mask = LVIF_TEXT;
+		item.iItem = index;
+		item.iSubItem = 0;
+		item.pszText = (LPWSTR)row->at(0)->c_str();
+
+		// In case 'index' is too large (happens when we insert initially).
+		ListView_SetItem(hwnd, &item);
+
+		for (Nat i = 1; i < row->count(); i++) {
+			item.iSubItem = i;
+			item.pszText = (LPWSTR)row->at(i)->c_str();
+			ListView_SetItem(hwnd, &item);
+		}
+
+		updateColSize(row);
+	}
+
+	void ListView::updateColSize(Array<Str *> *row) {
+		HWND hwnd = handle().hwnd();
 
 		// Update size.
 		Font *font = this->font();
 		Nat dpi = currentDpi();
-		Nat padding = dpiSystemMetrics(SM_CXEDGE, dpi) * 6; // from StackOverflow.
+		// The padding is from StackOverflow. Does not seem to work when using the Explorer style,
+		// so we increased it from 6 to 8.
+		Nat padding = dpiSystemMetrics(SM_CXEDGE, dpi) * 8;
 		for (Nat i = 0; i < cols->count(); i++) {
 			Size sz = font->stringSize(row->at(i), dpi);
 			sz.w += padding;
@@ -448,6 +487,31 @@ namespace gui {
 		for (Nat c = 0; c < row->count(); c++) {
 			gtk_list_store_set(gtkStore, &iter, c + 1, row->at(c)->utf8_str(), -1);
 		}
+	}
+
+	void ListView::modelUpdate(Array<Str *> *row, Nat id) {
+		if (!gtkStore)
+			return;
+
+		GtkTreeModel *model = GTK_TREE_MODEL(gtkStore);
+
+		GtkTreeIter iter;
+		gtk_tree_model_get_iter_first(model, &iter);
+
+		GValue value = {};
+		do {
+			gtk_tree_model_get_value(model, &iter, 0, &value);
+			Nat rowId = g_value_get_uint(&value);
+			g_value_unset(&value);
+
+			if (rowId == id) {
+				gtk_list_store_set(gtkStore, &iter, 0, guint(id), -1);
+				for (Nat c = 0; c < row->count(); c++) {
+					gtk_list_store_set(gtkStore, &iter, c + 1, row->at(c)->utf8_str(), -1);
+				}
+				break;
+			}
+		} while (gtk_tree_model_iter_next(model, &iter));
 	}
 
 	void ListView::modelRemove(Nat id) {
