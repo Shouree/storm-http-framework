@@ -4,10 +4,10 @@
 #include "Container.h"
 #include "Win32Dpi.h"
 
-// #ifdef WIN32
-// #include <uxtheme.h>
-// #pragma comment (lib, "uxtheme.lib")
-// #endif
+#ifdef WIN32
+#include <uxtheme.h>
+#pragma comment (lib, "uxtheme.lib")
+#endif
 
 namespace gui {
 
@@ -95,10 +95,14 @@ namespace gui {
 
 		HWND hwnd = handle().hwnd();
 
-		// Note: Looks nicer, but has visual artifacts when resizing columns in a list that is not entirely full.
-		// SetWindowTheme(hwnd, S("Explorer"), NULL);
+		DWORD exStyles = LVS_EX_DOUBLEBUFFER | LVS_EX_FULLROWSELECT;
+		ListView_SetExtendedListViewStyle(hwnd, exStyles);
 
-		ListView_SetExtendedListViewStyle(hwnd, LVS_EX_FULLROWSELECT);
+		// Set the style to "explorer". This makes the selection look nicer, and makes it not lose
+		// the selection when the window is deactivated.
+		// This requires the extended style "doublebuffer" to work properly.
+		SetWindowTheme(hwnd, S("Explorer"), NULL);
+
 
 		// Note: If we want to have a non-left aligned column first, we need to add a dummy element
 		// as the first element and then remove it (that is what MSDN says).
