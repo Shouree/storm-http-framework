@@ -103,7 +103,7 @@ class MainWin extends Frame {
 		onlineMenu
 			<< Menu:Text(mnemonic("_Connect"), &this.connect())
 			<< Menu:Text(mnemonic("_Disconnect"), &this.disconnect())
-			<< Menu:Text(mnemonic("_Status..."), &this.onOnlineStatus())
+			<< Menu:Text(mnemonic("_Highscores..."), &this.onOnlineStatus())
 			<< Menu:Text(mnemonic("_Problems..."), ctrlChord(Key:p), &this.onOnlineProblems())
 			<< Menu:Text("Submit problem...", &this.onOnlineSubmit())
 			<< Menu:Text("Sign out", &this.logout());

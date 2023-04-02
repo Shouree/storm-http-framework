@@ -305,10 +305,15 @@ dialog SolutionUploadDlg {
 			size = minSize();
 		} else {
 			if (currentError.any) {
-				// We allow uploading the problems again, but with reduced reward. Thus, one student
-				// may solve one issue, but another may solve another issue. We check so that the
-				// code is not identical as the first part here.
-				done("Your solution does not solve all errors with this test program.\nYou may still upload your solution, but you will not receive full points for it.");
+				if (original.testId < 0) {
+					// Require a solution initially.
+					error("Your solution does not solve all errors with this test program.\nThis is required for the initial problem. Try again!");
+				} else {
+					// We allow uploading the problems again, but with reduced reward. Thus, one student
+					// may solve one issue, but another may solve another issue. We check so that the
+					// code is not identical as the first part here.
+					done("Your solution does not solve all errors with this test program.\nYou may still upload your solution, but you will not receive full points for it.");
+				}
 			} else {
 				done("You fixed the current issues, click \"Submit\" to proceed!");
 			}

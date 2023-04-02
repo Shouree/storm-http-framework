@@ -53,6 +53,8 @@ DATABASE ProgvisDB {
 		author INTEGER,
 		// Code (foreign to code).
 		code INTEGER,
+		// Which test was used to highlight an error here? (foreign to tests, -1 if original test)
+		basedOn INTEGER,
 		// Created.
 		created TEXT
 	);
@@ -70,6 +72,8 @@ DATABASE ProgvisDB {
 		author INTEGER,
 		// Code (foreign to code).
 		code INTEGER,
+		// Which implementation was used to find errors in? (foreign to implementations, -1 if original impl.)
+		basedOn INTEGER,
 		// Created.
 		created TEXT
 	);
@@ -179,9 +183,66 @@ class Database {
 			VALUES (userId, implId, testId, sequence, error, CURRENT DATETIME);
 	}
 
-	// Compute the points of all users in the database.
+	// Compute the points of all users in the database. Returns map of userId -> score.
 	Int->Int allScores() {
+		// Scores:
+		// Points given to a user who...
+		// ...solves an initial problem. Only awarded if issues are solved.
+		Int initialSubmit = 50;
+		// ...submits an improvement for a debug problem (i.e. a new implementation).
+		Int submittedImpl = 10;
+		// ...submits an improvement to a debug problem that solves a previous error.
+		Int solvedImpl = 50;
+		// ...submits an improved test (these need to solve an error somewhere).
+		Int submittedTest = 100;
+
+		// Divider if interacting with one's own problems.
+		Int selfPenalty = 3;
+
 		Int->Int result;
+		WITH db {
+			// Check implementations:
+			for (row in SELECT i.id AS iId, i.author AS iAuthor, i.problem AS problem, t.id AS tId, t.author AS tAuthor
+					 FROM implementations i
+					 JOIN tests t ON t.id == i.basedOn) {
+				Int points = submittedImpl;
+
+				// Note: We enforce that the previous setup must have contained an error, so we don't need to check that.
+				Error e = findError(row.problem, row.iId, row.tId);
+				if (e.success())
+					points += submittedImpl;
+
+				if (row.iAuthor == row.tAuthor)
+					points /= selfPenalty;
+
+				result[row.iAuthor] += points;
+			}
+
+			// Check initial implementations:
+			for (row in SELECT id, author, problem FROM implementations WHERE basedOn == -1) {
+				// Note: We can do this with a nice join.
+				// Only award points if the problem was actually solved (we try to enforce it, so the check is not really needed).
+				if (findError(row.problem, row.id, -1).success())
+					result[row.author] += initialSubmit;
+			}
+
+			// Check tests:
+			for (row in SELECT t.id AS newId, t.author AS tAuthor, t.problem AS problem, i.id AS iId, i.author AS iAuthor
+					 FROM tests t
+					 JOIN implementations i ON i.id == t.basedOn) {
+				Int points = submittedTest;
+
+				if (row.iAuthor == row.tAuthor)
+					points /= selfPenalty;
+
+				result[row.tAuthor] += points;
+			}
+
+			// Check initial tests:
+			for (row in SELECT author FROM tests WHERE basedOn == -1) {
+				result[row.author] += initialSubmit;
+			}
+		}
 		return result;
 	}
 
@@ -283,8 +344,8 @@ class Database {
 
 			Int codeId = createCode(code);
 
-			Int implId = INSERT INTO implementations(problem, version, author, code, created)
-				VALUES (problemId, ver, userId, codeId, CURRENT DATETIME);
+			Int implId = INSERT INTO implementations(problem, version, author, code, basedOn, created)
+				VALUES (problemId, ver, userId, codeId, testId, CURRENT DATETIME);
 
 			// Also add to the autotable, so we don't have to check it ourselves.
 			addError(problemId, implId, testId, error);
@@ -302,8 +363,8 @@ class Database {
 
 			Int codeId = createCode(code);
 
-			Int testId = INSERT INTO tests(problem, version, author, code, created)
-				VALUES (problemId, ver, userId, codeId, CURRENT DATETIME);
+			Int testId = INSERT INTO tests(problem, version, author, code, basedOn, created)
+				VALUES (problemId, ver, userId, codeId, implId, CURRENT DATETIME);
 
 			// Also add to the autotable, so we don't have to check it ourselves.
 			addError(problemId, implId, testId, error);

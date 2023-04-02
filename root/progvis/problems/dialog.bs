@@ -208,8 +208,8 @@ class ExplorePanel extends TabView {
 		init() {}
 
 		add("Overview", CodeOverviewPanel(state));
-		add("Explore implementations", ExploreImplPanel(state));
-		add("Explore tests", ExploreTestsPanel(state));
+		add("Improve my implementation", ExploreTestsPanel(state));
+		add("Improve my test", ExploreImplPanel(state));
 	}
 }
 
