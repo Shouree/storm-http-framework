@@ -315,7 +315,7 @@ window ExploreImprovementPanel {
 		ListView improvementsView(["Author", "Version", "Status"]) {}
 		CodeView code {}
 		nextLine;
-		CheckProgress checker { row: 2; col: 1; colspan: 2; }
+		CheckProgress checker { row: 2; col: 0; colspan: 2; }
 		Grid { row: 2; col: 1;
 			expandCol: 0;
 			expandCol: 1;
@@ -510,6 +510,7 @@ class ExploreImplPanel extends ExploreImprovementPanel {
 window CheckProgress {
 	layout Grid {
 		expandCol: 1;
+		expandRow: 1;
 		Label msg("Checking...", VAlign:center) {}
 		Progress progress {}
 		Button cancel("Cancel") {}

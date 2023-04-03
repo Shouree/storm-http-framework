@@ -254,10 +254,24 @@ class Database {
 					 FROM problems p
 					 JOIN users u ON p.author == u.id) {
 				Bool attempted =
-					(SELECT ONE id FROM implementations WHERE problem == ${row.id}).any |
-					(SELECT ONE id FROM tests WHERE problem == ${row.id}).any;
+					(SELECT ONE id FROM implementations WHERE problem == ${row.id} AND author == userId).any |
+					(SELECT ONE id FROM tests WHERE problem == ${row.id} AND author == userId).any;
 				Error error = findError(row.id, -1, -1);
 				result << ProblemInfo(row.id, row.title, row.author, error.any(), attempted);
+			}
+		}
+		result;
+	}
+
+	// Get a list of all problems in the system. Don't populate 'attempted' as we have no user.
+	ProblemInfo[] problemList() {
+		ProblemInfo[] result;
+		WITH db {
+			for (row in SELECT p.id AS id, u.displayName AS author, p.title AS title
+					 FROM problems p
+					 JOIN users u ON p.author == u.id) {
+				Error error = findError(row.id, -1, -1);
+				result << ProblemInfo(row.id, row.title, row.author, error.any(), false);
 			}
 		}
 		result;
@@ -510,6 +524,57 @@ class Database {
 		}
 	}
 
+	// Check if a problem has an error, and return the Bool? that is used in many parts of the system.
+	Error findError(Int problemId, Int implId, Int testId) {
+		unless (r = WITH db: SELECT ONE error FROM autoresults
+				WHERE problem == problemId AND impl == implId AND test == testId)
+			return Error:unknown();
+
+		if (e = r.error)
+			return Error:error(e);
+		return Error:success();
+	}
+
+	// Get all latest versions of implementations.
+	Int[] latestImplementations(Int problemId) {
+		WITH db {
+			Int[] result;
+
+			Int lastAuthor = -1;
+			for (row in SELECT id, author FROM implementations
+					 WHERE problem == problemId
+					 ORDER BY author ASC, version DESC) {
+				// Note: The ordering ensures that the first row for each user is the latest version.
+				if (row.author != lastAuthor) {
+					lastAuthor = row.author;
+					result << row.id;
+				}
+			}
+
+			return result;
+		}
+	}
+
+	// Get all latest versions of tests.
+	Int[] latestTests(Int problemId) {
+		WITH db {
+			Int[] result;
+
+			Int lastAuthor = -1;
+			for (row in SELECT id, author FROM tests
+					 WHERE problem == problemId
+					 ORDER BY author ASC, version DESC) {
+				// Note: The ordering ensures that the first row for each user is the latest version.
+				if (row.author != lastAuthor) {
+					lastAuthor = row.author;
+					result << row.id;
+				}
+			}
+
+			return result;
+		}
+	}
+
 	/**
 	 * Utils
 	 */
@@ -546,17 +611,6 @@ class Database {
 
 		if (codeSignature(code.src) == newCode.signature)
 			throw ServerError("This solution is almost identical to another solution you submitted to this problem.");
-	}
-
-	// Check if a problem has an error, and return the Bool? that is used in many parts of the system.
-	private Error findError(Int problemId, Int implId, Int testId) {
-		unless (r = WITH db: SELECT ONE error FROM autoresults
-				WHERE problem == problemId AND impl == implId AND test == testId)
-			return Error:unknown();
-
-		if (e = r.error)
-			return Error:error(e);
-		return Error:success();
 	}
 
 	// Get the user's current best implementation for a problem.

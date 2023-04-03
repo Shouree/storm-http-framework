@@ -1,0 +1,73 @@
+use progvis:net;
+use progvis:program;
+use progvis:check;
+use core:io;
+
+// Check improvements that have not yet been checked automatically.
+void checkImprovements() {
+	Database db;
+	checkImprovements(db);
+}
+
+// Check improvements periodically.
+void checkImprovementsLoop() {
+	Database db;
+	while (true) {
+		print("== Begin check of improvements ==");
+		checkImprovements(db);
+		print("== End check of improvements ==");
+		sleep(30 min);
+	}
+}
+
+
+// Check all improvements.
+void checkImprovements(Database db) {
+	for (problem in db.problemList()) {
+		print("Checking problem ${problem.id}: ${problem.title}");
+		checkImprovements(db, problem.id);
+	}
+}
+
+// Check all improvements for a particular problem.
+void checkImprovements(Database db, Int problemId) {
+	Int[] impls = db.latestImplementations(problemId);
+	Int[] tests = db.latestTests(problemId);
+	impls << -1;
+	tests << -1;
+	for (impl in impls) {
+		for (test in tests) {
+			if (db.findError(problemId, impl, test).unknown) {
+				print("- Checking impl ${impl} with test ${test}");
+				checkImprovement(db, problemId, impl, test);
+			}
+		}
+	}
+}
+
+// Check a single combination of test + implementation.
+void checkImprovement(Database db, Int problemId, Int implId, Int testId) {
+	Problem problem = db.problem(problemId, implId, testId);
+
+	MemoryProtocol memory;
+	Url test = problem.test.put("test", memory);
+	Url impl = problem.impl.put("impl", memory);
+
+	Error result = Error:unknown();
+	try {
+		if (error = progvis:check:check([test, impl])) {
+			result = Error:error(error.error.type);
+			print("-- Found error: " + error.error.type);
+		} else {
+			result = Error:success();
+			print("-- No error!");
+		}
+	} catch (Exception e) {
+		print("-- Failed: " + e.message);
+		result = Error:error("internal error");
+	}
+
+	if (!db.addError(problemId, implId, testId, result)) {
+		print("-- Failed to save error to database.");
+	}
+}
