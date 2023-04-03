@@ -125,7 +125,12 @@ DATABASE ProgvisDB {
 
 class Database {
 	init() {
-		SQLite db(cwdUrl / "progvis.db");
+		Url baseDir = cwdUrl;
+		Url subDir = baseDir / "db";
+		if (subDir.exists)
+			baseDir = subDir;
+
+		SQLite db(baseDir / "progvis.db");
 
 		init() {
 			db(db);
