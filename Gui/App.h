@@ -237,6 +237,9 @@ namespace gui {
 		// Should we exit?
 		bool done;
 
+		// Are we running in headless mode?
+		bool headless;
+
 		// Notify this semaphore on exit.
 		os::Sema *notifyExit;
 
@@ -319,9 +322,6 @@ namespace gui {
 
 		// Did we start up enough to dispatch?
 		bool started;
-
-		// Are we running in headless mode?
-		bool headless;
 
 		// Poll descriptors passed to Gtk+.
 		vector<GPollFD> gPollFd;
