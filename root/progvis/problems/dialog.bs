@@ -50,10 +50,6 @@ dialog ProblemsDlg {
 	}
 
 	private void populateList() {
-		// The list view in Gtk currently insists on selecting a row when it is populated early
-		// enough. We don't want that.
-		sleep(100 ms);
-
 		unless (response = state.query(ProblemListRequest()) as ProblemListResponse) {
 			showMessage(this, "Connection error", "Failed to retrieve list of problems.");
 			close(-1);

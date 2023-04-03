@@ -391,11 +391,11 @@ namespace gui {
 		GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
 		gtk_tree_selection_set_mode(selection, multiSel ? GTK_SELECTION_MULTIPLE : GTK_SELECTION_SINGLE);
 
-		gtkClearSelection = false;
 		if (selected) {
 			updateSelection(GTK_TREE_VIEW(tree), GTK_TREE_MODEL(gtkStore), selected);
 			selected = null;
-		} else if (rows->any()) {
+			gtkClearSelection = false;
+		} else {
 			// Notify the select function that we shall clear the selection at the next opportunity.
 			gtkClearSelection = true;
 		}
@@ -449,10 +449,14 @@ namespace gui {
 
 	bool ListView::rowSelected(GtkTreeSelection *selection, GtkTreeModel *model, GtkTreePath *path, gboolean current) {
 		if (gtkClearSelection && current == 0) {
-			// This select event is a result from the treeview initially selecting the first
-			// element. Just tell the list view to not select the element, and we are done!
 			gtkClearSelection = false;
-			return false;
+
+			// This select event is a result from the treeview initially selecting the first
+			// element. Just tell the list view to not select the element, and we are done!  This
+			// should only happen if there are rows in the list (which may be added after creation,
+			// but before realization).
+			if (rows->any())
+				return false;
 		}
 
 		if (!gtkInhibitSelection && onSelect) {
@@ -498,6 +502,10 @@ namespace gui {
 	void ListView::modelAdd(Array<Str *> *row, Nat id) {
 		if (!gtkStore)
 			return;
+
+		// If the widget is realized, then we should not inhibit the code that cancels selections.
+		if (gtk_widget_get_realized(handle().widget()))
+			gtkClearSelection = false;
 
 		lastSelected = -1;
 
@@ -643,6 +651,9 @@ namespace gui {
 			selected = sel;
 			return;
 		}
+
+		// Realization might happen quite some time after creation.
+		gtkClearSelection = false;
 
 		updateSelection(viewWidget(), GTK_TREE_MODEL(gtkStore), sel);
 	}
