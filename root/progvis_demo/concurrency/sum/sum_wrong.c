@@ -22,7 +22,7 @@ int main(void) {
 			data[i] = 1;
 	}
 
-	sema_init(&sema, 2);
+	sema_init(&sema, 0);
 
 	thread_new(&sum_low, data);
 	thread_new(&sum_high, data);
