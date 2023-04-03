@@ -50,6 +50,7 @@ namespace gui {
 		// Get selected indices.
 		Set<Nat> *STORM_FN selection();
 		void STORM_ASSIGN selection(Set<Nat> *v);
+		void STORM_ASSIGN selection(Nat v);
 
 #ifdef GUI_WIN32
 		virtual bool onNotify(NMHDR *header);
@@ -96,6 +97,12 @@ namespace gui {
 		// Allow multiselect.
 		Bool multiSel;
 
+		// For GTK: Shall we clear selection on first select event?
+		Bool gtkClearSelection;
+
+		// For GTK: Shall we inhibit selection events?
+		Bool gtkInhibitSelection;
+
 		// For GTK: sometimes select row events are duplicated. Remember the last event so that we
 		// can destroy it.
 		Nat lastSelected;
@@ -126,7 +133,7 @@ namespace gui {
 		void rowActivated(GtkTreePath *path, GtkTreeViewColumn *column);
 
 		// Selection callback.
-		void rowSelected(GtkTreeSelection *selection, GtkTreeModel *model, GtkTreePath *path, gboolean selected);
+		bool rowSelected(GtkTreeSelection *selection, GtkTreeModel *model, GtkTreePath *path, gboolean selected);
 
 		// Callback for selection.
 		static gboolean selectFunction(GtkTreeSelection *selection,

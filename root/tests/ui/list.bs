@@ -1,0 +1,43 @@
+use ui;
+use core:geometry;
+
+frame ListTest {
+	layout Grid {
+		expandCol: 0;
+		expandRow: 0;
+		ListView list(["A", "B", "C", "D"]) {}
+		nextLine;
+		Button reset("Reset") {}
+	}
+
+	init() {
+		init("List view test", Size(300, 300)) {}
+
+		addContents();
+
+		list.onSelect = &this.onSelect;
+		reset.onClick = &this.onReset;
+
+		create();
+	}
+
+	void addContents() {
+		for (Nat i = 0; i < 10; i++) {
+			list.add(["Test1", i.toS, "C", (i + 2).toS]);
+		}
+	}
+
+	void onReset() {
+		list.clear();
+		addContents();
+	}
+
+	void onSelect(Nat row, Bool selected) {
+		print("Selected ${row}, ${selected}");
+	}
+}
+
+void listTest() {
+	ListTest list;
+	list.waitForClose();
+}

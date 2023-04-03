@@ -262,7 +262,6 @@ namespace storm {
 				}
 			}
 		}
-		Function *natReadFn = findStormFn(natType, S("read"), objStream);
 
 		Listing *l = new (this) Listing(false, natType.desc(engine));
 		code::Var streamVar = l->createParam(objStream.desc(engine));

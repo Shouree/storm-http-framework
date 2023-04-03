@@ -21,7 +21,7 @@ namespace gui {
 		myHandle(invalid), myParent(null), myRoot(null),
 		myVisible(true), myEnabled(true), drawing(false), mouseInside(false),
 		gdkWindow(null), gTimer(null),
-		myPos(0, 0, 40, 40) /* large enough to not generate warnings in Gtk+ */ {
+		myPos(0, 0, 100, 100) /* large enough to not generate warnings in Gtk+ */ {
 
 		myText = new (this) Str(L"");
 		myFont = app(engine())->defaultFont;

@@ -72,6 +72,12 @@ namespace gui {
 		modelClear();
 	}
 
+	void ListView::selection(Nat v) {
+		Set<Nat> *sel = new (this) Set<Nat>();
+		sel->put(v);
+		selection(sel);
+	}
+
 	void ListView::destroyWindow(Handle handle) {
 		Window::destroyWindow(handle);
 		clearData();
@@ -374,6 +380,7 @@ namespace gui {
 		for (Nat i = 0; i < rows->count(); i++) {
 			modelAdd(rows->at(i).cols, i);
 		}
+		lastSelected = rows->count();
 
 		gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(tree), showHeader);
 		gtk_widget_show(tree);
@@ -384,9 +391,13 @@ namespace gui {
 		GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
 		gtk_tree_selection_set_mode(selection, multiSel ? GTK_SELECTION_MULTIPLE : GTK_SELECTION_SINGLE);
 
+		gtkClearSelection = false;
 		if (selected) {
 			updateSelection(GTK_TREE_VIEW(tree), GTK_TREE_MODEL(gtkStore), selected);
 			selected = null;
+		} else if (rows->any()) {
+			// Notify the select function that we shall clear the selection at the next opportunity.
+			gtkClearSelection = true;
 		}
 
 		initWidget(parent, scrolled);
@@ -423,7 +434,7 @@ namespace gui {
 		if (me) {
 			// Note: We can't throw exceptions throuhg Gtk, so we need to catch them here.
 			try {
-				me->rowSelected(selection, model, path, currently_selected);
+				return me->rowSelected(selection, model, path, currently_selected) ? TRUE : FALSE;
 			} catch (const storm::Exception *e) {
 				PLN(L"Unhandled exception in window thread:\n" << e->message());
 			} catch (const ::Exception &e) {
@@ -436,8 +447,15 @@ namespace gui {
 		return TRUE;
 	}
 
-	void ListView::rowSelected(GtkTreeSelection *selection, GtkTreeModel *model, GtkTreePath *path, gboolean current) {
-		if (onSelect) {
+	bool ListView::rowSelected(GtkTreeSelection *selection, GtkTreeModel *model, GtkTreePath *path, gboolean current) {
+		if (gtkClearSelection && current == 0) {
+			// This select event is a result from the treeview initially selecting the first
+			// element. Just tell the list view to not select the element, and we are done!
+			gtkClearSelection = false;
+			return false;
+		}
+
+		if (!gtkInhibitSelection && onSelect) {
 			GtkTreeIter iter;
 			gtk_tree_model_get_iter(model, &iter, path);
 
@@ -449,14 +467,16 @@ namespace gui {
 			// About to toggle to selected?
 			if (current == 0) {
 				if (row == lastSelected) {
-					row = -1;
-					return;
+					lastSelected = -1;
+					return true;
 				}
 				lastSelected = row;
 			}
 
 			onSelect->call(row, current == 0);
 		}
+
+		return true;
 	}
 
 	void ListView::rowActivated(GtkTreePath *path, GtkTreeViewColumn *column) {
@@ -542,9 +562,20 @@ namespace gui {
 		if (!gtkStore)
 			return;
 
-		lastSelected = -1;
+		lastSelected = 0;
+		gtkInhibitSelection = true;
+
+		// Send "deselect" notifications.
+		if (onSelect) {
+			Set<Nat> *selected = selection();
+			for (Set<Nat>::Iter i = selected->begin(); i != selected->end(); ++i) {
+				onSelect->call(i.v(), false);
+			}
+		}
 
 		gtk_list_store_clear(gtkStore);
+
+		gtkInhibitSelection = false;
 	}
 
 	void ListView::clearData() {
