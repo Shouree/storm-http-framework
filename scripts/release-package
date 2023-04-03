@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Launchers to include in build: (space separated)
-launchers="progvis.main"
+# Launchers to include in build: (space separated). An @ indicates envvars to set on Linux.
+launchers="progvis.main@STORM_RENDER_BACKEND=gtk"
 
 OUT_BASE=$STORM_ROOT/release/storm
 
@@ -27,15 +27,23 @@ OUT=$OUT_BASE$OUT_EXT
 notes="$2"
 
 function launcher {
+    fn=${1%%@*}
+    envvars=$(expr match "$1" '.*@\(.*\)')
+
     if [[ "$2" =~ \.bat$ ]]
     then
-	echo "@%~dp0Storm.exe -f $1" > "$2"
+	echo "@%~dp0Storm.exe -f $fn" > "$2"
     else
 	(
 	    echo '#!/bin/bash'
 	    echo 'DIR=$(dirname "$0")'
 	    echo 'chmod +x "$DIR"/Storm'
-	    echo "\"\$DIR\"/Storm -f $1"
+	    while [ ! "x$envvars" == "x" ]
+	    do
+		echo "export ${envvars%%@*}"
+		envvars=$(expr match "$envvars" '.*@\(.*\)')
+	    done
+	    echo "exec \"\$DIR\"/Storm -f $fn"
 	) > "$2"
 	chmod +x "$2"
     fi
