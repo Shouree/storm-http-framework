@@ -214,12 +214,12 @@ static void basic_size_allocate(GtkWidget *widget, GtkAllocation *allocation) {
 		alloc.width = child->w;
 		alloc.height = child->h;
 
-		if (!gtk_widget_get_has_window(widget)) {
-			// Really? It seems these coordinates are supposed to be relative to the parent... They
-			// are, however, relative to the window of the parent. Wayland is a good way to test this.
-			alloc.x += allocation->x;
-			alloc.y += allocation->y;
-		}
+		// if (!gtk_widget_get_has_window(widget)) {
+		// 	// Really? It seems these coordinates are supposed to be relative to the parent... They
+		// 	// are, however, relative to the window of the parent. Wayland is a good way to test this.
+		// 	alloc.x += allocation->x;
+		// 	alloc.y += allocation->y;
+		// }
 
 		gtk_widget_size_allocate(child->widget, &alloc);
 	}
