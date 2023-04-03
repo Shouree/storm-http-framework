@@ -68,6 +68,11 @@ namespace gui {
 		// windows, so don't use it for frequent events.
 		MAYBE(Menu::Item *) findMenuItem(Handle h);
 
+		// Are we running in headless mode?
+		Bool STORM_FN headless() const {
+			return !appWait;
+		}
+
 #ifdef GUI_WIN32
 		/**
 		 * Win32 specifics.
@@ -314,6 +319,9 @@ namespace gui {
 
 		// Did we start up enough to dispatch?
 		bool started;
+
+		// Are we running in headless mode?
+		bool headless;
 
 		// Poll descriptors passed to Gtk+.
 		vector<GPollFD> gPollFd;

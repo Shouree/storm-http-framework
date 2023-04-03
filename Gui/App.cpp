@@ -39,10 +39,16 @@ namespace gui {
 
 		init();
 
-		Defaults def = sysDefaults(engine());
-		defaultFont = def.font;
-		defaultBgColor = def.bgColor;
-		defaultTextColor = def.textColor;
+		if (headless()) {
+			defaultFont = new (this) Font(new (this) Str(S("Arial")), 12);
+			defaultBgColor = Color(1.0f, 1.0f, 1.0f);
+			defaultTextColor = Color(0.0f, 0.0f, 0.0f);
+		} else {
+			Defaults def = sysDefaults(engine());
+			defaultFont = def.font;
+			defaultBgColor = def.bgColor;
+			defaultTextColor = def.textColor;
+		}
 	}
 
 	void App::terminate() {
@@ -150,6 +156,7 @@ namespace gui {
 
 	AppWait::AppWait(Engine &e) : uThread(os::UThread::invalid), msgDisabled(0), e(e), notifyExit(null) {
 		done = false;
+		headless = false;
 	}
 
 	void AppWait::init() {
@@ -158,8 +165,11 @@ namespace gui {
 	}
 
 	void AppWait::setup() {
-		App *app = gui::app(e);
-		app->appWait = this;
+		// Don't use the wait logic if running in headless mode.
+		if (!headless) {
+			App *app = gui::app(e);
+			app->appWait = this;
+		}
 	}
 
 	AppWait::~AppWait() {
@@ -573,6 +583,9 @@ namespace gui {
 	static THREAD AppWait *currentWait = null;
 
 	void App::init() {
+		if (headless())
+			return;
+
 		// Note: App::init is called after AppWait::platformInit
 		display = gdk_display_get_default();
 	}
@@ -594,7 +607,12 @@ namespace gui {
 		gtk_disable_setlocale();
 
 		// TODO? Pass 'standard' parameters from the command line somehow...
-		gtk_init(NULL, NULL);
+		if (!gtk_init_check(NULL, NULL)) {
+			// If headless: then we don't have to do anything. Just let the regular thread scheduling do its work.
+			headless = true;
+			done = true;
+			return;
+		}
 
 		// Install our own event handler before the one Gtk+ installed. We need to intercept events
 		// to windows where we are rendering using OpenGL.
@@ -622,6 +640,9 @@ namespace gui {
 	}
 
 	void AppWait::platformDestroy() {
+		if (headless)
+			return;
+
 		// Dismiss any repaint requests.
 		{
 			util::Lock::L z(repaintLock);

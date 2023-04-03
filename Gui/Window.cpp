@@ -8,6 +8,7 @@
 #include "GtkSignal.h"
 #include "GtkEmpty.h"
 #include "Env.h"
+#include "Exception.h"
 
 // We're using gtk_widget_override_font, as there is no better way of setting custom fonts on widgets...
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -23,8 +24,12 @@ namespace gui {
 		gdkWindow(null), gTimer(null),
 		myPos(0, 0, 100, 100) /* large enough to not generate warnings in Gtk+ */ {
 
+		App *a = app(engine());
+		if (a->headless())
+			throw new (this) GuiError(S("Can not create windows when running in headless mode."));
+
 		myText = new (this) Str(L"");
-		myFont = app(engine())->defaultFont;
+		myFont = a->defaultFont;
 	}
 
 	Window::~Window() {
