@@ -13,6 +13,8 @@ class ServerConn {
 			output = ObjOStream(stream.output);
 			db = db;
 		}
+
+		setupLimits();
 	}
 
 	init(NetStream stream, IStream input, OStream output, Database db) {
@@ -22,6 +24,8 @@ class ServerConn {
 			output = ObjOStream(output);
 			db = db;
 		}
+
+		setupLimits();
 	}
 
 	private Database db;
@@ -40,6 +44,12 @@ class ServerConn {
 
 	// Get the client ID.
 	public Str clientId() { myClientId; }
+
+	// Set up size limits on our input stream.
+	private void setupLimits() {
+		// Maximum size for each part is 2MiB.
+		input.maxSize = 2n * 1024n * 1024n;
+	}
 
 	// Run the communication with this client.
 	void run() {
@@ -71,6 +81,11 @@ class ServerConn {
 				return false;
 			}
 
+		} catch (SizeLimitReached sz) {
+			print("Too large message: " + sz.message);
+			// The input stream is out of sync now, but we can at least send a message back.
+			error("Too large message.");
+			return false;
 		} catch (EndOfStream eos) {
 			print("End of stream. Exiting.");
 			return false;

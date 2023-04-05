@@ -558,7 +558,7 @@ window CheckProgress {
 					break;
 
 				if (count > 1) {
-					progress.progress = (id + 1).float / count.float;
+					progress.progress = id.float / count.float;
 					msg.text = "Checking (${id + 1}/${count})...";
 					resized();
 				}
