@@ -748,7 +748,7 @@ namespace storm {
 		Nat count = from->readNat();
 		Buffer b = from->read(count);
 		if (!b.full())
-			throw new (this) SerializationError(S("Not enough data."));
+			throw new (this) SerializationFormatError(S("Not enough data."));
 
 		size_t sz = convert((char *)b.dataPtr(), count, NULL, 0);
 		data = runtime::allocArray<wchar>(from->engine(), &wcharArrayType, sz);
@@ -761,10 +761,45 @@ namespace storm {
 		return new (from) Str(from);
 	}
 
+	Str::Str(IStream *from, Nat limitBytes) {
+		Nat count = from->readNat();
+		if (count >= limitBytes / sizeof(wchar))
+			throw new (this) SizeLimitReached(S("a string"), count * sizeof(wchar), limitBytes);
+		Buffer b = from->read(count);
+		if (!b.full())
+			throw new (this) SerializationFormatError(S("Not enough data."));
+
+		size_t sz = convert((char *)b.dataPtr(), count, NULL, 0);
+		data = runtime::allocArray<wchar>(from->engine(), &wcharArrayType, sz);
+		convert((char *)b.dataPtr(), count, data->v, sz);
+
+		validate();
+	}
+
+	Str *Str::read(IStream *from, Nat limit) {
+		return new (from) Str(from, limit);
+	}
+
 	void Str::write(ObjOStream *to) const {
 		to->startPrimitive(strId);
 		write(to->to);
 		to->end();
+	}
+
+	Str::Str(ObjIStream *from) {
+		Nat count = from->from->readNat();
+		from->checkArrayAlloc(sizeof(wchar), count);
+		Buffer b = from->from->read(count);
+		if (!b.full())
+			throw new (this) SerializationFormatError(S("Not enough data."));
+
+		size_t sz = convert((char *)b.dataPtr(), count, NULL, 0);
+		data = runtime::allocArray<wchar>(from->engine(), &wcharArrayType, sz);
+		convert((char *)b.dataPtr(), count, data->v, sz);
+
+		from->end();
+
+		validate();
 	}
 
 	Str *Str::read(ObjIStream *from) {

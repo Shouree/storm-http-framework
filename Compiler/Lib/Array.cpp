@@ -354,10 +354,12 @@ namespace storm {
 		Value me = thisPtr(this);
 		Value param = this->param();
 		Value objStream(StormInfo<ObjIStream>::type(engine));
+		Value natType(StormInfo<Nat>::type(engine));
 
 		Function *initFn = findStormMemberFn(me, Type::CTOR);
 		Function *endFn = findStormMemberFn(objStream, S("end"));
-		Function *natReadFn = findStormFn(Value(StormInfo<Nat>::type(engine)), S("read"), objStream);
+		Function *checkArrayFn = findStormMemberFn(objStream, S("checkArrayAlloc"), natType, natType);
+		Function *natReadFn = findStormFn(Value(natType), S("read"), objStream);
 		Function *reserveFn = findStormMemberFn(me, S("reserve"), Value(StormInfo<Nat>::type(engine)));
 		Function *pushFn = findStormMemberFn(me, S("<<"), param.asRef(true));
 
@@ -382,6 +384,12 @@ namespace storm {
 		// Find number of elements.
 		*l << fnParam(objStream.desc(engine), streamVar);
 		*l << fnCall(natReadFn->ref(), false, natDesc, count);
+
+		// Check size of array.
+		*l << fnParam(objStream.desc(engine), streamVar);
+		*l << fnParam(natDesc, natConst(param.size()));
+		*l << fnParam(natDesc, count);
+		*l << fnCall(checkArrayFn->ref(), true);
 
 		// Reserve elements.
 		*l << fnParam(me.desc(engine), meVar);

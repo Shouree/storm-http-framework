@@ -58,6 +58,32 @@ objects, it produces human readable text. For this stream, just like with `ObjIS
 important to match the number of instances when reading with the number of instances when writing.
 
 
+Limiting impact of untrusted data
+-----------------------------------
+
+To provide basic protection against deserialization of untrusted data, it is possible to impose
+various limits on the size of the deserialized data. The `ObjIStream` provides the following
+variables for this purpose:
+
+- `maxReadSize`: Limits the total size of each object hierarchy that is read through a top-level
+  call to `read`. This number accounts for all objects and arrays created by the deserialized
+  data. However, it does not account for all forms of overhead (e.g. object headers, extra memory
+  used for hash tables, etc.). As such, do not assume that the limit corresponds to an exact number
+  of bytes.
+- `maxArraySize`: Limits the number of array allocations. Array allocations could be particularly
+  problematic since ambiguous references causes the garbage collector to retain a small number of
+  objects that could be reclaimed. Large array allocations are more likely to be pinned in this
+  manner, and the impact of retaining them are quite significant. This is why the array size can be
+  controlled separately.
+- `maxTypeDescSize`: Limits the size of the data retained for memory used internally for type
+  descriptions. This is to avoid deserializing a stream that defines a large data structure with a
+  large number of members to exhaust available memory.
+
+It is also possible to set all of these variables at the same time by setting `maxSize`. After
+creating an `ObjIStream`, all of them are set to the maximum `Nat` value, which corresponds to just
+below 4 GiB.
+
+
 Making classes serializable
 ----------------------------
 
@@ -271,6 +297,11 @@ class MyClass {
     }
 }
 ```
+
+If you implement custom serialization and deserialize an array, you are additionally expected to
+call the `checkArrayAlloc` function before allocating the array. This allows the `ObjIStream` to
+keep track of size limits properly. If the limits are exceeded, the `checkArrayAlloc` function
+throws an appropriate error.
 
 ### Examples
 

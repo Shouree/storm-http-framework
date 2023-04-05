@@ -202,17 +202,22 @@ namespace storm {
 		// Read/write (raw).
 		void STORM_FN write(OStream *to) const;
 		static Str *STORM_FN read(IStream *from);
-
-		// Create a string from the stream. Use 'read' from Storm.
-		explicit Str(IStream *from);
+		static Str *STORM_FN read(IStream *from, Nat limitBytes);
 
 		// Serialization.
 		void STORM_FN write(ObjOStream *to) const;
 		static Str *STORM_FN read(ObjIStream *from);
 
+		// Called from the serialization API.
+		explicit Str(ObjIStream *from);
+
 	private:
 		friend class Iter;
 		friend class StrBuf;
+
+		// Create a string from the stream. Use 'read' from Storm.
+		explicit Str(IStream *from);
+		explicit Str(IStream *from, Nat limitBytes);
 
 		// Data we're storing. Always null-terminated or null.
 		GcArray<wchar> *data;

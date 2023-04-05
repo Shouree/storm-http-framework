@@ -148,10 +148,10 @@ namespace storm {
 
 		Type *t = runtime::fromIdentifier(name);
 		if (!t)
-			throw new (this) SerializationError(TO_S(this, S("Unknown type: ") << demangleName(name)));
+			throw new (this) SerializationFormatError(TO_S(this, S("Unknown type: ") << demangleName(name)));
 		const Handle &h = runtime::typeHandle(t);
 		if (!h.serializedTypeFn)
-			throw new (this) SerializationError(TO_S(this, S("The type ") << demangleName(name) << S(" is not serializable.")));
+			throw new (this) SerializationFormatError(TO_S(this, S("The type ") << demangleName(name) << S(" is not serializable.")));
 
 		info = (*h.serializedTypeFn)();
 	}
@@ -200,6 +200,68 @@ namespace storm {
 	}
 
 
+	/**
+	 * Size limits.
+	 */
+
+	// Check if 'base + add' would be larger than 'limit'. Updates 'base' to reflect the addition,
+	// but caps it at 'limit' to avoid overflows.
+	static bool addSize(Nat &base, Nat add, Nat limit) {
+		// Note: It is safe to rely on overflow here since unsigned types are defined to behave as
+		// modular arithmetics.
+		Nat original = base;
+		base += add;
+		if (base > limit || base < original) {
+			base = limit;
+			return true;
+		}
+		return false;
+	}
+
+	static void throwLimitError(Engine &e, Nat limit) {
+		throw new (e) SizeLimitReached(S("type metadata"), 0, limit);
+	}
+
+	void ObjIStream::maxTypeDescSize(Nat limit) {
+		typeDescLimit = limit;
+		if (typeDescCurrent >= limit)
+			throwLimitError(engine(), limit);
+	}
+
+	void ObjIStream::checkTypeDescSize(Nat add) {
+		if (addSize(typeDescCurrent, add, typeDescLimit))
+			throwLimitError(engine(), typeDescLimit);
+	}
+
+	static void throwSizeError(Engine &e, Nat alloc, Nat limit) {
+		throw new (e) SizeLimitReached(S("an object"), alloc, limit);
+	}
+
+	void ObjIStream::checkAllocSize(Nat add) {
+		if (add > readSizeBudget)
+			throwSizeError(engine(), add, readSizeBudget);
+		readSizeBudget -= add;
+	}
+
+	static void throwArraySizeError(Engine &e, Nat alloc, Nat limit) {
+		throw new (e) SizeLimitReached(S("an array"), alloc, limit);
+	}
+
+	void ObjIStream::checkArrayAlloc(Nat elemSize, Nat count) {
+		Word totalSize = Word(elemSize) * Word(count);
+		if (totalSize > maxArraySize)
+			throwArraySizeError(engine(), Nat(min(Word(0xFFFFFFFF), totalSize)), maxArraySize);
+
+		if (totalSize > readSizeBudget)
+			throwArraySizeError(engine(), Nat(totalSize), readSizeBudget);
+
+		readSizeBudget -= totalSize;
+	}
+
+	/**
+	 * IStream.
+	 */
+
 	template <class T, T (IStream::* readFn)()>
 	static void CODECALL read(T *out, ObjIStream *from) {
 		new (out) T((from->from->*readFn)());
@@ -207,11 +269,17 @@ namespace storm {
 	}
 
 	static void readStr(Str **out, ObjIStream *from) {
-		new (Place(out)) Str(from->from);
-		from->end();
+		new (Place(out)) Str(from);
 	}
 
-	ObjIStream::ObjIStream(IStream *src) : from(src) {
+	ObjIStream::ObjIStream(IStream *src)
+		: from(src),
+		  maxReadSize(0xFFFFFFFF),
+		  maxArraySize(0xFFFFFFFF),
+		  typeDescLimit(0xFFFFFFFF),
+		  typeDescCurrent(0),
+		  readSizeBudget(0) {
+
 		clearObjects();
 
 		depth = new (this) Array<Cursor>();
@@ -251,11 +319,11 @@ namespace storm {
 
 		Desc *expected = findInfo(info.expectedType);
 		if (!expected->isValue())
-			throw new (this) SerializationError(S("Expected a value type, but got a class type."));
+			throw new (this) SerializationFormatError(S("Expected a value type, but got a class type."));
 		if (expected->info->type != type) {
 			Str *msg = TO_S(this, S("Type mismatch. Expected ") << runtime::typeName(expected->info->type)
 							<< S(" but got ") << runtime::typeName(type) << S("."));
-			throw new (this) SerializationError(msg);
+			throw new (this) SerializationFormatError(msg);
 		}
 
 		readValueI(expected, out);
@@ -268,8 +336,17 @@ namespace storm {
 		// of 'expected'.
 		Info info = start();
 		if (info.result.any()) {
-			// TODO: Check type!
-			return (Object *)info.result.getObject();
+			RootObject *result = info.result.getObject();
+			if (!runtime::isA(result, type)) {
+				StrBuf *msg = new (this) StrBuf();
+				*msg << S("Attempted to read an object of type: ")
+					 << runtime::typeName(type)
+					 << S(" but received an object of type ")
+					 << runtime::typeName(runtime::typeOf(result))
+					 << S(".");
+				throw new (this) SerializationFormatError(msg->toS());
+			}
+			return (Object *)result;
 		}
 
 		Desc *expected = findInfo(info.expectedType);
@@ -289,9 +366,9 @@ namespace storm {
 		Info info = start();
 		Desc *expected = findInfo(info.expectedType);
 		if (!expected->isValue())
-			throw new (this) SerializationError(S("Expected a value type, but got a class type."));
+			throw new (this) SerializationFormatError(S("Expected a value type, but got a class type."));
 		if (id != info.expectedType)
-			throw new (this) SerializationError(S("Mismatch of built-in types!"));
+			throw new (this) SerializationFormatError(S("Mismatch of built-in types!"));
 
 		if (info.result.any()) {
 			// TODO: Check type!
@@ -306,9 +383,9 @@ namespace storm {
 		Info info = start();
 		Desc *expected = findInfo(info.expectedType);
 		if (expected->isValue())
-			throw new (this) SerializationError(S("Expected a class type, but got a value type."));
+			throw new (this) SerializationFormatError(S("Expected a class type, but got a value type."));
 		if (id != info.expectedType)
-			throw new (this) SerializationError(S("Mismatch of built-in types!"));
+			throw new (this) SerializationFormatError(S("Mismatch of built-in types!"));
 
 		if (info.result.any()) {
 			// TODO: Check type?
@@ -363,7 +440,7 @@ namespace storm {
 		Nat objId = from->readNat();
 		if (Object *old = objIds->get(objId, null)) {
 			if (!runtime::isA(old, t))
-				throw new (this) SerializationError(S("Wrong type found during deserialization."));
+				throw new (this) SerializationFormatError(S("Wrong type found during deserialization."));
 			return old;
 		}
 
@@ -373,10 +450,14 @@ namespace storm {
 
 		// Make sure the type we're about to create is appropriate.
 		if (!runtime::isA(actual->info->type, t))
-			throw new (this) SerializationError(S("Wrong type found during deserialization."));
+			throw new (this) SerializationFormatError(S("Wrong type found during deserialization."));
+
+		// Check so that we are not over capacity.
+		Type *type = actual->info->type;
+		checkAllocSize(runtime::typeGc(type)->stride);
 
 		// Allocate the object and deserialize by calling the constructor, just like we do with value types.
-		Object *created = (Object *)runtime::allocObject(0, actual->info->type);
+		Object *created = (Object *)runtime::allocObject(0, type);
 		objIds->put(objId, created);
 
 		readValueI(actual, created);
@@ -388,8 +469,12 @@ namespace storm {
 		Info r = { 0, Variant() };
 
 		if (depth->empty()) {
-			// First type. Read its id from the stream.
+			// First type.
 
+			// Reset current size limit.
+			readSizeBudget = maxReadSize;
+
+			// Read its id from the stream.
 			if (!from->more())
 				throw new (this) EndOfStream();
 
@@ -406,12 +491,12 @@ namespace storm {
 		// Some other type. Examine what we expect to read.
 		Cursor &at = depth->last();
 		if (at.customDesc())
-			throw new (this) SerializationError(S("Can not use 'start' when serializing custom types."));
+			throw new (this) SerializationFormatError(S("Can not use 'start' when serializing custom types."));
 
 		// Process objects until we find something we can return!
 		while (true) {
 			if (!at.any())
-				throw new (this) SerializationError(S("Trying to deserialize too many members."));
+				throw new (this) SerializationFormatError(S("Trying to deserialize too many members."));
 
 			const Member &expected = at.current();
 			at.next();
@@ -433,11 +518,11 @@ namespace storm {
 
 	void ObjIStream::end() {
 		if (depth->empty())
-			throw new (this) SerializationError(S("Mismatched calls to startX during dedeserialization!"));
+			throw new (this) SerializationFormatError(S("Mismatched calls to startX during dedeserialization!"));
 
 		Cursor end = depth->last();
 		if (!end.atEnd())
-			throw new (this) SerializationError(S("Missing fields during deserialization!"));
+			throw new (this) SerializationFormatError(S("Missing fields during deserialization!"));
 
 		depth->pop();
 
@@ -453,22 +538,26 @@ namespace storm {
 			return result;
 
 		Byte flags = from->readByte();
-		Str *name = Str::read(from);
+		Str *name = Str::read(from, typeDescLimit - typeDescCurrent);
 		Nat parent = from->readNat();
 
+		checkTypeDescSize(sizeof(Desc) + name->peekLength()*sizeof(wchar));
 		result = new (this) Desc(flags, parent, name);
 
 		if (flags & typeInfo::tuple) {
 			// Tuple.
+			checkTypeDescSize(sizeof(Member));
 			result->members->push(Member(null, natId));
 
 			for (Nat type = from->readNat(); type != endId; type = from->readNat()) {
+				checkTypeDescSize(sizeof(Member));
 				result->members->push(Member(null, type));
 			}
 
 			validateTuple(result);
 		} else if (flags & typeInfo::maybe) {
 			// Maybe-type.
+			checkTypeDescSize(sizeof(Member)*2);
 			result->members->push(Member(null, boolId));
 			result->members->push(Member(null, from->readNat()));
 
@@ -480,7 +569,8 @@ namespace storm {
 		} else {
 			// Members.
 			for (Nat type = from->readNat(); type != endId; type = from->readNat()) {
-				Str *name = Str::read(from);
+				Str *name = Str::read(from, typeDescLimit - typeDescCurrent);
+				checkTypeDescSize(sizeof(Member) + name->peekLength()*sizeof(wchar));
 				result->members->push(Member(name, type));
 			}
 
@@ -494,7 +584,7 @@ namespace storm {
 	void ObjIStream::validateMembers(Desc *stream) {
 		SerializedStdType *our = as<SerializedStdType>(stream->info);
 		if (!our)
-			throw new (this) SerializationError(S("Trying to deserialize a standard type into a non-compatible type!"));
+			throw new (this) SerializationFormatError(S("Trying to deserialize a standard type into a non-compatible type!"));
 
 		// Note: We check the parent type when reading objects. Otherwise, we need quite a bit of
 		// bookkeeping to know when to validate parents of all types unless we want to check all
@@ -539,7 +629,7 @@ namespace storm {
 				// TODO: When we have support for default initialization, take that into consideration here!
 				Str *msg = TO_S(this, S("The member ") << ourMember.name << S(", required for type ")
 								<< runtime::typeName(our->type) << S(", is not present in the stream."));
-				throw new (this) SerializationError(msg);
+				throw new (this) SerializationFormatError(msg);
 			}
 		}
 
@@ -558,7 +648,7 @@ namespace storm {
 	void ObjIStream::validateTuple(Desc *stream) {
 		SerializedTuples *our = as<SerializedTuples>(stream->info);
 		if (!our)
-			throw new (this) SerializationError(S("Trying to deserialize a type type into a non-compatible type!"));
+			throw new (this) SerializationFormatError(S("Trying to deserialize a type type into a non-compatible type!"));
 
 		// We don't try to do anything intelligent here. We just check so that the number of
 		// elements in each tuple match.
@@ -566,14 +656,14 @@ namespace storm {
 		if (our->count() != tupleCount) {
 			Str *msg = TO_S(this, S("Tuple size mismatch. Stream: ") << tupleCount
 							<< S(", here: ") << our->count() << S("."));
-			throw new (msg) SerializationError(msg);
+			throw new (msg) SerializationFormatError(msg);
 		}
 	}
 
 	void ObjIStream::validateMaybe(Desc *stream) {
 		SerializedMaybe *our = as<SerializedMaybe>(stream->info);
 		if (!our)
-			throw new (this) SerializationError(S("Trying to deserialize a type into a non-compatible type!"));
+			throw new (this) SerializationFormatError(S("Trying to deserialize a type into a non-compatible type!"));
 
 		// Nothing more to verify.
 	}
@@ -646,7 +736,7 @@ namespace storm {
 
 		const Handle &h = runtime::typeHandle(type);
 		if (!h.serializedTypeFn)
-			throw new (this) SerializationError(TO_S(this, S("The type ") << runtime::typeName(type) << S(" is not serializable.")));
+			throw new (this) SerializationFormatError(TO_S(this, S("The type ") << runtime::typeName(type) << S(" is not serializable.")));
 
 		SerializedType *info = (*h.serializedTypeFn)();
 		serializedTypes->put((TObject *)type, info);
@@ -661,11 +751,11 @@ namespace storm {
 			// for classes.
 			// PVAR(runtime::typeName(expected));
 			Str *msg = TO_S(this, S("Unexpected value type during serialization. Expected: ") << runtime::typeName(expected));
-			throw new (this) SerializationError(msg);
+			throw new (this) SerializationFormatError(msg);
 		}
 
 		if (type->info() & typeInfo::classType)
-			throw new (this) SerializationError(S("Expected a class type, but a value type was provided!"));
+			throw new (this) SerializationFormatError(S("Expected a class type, but a value type was provided!"));
 
 		writeInfo(type);
 		return true;
@@ -681,7 +771,7 @@ namespace storm {
 			while (expectedDesc && expectedDesc->type != expected)
 				expectedDesc = findSerialized(expectedDesc->super());
 			if (!expectedDesc)
-				throw new (this) SerializationError(S("The provided type description does not match the serialized object."));
+				throw new (this) SerializationFormatError(S("The provided type description does not match the serialized object."));
 
 			writeInfo(expectedDesc);
 
@@ -706,7 +796,7 @@ namespace storm {
 		}
 
 		if ((type->info() & typeInfo::classType) != typeInfo::classType)
-			throw new (this) SerializationError(S("Expected a value type, but a class type was provided."));
+			throw new (this) SerializationFormatError(S("Expected a value type, but a class type was provided."));
 
 		writeInfo(type);
 		return true;
@@ -730,7 +820,7 @@ namespace storm {
 		} else {
 			SerializedType::Cursor &at = depth->last();
 			if (!at.any())
-				throw new (this) SerializationError(S("Trying to serialize too many fields."));
+				throw new (this) SerializationFormatError(S("Trying to serialize too many fields."));
 
 			if (at.isParent())
 				r = null;
@@ -746,11 +836,11 @@ namespace storm {
 
 	void ObjOStream::end() {
 		if (depth->empty())
-			throw new (this) SerializationError(S("Mismatched calls to startX during serialization!"));
+			throw new (this) SerializationFormatError(S("Mismatched calls to startX during serialization!"));
 
 		SerializedType::Cursor end = depth->last();
 		if (!end.atEnd())
-			throw new (this) SerializationError(S("Missing fields during serialization!"));
+			throw new (this) SerializationFormatError(S("Missing fields during serialization!"));
 
 		depth->pop();
 

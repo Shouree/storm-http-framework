@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Fn.h"
 #include "Core/Io/Buffer.h"
+#include "Core/Io/Serialization.h"
+#include "Core/Io/MemStream.h"
 
 BEGIN_TEST(Serialize, BS) {
 
@@ -33,6 +35,46 @@ BEGIN_TEST(Serialize, BS) {
 
 	// Serialization of Version.
 	CHECK(runFn<Bool>(S("tests.bs.versionSerialization")));
+
+} END_TEST
+
+static ObjIStream *createStream(Buffer b) {
+	return new (gEngine()) ObjIStream(new (gEngine()) MemIStream(b));
+}
+
+BEGIN_TEST(SerializeLimits, BS) {
+	Buffer b = runFn<Buffer>(S("tests.bs.createLargeObject"));
+	Type *type = runFn<Type *>(S("tests.bs.largeObjectType"));
+
+	// Check so that it works with decent limits.
+	{
+		ObjIStream *input = createStream(b);
+		input->maxTypeDescSize(1024);
+		input->maxReadSize = 10000; // This data blob is about 8k.
+		input->maxArraySize = 1000;
+		CHECK(input->readClass(type) != NULL);
+	}
+
+	// Check so that type descriptions limit works.
+	{
+		ObjIStream *input = createStream(b);
+		input->maxTypeDescSize(512);
+		CHECK_ERROR(input->readClass(type), SizeLimitReached);
+	}
+
+	// Check so that total object size works.
+	{
+		ObjIStream *input = createStream(b);
+		input->maxReadSize = 1024;
+		CHECK_ERROR(input->readClass(type), SizeLimitReached);
+	}
+
+	// Check so that array size works.
+	{
+		ObjIStream *input = createStream(b);
+		input->maxArraySize = 300; // Arrays are 4 byte large and contain 100 elements.
+		CHECK_ERROR(input->readClass(type), SizeLimitReached);
+	}
 
 } END_TEST
 

@@ -533,6 +533,26 @@ Bool versionSerialization() {
 	copy.toS == version.toS;
 }
 
+// Create a fairly large serialized blob. Used to test read limits in C++ later on.
+Buffer createLargeObject() {
+	ArrayData data;
+	for (Nat i = 0; i < 100; i++) {
+		data.numbers << (i + 5).int;
+		data.data << Employee();
+	}
+
+	MemOStream out;
+	ObjOStream objOut(out);
+	data.write(objOut);
+
+	out.buffer;
+}
+
+core:lang:Type largeObjectType() {
+	named{ArrayData};
+}
+
+
 // Deserialize some data in a buffer (from C++). This is used to ensure that we don't crash in cases
 // we previously found to crash the deserialization logic. While we don't expect random data to make
 // sense, we don't expect it to crash the system.
@@ -555,6 +575,7 @@ void deserializeFuzz() {
 		print(data.toS);
 
 		ObjIStream obj(MemIStream(data));
+		obj.maxSize = 32768; // Limit to 32KiB to avoid performance degradation.
 		try {
 			Data:read(obj);
 			print("Read OK!");

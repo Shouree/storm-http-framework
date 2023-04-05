@@ -59,7 +59,9 @@
     but the scale of the issue should be assessed first.
   - [ ] Parsing core.lang.syntax.bnf takes about 80 ms, which is a bit on the high end when compiling code...
 
-* Loose ends so far [60/107]
+* Loose ends so far [60/108]
+  - [ ] It is possible to create a function pointer to a constructor, but they will not behave
+    properly when calling the constructor of an actor, for example.
   - [ ] If a class contains a variable "center", and the layout library is imported, the class
     "center" in the library takes precedence over the class-local variable. This should probably not
     be the case.

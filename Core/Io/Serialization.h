@@ -289,11 +289,19 @@ namespace storm {
 	class EXCEPTION_EXPORT SerializationError : public Exception {
 		STORM_EXCEPTION;
 	public:
-		SerializationError(const wchar *msg) {
+	};
+
+	/**
+	 * Format errors during serialization. Contains a message and a stack trace for debugging.
+	 */
+	class EXCEPTION_EXPORT SerializationFormatError : public SerializationError {
+		STORM_EXCEPTION;
+	public:
+		SerializationFormatError(const wchar *msg) {
 			w = new (this) Str(msg);
 			saveTrace();
 		}
-		STORM_CTOR SerializationError(Str *msg) {
+		STORM_CTOR SerializationFormatError(Str *msg) {
 			w = msg;
 			saveTrace();
 		}
@@ -308,7 +316,7 @@ namespace storm {
 	/**
 	 * End of stream while reading from an object stream. Does not save a trace.
 	 */
-	class EXCEPTION_EXPORT EndOfStream : public Exception {
+	class EXCEPTION_EXPORT EndOfStream : public SerializationError {
 		STORM_EXCEPTION;
 	public:
 		STORM_CTOR EndOfStream() {}
@@ -316,6 +324,34 @@ namespace storm {
 		virtual void STORM_FN message(StrBuf *to) const {
 			*to << S("End of stream while reading an object.");
 		}
+	};
+
+	/**
+	 * Size limit exceeded during deserialization.
+	 */
+	class EXCEPTION_EXPORT SizeLimitReached : public SerializationError {
+		STORM_EXCEPTION;
+	public:
+		STORM_CTOR SizeLimitReached(Str *type, Nat size, Nat budget)
+			: type(type), size(size), budget(budget) {}
+
+		SizeLimitReached(const wchar *type, Nat size, Nat budget)
+			: type(new (engine()) Str(type)), size(size), budget(budget) {}
+
+		virtual void STORM_FN message(StrBuf *to) const {
+			*to << S("Size limit reached: trying to allocate ") << type;
+			if (size == 0) {
+				*to << S(". This would exceed the limit of ") << budget << S(" bytes.");
+			} else {
+				*to << S(" of ") << size
+					<< S(" bytes, which is larger than the current limit of ") << budget
+					<< S(" bytes.");
+			}
+		}
+	private:
+		Str *type;
+		Nat size;
+		Nat budget;
 	};
 
 	/**
@@ -357,6 +393,48 @@ namespace storm {
 
 		// Close the underlying stream.
 		void STORM_FN close() { from->close(); }
+
+		// Check array allocation. Expected to be called by types that allocate arrays separately by
+		// themselves. May throw an exception.
+		void STORM_FN checkArrayAlloc(Nat elemSize, Nat count);
+
+		// Maximum total size to allow for top-level read operations. If the in-memory size of the
+		// object would exceed this number, then an exception is thrown instead, and reading is
+		// aborted early. If this happens, the input stream is left in an intermediate state, and
+		// further reads can not be made reliably. We don't try to skip the malformed data, as the
+		// intent of this property is to guard against malformed data from possibly malicious
+		// sources. The default value is 4GiB.
+		Nat maxReadSize;
+
+		// Maximum size to allow for any individual array allocations. This value is provided in
+		// addition to 'maxSize' to control the size of individual allocations to some degree. Due
+		// to the existence of ambiguous references, the garbage collector might fail to reclaim
+		// some allocations. Large allocations thereby have a larger risk of being retained, which
+		// could in turn lead to out-of-memory conditions whenever a large object is allocated, even
+		// if it is not used afterwards. The default value is 4GiB.
+		Nat maxArraySize;
+
+		// Get/set the size of type descriptions. This is to put an upper limit on the metadata
+		// stored by this object in order to disallow out-of-memory conditions from malformed type
+		// descriptions. Default is 4GiB.
+		Nat STORM_FN maxTypeDescSize() const { return typeDescLimit; }
+		void STORM_FN maxTypeDescSize(Nat size);
+
+		// Current size of our type description.
+		Nat STORM_FN typeDescSize() const { return typeDescCurrent; }
+
+		// Set all sizes to the specified number.
+		void STORM_ASSIGN maxSize(Nat max) {
+			maxReadSize = max;
+			maxArraySize = max;
+			maxTypeDescSize(max);
+		}
+
+		// Get the remaining size budget of the last object that was read.
+		Nat STORM_FN lastReadBudget() const { return readSizeBudget; }
+
+		// Get the size of the last read object (assuming that 'maxReadSize' was not changed).
+		Nat STORM_FN lastReadSize() const { return maxReadSize - lastReadBudget(); }
 
 	private:
 		// Description of a member.
@@ -482,6 +560,15 @@ namespace storm {
 		// Directory of known type ids.
 		Map<Nat, Desc *> *typeIds;
 
+		// Limit of type desc size.
+		Nat typeDescLimit;
+
+		// Current size of the type description data, to guard against overflows.
+		Nat typeDescCurrent;
+
+		// Current remaining size budget of the top-level object that is currently being read.
+		Nat readSizeBudget;
+
 		// Information from 'start'.
 		struct Info {
 			// Type we're expecting.
@@ -519,6 +606,12 @@ namespace storm {
 
 		// Clear object ids.
 		void clearObjects();
+
+		// Check size of type descriptions. Add 'current' to it.
+		void checkTypeDescSize(Nat add);
+
+		// Check total allocation size.
+		void checkAllocSize(Nat add);
 	};
 
 

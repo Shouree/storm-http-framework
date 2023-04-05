@@ -242,6 +242,7 @@ namespace storm {
 		Function *endFn = findStormMemberFn(objStream, S("end"));
 		Function *natReadFn = findStormFn(natType, S("read"), objStream);
 		Function *putFn = findStormMemberFn(me, S("put"), Value(k, true));
+		Function *checkArrayFn = findStormMemberFn(objStream, S("checkArrayAlloc"), natType, natType);
 
 		Listing *l = new (this) Listing(true, engine.voidDesc());
 		code::Var meVar = l->createParam(me.desc(engine));
@@ -261,6 +262,12 @@ namespace storm {
 		// Find number of elements.
 		*l << fnParam(objStream.desc(engine), streamVar);
 		*l << fnCall(natReadFn->ref(), false, natType.desc(engine), count);
+
+		// Check size of array.
+		*l << fnParam(objStream.desc(engine), streamVar);
+		*l << fnParam(natType.desc(engine), natConst(kType.size()));
+		*l << fnParam(natType.desc(engine), count);
+		*l << fnCall(checkArrayFn->ref(), true);
 
 		// Read each element.
 		*l << lblLoop;
