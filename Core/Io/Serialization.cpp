@@ -248,10 +248,11 @@ namespace storm {
 	}
 
 	void ObjIStream::checkArrayAlloc(Nat elemSize, Nat count) {
-		Word totalSize = Word(elemSize) * Word(count);
-		if (totalSize > maxArraySize)
-			throwArraySizeError(engine(), Nat(min(Word(0xFFFFFFFF), totalSize)), maxArraySize);
+		Word totalSizeW = Word(elemSize) * Word(count);
+		if (totalSizeW > maxArraySize)
+			throwArraySizeError(engine(), Nat(min(Word(0xFFFFFFFF), totalSizeW)), maxArraySize);
 
+		Nat totalSize = Nat(totalSizeW);
 		if (totalSize > readSizeBudget)
 			throwArraySizeError(engine(), Nat(totalSize), readSizeBudget);
 
