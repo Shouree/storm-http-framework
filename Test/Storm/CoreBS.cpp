@@ -324,10 +324,14 @@ BEGIN_TEST(StormCtorTest, BS) {
  * Scoping.
  */
 
-BEGIN_TEST(ScopeTest, BS) {
+BEGIN_TEST_(ScopeTest, BS) {
 	CHECK_EQ(runFn<Int>(S("tests.bs.testScopeCls")), 10);
 	CHECK_EQ(runFn<Int>(S("tests.bs.testClassMember")), 20);
 	CHECK_EQ(runFn<Int>(S("tests.bs.testClassNonmember")), 20);
+	CHECK_EQ(runFn<Int>(S("tests.bs.testClassNonmemberNoDot")), 20);
+	CHECK_EQ(runFn<Int>(S("tests.bs.testClassMemberNoDot")), 20);
+	CHECK_EQ(runFn<Int>(S("tests.bs.testClassNoThis")), 20);
+	CHECK_EQ(toS(runFn<Str *>(S("tests.bs.testClassCollision"))), L"0");
 } END_TEST
 
 

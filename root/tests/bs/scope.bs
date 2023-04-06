@@ -14,13 +14,45 @@ class ScopeCls {
 		tester();
 	}
 
+	Int testScopeNoDot() {
+		tester(this);
+	}
+
+	Int testScopeNoThis() {
+		noThis();
+	}
+
+	Str testClassCollision() {
+		classCollision.toS;
+	}
+
 	Int tester() {
 		v;
+	}
+
+	Int noThis() {
+		v;
+	}
+
+	Int classCollision() {
+		0;
 	}
 }
 
 Int tester(ScopeCls s) {
 	10;
+}
+
+Int noThis() {
+	10;
+}
+
+class classCollision {
+	init() {}
+
+	Str toS() : override {
+		return "class";
+	}
 }
 
 Int testScopeCls() {
@@ -37,4 +69,25 @@ Int testClassMember() {
 Int testClassNonmember() {
 	ScopeCls c;
 	c.tester;
+}
+
+Int testClassNonmemberNoDot() {
+	ScopeCls c;
+	// Note: Equivalent to c.tester().
+	tester(c);
+}
+
+Int testClassMemberNoDot() {
+	ScopeCls c;
+	c.testScopeNoDot();
+}
+
+Int testClassNoThis() {
+	ScopeCls c;
+	c.testScopeNoThis();
+}
+
+Str testClassCollision() {
+	ScopeCls c;
+	c.testClassCollision();
 }
