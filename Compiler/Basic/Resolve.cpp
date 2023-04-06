@@ -17,21 +17,6 @@ namespace storm {
 		static Expr *findTargetThis(Block *block, SimpleName *name,
 									Actuals *params, const SrcPos &pos,
 									Named *&candidate);
-		static Expr *findTarget(Block *block, SimpleName *name,
-								const SrcPos &pos, Actuals *params,
-								bool useThis);
-
-		// Find a constructor.
-		static MAYBE(Expr *) findCtor(Scope scope, Type *t, Actuals *actual, const SrcPos &pos) {
-			BSNamePart *part = new (t) BSNamePart(Type::CTOR, pos, actual);
-			part->insert(thisPtr(t));
-
-			Function *ctor = as<Function>(t->find(part, scope));
-			if (!ctor)
-				return null;
-
-			return new (t) CtorCall(pos, scope, ctor, actual);
-		}
 
 
 		// Helper to create the actual type, given something found. If '!useLookup', then we will not use the lookup
@@ -138,7 +123,6 @@ namespace storm {
 		// 'useThis' is true, a 'this' pointer may be inserted as the first parameter.
 		static Expr *findTarget(Block *block, SimpleName *name, const SrcPos &pos, Actuals *params, bool useThis) {
 			try {
-
 				const Scope &scope = block->scope;
 
 				// Type ctors and local variables have priority.
@@ -196,6 +180,129 @@ namespace storm {
 					error->pos = pos;
 				throw;
 			}
+		}
+
+		/**
+		 * New implementation:
+		 */
+
+		BSResolvePart::BSResolvePart(Str *name, SrcPos pos, Actuals *params, MAYBE(LocalVar *) thisVar)
+			: BSNamePart(name, pos, params), thisVar(thisVar) {}
+
+		Int BSResolvePart::matches(Named *candidate, Scope source) const {
+			// #1: If it is a type without parameters, match it since we want to match its constructors.
+			if (candidate->params->empty()) {
+				if (as<Type>(candidate)) {
+					return 0;
+				}
+			}
+
+			// #2: ...
+
+			// #3: ...
+
+			return 0;
+		}
+
+		// Find a constructor.
+		static MAYBE(Expr *) findCtor(Scope scope, Type *t, Actuals *actual, const SrcPos &pos) {
+			BSNamePart *part = new (t) BSNamePart(Type::CTOR, pos, actual);
+			part->insert(thisPtr(t));
+
+			Function *ctor = as<Function>(t->find(part, scope));
+			if (!ctor)
+				return null;
+
+			return new (t) CtorCall(pos, scope, ctor, actual);
+		}
+
+		// Find a constructor. Throw otherwise.
+		static Expr *findCtorSafe(Scope scope, Type *t, Actuals *actual, const SrcPos &pos) {
+			if (Expr *e = findCtor(scope, t, actual, pos))
+				return e;
+
+			*msg << n->identifier() << S(" refers to a type, but no suitable constructor was found.\n");
+			*msg << S("  Available constructors:\n");
+			for (NameSet::Iter b = t->begin(), e = t->end(); b != e; b++) {
+				Named *v = b.v();
+				if (*v->name == Type::CTOR)
+					*msg << S("  ") << v << S("\n");
+			}
+			throw new (t) TypeError(pos, msg->toS());
+		}
+
+		// Find the this variable if it exists.
+		static MAYBE(LocalVar *) findThis(Block *block) {
+			return block->variable(new (block) SimplePart(S("this")));
+		}
+
+		// Find a constructor call.
+		static Expr *findTargetCtor(Block *block, SimpleName *name, const SrcPos &pos, Actuals *params, Bool useThis) {
+			Scope scope = block->scope;
+			Named *n = scope.find(name);
+			if (!name)
+				return new (block) UnresolvedName(block, name, pos, params, useThis);
+
+			if (Type *t = as<Type>(n))
+				return findCtorSafe(scope, t, params, pos);
+
+			StrBuf *msg = new (this) StrBuf();
+			*msg << n->identifier() << S(" refers to a ") << runtime::typeOf(n)->identifier()
+				 << S(". However, since you have specified explicit template parameters, ")
+				 << S("it has to refer to a type.");
+			throw new (block) TypeError(pos, msg->toS());
+		}
+
+		// Find the what the meaning of 'name' is in the given context. Returns a suitable
+		// expression if 'name' can be resolved, or an 'UnresolvedName' to indicate failure. This is
+		// so that implementations can detect failure without relying on exceptions. The
+		// 'UnresolvedName' throws whenever it is accessed. If 'useThis' is true, then we will
+		// attempt to insert a 'this' pointer if it exists, and if it is required by the situation.
+		static Expr *findTarget(Block *block, SimpleName *name, const SrcPos &pos, Actuals *params, bool useThis) {
+			assert(name->any(), L"Cannot resolve an empty name.");
+
+			// It is important that we traverse the scope hierarcy *once* here. Otherwise, we might
+			// accidentally give items close to the root of the name tree precedence over items
+			// close to the leaves. This often leads to confusing results.
+			Scope scope = block->scope;
+			SimplePart *last = name->last();
+
+			if (last->params->any()) {
+				// If we have parameters, we need to look for a template type and find a constructor
+				// inside that type. That is the only option.
+				return findTargetCtor(block, name, pos, params, useThis);
+			}
+
+			// Otherwise, create a BSResolvePart that we use to traverse the name tree. For this, we
+			// need to examine if we should use a 'this' pointer, and if it exists.
+			LocalVar *thisVar = useThis ? findThis() : null;
+			if (thisVar && isSuperName(name)) {
+				if (!thisVar->thisVariable())
+					throw new (block) SyntaxError(pos, S("It is not possible to use 'super' outside of member functions."));
+
+				// This is a "super" expression. Handle it.
+				assert(false, L"TODO!");
+			}
+
+			BSResolvePart *part = new (this) BSResolvePart(last->name, pos, params, thisType);
+			name->last() = part;
+
+			// Traverse the name tree.
+			Named *found = scope.find(name);
+			if (!found)
+				return new (this) UnresolvedName(block, name, pos, params, useThis);
+
+			// Translate it into a suitable expression.
+			if (Expr *expr = toExpression(scope, found, thisVar, actual, pos, true))
+				return expr;
+
+			// Error message if it is not supported.
+			StrBuf *msg = new (this) StrBuf();
+			*msg << found->identifier() S(" refers to a ") << runtime::typeOf(found)->identifier()
+				 << S(". This type is not natively supported in Basic Storm, and can therefore not ")
+				 << S("be used without custom syntax. Only functions, variables, and constructors ")
+				 << S("can be used in this manner.");
+			throw new (block) TypeError(pos, msg->toS());
 		}
 
 		Expr *namedExpr(Block *block, syntax::SStr *name, Actuals *params) {

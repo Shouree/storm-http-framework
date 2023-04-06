@@ -8,6 +8,35 @@ namespace storm {
 		STORM_PKG(lang.bs);
 
 		/**
+		 * Custom name part used to traverse the named hierarchy and find elements that possibly
+		 * need a 'this' pointer.
+		 *
+		 * To perform all name resolution in a single traversal of the name tree, the logic
+		 * implemented here is as follows:
+		 *
+		 * 1. See if the raw name (i.e. without params) matches a type. If that is the case, match
+		 *    the type (so that we can later match a constructor call).
+		 * 2. See if the name with parameters matches an entity. In that case, use that name.
+		 * 3. See if the name with a this pointer matches an enity. If so, use that.
+		 *
+		 * Comparisons in steps 2 and 3 are done using the semantics of the BSNamePart.
+		 */
+		class BSResolvePart : public BSNamePart {
+			STORM_CLASS;
+		public:
+			// Create.
+			STORM_CTOR BSResolvePart(Str *name, SrcPos pos, Actuals *params, MAYBE(LocalVar *) thisVar);
+
+			// Check if an item matches or not.
+			virtual Int STORM_FN matches(Named *candidate, Scope source) const;
+
+		private:
+			// Type of the this pointer.
+			LocalVar *thisVar;
+		};
+
+
+		/**
 		 * Unresolved named expression returned from 'namedExpr' in case a name is not found. This
 		 * is useful since parts of the system (such as the assignment operator when using setters)
 		 * need to inspect and modify a possibly incorrect name.

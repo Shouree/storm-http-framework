@@ -59,12 +59,9 @@
     but the scale of the issue should be assessed first.
   - [ ] Parsing core.lang.syntax.bnf takes about 80 ms, which is a bit on the high end when compiling code...
 
-* Loose ends so far [60/108]
+* Loose ends so far [61/108]
   - [ ] It is possible to create a function pointer to a constructor, but they will not behave
     properly when calling the constructor of an actor, for example.
-  - [ ] If a class contains a variable "center", and the layout library is imported, the class
-    "center" in the library takes precedence over the class-local variable. This should probably not
-    be the case.
   - [ ] Font sizes in DirectX (in particular, the default font) are larger than when using Gdi.
   - [ ] We want to allocate threads in some kind of pool. since the minimum alignment for VirtualAlloc on Windows
     is 64k, we might waste quite a lot of memory when allocating small stacks.
@@ -149,6 +146,9 @@
   - [ ] Move the 'assign' declaration to being purely a decorator (ie. Foo field(Foo v) : assign)?
   - [ ] If a type has a '==' or '<' outside the type itself, the corresponding operator will not be present in
     a Handle, like '<<' at the moment.
+  - [X] If a class contains a variable "center", and the layout library is imported, the class
+    "center" in the library takes precedence over the class-local variable. This should probably not
+    be the case.
   - [X] Str:unescape() does not handle \\. Adding this breaks the syntax language, so we need to
     revise the logic for that particular language.
   - [X] Trap division by zero errors. On Linux + AMD64, division by zero crashes the process. ARM gives zero.
