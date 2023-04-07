@@ -9,3 +9,4 @@ library+=ssl
 
 [unix,!dist]
 define+=RUNTIME_OPENSSL_LINK
+library+=dl
