@@ -19,9 +19,6 @@ namespace storm {
 			// If we have a thisExpr, create a BSNamePart that matches with the this pointer.
 			if (thisExpr)
 				secondPass = new (this) BSNamePart(name, pos, params->withFirst(thisExpr));
-
-			ctorMatcher = new (this) BSNamePart(new (this) Str(Type::CTOR), pos,
-												params->withFirst(new (this) DummyExpr(pos, Value())));
 		}
 
 		Int BSResolvePart::matches(Named *candidate, Scope source) const {
@@ -31,7 +28,12 @@ namespace storm {
 			if (candidate->params->empty()) {
 				if (Type *t = as<Type>(candidate)) {
 
-					ctorMatcher->alter(0, thisPtr(t));
+					if (ctorMatcher) {
+						ctorMatcher->alter(0, thisPtr(t));
+					} else {
+						ctorMatcher = this->withFirst(thisPtr(t));
+						ctorMatcher->name = new (this) Str(Type::CTOR);
+					}
 
 					if (Named *ctor = t->find(ctorMatcher, source)) {
 						// Compute penalty for this option.

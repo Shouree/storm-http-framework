@@ -42,7 +42,7 @@ namespace storm {
 			MAYBE(SimplePart *) secondPass;
 
 			// Lookup used to match constructors (cache object so we don't need memory allocations).
-			BSNamePart *ctorMatcher;
+			mutable BSNamePart *ctorMatcher;
 		};
 
 

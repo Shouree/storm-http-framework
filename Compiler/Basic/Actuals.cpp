@@ -20,13 +20,17 @@ namespace storm {
 			expressions = new (this) Array<Expr *>(*o.expressions);
 		}
 
-		Array<Value> *Actuals::values() {
-			Array<Value> *v = new (this) Array<Value>();
+		static Array<Value> *values(Array<Expr *> *expressions) {
+			Array<Value> *v = new (expressions) Array<Value>();
 			v->reserve(expressions->count());
 			for (nat i = 0; i < expressions->count(); i++)
 				v->push(expressions->at(i)->result().type());
 
 			return v;
+		}
+
+		Array<Value> *Actuals::values() {
+			return storm::bs::values(expressions);
 		}
 
 		void Actuals::add(Expr *e) {
@@ -107,6 +111,9 @@ namespace storm {
 			exprs = new (this) Array<Expr *>(*params->expressions);
 		}
 
+		BSNamePart::BSNamePart(Str *name, SrcPos pos, Array<Expr *> *params) :
+			SimplePart(name, values(params)), pos(pos), exprs(params) {}
+
 		void BSNamePart::insert(Expr *first) {
 			insert(first, 0);
 		}
@@ -132,6 +139,15 @@ namespace storm {
 
 		void BSNamePart::strictFirst() {
 			strictThis = true;
+		}
+
+		BSNamePart *BSNamePart::withFirst(Value val) const {
+			Array<Expr *> *exprs = new (this) Array<Expr *>();
+			exprs->reserve(this->exprs->count() + 1);
+			*exprs << new (this) DummyExpr(pos, val);
+			for (Nat i = 0; i < this->exprs->count(); i++)
+				*exprs << this->exprs->at(i);
+			return new (this) BSNamePart(name, pos, exprs);
 		}
 
 		// TODO: Consider using 'max' for match weights instead?

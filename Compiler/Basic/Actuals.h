@@ -81,6 +81,9 @@ namespace storm {
 			// first parameter.
 			void STORM_FN strictFirst();
 
+			// Create a copy of this object, but inserting a new value as the first parameter.
+			BSNamePart *STORM_FN withFirst(Value val) const;
+
 			// Matches?
 			virtual Int STORM_FN matches(Named *candidate, Scope source) const;
 
@@ -98,6 +101,8 @@ namespace storm {
 
 			// Strict matching of the 'this' parameter.
 			Bool strictThis;
+
+			BSNamePart(Str *name, SrcPos pos, Array<Expr *> *exprs);
 		};
 
 		// Helper to create a Name with one BSNamePart inside of it.

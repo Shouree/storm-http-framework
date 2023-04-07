@@ -75,6 +75,7 @@ static Auto<TypeRef> parseTypeRef(Tokenizer &tok) {
 	if (tok.skipIf(L"const"))
 		isConst = true;
 	tok.skipIf(L"volatile"); // Just ignore 'volatile' so far.
+	tok.skipIf(L"mutable"); // Just ignore 'mutable' -- we do not worry about const.
 
 	Auto<TypeRef> type;
 	if (tok.skipIf(L"MAYBE")) {
