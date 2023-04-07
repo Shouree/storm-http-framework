@@ -85,7 +85,7 @@ namespace storm {
 
 	static void outputPart(StrBuf *to, const Value &v) {
 		if (v.type)
-			v.type->path()->toS(to);
+			v.type->safePath()->toS(to);
 		else
 			*to << S("void");
 		if (v.ref)

@@ -59,8 +59,12 @@ class ArrayInit extends Expr {
 	Int castPenalty(Value to) {
 		if (to.ref) {
 			-1;
-		} else if (acceptable(unwrapArray(to))) {
-			1;
+		} else if (isArray(to)) {
+			if (acceptable(unwrapArray(to))) {
+				1;
+			} else {
+				-1;
+			}
 		} else {
 			-1;
 		}
