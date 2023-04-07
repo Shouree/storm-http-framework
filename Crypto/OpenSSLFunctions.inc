@@ -20,7 +20,7 @@ SSL_FN(libSSL, int, SSL_CTX_use_PrivateKey, (SSL_CTX *ctx, EVP_PKEY *pk), (ctx, 
 SSL_FN(libSSL, int, SSL_shutdown, (SSL *ssl), (ssl))
 SSL_FN(libSSL, X509_VERIFY_PARAM *, SSL_get0_param, (SSL *ssl), (ssl))
 SSL_FN(libSSL, long, SSL_ctrl, (SSL *ssl, int cmd, long larg, void *parg), (ssl, cmd, larg, parg))
-SSL_FN(libSSL, X509 *, SSL_get1_peer_certificate, (const SSL *ssl), (ssl))
+SSL_FN_ALT(libSSL, X509 *, SSL_get_peer_certificate, (const SSL *ssl), (ssl), "SSL_get1_peer_certificate")
 SSL_FN(libSSL, long, SSL_get_verify_result, (const SSL *ssl), (ssl))
 
 SSL_FN(libSSL, void, X509_free, (X509 *x), (x))
