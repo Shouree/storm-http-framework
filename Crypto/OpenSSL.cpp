@@ -9,6 +9,7 @@
 #include "Exception.h"
 #include "OpenSSLCert.h"
 #include "Core/Convert.h"
+#include "RuntimeSSL.h"
 
 #include <openssl/err.h>
 #include <openssl/opensslv.h>
@@ -30,6 +31,8 @@ namespace ssl {
 	class Initializer {
 	public:
 		Initializer() {
+			initRuntimeSSL();
+
 			SSL_library_init();
 			SSL_load_error_strings();
 			CONF_modules_load_file(NULL, NULL, 0);

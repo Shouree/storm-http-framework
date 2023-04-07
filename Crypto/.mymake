@@ -3,6 +3,9 @@ package=crypto
 input=*
 stormUsingNamespace=storm
 
-[unix]
+[unix,dist]
 library+=crypto
 library+=ssl
+
+[unix,!dist]
+define+=RUNTIME_OPENSSL_LINK

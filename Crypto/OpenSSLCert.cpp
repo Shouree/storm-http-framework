@@ -6,6 +6,8 @@
 
 #ifdef POSIX
 
+#include "OpenSSL.h"
+
 #include <openssl/bio.h>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
@@ -21,6 +23,8 @@ namespace ssl {
 	class StrBIO {
 	public:
 		StrBIO(Str *data) {
+			ssl::init();
+
 			size_t count = convert(data->c_str(), (char *)0, 0);
 			// Remove null-terminator.
 			count = max(count, size_t(1)) - 1;

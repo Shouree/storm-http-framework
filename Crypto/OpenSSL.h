@@ -15,6 +15,9 @@ namespace ssl {
 	class ServerContext;
 	class CertificateKey;
 
+	// Ensure the library is initialized.
+	void init();
+
 	/**
 	 * OpenSSL context.
 	 */
