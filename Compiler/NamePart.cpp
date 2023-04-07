@@ -75,6 +75,10 @@ namespace storm {
 		return distance;
 	}
 
+	MAYBE(SimplePart *) SimplePart::nextOption() const {
+		return null;
+	}
+
 	Bool SimplePart::visible(Named *candidate, Scope source) const {
 		return candidate->visibleFrom(source);
 	}

@@ -33,6 +33,9 @@ namespace storm {
 			inline Bool STORM_FN empty() { return expressions->empty(); }
 			inline Bool STORM_FN any() { return expressions->any(); }
 
+			// Count?
+			inline Nat STORM_FN count() { return expressions->count(); }
+
 			// Add a parameter.
 			void STORM_FN add(Expr *expr);
 
@@ -63,6 +66,10 @@ namespace storm {
 			STORM_CTOR BSNamePart(Str *name, SrcPos pos, Actuals *params);
 			BSNamePart(const wchar *name, SrcPos pos, Actuals *params);
 
+			// Insert an expression as the first parameter (used for this pointers).
+			void STORM_FN insert(Expr *first);
+			void STORM_FN insert(Expr *first, Nat at);
+
 			// Insert a type as the first parameter (used for this pointers).
 			void STORM_FN insert(Value first);
 			void STORM_FN insert(Value first, Nat at);
@@ -77,12 +84,17 @@ namespace storm {
 			// Matches?
 			virtual Int STORM_FN matches(Named *candidate, Scope source) const;
 
-		private:
-			// Original expressions. (may contain null).
-			Array<Expr *> *exprs;
+		protected:
+			// Check a single parameter. Used to implement a custom 'matches' in derived classes.
+			Int checkParam(Value formal, Nat index, Bool first, NamedFlags flags, Scope context) const;
+			Int checkParam(Value formal, Expr *actual, Bool first, NamedFlags flags, Scope context) const;
 
 			// Position of this part.
 			SrcPos pos;
+
+		private:
+			// Original expressions. (may contain null).
+			Array<Expr *> *exprs;
 
 			// Strict matching of the 'this' parameter.
 			Bool strictThis;

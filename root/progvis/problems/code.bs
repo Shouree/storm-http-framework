@@ -82,8 +82,7 @@ class CodePainter extends Painter {
 	Bool render(Size me, Graphics g) : override {
 		if (code) {
 			Size codeSz = code.size;
-			// Note: We should *not* need "this." here.
-			if (this.center) {
+			if (center) {
 				// Just center the text as a message.
 				g.draw(code, brush, Point((me - codeSz) / 2));
 			} else {

@@ -324,7 +324,7 @@ BEGIN_TEST(StormCtorTest, BS) {
  * Scoping.
  */
 
-BEGIN_TEST_(ScopeTest, BS) {
+BEGIN_TEST(ScopeTest, BS) {
 	CHECK_EQ(runFn<Int>(S("tests.bs.testScopeCls")), 10);
 	CHECK_EQ(runFn<Int>(S("tests.bs.testClassMember")), 20);
 	CHECK_EQ(runFn<Int>(S("tests.bs.testClassNonmember")), 20);

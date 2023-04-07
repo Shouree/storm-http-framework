@@ -69,6 +69,12 @@ namespace storm {
 		// badness. We also assume that an exact match has a badness of 0.
 		virtual Int STORM_FN matches(Named *candidate, Scope source) const;
 
+		// Present the lookup system with an alternative part. Parts are resolved in the order they
+		// appear, and only the first one matches. This can be used to implement multiple levels of
+		// name resolution rules without having to traverse the name tree multiple times (which is
+		// both slow and causes confusing behavior in some situations).
+		virtual MAYBE(SimplePart *) STORM_FN nextOption() const;
+
 		// Determine if a particular named entity should be visible. The default implementation
 		// simply calls 'candidate->visibleFrom(source)', which is suitable in most cases. This
 		// function is provided to allow overriding the default visibility rules.
@@ -83,6 +89,7 @@ namespace storm {
 		// Hash.
 		virtual Nat STORM_FN hash() const;
 	};
+
 
 	/**
 	 * A NamePart which has unresolved (recursive) parameters.

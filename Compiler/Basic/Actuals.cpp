@@ -107,9 +107,17 @@ namespace storm {
 			exprs = new (this) Array<Expr *>(*params->expressions);
 		}
 
+		void BSNamePart::insert(Expr *first) {
+			insert(first, 0);
+		}
+
+		void BSNamePart::insert(Expr *first, Nat at) {
+			params->insert(at, first->result().type());
+			exprs->insert(at, first);
+		}
+
 		void BSNamePart::insert(Value first) {
-			params->insert(0, first);
-			exprs->insert(0, new (this) DummyExpr(pos, first));
+			insert(first, 0);
 		}
 
 		void BSNamePart::insert(Value first, Nat at) {
@@ -134,23 +142,10 @@ namespace storm {
 			if (c->count() != params->count())
 				return -1;
 
-			int distance = 0;
+			Int distance = 0;
 
-			for (nat i = 0; i < c->count(); i++) {
-				// We can convert everything to references, so treat everything as if it was a plain
-				// value. However, we don't want to use automatic type casts when the formal
-				// parameter is a reference, since that eliminates any side effects (most notably
-				// for the 'this' parameter).
-
-				Value formal = c->at(i);
-				Expr *actual = exprs->at(i);
-
-				int penalty = -1;
-				if (formal.ref && i == 0 && strictThis) {
-					penalty = plainCastPenalty(actual->result(), formal.asRef(false), candidate->flags);
-				} else {
-					penalty = castPenalty(actual, formal.asRef(false), candidate->flags, context);
-				}
+			for (Nat i = 0; i < c->count(); i++) {
+				Int penalty = checkParam(c->at(i), i, i == 0, candidate->flags, context);
 
 				if (penalty >= 0)
 					distance += penalty;
@@ -159,6 +154,22 @@ namespace storm {
 			}
 
 			return distance;
+		}
+
+		Int BSNamePart::checkParam(Value formal, Nat index, Bool first, NamedFlags flags, Scope context) const {
+			return checkParam(formal, exprs->at(index), first, flags, context);
+		}
+
+		Int BSNamePart::checkParam(Value formal, Expr *actual, Bool first, NamedFlags flags, Scope context) const {
+			// We can convert everything to references, so treat everything as if it was a plain
+			// value. However, we don't want to use automatic type casts when the formal
+			// parameter is a reference, since that eliminates any side effects (most notably
+			// for the 'this' parameter).
+			if (formal.ref && first && strictThis) {
+				return plainCastPenalty(actual->result(), formal.asRef(false), flags);
+			} else {
+				return castPenalty(actual, formal.asRef(false), flags, context);
+			}
 		}
 
 		Name *bsName(syntax::SStr *name, Actuals *params) {

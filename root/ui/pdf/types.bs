@@ -837,7 +837,7 @@ class RadialShading extends ShadingPattern {
 
 	// Output our data.
 	void outputShading(StrBuf to, Transform tfm) {
-		to << "/Coords [" << this.center.x << " " << this.center.y << " 0 " << this.center.x << " " << this.center.y << " " << radius << "] ";
+		to << "/Coords [" << center.x << " " << center.y << " 0 " << center.x << " " << center.y << " " << radius << "] ";
 		to << "/Extend [true true] ";
 	}
 }

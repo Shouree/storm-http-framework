@@ -49,7 +49,7 @@ value ThreadId {
 	}
 
 	// Empty?
-	Bool empty() { noInit() | (v == 0); }
+	Bool empty() { this.noInit() | (v == 0); }
 	Bool any() { !empty(); }
 
 	// Not initialized?

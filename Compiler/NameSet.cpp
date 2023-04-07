@@ -288,6 +288,16 @@ namespace storm {
 	}
 
 	Named *NameSet::tryFind(SimplePart *part, Scope source, NameOverloads *from) {
+		while (part) {
+			if (Named *found = tryFindSingle(part, source, from))
+				return found;
+
+			part = part->nextOption();
+		}
+		return null;
+	}
+
+	Named *NameSet::tryFindSingle(SimplePart *part, Scope source, NameOverloads *from) {
 		// Note: We do this in two steps. First, we find the best match, and keep track of whether
 		// or not there are multiple instances of that or not. If there are multiple instances of
 		// the best match, we need to produce an error. To do that, we loop through the candidates a

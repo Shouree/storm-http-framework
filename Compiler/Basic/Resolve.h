@@ -15,24 +15,34 @@ namespace storm {
 		 * implemented here is as follows:
 		 *
 		 * 1. See if the raw name (i.e. without params) matches a type. If that is the case, match
-		 *    the type (so that we can later match a constructor call).
+		 *    the type if there is a suitable constructor there (so that we can later match a constructor call).
 		 * 2. See if the name with parameters matches an entity. In that case, use that name.
 		 * 3. See if the name with a this pointer matches an enity. If so, use that.
 		 *
-		 * Comparisons in steps 2 and 3 are done using the semantics of the BSNamePart.
+		 * In the implementation, we lump the two first together as a single pass.
+		 *
+		 * Note: We dont show the implicit this parameter, since some lookups will look at the first
+		 * parameter to search in different parts of the name tree.
 		 */
 		class BSResolvePart : public BSNamePart {
 			STORM_CLASS;
 		public:
 			// Create.
-			STORM_CTOR BSResolvePart(Str *name, SrcPos pos, Actuals *params, MAYBE(LocalVar *) thisVar);
+			STORM_CTOR BSResolvePart(Str *name, SrcPos pos, Actuals *params, MAYBE(Expr *) thisExpr);
 
-			// Check if an item matches or not.
+			// Check if an item matches in the first step. We modify the lookup a bit here to check
+			// for type constructors as well.
 			virtual Int STORM_FN matches(Named *candidate, Scope source) const;
 
+			// Provide the next part if we need it.
+			virtual MAYBE(SimplePart *) STORM_FN nextOption() const;
+
 		private:
-			// Type of the this pointer.
-			LocalVar *thisVar;
+			// Part used for the second option.
+			MAYBE(SimplePart *) secondPass;
+
+			// Lookup used to match constructors (cache object so we don't need memory allocations).
+			BSNamePart *ctorMatcher;
 		};
 
 

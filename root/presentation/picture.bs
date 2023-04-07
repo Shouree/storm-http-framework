@@ -218,14 +218,14 @@ class Node extends PElement {
 
 	// Get different anchor points.
 	Point center() { pos.center; }
-	Point north() { north.pick(pos); }
-	Point northEast() { northEast.pick(pos); }
-	Point east() { east.pick(pos); }
-	Point southEast() { southEast.pick(pos); }
-	Point south() { south.pick(pos); }
-	Point southWest() { southWest.pick(pos); }
-	Point west() { west.pick(pos); }
-	Point northWest() { northWest.pick(pos); }
+	Point north() { layout:north.pick(pos); }
+	Point northEast() { layout:northEast.pick(pos); }
+	Point east() { layout:east.pick(pos); }
+	Point southEast() { layout:southEast.pick(pos); }
+	Point south() { layout:south.pick(pos); }
+	Point southWest() { layout:southWest.pick(pos); }
+	Point west() { layout:west.pick(pos); }
+	Point northWest() { layout:northWest.pick(pos); }
 
 	// Place at various positions.
 	void place(Cardinal dir, Float distance, Point origin) {

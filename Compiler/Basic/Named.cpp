@@ -96,7 +96,9 @@ namespace storm {
 			BlockLookup *lookup = as<BlockLookup>(scope.top);
 			if (!lookup)
 				throw new (this) InternalError(S("Can not use FnCall::name() without having a scope referring to a block."));
-			return new (this) UnresolvedName(lookup->block, toExecute->path(), pos, params, false);
+			SimpleName *path = toExecute->path();
+			path->last()->params = new (this) Array<Value>();
+			return new (this) UnresolvedName(lookup->block, path, pos, params, false);
 		}
 
 		void FnCall::makeAsync() {
