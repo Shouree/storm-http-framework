@@ -36,6 +36,18 @@ namespace storm {
 		return this;
 	}
 
+	Exception *Exception::saveTrace(void *context) {
+		if (stackTrace.empty()) {
+			try {
+				stackTrace = collectStackTrace(engine(), context);
+			} catch (...) {
+				// If we get an error, we just ignore it here. Better that we can throw an exception
+				// at all than crashing when trying to grab a stack trace!
+			}
+		}
+		return this;
+	}
+
 	RuntimeError::RuntimeError() {}
 
 	GcError::GcError(const wchar *msg) : msg(msg) {
@@ -53,6 +65,10 @@ namespace storm {
 		saveTrace();
 	}
 
+	DivisionByZero::DivisionByZero(void *context) {
+		saveTrace(context);
+	}
+
 	void DivisionByZero::message(StrBuf *to) const {
 		*to << S("Integer division by zero");
 	}
@@ -60,6 +76,10 @@ namespace storm {
 
 	MemoryAccessError::MemoryAccessError(Word address, Type type) : address(address), type(type) {
 		saveTrace();
+	}
+
+	MemoryAccessError::MemoryAccessError(Word address, Type type, void *context) : address(address), type(type) {
+		saveTrace(context);
 	}
 
 	void MemoryAccessError::message(StrBuf *to) const {

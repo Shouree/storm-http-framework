@@ -87,10 +87,14 @@ namespace storm {
 	};
 
 	StackTrace collectStackTrace(EnginePtr e) {
+		return collectStackTrace(e, null);
+	}
+
+	StackTrace collectStackTrace(EnginePtr e, void *state) {
 		StackTrace result(e.v);
 		StormGen gen(result);
 
-		createStackTrace(gen, 0);
+		createStackTrace(gen, 0, state);
 
 		return result;
 	}

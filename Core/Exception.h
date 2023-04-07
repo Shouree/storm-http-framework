@@ -36,6 +36,9 @@ namespace storm {
 		// errors). Returns 'this' to allow chaining it after creation.
 		Exception *STORM_FN saveTrace();
 
+		// For providing a context in exception handlers.
+		Exception *saveTrace(void *context);
+
 	protected:
 		// Regular to string implementation.
 		virtual void STORM_FN toS(StrBuf *to) const;
@@ -91,6 +94,7 @@ namespace storm {
 	public:
 		// Create.
 		STORM_CTOR DivisionByZero();
+		DivisionByZero(void *context);
 
 		// Message.
 		virtual void STORM_FN message(StrBuf *to) const;
@@ -112,6 +116,7 @@ namespace storm {
 
 		// Create. If 'mapped' is true, then the address is mapped, but the access type was invalid.
 		STORM_CTOR MemoryAccessError(Word address, Type type);
+		MemoryAccessError(Word address, Type type, void *context);
 
 		// Message.
 		virtual void STORM_FN message(StrBuf *to) const;

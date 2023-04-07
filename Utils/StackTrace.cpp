@@ -122,24 +122,27 @@ static void initFrame(CONTEXT &context, STACKFRAME64 &frame) {
 // Warning about not being able to protect from stack-overruns...
 #pragma warning ( disable : 4748 )
 
-void createStackTrace(TraceGen &gen, nat skip) {
+void createStackTrace(TraceGen &gen, nat skip, void *state) {
 	// Initialize the library if it is not already done.
 	dbgHelp();
 
 	CONTEXT context;
-
+	if (state) {
+		context = *(CONTEXT *)state;
+	} else {
 #ifdef X64
-	RtlCaptureContext(&context);
+		RtlCaptureContext(&context);
 #else
-	// Sometimes RtlCaptureContext crashes for X86, so we do it with inline-assembly instead!
-	__asm {
-	label:
-		mov [context.Ebp], ebp;
-		mov [context.Esp], esp;
-		mov eax, [label];
-		mov [context.Eip], eax;
-	}
+		// Sometimes RtlCaptureContext crashes for X86, so we do it with inline-assembly instead!
+		__asm {
+		label:
+			mov [context.Ebp], ebp;
+			mov [context.Esp], esp;
+			mov eax, [label];
+			mov [context.Eip], eax;
+		}
 #endif
+	}
 
 	HANDLE process = GetCurrentProcess();
 	HANDLE thread = GetCurrentThread();
@@ -198,14 +201,18 @@ static NT_TIB *getTIB() {
 	return tib;
 }
 
-void createStackTrace(TraceGen &gen, nat skip) {
+void createStackTrace(TraceGen &gen, nat skip, void *state) {
 	NT_TIB *tib = getTIB();
 	void *stackMax = tib->StackBase;
 	void *stackMin = tib->StackLimit;
 
 	void *base = null;
-	__asm {
-		mov base, ebp;
+	if (state) {
+		base = ((CONTEXT *)state)->Ebp;
+	} else {
+		__asm {
+			mov base, ebp;
+		}
 	}
 
 	// Count frames.
@@ -244,7 +251,8 @@ void createStackTrace(TraceGen &gen, nat skip) {
 // Note: Calling "backtrace()" on Arm64 sometimes crashes internally if there are functions without
 // unwind info on the stack. However, the calling convention requires storing stack- and base
 // pointers on the stack. That makes it very easy to traverse the stack anyway!
-void createStackTrace(TraceGen &gen, nat skip) {
+void createStackTrace(TraceGen &gen, nat skip, void *state) {
+	(void)state; // TODO: We could extract x29 from state here.
 	void *framePointer = null;
 	__asm__ volatile ("mov %0, x29\n"
 					: "=r" (framePointer)
@@ -278,7 +286,8 @@ void createStackTrace(TraceGen &gen, nat skip) {
 
 #else
 
-void createStackTrace(TraceGen &gen, nat skip) {
+void createStackTrace(TraceGen &gen, nat skip, void *state) {
+	(void) state;
 	// Note: We could call _Unwind_Backtrace directly to avoid any size limitations.
 	const int MAX_DEPTH = 100;
 	void *buffer[MAX_DEPTH];

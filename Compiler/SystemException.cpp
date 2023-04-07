@@ -225,9 +225,9 @@ namespace storm {
 		MEMORY_BASIC_INFORMATION memInfo;
 		VirtualQuery((LPCVOID)address, &memInfo, sizeof(memInfo));
 		if (memInfo.State == MEM_COMMIT)
-			throw new (*e) MemoryAccessError(address, MemoryAccessError::invalidAccess);
+			throw new (*e) MemoryAccessError(address, MemoryAccessError::invalidAccess, info->ContextRecord);
 		else
-			throw new (*e) MemoryAccessError(address, MemoryAccessError::notMapped);
+			throw new (*e) MemoryAccessError(address, MemoryAccessError::notMapped, info->ContextRecord);
 	}
 
 
@@ -246,11 +246,12 @@ namespace storm {
 				// guess based on how ACCESS_VIOLATION works.
 				throw new (*e) MemoryAccessError(
 					info->ExceptionRecord->ExceptionInformation[1],
-					MemoryAccessError::invalidAlignment);
+					MemoryAccessError::invalidAlignment,
+					info->ContextRecord);
 			break;
 		case EXCEPTION_INT_DIVIDE_BY_ZERO:
 			if (Engine *e = findEngine(info))
-				throw new (*e) DivisionByZero();
+				throw new (*e) DivisionByZero(info->ContextRecord);
 			break;
 		}
 

@@ -88,4 +88,6 @@ public:
 	// Add a frame.
 	virtual void put(const StackFrame &frame) = 0;
 };
-void createStackTrace(TraceGen &gen, nat skip = 0);
+
+// State is a pointer to a platform-specific collected stack state.
+void createStackTrace(TraceGen &gen, nat skip = 0, void *state = null);
