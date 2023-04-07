@@ -58,8 +58,6 @@ namespace ssl {
 
 		void *libCrypto = dlopen("libcrypto.so", RTLD_NOW | RTLD_GLOBAL);
 		void *libSSL = dlopen("libssl.so", RTLD_NOW);
-		PVAR(libCrypto);
-		PVAR(libSSL);
 
 		if (!libSSL || !libCrypto)
 			throw new (runtime::someEngine()) SSLError(S("Unable to load libssl.so and/or libcrypto.so. Make sure they are installed!"));
