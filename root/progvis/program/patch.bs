@@ -851,9 +851,19 @@ private void generateCallTracking(Program program, PatchParams to, Function fn) 
 
 // Generate a simpler version of call tracking that only initializes things needed for the memory tracking.
 private void generateInit(Program program, PatchParams to, Function fn) on Compiler {
-	var enterFn = named{Program:functionEntered<Program>};
-	to.to << fnParam(ptrDesc, objPtr(program));
-	to.to << fnCall(enterFn.ref, true, ptrDesc, to.memTracker);
+	var enterFn = named{Program:anonFunctionEntered<Program>};
+	// TODO: It is not always safe to do this... The destructor is expected to be a free function,
+	// but in almost all cases, it does not matter.
+	var exitFn = named{Program:anonFunctionExited<Program>};
+
+	Listing l = to.to;
+
+	Var v = l.createVar(l.root, sPtr, exitFn.ref);
+	l.moveFirst(v);
+	l << mov(v, objPtr(program));
+
+	l << fnParam(ptrDesc, objPtr(program));
+	l << fnCall(enterFn.ref, true, ptrDesc, to.memTracker);
 }
 
 // Check if the listing contains any location information at all.

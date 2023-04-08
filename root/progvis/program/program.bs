@@ -329,9 +329,9 @@ class Program on Render {
 	}
 
 	// This function will be called on function entry of a non-traced function. 'functionExited'
-	// will not be called for this function. The main purpose of this function is to acquire the
-	// MemTracker object for this thread.
-	package MemTracker functionEntered() {
+	// will still not be called for this function so that we can properly track when the thread
+	// exists.
+	package MemTracker anonFunctionEntered() {
 		Word id = currentUThread();
 		ProgThread t = if (threads.has(id)) {
 			threads.get(id);
@@ -341,7 +341,7 @@ class Program on Render {
 			t;
 		};
 
-		t.memory;
+		t.onAnonFunctionEntered();
 	}
 
 	// This function will be called by the executed code to notify that a (traced) function is about
@@ -353,6 +353,27 @@ class Program on Render {
 
 		ProgThread t = threads.get(id);
 		var notify = t.onFunctionExited();
+		if (!t.alive) {
+			removeThread(id, t);
+
+			if (f = t.watch)
+				spawn checkErrors(t.threadId, f);
+
+			lastTerminatedId = t.threadId;
+			if (notify)
+				notifyChange(true);
+		}
+	}
+
+	// This function will be called by the executed code to notify that an anonymous function is
+	// about to exit.
+	package void anonFunctionExited() {
+		Word id = currentUThread();
+		if (!threads.has(id))
+			return;
+
+		ProgThread t = threads.get(id);
+		var notify = t.onAnonFunctionExited();
 		if (!t.alive) {
 			removeThread(id, t);
 
