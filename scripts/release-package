@@ -32,7 +32,7 @@ function launcher {
 
     if [[ "$2" =~ \.bat$ ]]
     then
-	echo '"@%~dp0Storm.exe" -f '"$fn" > "$2"
+	echo '@"%~dp0Storm.exe" -f '"$fn" > "$2"
     else
 	(
 	    echo '#!/bin/bash'
