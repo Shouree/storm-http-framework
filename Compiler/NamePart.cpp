@@ -79,6 +79,10 @@ namespace storm {
 		return null;
 	}
 
+	Bool SimplePart::scopeParam(Nat id) const {
+		return false;
+	}
+
 	Bool SimplePart::visible(Named *candidate, Scope source) const {
 		return candidate->visibleFrom(source);
 	}

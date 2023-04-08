@@ -175,13 +175,24 @@ namespace storm {
 		}
 
 		Named *SyntaxLookup::find(Scope in, SimpleName *name) {
-			if (name->count() == 1) {
-				SimplePart *last = name->last();
-				if (*last->name == S("SStr") && last->params->empty())
-					return SStr::stormType(engine());
+			// Note: In contrast to the lookup in Basic Storm, the syntax language does not really
+			// have local scope, and therefore we don't have to worry about local variables clashing
+			// with functions to the same extent. It is also nearly always clear what is a variable
+			// and what is a function.
 
-				if (last->params->any() && last->params->at(0) != Value()) {
-					if (Named *r = last->params->at(0).type->find(last, in))
+			if (name->count() == 1) {
+				for (SimplePart *last = name->last(); last; last = last->nextOption()) {
+					if (last->params->empty()) {
+						if (*last->name == S("SStr"))
+							return SStr::stormType(engine());
+						continue;
+					}
+
+					Value firstParam = last->params->at(0);
+					if (!firstParam.type)
+						continue;
+
+					if (Named *r = firstParam.type->find(last, in))
 						return r;
 				}
 			}

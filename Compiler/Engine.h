@@ -114,6 +114,9 @@ namespace storm {
 		// Get the root package.
 		Package *package();
 
+		// Get the core package. Stored specially since it is often needed.
+		Package *corePackage();
+
 		// Get a package relative to the root. If 'create', the package will be created. No
 		// parameters are supported in the name.
 		Package *package(SimpleName *name, bool create = false);
@@ -226,6 +229,9 @@ namespace storm {
 
 			// Root package.
 			Package *root;
+
+			// Core package (populated on demand).
+			Package *corePkg;
 
 			// Quick lookup from path to package.
 			Map<Url *, Package *> *pkgMap;

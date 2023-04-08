@@ -81,6 +81,12 @@ namespace storm {
 			// first parameter.
 			void STORM_FN strictFirst();
 
+			// Set the first parameter as having been specified explicitly.
+			void STORM_FN explicitFirst();
+
+			// Was the first parameter explicit?
+			Bool STORM_FN scopeParam(Nat id) const;
+
 			// Create a copy of this object, but inserting a new value as the first parameter.
 			BSNamePart *STORM_FN withFirst(Value val) const;
 
@@ -101,6 +107,9 @@ namespace storm {
 
 			// Strict matching of the 'this' parameter.
 			Bool strictThis;
+
+			// Explicit first parameter.
+			Bool expFirst;
 
 			BSNamePart(Str *name, SrcPos pos, Array<Expr *> *exprs);
 		};

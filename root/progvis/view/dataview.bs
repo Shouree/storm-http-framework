@@ -378,7 +378,7 @@ class ArrayView extends DataView {
 			var nameSz = v.text.size;
 			var dataSz = v.value.size;
 
-			// Align the text a bit nicer on the y-acis, to line up the baselines...
+			// Align the text a bit nicer on the y-axis, to line up the baselines...
 			g.draw(v.text, dataFg, at + Point(0, dataBorder.h));
 
 			v.value.pos = at + Point(width - dataSz.w - xBorder*2, 0);

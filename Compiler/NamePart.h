@@ -75,6 +75,12 @@ namespace storm {
 		// both slow and causes confusing behavior in some situations).
 		virtual MAYBE(SimplePart *) STORM_FN nextOption() const;
 
+		// Note if a parameter is expected to alter the scope of searches. For example, the
+		// expression a.b() is expected to look inside 'a' before looking inside other scopes. This
+		// is not something the system respects by default. Rather, individual lookup
+		// implementations may choose to respect it.
+		virtual Bool STORM_FN scopeParam(Nat id) const;
+
 		// Determine if a particular named entity should be visible. The default implementation
 		// simply calls 'candidate->visibleFrom(source)', which is suitable in most cases. This
 		// function is provided to allow overriding the default visibility rules.

@@ -328,7 +328,7 @@ BEGIN_TEST(ScopeTest, BS) {
 	CHECK_EQ(runFn<Int>(S("tests.bs.testScopeCls")), 10);
 	CHECK_EQ(runFn<Int>(S("tests.bs.testClassMember")), 20);
 	CHECK_EQ(runFn<Int>(S("tests.bs.testClassNonmember")), 20);
-	CHECK_EQ(runFn<Int>(S("tests.bs.testClassNonmemberNoDot")), 20);
+	CHECK_EQ(runFn<Int>(S("tests.bs.testClassNonmemberNoDot")), 10);
 	CHECK_EQ(runFn<Int>(S("tests.bs.testClassMemberNoDot")), 20);
 	CHECK_EQ(runFn<Int>(S("tests.bs.testClassNoThis")), 20);
 	CHECK_EQ(toS(runFn<Str *>(S("tests.bs.testClassCollision"))), L"0");

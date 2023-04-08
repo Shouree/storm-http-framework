@@ -24,10 +24,6 @@ namespace storm {
 
 			// Add syntax to a parser.
 			void STORM_FN addSyntax(Scope from, syntax::ParserBase *to);
-
-		private:
-			// Find helper.
-			Named *findHelper(Scope from, SimpleName *name);
 		};
 
 		// Add includes. Note: it is generally more efficient to add multiple includes at once.

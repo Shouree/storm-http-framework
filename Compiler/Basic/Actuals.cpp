@@ -141,6 +141,14 @@ namespace storm {
 			strictThis = true;
 		}
 
+		void BSNamePart::explicitFirst() {
+			expFirst = true;
+		}
+
+		Bool BSNamePart::scopeParam(Nat id) const {
+			return (id == 0) & expFirst;
+		}
+
 		BSNamePart *BSNamePart::withFirst(Value val) const {
 			Array<Expr *> *exprs = new (this) Array<Expr *>();
 			exprs->reserve(this->exprs->count() + 1);

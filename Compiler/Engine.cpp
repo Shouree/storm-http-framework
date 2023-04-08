@@ -612,6 +612,12 @@ namespace storm {
 		return o.root;
 	}
 
+	Package *Engine::corePackage() {
+		if (!o.corePkg)
+			o.corePkg = package(S("core"));
+		return o.corePkg;
+	}
+
 	Package *Engine::package(SimpleName *name, bool create) {
 		Package *now = package();
 

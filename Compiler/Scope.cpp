@@ -61,11 +61,12 @@ namespace storm {
 	}
 
 	Package *ScopeLookup::corePkg(NameLookup *l) {
-		// TODO: Ask the engine directly!
-		Package *top = firstPkg(l);
-		Package *root = rootPkg(top);
-		SimplePart *core = new (l) SimplePart(new (l) Str(L"core"));
-		return as<Package>(root->find(core, Scope(root)));
+		return l->engine().corePackage();
+
+		// Package *top = firstPkg(l);
+		// Package *root = rootPkg(top);
+		// SimplePart *core = new (l) SimplePart(new (l) Str(L"core"));
+		// return as<Package>(root->find(core, Scope(root)));
 	}
 
 	NameLookup *ScopeLookup::nextCandidate(NameLookup *prev) {

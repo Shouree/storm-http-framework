@@ -216,21 +216,13 @@ namespace storm {
 			}
 
 			LocalVarAccess *thisAccess = thisVar ? new (block) LocalVarAccess(pos, thisVar) : null;
-			name->last() = new (block) BSResolvePart(last->name, pos, params, thisAccess);
+			BSResolvePart *part = new (block) BSResolvePart(last->name, pos, params, thisAccess);
+			if (!useThis)
+				part->explicitFirst();
+			name->last() = part;
 
 			// Traverse the name tree.
 			Named *found = scope.find(name);
-
-			// If we did not find anything, try looking inside the type of 'this'. Since the
-			// BSResolvePart does not expose the fact that there is a this pointer.
-			if (!found && thisVar) {
-				// In this case, we should not use the BSResolvePart, since this is conditioned on
-				// us using the this pointer.
-				Type *t = thisVar->result.type;
-				name->last() = new (block) BSNamePart(last->name, pos, params->withFirst(thisAccess));
-				found = storm::find(scope, t, name);
-			}
-
 			if (!found) {
 				// Replace last with original part, so that re-tries work properly.
 				name->last() = last;

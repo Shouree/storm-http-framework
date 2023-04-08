@@ -197,6 +197,11 @@ class WithCaption extends WrapDrawable {
 		sz;
 	}
 
+	assign size(Size s) : override {
+		wrap.size(Size(s.w, s.h - captionSz.h));
+		s;
+	}
+
 	void draw(Graphics g, Bool active) : override {
 		Size cSz = captionSz;
 		Size wSz = wrap.size;

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Lookup.h"
 #include "Package.h"
+#include "Engine.h"
 #include "Compiler/Syntax/Reader.h"
 
 namespace storm {
@@ -19,34 +20,57 @@ namespace storm {
 			return copy;
 		}
 
-		Named *BSLookup::findHelper(Scope scope, SimpleName *name) {
-			if (Named *found = ScopeLookup::find(scope, name))
-				return found;
+		static Named *findFirstParam(Scope s, SimpleName *name, Bool scope) {
+			if (name->count() != 1)
+				return null;
 
-			for (nat i = 0; i < includes->count(); i++) {
-				if (Named *found = storm::find(scope, includes->at(i), name))
-					return found;
+			for (SimplePart *last = name->last(); last; last = last->nextOption()) {
+				if (!last->params->any() || last->scopeParam(0) != scope)
+					continue;
+
+				Value firstParam = last->params->at(0);
+				if (!firstParam.type)
+					continue;
+
+				if (Named *r = firstParam.type->find(last, s))
+					return r;
+
+				// TODO: Also look in the parent scope of the last type? This will fix issues
+				// with 2 / 0.2 etc.
 			}
 
 			return null;
 		}
 
 		Named *BSLookup::find(Scope s, SimpleName *name) {
-			// Expressions of the form foo(x, y, z) are equal to x.foo(y, z),
-			// but only if name only contains one part (ie. not foo:bar(y, z)).
-			if (name->count() == 1) {
-				SimplePart *last = name->last();
-				if (last->params->any() && last->params->at(0) != Value()) {
-					Type *firstParam = last->params->at(0).type;
-					if (Named *r = firstParam->find(last, s))
-						return r;
+			// 1: If the first parameter is marked as scope-altering, prioritize lookups there.
+			if (Named *found = findFirstParam(s, name, true))
+				return found;
 
-					// TODO: Also look in the parent scope of the last type? This will fix issues
-					// with 2 / 0.2 etc.
-				}
+			// 2: Traverse until we reach the root.
+			for (NameLookup *at = s.top; at; at = ScopeLookup::nextCandidate(at)) {
+				if (Named *found = storm::find(s, at, name))
+					return found;
 			}
 
-			return findHelper(s, name);
+			// 3: Now we are at a location where we can start looking for more "complex" things. At
+			// this point, we try to examine the first parameters if the name only contains of a
+			// single part. This is since users expect x.foo() to examine the scope of 'x', and
+			// since this is equivalent to foo(x).
+			if (Named *found = findFirstParam(s, name, false))
+				return found;
+
+			// 4: Look in the root package.
+			if (Named *found = storm::find(s, engine().corePackage(), name))
+				return found;
+
+			// 5: Lastly, examine imported packages.
+			for (Nat i = 0; i < includes->count(); i++) {
+				if (Named *found = storm::find(s, includes->at(i), name))
+					return found;
+			}
+
+			return null;
 		}
 
 		void BSLookup::addSyntax(Scope from, syntax::ParserBase *to) {
