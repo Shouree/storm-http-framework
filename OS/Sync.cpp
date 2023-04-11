@@ -26,7 +26,7 @@ namespace os {
 		// Wake the thread up. Note: We can not do that inside the lock. Otherwise, the thread might
 		// wake up before we have time to release the lock, which could cause us to crash if this
 		// semaphore was deallocated by the thread that we woke (a typical use case for semaphores).
-		toWake->owner->wake(toWake);
+		toWake->owner()->wake(toWake);
 	}
 
 	void Sema::down() {
@@ -100,7 +100,7 @@ namespace os {
 
 		// Now we can take our time and wake the threads.
 		while (UThreadData *toWake = local.pop())
-			toWake->owner->wake(toWake);
+			toWake->owner()->wake(toWake);
 	}
 
 	void Event::clear() {

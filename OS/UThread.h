@@ -172,11 +172,21 @@ namespace os {
 	 * Additional state for a particular UThread.
 	 */
 	class UThreadData : NoCopy {
+	private:
 		// Create for a newly allocated thread.
 		UThreadData(UThreadState *thread, size_t stackSize);
 
 		// Create for an already existing thread.
 		UThreadData(UThreadState *thread, void *limit);
+
+		// Write protection of 'owner'.
+		UThreadState *myOwner;
+
+		// Implementation-specific update of the current owner.
+		void updateOwner(UThreadState *newOwner);
+
+		// Implementation-specific stack initialization.
+		void initStack();
 
 	public:
 		// Number of references.
@@ -186,7 +196,8 @@ namespace os {
 		UThreadData *next;
 
 		// Owner.
-		UThreadState *owner;
+		void setOwner(UThreadState *state);
+		inline UThreadState *owner() const { return myOwner; }
 
 		// Add refcount.
 		inline void addRef() {

@@ -260,7 +260,7 @@ namespace os {
 			return false;
 
 		// Same Thread?
-		if (data->owner != current.data->owner)
+		if (data->owner() != current.data->owner())
 			return false;
 
 		// Running?
@@ -273,9 +273,9 @@ namespace os {
 		StackDesc *old = data->pushSubContext(address(&detourMain), (void *)&fn);
 
 		// Need to reset the owner to make the detour system happy.
-		data->owner = null;
-		current.data->owner->startDetour(data);
-		data->owner = current.data->owner;
+		data->setOwner(null);
+		current.data->owner()->startDetour(data);
+		data->setOwner(current.data->owner());
 
 		// Now, the detour has finished execution. Restore the old state.
 		data->restoreContext(old);
@@ -289,8 +289,10 @@ namespace os {
 	 */
 
 	UThreadData::UThreadData(UThreadState *state, size_t size)
-		: references(0), next(null), owner(null), stack(size),
+		: references(0), next(null), myOwner(null), stack(size),
 		  detourOrigin(null), detourResult(null) {
+
+		initStack();
 
 		// Notify the GC that we exist and may contain interesting data.
 		// Note: This UThread must be scannable by this point!
@@ -298,7 +300,7 @@ namespace os {
 	}
 
 	UThreadData::UThreadData(UThreadState *state, void *limit)
-		: references(0), next(null), owner(null), stack(limit),
+		: references(0), next(null), myOwner(null), stack(limit),
 		  detourOrigin(null), detourResult(null) {
 
 		// Notify the GC that we exist and may contain interesting data.
@@ -316,6 +318,11 @@ namespace os {
 
 	UThreadData::~UThreadData() {}
 
+	void UThreadData::setOwner(UThreadState *state) {
+		myOwner = state;
+		updateOwner(state);
+	}
+
 	void UThreadData::switchTo(UThreadData *to) {
 		doSwitch(&to->stack.desc, &stack.desc);
 	}
@@ -328,7 +335,7 @@ namespace os {
 		currentUThreadState(this);
 
 		running = UThreadData::createFirst(this, stackBase);
-		running->owner = this;
+		running->setOwner(this);
 		running->addRef();
 
 		aliveCount = 1;
@@ -480,7 +487,7 @@ namespace os {
 	}
 
 	void UThreadState::insert(UThreadData *data) {
-		data->owner = this;
+		data->setOwner(this);
 		dbg_assert(stacks.contains(&data->stack), L"WRONG THREAD");
 		atomicIncrement(aliveCount);
 
@@ -540,7 +547,7 @@ namespace os {
 	}
 
 	void *UThreadState::startDetour(UThreadData *to) {
-		assert(to->owner == null, L"The UThread is already associated with a thread, can not use it for detour.");
+		assert(to->owner() == null, L"The UThread is already associated with a thread, can not use it for detour.");
 
 		UThreadData *prev = running;
 		Stack *prevStack = &prev->stack;
@@ -554,7 +561,7 @@ namespace os {
 		}
 
 		// Remember the currently running UThread so that we can go back to it.
-		to->owner = this;
+		to->setOwner(this);
 		to->detourOrigin = prev;
 
 		// Adopt the new UThread, so that it is scanned as if it belonged to our thread.
@@ -590,7 +597,7 @@ namespace os {
 		// Release the currently running UThread from our grip.
 		prev->detourOrigin = null;
 		prev->detourResult = result;
-		prev->owner = null;
+		prev->setOwner(null);
 
 		// Switch threads.
 		prev->switchTo(running);
@@ -661,10 +668,77 @@ namespace os {
 	 * Machine specific code.
 	 */
 
-#if defined(X86)
+#if defined(X86) && defined(WINDOWS)
+
+	/**
+	 * On Windows in 32-bit mode, SEH is used for exception handling. Since SEH stores function
+	 * pointers on the stack, there are some mitigations against stack overflows in place.
+	 *
+	 * The first, and most obvious one, is SAFESEH. It requires that all exception handler functions
+	 * are registered in the .exe file at compile time. We do this for the Storm exception handler,
+	 * and it is nothing we need to worry about here.
+	 *
+	 * The second one, that does not seem to be enabled by default, is called SEHOP. According to
+	 * MSDN, it might break compatibility with Cygwin and Skype for example. This might be why it is
+	 * not enabled by default [1]. This mitigation can be enabled/disabled in the Registry, by
+	 * setting the DWORD key HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session
+	 * Manager\kernel\DisableExceptionValidation to 0. There is likely also a way in Group Policy
+	 * Editor to do it. I have seen it enabled on Windows machines in organizations, so Storm should
+	 * support it.
+	 *
+	 * The SEHOP mitigation is described in [2]. The idea is basically that the system inserts a SEH
+	 * entry at the end of the SEH list, and verifies that this special frame is present before
+	 * traversing the SEH list. This is done to verify that no malicious code has overwritten the
+	 * "prev" pointer at any point in the chain. In essence, this has similar effects to SAFESEH
+	 * above, but also works for binaries compiled without SAFESEH.
+	 *
+	 * The tricky part is finding the frame we need to insert. It is supposed to refer to the
+	 * function FinalExceptionHandler in ntdll. According to the debug symbols, there are 64
+	 * versions of this function in ntdll, so we likely need to pick the right one. Furthermore, the
+	 * FinalExceptionHandler symbol is not easily accessible to us. What we do instead is that we
+	 * traverse the chain and find the last function from threads started by the standard
+	 * library. Then we can insert the same frame in our UThreads, which makes the system
+	 * happy. Source [3] describes some details not present in the original proposal [2].
+	 *
+	 *
+	 * [1]: https://support.microsoft.com/en-us/topic/how-to-enable-structured-exception-handling-overwrite-protection-sehop-in-windows-operating-systems-8d4595f7-827f-72ee-8c34-fa8e0fe7b915
+	 * [2]: http://www.uninformed.org/?v=5&a=2&t=txt
+	 * [3]: https://web.archive.org/web/20120907022250/http://www.sysdream.com/sites/default/files/sehop_en.pdf
+	 */
 
 	static void *&stackPtr(Stack &stack) {
 		return stack.desc->low;
+	}
+
+	static void **rootSEHFrame(Stack &stack) {
+		void **frame = (void **)stack.high();
+		// Note: We only really need 2 words, but it seems like the runtime expects the
+		// EXCEPTION_REGISTRATION_RECORD to be around 3 words in size. We use 4 for some margin, and
+		// since it is a power of 2.
+		return frame - 4;
+	}
+
+	void UThreadData::initStack() {
+		// Save a SEH frame in the cold end of the stack. This will then be updated with the
+		// appropriate value from our owner.
+		void **frame = rootSEHFrame(stack);
+		stackPtr(stack) = frame;
+
+		frame[0] = (void *)(-1); // End of SEH chain.
+		frame[1] = null; // Function pointer.
+	}
+
+	void UThreadData::updateOwner(UThreadState *state) {
+		if (!stack.allocated())
+			return;
+
+		void **frame = rootSEHFrame(stack);
+
+		// Update the function pointer at the frame.
+		if (state)
+			frame[1] = state->owner->osExtraData();
+		else
+			frame[1] = 0;
 	}
 
 	void UThreadData::push(void *v) {
@@ -691,20 +765,22 @@ namespace os {
 		push(0); // ebx
 		push(0); // esi
 		push(0); // edi
-		push(-1); // seh (end of list is -1)
+		push(rootSEHFrame(stack)); // seh (our special element)
 		push(stack.desc->high);
 		push(stack.limit());
-		push(stack.desc->low); // current stack pointer (approximate, this is enough)
+		push(stack.desc->low); // current stack pointer (approximate, this is enough, only needed for GC)
 
 		// Set the 'desc' of 'stack' to the actual stack pointer, so that we can run code on this stack.
 		atomicWrite(stack.desc, (StackDesc *)(stack.desc->low));
 	}
 
 	void UThreadData::pushContext(const void *fn, void *param) {
-		push(param);
+		push(param); // Parameter to the function.
 		push(null); // return address used for 'fn'.
+
 		pushContext(fn);
 	}
+
 
 	StackDesc *UThreadData::pushSubContext(const void *fn, void *param) {
 		StackDesc *old = stack.desc;
@@ -830,6 +906,15 @@ namespace os {
 
 #elif defined(GCC) && defined(X64)
 
+	void UThreadData::initStack() {
+		// Not necessary on ARM.
+	}
+
+	void UThreadData::updateOwner(UThreadState *state) {
+		// Not necessary on X64.
+		(void)state;
+	}
+
 	static void *&stackPtr(Stack &stack) {
 		return stack.desc->low;
 	}
@@ -948,6 +1033,15 @@ namespace os {
 	}
 
 #elif defined(GCC) && defined(ARM64)
+
+	void UThreadData::initStack() {
+		// Not necessary on ARM.
+	}
+
+	void UThreadData::updateOwner(UThreadState *state) {
+		// Not necessary on ARM.
+		(void)state;
+	}
 
 	static void *&stackPtr(Stack &stack) {
 		return stack.desc->low;

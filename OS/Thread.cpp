@@ -48,11 +48,15 @@ namespace os {
 	// This one is system-specific
 	static void startThread(ThreadStart &start);
 
+	// Capture thread- and OS-specific data for each thread.
+	static void *captureOSExtraData();
+
 	/**
 	 * Thread data.
 	 */
 
-	ThreadData::ThreadData(void *stack) : references(0), uState(this, stack) {}
+	ThreadData::ThreadData(void *stack, void *extra) :
+		references(0), uState(this, stack), osExtra(extra) {}
 
 	ThreadData::~ThreadData() {}
 
@@ -101,6 +105,7 @@ namespace os {
 	}
 
 	static void *mainStackBase = null;
+	static void *mainStackOSData = null;
 
 	Thread Thread::current() {
 		ThreadData *t = currentThreadData();
@@ -110,7 +115,7 @@ namespace os {
 		assert(mainStackBase, L"Call 'Thread::setStackBase' before using 'Thread::current'");
 
 		// The first thread, create its data...
-		static ThreadData firstData(mainStackBase);
+		static ThreadData firstData(mainStackBase, mainStackOSData);
 		// Keep the first thread from firing 'signal' all the time.
 		static Thread first(&firstData);
 
@@ -123,6 +128,7 @@ namespace os {
 
 	void Thread::setStackBase(void *base) {
 		mainStackBase = base;
+		mainStackOSData = captureOSExtraData();
 	}
 
 	Thread Thread::invalid = Thread(null);
@@ -159,7 +165,7 @@ namespace os {
 	}
 
 	void ThreadData::threadMain(ThreadStart &start, void *stackBase) {
-		ThreadData d(stackBase);
+		ThreadData d(stackBase, captureOSExtraData());
 		d.addRef(); // Add a reference so that 'd' do not terminate prematurely.
 
 		Thread::initThread();
@@ -308,6 +314,44 @@ namespace os {
 #ifdef WINDOWS
 	// Windows-specific implementation.
 
+#ifdef X86
+
+	// If we are on X86, there is an option to enable another layer on top of SAFESEH: namely, that
+	// the system examines the last element of the SEH linked list and verifies that it points to a
+	// particular function (FinalExceptionHandler in ntdll, there are a number of offsets there, and
+	// we probably need to point to the right one).
+
+	struct SehRecord {
+		SehRecord *prev;
+		void *handler;
+	};
+
+	static void *captureOSExtraData() {
+		// Capture the top of the SEH chain.
+		SehRecord *first = null;
+		__asm {
+			mov eax, fs:[0];
+			mov first, eax;
+		}
+
+		// Traverse it until we reach 0xFFFFFFFF, and remember the last handler.
+		void *lastHandler = null;
+		while (size_t(first) != size_t(-1)) {
+			lastHandler = first->handler;
+			first = first->prev;
+		}
+
+		return lastHandler;
+	}
+
+#else
+
+	static void *captureOSExtraData() {
+		return null;
+	}
+
+#endif
+
 	static void winThreadMain(void *param) {
 		ThreadStart *s = (ThreadStart *)param;
 		ThreadData::threadMain(*s, &param);
@@ -337,6 +381,10 @@ namespace os {
 		pthread_t thread;
 		pthread_create(&thread, null, &posixThreadMain, &start);
 		pthread_detach(thread);
+	}
+
+	static void *captureOSExtraData() {
+		return null;
 	}
 
 	void Thread::initThread() {}

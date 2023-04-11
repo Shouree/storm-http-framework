@@ -79,6 +79,9 @@ namespace os {
 		inline void *low() const { return alloc; }
 		inline void *high() const { return (byte *)alloc + size; }
 
+		// Check if this stack was allocated by the Stack class.
+		inline bool allocated() const { return size > 0; }
+
 	private:
 		// The low address of the stack. If we represent an OS allocated stack, this is the limit.
 		void *alloc;

@@ -108,7 +108,7 @@ namespace os {
 		UThreadState uState;
 
 		// Create.
-		ThreadData(void *stackBase);
+		ThreadData(void *stackBase, void *osThreadData);
 
 		// Destroy.
 		~ThreadData();
@@ -139,6 +139,11 @@ namespace os {
 		// Detach a handle.
 		inline void detach(Handle h) { ioComplete.remove(h, this); }
 
+		// Access the OS-specific data. This is currently only used on 32-bit Windows systems, where
+		// we need to keep track of the top element of the SEH handler chain in order to work with
+		// the SEHOP mitigation. See UThread.cpp for more details.
+		inline void *osExtraData() { return osExtra; }
+
 		// Thread main function.
 		static void threadMain(ThreadStart &start, void *stackBottom);
 
@@ -152,6 +157,9 @@ namespace os {
 
 		// Current wait behavior.
 		ThreadWait *wait;
+
+		// Other os-specific data that needs to be remembered for this thread.
+		void *osExtra;
 
 		// Handle indicating the completion of any async IO operations.
 		IOHandle ioComplete;
