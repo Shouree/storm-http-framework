@@ -1068,7 +1068,7 @@ namespace gui {
 
 			// If this is the same UThread that runs the regular main loop, then we need to emulate
 			// what UThread usually does.
-			os::UThreadState *state = os::UThread::current().threadData()->owner;
+			os::UThreadState *state = os::UThread::current().threadData()->owner();
 			while (g_main_loop_is_running(loop)) {
 				// Run other threads while we have things to do. We must remember to run this thread
 				// as well. Otherwise we won't dispatch events to Gtk+.
