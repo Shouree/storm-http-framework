@@ -51,7 +51,7 @@ class DebugProblemBehavior extends Behavior {
 	ProblemPanel? panel() : override {
 		ProblemPanel p("Find an error in \"${problem.title}\"!");
 		p.button("Restart", &this.onRestartClicked());
-		p.button("Open main", &this.onOpenMain());
+		p.button("Open test", &this.onOpenMain());
 		p.button("Open implementation", &this.onOpenImpl());
 		p;
 	}
@@ -207,7 +207,7 @@ class ImproveBehavior extends UploadableBehavior {
 		msg << "3. Select \"Reload\" to load your changes and see if they work.\n";
 		msg << "4. Repeat 2-3 as necessary.\n";
 		msg << "5. Click \"Submit\" in the green box when you are done.\n";
-		msg << "Note: You can only modify the implementation, any chainges to the main file will be ignored.\n";
+		msg << "Note: You can only modify the implementation, any chainges to the test file will be ignored.\n";
 		showMessage(window, "Improve the code", msg.toS);
 	}
 
