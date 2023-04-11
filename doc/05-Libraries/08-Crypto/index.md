@@ -12,7 +12,7 @@ The library itself does not implement any cryptographic primitives itself. Inste
 default cryptographic libraries of the operating system. On Linux and other POSIX systems, OpenSSL
 (>= 1.1.0) is used. On Windows, the standard cryptographic library (SChannel) is used instead. This
 way, the SSL library benefits from any security patches in these critical libraries that are
-provided by your operating system.
+provided by your operating system. Note: SSL support does not work on Windows 7.
 
 
 Usage
