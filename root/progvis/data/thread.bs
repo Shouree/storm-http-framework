@@ -18,7 +18,6 @@ class Thread extends Data {
 	Bool crashed;
 	Bool afterReturn;
 	Bool barriersAvailable;
-	SrcPos[] pos; // All stack frames.
 
 	// Create.
 	init(ProgThread thread) {
@@ -36,8 +35,14 @@ class Thread extends Data {
 			sleeping = original.sleeping;
 			crashed = original.crashed;
 			afterReturn = original.afterReturn;
-			pos = original.pos.clone;
 		}
+	}
+
+	// Get current position.
+	SrcPos? pos() {
+		if (frames.any)
+			return frames.last.pos;
+		null;
 	}
 
 	// Get thread id.
@@ -53,7 +58,6 @@ class Thread extends Data {
 		if (src.frames.any)
 			afterReturn = src.frames.last.returned;
 		barriersAvailable = src.barriersAvailable;
-		pos = src.allPos;
 
 		if (!alive & !crashed) {
 			// Remove frames, but not if we crashed (makes it easier to find the crash).
@@ -98,13 +102,6 @@ class Thread extends Data {
 
 	// Summary.
 	protected void putSummary(StrBuf to, SummaryData data) : override {
-		// Location of the thread.
-		for (p in pos) {
-			if (file = p.file) {
-				to << file.title << ":" << p.start << "-" << p.end << ".";
-			}
-		}
-
 		// Stack frames. We don't need a delimiter.
 		for (f in frames) {
 			f.summary(to, data);
@@ -126,6 +123,9 @@ class Thread extends Data {
 		// Original stack frame.
 		StackFrame src;
 
+		// Source position for this stack frame.
+		SrcPos pos;
+
 		// Create.
 		init(StackFrame src) {
 			init(null) {
@@ -137,6 +137,7 @@ class Thread extends Data {
 		init(Frame original) {
 			init(original) {
 				src = original.src;
+				pos = original.pos;
 			}
 		}
 
@@ -146,6 +147,8 @@ class Thread extends Data {
 		}
 
 		void update(World:Traversal t, unsafe:RawPtr object, Nat offset) : override {
+			pos = src.pos;
+
 			for (k, v in src.variables) {
 				var ptr = unsafe:RawPtr(v.value);
 				if (k >= parts.count) {
@@ -185,6 +188,13 @@ class Thread extends Data {
 
 		protected Data copyObject() : override {
 			Frame(this);
+		}
+
+		protected void putSummary(StrBuf to, SummaryData data) : override {
+			// Put the location first:
+			if (file = pos.file)
+				to << file.title << ":" << pos.start << "-" << pos.end << ".";
+			super:putSummary(to, data);
 		}
 	}
 
