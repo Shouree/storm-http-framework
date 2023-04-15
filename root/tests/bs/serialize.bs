@@ -360,6 +360,77 @@ Bool shuffledSerialization() {
 	original.compare(copy);
 }
 
+/**
+ * Serializable class, with the ability to write a subset of members so that we can test our ability
+ * to create new values.
+ */
+class MissingData : serializable {
+	Str a = "Def A";
+	Str b = "Def B";
+
+	init(Str a, Str b) {
+		init {
+			a = a;
+			b = b;
+		}
+	}
+
+	void writeShuffled(ObjOStream to) {
+		SerializedStdType desc(named{MissingData}, &__init(MissingData, ObjIStream));
+		desc.add("b", named{core:Str});
+		desc.add("a", named{core:Str});
+
+		if (to.startClass(desc, this)) {
+			b.write(to);
+			a.write(to);
+			to.end();
+		}
+	}
+
+	void writeMissing(ObjOStream to) {
+		SerializedStdType desc(named{MissingData}, &__init(MissingData, ObjIStream));
+		desc.add("b", named{core:Str});
+
+		if (to.startClass(desc, this)) {
+			b.write(to);
+			to.end();
+		}
+	}
+
+	void toS(StrBuf to) {
+		to << a << ", " << b;
+	}
+}
+
+
+// Serialize an object, but with some new members (that have default values).
+Str shuffledSerialization2() {
+	MissingData original("Custom A", "Custom B");
+	MemOStream out;
+	original.writeShuffled(ObjOStream(out));
+
+	// showString(out.buffer);
+
+	MemIStream in(out.buffer);
+	MissingData copy = MissingData:read(ObjIStream(in));
+
+	copy.toS;
+}
+
+// Serialize an object, but with some new members (that have default values).
+Str missingSerialization() {
+	MissingData original("Custom A", "Custom B");
+	MemOStream out;
+	original.writeMissing(ObjOStream(out));
+
+	// showString(out.buffer);
+
+	MemIStream in(out.buffer);
+	MissingData copy = MissingData:read(ObjIStream(in));
+
+	copy.toS;
+}
+
 // Serialize some primitives.
 Bool primitiveSerialization() {
 	MemOStream out;

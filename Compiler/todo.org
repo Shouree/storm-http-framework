@@ -59,7 +59,10 @@
     but the scale of the issue should be assessed first.
   - [ ] Parsing core.lang.syntax.bnf takes about 80 ms, which is a bit on the high end when compiling code...
 
-* Loose ends so far [61/108]
+* Loose ends so far [61/109]
+  - [ ] Serializing an object graph containing multiple references to the same string currently
+    causes the string to be duplicated. This might not be ideal, and surprising since we break
+    object identity (even if it generally does not matter for strings, as they are immutable).
   - [ ] It is possible to create a function pointer to a constructor, but they will not behave
     properly when calling the constructor of an actor, for example.
   - [ ] Font sizes in DirectX (in particular, the default font) are larger than when using Gdi.

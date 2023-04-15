@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Serialization.h"
 #include "Str.h"
+#include "StrBuf.h"
 #include "Exception.h"
 
 namespace storm {
@@ -64,17 +65,33 @@ namespace storm {
 	}
 
 
-	SerializedMember::SerializedMember(Str *name, Type *type) : name(name), type(type) {}
+	SerializedMember::SerializedMember(Str *name, Type *type)
+		: name(name), type(type), init(null) {}
+
+	SerializedMember::SerializedMember(Str *name, Type *type, MAYBE(FnBase *) init)
+		: name(name), type(type), init(init) {}
 
 	SerializedStdType::SerializedStdType(Type *t, FnBase *ctor)
-		: SerializedType(t, ctor), names(new (engine()) Array<Str *>()) {}
+		: SerializedType(t, ctor),
+		  names(new (engine()) Array<Str *>()),
+		  inits(new (engine()) Array<FnBase *>()) {}
 
 	SerializedStdType::SerializedStdType(Type *t, FnBase *ctor, Type *parent)
-		: SerializedType(t, ctor, parent), names(new (engine()) Array<Str *>()) {}
+		: SerializedType(t, ctor, parent),
+		  names(new (engine()) Array<Str *>()),
+		  inits(new (engine()) Array<FnBase *>()) {}
 
 	void SerializedStdType::add(Str *name, Type *type) {
 		typeAdd(type);
 		names->push(name);
+		inits->push(null);
+		typeRepeat(typeCount());
+	}
+
+	void SerializedStdType::add(Str *name, Type *type, MAYBE(FnBase *) init) {
+		typeAdd(type);
+		names->push(name);
+		inits->push(init);
 		typeRepeat(typeCount());
 	}
 
@@ -83,7 +100,7 @@ namespace storm {
 	}
 
 	SerializedMember SerializedStdType::at(Nat i) const {
-		return SerializedMember(names->at(i), typeAt(i));
+		return SerializedMember(names->at(i), typeAt(i), inits->at(i));
 	}
 
 	typeInfo::TypeInfo SerializedStdType::baseInfo() const {
@@ -138,9 +155,11 @@ namespace storm {
 	 * ObjIStream
 	 */
 
-	ObjIStream::Member::Member(Str *name, Nat type) : name(name), type(type), read(0) {}
+	ObjIStream::Member::Member(Str *name, Nat type) : type(type), read(0), data(name) {}
 
-	ObjIStream::Member::Member(const Member &o, Int read) : name(o.name), type(o.type), read(read) {}
+	ObjIStream::Member::Member(FnBase *init) : type(0), read(-1), data(init) {}
+
+	ObjIStream::Member::Member(const Member &o, Int read) : data(o.data), type(o.type), read(read) {}
 
 
 	ObjIStream::Desc::Desc(Byte flags, Nat parent, Str *name) : data(Nat(flags) << 24), parent(parent) {
@@ -162,9 +181,11 @@ namespace storm {
 	}
 
 	Nat ObjIStream::Desc::findMember(Str *name) const {
-		for (Nat i = 0; i < members->count(); i++)
-			if (*members->at(i).name == *name)
+		for (Nat i = 0; i < members->count(); i++) {
+			Str *mName = members->at(i).name();
+			if (mName && *mName == *name)
 				return i;
+		}
 		return members->count();
 	}
 
@@ -311,7 +332,13 @@ namespace storm {
 	}
 
 	void ObjIStream::readValue(Type *type, PTR_GC out) {
-		Info info = start();
+		Info info = start(out);
+
+		// Default initialized?
+		if (info.expectedType == endId)
+			return;
+
+		// Read from storage?
 		if (info.result.any()) {
 			// TODO: Check type!
 			info.result.moveValue(out);
@@ -335,7 +362,9 @@ namespace storm {
 		// since the types used at the root of deserialization do not need to be equal. However,
 		// 'type' needs to be a parent of whatever we find as 'actual' later on, which is a subclass
 		// of 'expected'.
-		Info info = start();
+		Info info = start(null);
+
+		// Read from cache? Note: we don't have to care about special cases here like in 'readValue'.
 		if (info.result.any()) {
 			RootObject *result = info.result.getObject();
 			if (!runtime::isA(result, type)) {
@@ -364,7 +393,18 @@ namespace storm {
 	}
 
 	void ObjIStream::readPrimitiveValue(StoredId id, PTR_GC out) {
-		Info info = start();
+		Info info = start(out);
+
+		// Using default initialization? If so, we are already done.
+		if (info.expectedType == endId)
+			return;
+
+		// Stored value?
+		if (info.result.any()) {
+			info.result.moveValue(out);
+			return;
+		}
+
 		Desc *expected = findInfo(info.expectedType);
 		if (!expected->isValue())
 			throw new (this) SerializationFormatError(S("Expected a value type, but got a class type."));
@@ -381,17 +421,19 @@ namespace storm {
 	}
 
 	Object *ObjIStream::readPrimitiveObject(StoredId id) {
-		Info info = start();
+		Info info = start(null);
+
+		// Default initialization, or reading duplicates?
+		if (info.result.any()) {
+			// TODO: Check type?
+			return (Object *)info.result.getObject();
+		}
+
 		Desc *expected = findInfo(info.expectedType);
 		if (expected->isValue())
 			throw new (this) SerializationFormatError(S("Expected a class type, but got a value type."));
 		if (id != info.expectedType)
 			throw new (this) SerializationFormatError(S("Mismatch of built-in types!"));
-
-		if (info.result.any()) {
-			// TODO: Check type?
-			return (Object *)info.result.getObject();
-		}
 
 		Object *created = (Object *)runtime::allocObject(0, expected->info->type);
 		readValueI(expected, created);
@@ -414,7 +456,16 @@ namespace storm {
 				return Variant(created);
 			}
 		} else {
-			return Variant(readClassI(type, type->info->type));
+			// Note: Primitives are never duplicated, so we need to check if it is a user-type or a
+			// primitive type. This likely means that we don't de-duplicate strings. It is fine
+			// since strings are immutable, but it could be a bit wasteful.
+			if (typeId < firstCustomId) {
+				Object *created = (Object *)runtime::allocObject(0, type->info->type);
+				readValueI(type, created);
+				return Variant(created);
+			} else {
+				return Variant(readClassI(type, type->info->type));
+			}
 		}
 	}
 
@@ -466,7 +517,7 @@ namespace storm {
 		return created;
 	}
 
-	ObjIStream::Info ObjIStream::start() {
+	ObjIStream::Info ObjIStream::start(PTR_GC valueOut) {
 		Info r = { 0, Variant() };
 
 		if (depth->empty()) {
@@ -502,16 +553,31 @@ namespace storm {
 			const Member &expected = at.current();
 			at.next();
 
-			if (expected.read < 0) {
-				// Read one object into temporary storage and continue.
-				at.pushTemporary(readClass(expected.type));
-			} else if (expected.read > 0) {
-				r.expectedType = expected.type;
-				r.result = at.temporary(Nat(expected.read - 1));
-				return r;
-			} else {
+			if (expected.read == 0) {
 				// Read it now!
 				r.expectedType = expected.type;
+				return r;
+			} else if (FnBase *init = expected.init()) { // 'read' is -1
+				// Indicate that we should use the default value. Return expected type = 0 to
+				// indicate this, put the result either in 'valueOut' or in the variant.
+				r.expectedType = endId;
+
+				if (valueOut) {
+					void *params[1] = {};
+					init->rawCall().call(init, valueOut, params);
+				} else {
+					os::FnCall<Object *, 1> params = os::fnCall();
+					r.result = Variant(init->callRaw(params, null, null));
+				}
+
+				return r;
+			} else if (expected.read < -1) {
+				// Read one object into temporary storage and continue.
+				at.pushTemporary(readClass(expected.type));
+			} else /* if (expected.read > 0) */ {
+				// Retrieve a value from temporary storage.
+				r.expectedType = expected.type;
+				r.result = at.temporary(Nat(expected.read - 1));
 				return r;
 			}
 		}
@@ -548,7 +614,7 @@ namespace storm {
 		if (flags & typeInfo::tuple) {
 			// Tuple.
 			checkTypeDescSize(sizeof(Member));
-			result->members->push(Member(null, natId));
+			result->members->push(Member((Str *)null, natId));
 
 			for (Nat type = from->readNat(); type != endId; type = from->readNat()) {
 				checkTypeDescSize(sizeof(Member));
@@ -559,8 +625,8 @@ namespace storm {
 		} else if (flags & typeInfo::maybe) {
 			// Maybe-type.
 			checkTypeDescSize(sizeof(Member)*2);
-			result->members->push(Member(null, boolId));
-			result->members->push(Member(null, from->readNat()));
+			result->members->push(Member((Str *)null, boolId));
+			result->members->push(Member((Str *)null, from->readNat()));
 
 			validateMaybe(result);
 		} else if (flags & typeInfo::custom) {
@@ -608,12 +674,13 @@ namespace storm {
 			// Look until we find it in the stream, saving intermediate members to temporary storage.
 			while (streamPos < memberCount) {
 				Member &m = stream->members->at(streamPos);
-				if (*m.name == *ourMember.name)
+				Str *mName = m.name();
+				if (mName && *mName == *ourMember.name)
 					break;
 
 				// Store it in temporary storage and remember its location (indexed from 1).
-				m.read = -1;
-				tempPos->put(m.name, Member(m, tempPos->count() + 1));
+				m.read = -2;
+				tempPos->put(mName, Member(m, tempPos->count() + 1));
 				streamPos++;
 			}
 
@@ -624,13 +691,16 @@ namespace storm {
 			} else if (tempPos->has(ourMember.name)) {
 				// If we skipped it earlier, read it from temporary storage.
 				stream->members->push(tempPos->get(ourMember.name));
+			} else if (ourMember.init) {
+				// Use the initializer!
+				stream->members->push(Member(ourMember.init));
 			} else {
-				// Otherwise, an error.
-
-				// TODO: When we have support for default initialization, take that into consideration here!
-				Str *msg = TO_S(this, S("The member ") << ourMember.name << S(", required for type ")
-								<< runtime::typeName(our->type) << S(", is not present in the stream."));
-				throw new (this) SerializationFormatError(msg);
+				// Otherwise, we are out of luck.
+				StrBuf *msg = new (this) StrBuf();
+				*msg << S("The member ") << ourMember.name << S(", required for type ")
+					 << runtime::typeName(our->type) << S(", is not present in the stream ")
+					 << S("and has no default value in the source code.");
+				throw new (this) SerializationFormatError(msg->toS());
 			}
 		}
 
@@ -641,7 +711,7 @@ namespace storm {
 		// for (Nat i = 0; i < stream->members->count(); i++) {
 		// 	Member t = stream->members->at(i);
 
-		// 	PLN(L"  " << t.name << L", " << t.type << L", " << t.read);
+		// 	PLN(L"  " << t.name() << L", " << t.type << L", " << t.read);
 		// }
 		// PLN(L"  (" << stream->storage() << L" temporary entries required)");
 	}

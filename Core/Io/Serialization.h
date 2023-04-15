@@ -172,9 +172,16 @@ namespace storm {
 		STORM_VALUE;
 	public:
 		STORM_CTOR SerializedMember(Str *name, Type *type);
+		STORM_CTOR SerializedMember(Str *name, Type *type, MAYBE(FnBase *) init);
 
+		// Name of the member.
 		Str *name;
+
+		// Type of the member.
 		Type *type;
+
+		// Default initialization, if any.
+		MAYBE(FnBase *) init;
 	};
 
 	/**
@@ -192,6 +199,7 @@ namespace storm {
 
 		// Add a member.
 		void STORM_FN add(Str *name, Type *type);
+		void STORM_FN add(Str *name, Type *type, MAYBE(FnBase *) init);
 		void add(const wchar *name, Type *type);
 
 		// Number of members.
@@ -209,6 +217,9 @@ namespace storm {
 	private:
 		// Names of the members.
 		Array<Str *> *names;
+
+		// Initialization pointers.
+		Array<FnBase *> *inits;
 	};
 
 	// C++ helper:
@@ -444,27 +455,42 @@ namespace storm {
 		class Member {
 			STORM_VALUE;
 		public:
-			// Create.
+			// Create a regular member: read 'name' with 'type' from the stream in some fashion.
 			Member(Str *name, Nat type);
+
+			// Create a default-initialized member. We don't use 'name', but instead store the initializer.
+			Member(FnBase *init);
 
 			// Create a copy with a different 'read' member.
 			Member(const Member &o, Int read);
 
 			// Name of the member.
-			MAYBE(Str *) name;
+			Str *name() const {
+				return read == -1 ? null : (Str *)data;
+			}
+
+			// Initializer of the member.
+			FnBase *init() const {
+				return read == -1 ? (FnBase *)data : null;
+			}
 
 			// Type of the member.
 			Nat type;
 
 			// How to read the member:
-			// =0: just read the member as usual.
-			// <0: read this member and push it to temporary storage. Do not return it immediately.
-			// >0: read the member from an object previously saved in temporary storage, not from the stream.
+			// = 0: Read it immediately, as usual.
+			// =-1: Use default value.
+			// =-2: Read this member and push it onto temporary storage.
+			// > 0: Read this member from temporary storage at 'read - 1'.
 			// This allows reading members in a different order compared to what is expected
 			// by the constructor of the object we're constructing. It does, however, incur
 			// additional memory allocation in cases where we need to reorder members. This is
 			// fine since we expect that case to be rare.
 			Int read;
+
+		private:
+			// Data. Either the name of the member, or a function ptr (if read = -1).
+			UNKNOWN(PTR_GC) void *data;
 		};
 
 		// Description of a type. Contains a pointer to an actual type once we know that.
@@ -580,8 +606,10 @@ namespace storm {
 
 		// Start deserialization of an object. As a part of the process, figures out which object to
 		// read and returns its id. Will also make sure to read any objects that are supposed to be
-		// stored in temporary storage if necessary.
-		Info start();
+		// stored in temporary storage if necessary. Parameter indicates where to store values if we
+		// are trying to load a value (so we can skip the Variant if we are default-initializing
+		// value types).
+		Info start(PTR_GC valueOut);
 
 		// Get the description for an object id, reading it if necessary.
 		Desc *findInfo(Nat id);

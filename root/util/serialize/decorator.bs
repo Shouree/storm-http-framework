@@ -217,7 +217,11 @@ Function addStdType(Type type, Member[] members, Function ctorFun) {
 	};
 	for (m in members) {
 		if (t = m.member.type.type) {
-			desc.add(m.name, t);
+			if (init = m.member.initializer) {
+				desc.add(m.name, t, init.pointer);
+			} else {
+				desc.add(m.name, t);
+			}
 		}
 	}
 

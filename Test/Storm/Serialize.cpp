@@ -14,6 +14,10 @@ BEGIN_TEST(Serialize, BS) {
 
 	// Shuffled output (simulating altering the order of members from when serialization was made).
 	CHECK(runFn<Bool>(S("tests.bs.shuffledSerialization")));
+	CHECK_EQ(::toS(runFn<Str *>(S("tests.bs.shuffledSerialization2"))), L"Custom A, Custom B");
+
+	// Missing data in the stream, but default values are available.
+	CHECK_EQ(::toS(runFn<Str *>(S("tests.bs.missingSerialization"))), L"Def A, Custom B");
 
 	// Primitives.
 	CHECK(runFn<Bool>(S("tests.bs.primitiveSerialization")));
