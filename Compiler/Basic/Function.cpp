@@ -153,7 +153,7 @@ namespace storm {
 			*l << prolog();
 
 			// Parameters
-			for (nat i = 0; i < valParams->count(); i++) {
+			for (Nat i = 0; i < valParams->count(); i++) {
 				SimplePart *name = new (this) SimplePart(valParams->at(i).name);
 				LocalVar *var = body->variable(name);
 				assert(var);
@@ -199,13 +199,16 @@ namespace storm {
 
 			// Only dispose it now, when we know we're done (in theory, the backend could fail, but
 			// this is generally good enough).
-			clearBody();
+			if (!isInline) {
+				clearBody();
+				bodyCleared = true;
+			}
 			return state;
 		}
 
 		void BSRawFn::makeStatic() {
 			if (parentLookup)
-				throw new (this) InternalError(S("Don't call 'makeStatic' after adding the function to the name tree."));
+				throw new (this) InternalError(S("Do not call 'makeStatic' after adding the function to the name tree."));
 
 			// Already static?
 			if (fnFlags() & fnStatic)
@@ -226,13 +229,48 @@ namespace storm {
 			params->remove(0);
 		}
 
+		void BSRawFn::makeInline() {
+			if (bodyCleared)
+				throw new (this) InternalError(S("Do not call 'makeInline' after the function has been executed."));
+			isInline = true;
+			setCode(new (this) InlineCode(fnPtr(engine(), &BSRawFn::generateInlineCode, this)));
+		}
+
+		void BSRawFn::generateInlineCode(InlineParams params) {
+			params.spillParams();
+
+			FnBody *body = createBody();
+			body->inlineResult = params.result;
+			body->inlineLabel = params.state->l->label();
+			body->inlineBlock = params.state->block;
+
+			Expr *bodyExpr = expectCastTo(body, result, Scope(this));
+
+			// Set parameters.
+			for (Nat i = 0; i < valParams->count(); i++) {
+				SimplePart *name = new (this) SimplePart(valParams->at(i).name);
+				LocalVar *var = body->variable(name);
+				assert(var);
+				var->var = VarInfo(params.param(i).var());
+			}
+
+			bodyExpr->code(params.state, params.result->split(params.state));
+
+			*params.state->l << body->inlineLabel;
+			params.result->created(params.state);
+		}
+
 		CodeGen *BSRawFn::generateCode() {
 			return createRawBody();
 		}
 
 		void BSRawFn::reset() {
 			// Could be done better...
-			setCode(new (this) LazyCode(fnPtr(engine(), &BSRawFn::generateCode, this)));
+			if (isInline) {
+				setCode(new (this) InlineCode(fnPtr(engine(), &BSRawFn::generateInlineCode, this)));
+			} else {
+				setCode(new (this) LazyCode(fnPtr(engine(), &BSRawFn::generateCode, this)));
+			}
 		}
 
 		Array<LocalVar *> *BSRawFn::addParams(Block *to) {

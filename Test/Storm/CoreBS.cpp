@@ -377,6 +377,10 @@ BEGIN_TEST(ReturnTest, BS) {
 	CHECK_EQ(runFn<Int>(S("tests.bs.returnAlways"), 22), 22);
 	CHECK_EQ(runFn<Int>(S("tests.bs.deduceType"), 21), 22);
 	CHECK_EQ(runFn<Int>(S("tests.bs.prematureReturn"), 20), 30);
+
+	// Return from inline functions.
+	CHECK_EQ(runFn<Int>(S("tests.bs.inlineReturn"), 20), 18);
+	CHECK_EQ(runFn<Int>(S("tests.bs.inlineReturn"), 1), 12);
 } END_TEST
 
 /**

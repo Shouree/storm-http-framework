@@ -110,6 +110,7 @@ SFormal => NameParam(type, name) : SType type, SName name #varName;
 // Decorators applicable both to free functions and to member functions.
 void SCommonOption(BSRawFn item);
 SCommonOption => makePure(item) : "pure" #keyword;
+SCommonOption => makeInline(item) : "inline" #keyword;
 
 // Decorators applicable to free functions.
 void SFreeOption(Scope scope, BSRawFn item);

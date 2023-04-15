@@ -41,3 +41,16 @@ Int prematureReturn(Int v) {
 	return v + 10;
 	10.3;
 }
+
+
+Int inlineReturnFn(Int x) : inline {
+	if (x > 10)
+		return 8;
+	else
+		return 2;
+}
+
+Int inlineReturn(Int x) {
+	Int y = inlineReturnFn(x);
+	y + 10;
+}

@@ -91,6 +91,9 @@ namespace storm {
 			// function is added to the name tree!
 			void STORM_FN makeStatic();
 
+			// Make the function inlineable. Only has affect before the function is compiled.
+			void STORM_FN makeInline();
+
 			// Add function parameters to a block. Mainly for internal use.
 			Array<LocalVar *> *STORM_FN addParams(Block *block);
 
@@ -111,8 +114,17 @@ namespace storm {
 			// Generate code.
 			CodeGen *CODECALL generateCode();
 
+			// Generate code for inline usage.
+			void CODECALL generateInlineCode(InlineParams params);
+
 			// Initialize.
 			void init(NamedThread *thread);
+
+			// Remember if we have cleared body data.
+			Bool bodyCleared;
+
+			// Should we be an inline function?
+			Bool isInline;
 		};
 
 
@@ -194,6 +206,17 @@ namespace storm {
 
 			// Parameters, ordered as they appear in the list of formal parameters.
 			Array<LocalVar *> *parameters;
+
+			// If present, we are generating code in an inline function. That means that the result
+			// should be stored inside this CodeResult, and execution should jump to the label
+			// indicated below.
+			MAYBE(CodeResult *) inlineResult;
+
+			// Label to jump to when we return from an inline function.
+			code::Label inlineLabel;
+
+			// Block to jump out to.
+			code::Block inlineBlock;
 
 			// We don't need to create a separate block for the function body itself, we can just
 			// use the root block.

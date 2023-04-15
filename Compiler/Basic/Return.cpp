@@ -7,16 +7,16 @@
 namespace storm {
 	namespace bs {
 
-		Return::Return(SrcPos pos, Block *block) : Expr(pos), returnType(findParentType(pos, block)) {
-			if (returnType != Value()) {
-				throw new (this) SyntaxError(pos, TO_S(this, S("Trying to return void from a function that returns ") << returnType));
+		Return::Return(SrcPos pos, Block *block) : Expr(pos), body(findParentFn(pos, block)) {
+			if (body->type != Value()) {
+				throw new (this) SyntaxError(pos, TO_S(this, S("Trying to return void from a function that returns ") << body->type));
 			}
 		}
 
-		Return::Return(SrcPos pos, Block *block, Expr *expr) : Expr(pos), returnType(findParentType(pos, block)) {
-			if (returnType == Value())
+		Return::Return(SrcPos pos, Block *block, Expr *expr) : Expr(pos), body(findParentFn(pos, block)) {
+			if (body->type == Value())
 				throw new (this) SyntaxError(pos, S("Trying to return a value from a function that returns void."));
-			this->expr = expectCastTo(expr, returnType, block->scope);
+			this->expr = expectCastTo(expr, body->type, block->scope);
 		}
 
 		ExprResult Return::result() {
@@ -24,7 +24,7 @@ namespace storm {
 		}
 
 		void Return::code(CodeGen *state, CodeResult *r) {
-			if (returnType == Value())
+			if (body->type == Value())
 				voidCode(state);
 			else
 				valueCode(state);
@@ -32,34 +32,44 @@ namespace storm {
 
 		void Return::voidCode(CodeGen *state) {
 			using namespace code;
-			*state->l << fnRet();
+
+			if (body->inlineResult) {
+				*state->l << jmpBlock(body->inlineLabel, body->inlineBlock);
+			} else {
+				*state->l << fnRet();
+			}
 		}
 
 		void Return::valueCode(CodeGen *state) {
 			using namespace code;
 
-			// If we can get the result as a reference, do that as we avoid a copy. The exception
-			// is built-in types, as we can copy them cheaply.
-			Value type = returnType;
-			if (!type.isPrimitive() && expr->result().type().ref)
-				type = returnType.asRef();
+			if (body->inlineResult) {
+				expr->code(state, body->inlineResult);
+				*state->l << jmpBlock(body->inlineLabel, body->inlineBlock);
+			} else {
+				// If we can get the result as a reference, do that as we avoid a copy. The exception
+				// is built-in types, as we can copy them cheaply.
+				Value type = body->type;
+				if (!type.isPrimitive() && expr->result().type().ref)
+					type = body->type.asRef();
 
-			CodeResult *r = new (this) CodeResult(type, state->block);
-			expr->code(state, r);
+				CodeResult *r = new (this) CodeResult(type, state->block);
+				expr->code(state, r);
 
-			if (type.ref)
-				*state->l << fnRetRef(r->location(state));
-			else
-				state->returnValue(r->location(state));
+				if (type.ref)
+					*state->l << fnRetRef(r->location(state));
+				else
+					state->returnValue(r->location(state));
+			}
 		}
 
-		Value Return::findParentType(SrcPos pos, Block *block) {
+		FnBody *Return::findParentFn(SrcPos pos, Block *block) {
 			BlockLookup *lookup = block->lookup;
 
 			while (lookup) {
 				Block *block = lookup->block;
 				if (FnBody *root = as<FnBody>(block))
-					return root->type;
+					return root;
 
 				lookup = as<BlockLookup>(lookup->parent());
 			}

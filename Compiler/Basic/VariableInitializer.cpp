@@ -8,7 +8,10 @@ namespace storm {
 
 		VariableInitializer::VariableInitializer(SrcPos pos, Value type, Scope scope, MAYBE(syntax::Node *) initExpr)
 			: BSRawFn(type, new (engine()) syntax::SStr(S("init")), new (engine()) Array<ValParam>(), null),
-			  pos(pos), scope(scope), initExpr(initExpr) {}
+			  pos(pos), scope(scope), initExpr(initExpr) {
+
+			makeInline();
+		}
 
 		FnBody *VariableInitializer::createBody() {
 			FnBody *body = new (this) FnBody(this, scope);

@@ -5,6 +5,8 @@ namespace storm {
 	namespace bs {
 		STORM_PKG(lang.bs);
 
+		class FnBody;
+
 		/**
 		 * Return statement.
 		 */
@@ -31,14 +33,14 @@ namespace storm {
 			virtual void STORM_FN toS(StrBuf *to) const;
 
 		private:
-			// Type to return.
-			Value returnType;
+			// Function body we are returning from.
+			FnBody *body;
 
 			// Check type.
 			void checkType();
 
-			// Find the return type of the parent function.
-			Value findParentType(SrcPos pos, Block *block);
+			// Find the surrounding FnBody.
+			FnBody *findParentFn(SrcPos pos, Block *block);
 
 			// Code generation.
 			void voidCode(CodeGen *state);
