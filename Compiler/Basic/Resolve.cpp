@@ -325,7 +325,10 @@ namespace storm {
 		}
 
 		void UnresolvedName::error() const {
-			throw new (this) SyntaxError(pos, TO_S(engine(), S("Can not find ") << name << S(".")));
+			StrBuf *msg = new (this) StrBuf();
+			*msg << S("Can not find \"") << name << S("\" with parameters (")
+				 << join(params->values(), S(", ")) << S(").");
+			throw new (this) SyntaxError(pos, msg->toS());
 		}
 
 	}
