@@ -630,8 +630,8 @@ SClassItem => MemberWrap(item) : SClassWrapItem@ item;
 
 // Class items possible to put access modifiers (and other decorators) in front of.
 Named SClassWrapItem(Class owner);
-SClassWrapItem[0] => classVar(owner, t, n) :
-    SType t, SName n #varName, ";";
+SClassWrapItem[0] => classVar(owner, t, n, init) :
+    SType t, SName n #varName, ("=", SExpr@ init, )? ";";
 SClassWrapItem[0] => classFn(owner, pos, name, result, params, body) :
     SType result, SFnDeclName name #fnName, "(", SFormals params, ")", SMemberOptions(owner, me), "{"[, SFunctionBody@ body,]+ "}";
 SClassWrapItem[0] => classAbstractFn(owner, pos, name, result, params, options) :

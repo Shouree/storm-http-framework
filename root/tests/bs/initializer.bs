@@ -1,0 +1,39 @@
+class DefInitTest {
+	Int i = 3;
+	Str s = "Hello";
+
+	// Rely on the default generated ctor.
+
+	void toS(StrBuf out) : override {
+		out << i << ", " << s;
+	}
+}
+
+class BsInitTest {
+	Int i = 3;
+	Str s = "Hello";
+
+	init() {
+		init {}
+	}
+
+	init(Int z) {
+		init { i = z; }
+	}
+
+	void toS(StrBuf out) : override {
+		out << i << ", " << s;
+	}
+}
+
+Str classDefInit() {
+	DefInitTest.toS;
+}
+
+Str classBsInit() {
+	BsInitTest.toS;
+}
+
+Str classBsInit(Int v) {
+	BsInitTest(v).toS;
+}

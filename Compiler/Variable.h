@@ -7,6 +7,8 @@
 namespace storm {
 	STORM_PKG(core.lang);
 
+	class Function;
+
 	/**
 	 * Describes some kind of variable. It is a member variable if it takes a parameter, otherwise
 	 * it is some kind of global variable.
@@ -42,10 +44,13 @@ namespace storm {
 		Offset STORM_FN offset() const;
 
 		// Get our parent type.
-		Type *owner() const;
+		Type *STORM_FN owner() const;
 
 		// Set our offset.
 		void setOffset(Offset off);
+
+		// Initializer, if any.
+		MAYBE(Function *) initializer;
 
 		// TODO: We might want to offer references for using the offset, so we can easily update it.
 	private:

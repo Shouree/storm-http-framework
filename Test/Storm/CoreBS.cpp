@@ -336,6 +336,16 @@ BEGIN_TEST(ScopeTest, BS) {
 
 
 /**
+ * Initializers.
+ */
+
+BEGIN_TEST(ClassInitTest, BS) {
+	CHECK_EQ(::toS(runFn<Str *>(S("tests.bs.classDefInit"))), L"3, Hello");
+	CHECK_EQ(::toS(runFn<Str *>(S("tests.bs.classBsInit"))), L"3, Hello");
+	CHECK_EQ(::toS(runFn<Str *>(S("tests.bs.classBsInit"), Int(8))), L"8, Hello");
+} END_TEST
+
+/**
  * Units.
  */
 

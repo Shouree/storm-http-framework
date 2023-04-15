@@ -8,6 +8,7 @@
 #include "Ctor.h"
 #include "Access.h"
 #include "Doc.h"
+#include "VariableInitializer.h"
 
 namespace storm {
 	namespace bs {
@@ -295,7 +296,20 @@ namespace storm {
 		 */
 
 		MemberVar *classVar(Class *owner, SrcName *type, syntax::SStr *name) {
-			return new (owner) MemberVar(name->pos, name->v, owner->scope.value(type), owner);
+			return classVar(owner, type, name, null);
+		}
+
+		MemberVar *classVar(Class *owner, SrcName *type, syntax::SStr *name, MAYBE(syntax::Node *) init) {
+			Value t = owner->scope.value(type);
+			MemberVar *var = new (owner) MemberVar(name->pos, name->v, t, owner);
+
+			if (init) {
+				var->initializer = new (owner) VariableInitializer(name->pos, t, owner->scope, init);
+				var->initializer->make(fnStatic);
+				var->initializer->parentLookup = var;
+			}
+
+			return var;
 		}
 
 

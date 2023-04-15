@@ -172,6 +172,7 @@ namespace storm {
 		 * Class variable.
 		 */
 		MemberVar *STORM_FN classVar(Class *owner, SrcName *type, syntax::SStr *name) ON(Compiler);
+		MemberVar *STORM_FN classVar(Class *owner, SrcName *type, syntax::SStr *name, MAYBE(syntax::Node *) init) ON(Compiler);
 
 		/**
 		 * Class function.

@@ -1,6 +1,5 @@
 #pragma once
 #include "Decl.h"
-#include "Function.h"
 #include "Compiler/Scope.h"
 #include "Compiler/Name.h"
 #include "Compiler/Visibility.h"
@@ -51,30 +50,6 @@ namespace storm {
 		private:
 			// Create an initializer for the variable.
 			Function *createInitializer(Value type, Scope scope, NamedThread *thread);
-		};
-
-
-		/**
-		 * Initializer for a global variable.
-		 */
-		class GlobalInitializer : public BSRawFn {
-			STORM_CLASS;
-		public:
-			// Create.
-			STORM_CTOR GlobalInitializer(SrcPos pos, Value type, Scope scope, MAYBE(syntax::Node *) initExpr);
-
-			// Generate the body.
-			virtual FnBody *STORM_FN createBody();
-
-		private:
-			// Location.
-			SrcPos pos;
-
-			// Scope.
-			Scope scope;
-
-			// Initialization expression.
-			MAYBE(syntax::Node *) initExpr;
 		};
 
 	}

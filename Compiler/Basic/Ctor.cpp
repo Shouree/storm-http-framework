@@ -531,9 +531,13 @@ namespace storm {
 				throw new (this) SyntaxError(pos, msg);
 			}
 
-			if (t.isPrimitive()) {
-				// Default value is already there.
+			if (v->initializer) {
+				// If an initializer was specified, use that.
+				initVarInitializer(s, v);
+			} else if (t.isPrimitive()) {
+				// Primitives don't need initialization since we zero memory by default.
 			} else if (t.isValue()) {
+				// Values:
 				Function *ctor = t.type->defaultCtor();
 				if (!ctor) {
 					Str *msg = TO_S(engine(), S("Can not initialize ") << v->name << S(" by default-constructing it. ")
@@ -546,6 +550,7 @@ namespace storm {
 				*s->l << fnParam(engine().ptrDesc(), ptrA);
 				*s->l << fnCall(ctor->ref(), false);
 			} else {
+				// Classes:
 				Function *ctor = t.type->defaultCtor();
 				if (!ctor) {
 					Str *msg = TO_S(engine(), S("Can not initialize ") << v->name << S(" by default-constructing it. ")
@@ -561,6 +566,23 @@ namespace storm {
 				*s->l << mov(ptrA, dest);
 				*s->l << mov(ptrRel(ptrA, v->offset()), cVar);
 			}
+		}
+
+		void InitBlock::initVarInitializer(CodeGen *s, MemberVar *v) {
+			using namespace code;
+
+			assert(v->initializer);
+
+			code::Var dest = thisVar->var.v;
+			code::Var resultPtr = s->l->createVar(s->block, Size::sPtr);
+
+			// Make a result pointer to pass to the function call.
+			*s->l << mov(ptrA, dest);
+			*s->l << add(ptrA, ptrConst(v->offset()));
+			*s->l << mov(resultPtr, ptrA);
+
+			// Call the function.
+			v->initializer->autoCallRef(s, new (this) Array<code::Operand>(), resultPtr);
 		}
 
 		void InitBlock::initVar(CodeGen *s, MemberVar *v, Initializer *to) {

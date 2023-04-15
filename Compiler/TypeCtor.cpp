@@ -97,7 +97,16 @@ namespace storm {
 		Array<MemberVar *> *vars = owner->variables();
 		for (nat i = 0; i < vars->count(); i++) {
 			MemberVar *v = vars->at(i);
-			if (v->type.isPrimitive()) {
+			if (Function *init = v->initializer) {
+				// Use initializer.
+				Var tmp = l->createVar(t->block, Size::sPtr);
+
+				*l << mov(ptrA, me);
+				*l << add(ptrA, ptrConst(v->offset()));
+				*l << mov(tmp, ptrA);
+
+				init->autoCallRef(t, new (this) Array<code::Operand>(), tmp);
+			} else if (v->type.isPrimitive()) {
 				// No need for initialization.
 			} else if (v->type.isValue()) {
 				Function *ctor = v->type.type->defaultCtor();

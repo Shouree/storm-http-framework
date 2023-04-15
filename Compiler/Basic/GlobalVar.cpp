@@ -1,9 +1,7 @@
 #include "stdafx.h"
 #include "GlobalVar.h"
 #include "Scope.h"
-#include "Function.h"
-#include "Named.h"
-#include "Resolve.h"
+#include "VariableInitializer.h"
 #include "Compiler/Variable.h"
 #include "Compiler/NamedThread.h"
 #include "Compiler/Exception.h"
@@ -46,32 +44,13 @@ namespace storm {
 		}
 
 		Function *GlobalVarDecl::createInitializer(Value type, Scope scope, NamedThread *thread) {
-			GlobalInitializer *r = new (this) GlobalInitializer(this->type->pos, type, scope, initExpr);
+			VariableInitializer *r = new (this) VariableInitializer(this->type->pos, type, scope, initExpr);
 			// Trick the function into believing that it has a proper name (just like
 			// lambdas). Necessary in order to be able to call 'runOn', which is done when we create
 			// function pointers to the function.
 			r->parentLookup = scope.top;
 			r->runOn(thread);
 			return r;
-		}
-
-
-		GlobalInitializer::GlobalInitializer(SrcPos pos, Value type, Scope scope, MAYBE(syntax::Node *) initExpr) :
-			BSRawFn(type, new (engine()) syntax::SStr(S("init")), new (engine()) Array<ValParam>(), null),
-			pos(pos), scope(scope), initExpr(initExpr) {}
-
-		FnBody *GlobalInitializer::createBody() {
-			FnBody *body = new (this) FnBody(this, scope);
-
-			if (initExpr) {
-				// Use the expression.
-				body->add(syntax::transformNode<Expr, Block *>(initExpr, body));
-			} else {
-				// Create an instance using the default constructor.
-				body->add(defaultCtor(pos, scope, result.type));
-			}
-
-			return body;
 		}
 
 	}
