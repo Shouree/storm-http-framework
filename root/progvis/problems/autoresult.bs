@@ -6,40 +6,45 @@ use core:io;
 // Check improvements that have not yet been checked automatically.
 void checkImprovements() {
 	Database db;
-	checkImprovements(db);
+	checkImprovements(db, true);
 }
 
 // Check improvements periodically.
 void checkImprovementsLoop() {
 	Database db;
+	var interval = 30 min;
+	print("== Begin check of improvements ==");
+	checkImprovements(db, true);
+	print("== End check of improvements ==");
+	print("Periodic checks will continue every " + interval.toS);
+
 	while (true) {
-		print("== Begin check of improvements ==");
-		checkImprovements(db);
-		print("== End check of improvements ==");
-		sleep(30 min);
+		checkImprovements(db, false);
+		sleep(interval);
 	}
 }
 
 
 // Check all improvements.
-void checkImprovements(Database db) {
+void checkImprovements(Database db, Bool verbose) {
 	for (problem in db.problemList()) {
-		print("Checking problem ${problem.id}: ${problem.title}");
-		checkImprovements(db, problem.id);
+		if (verbose)
+			print("Checking problem ${problem.id}: ${problem.title}");
+		checkImprovements(db, problem);
 	}
 }
 
 // Check all improvements for a particular problem.
-void checkImprovements(Database db, Int problemId) {
-	Int[] impls = db.latestImplementations(problemId);
-	Int[] tests = db.latestTests(problemId);
+void checkImprovements(Database db, ProblemInfo problem) {
+	Int[] impls = db.latestImplementations(problem.id);
+	Int[] tests = db.latestTests(problem.id);
 	impls << -1;
 	tests << -1;
 	for (impl in impls) {
 		for (test in tests) {
-			if (db.findError(problemId, impl, test).unknown) {
-				print("- Checking impl ${impl} with test ${test}");
-				checkImprovement(db, problemId, impl, test);
+			if (db.findError(problem.id, impl, test).unknown) {
+				print("Checking ${problem.id} - ${problem.title}: impl ${impl} with test ${test}...");
+				checkImprovement(db, problem.id, impl, test);
 			}
 		}
 	}
