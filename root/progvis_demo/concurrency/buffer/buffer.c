@@ -60,7 +60,7 @@ int buffer_get(struct buffer *b) {
 // Write some elements to a buffer.
 void write(struct buffer *to) {
 	for (int i = 0; i < 5; i++)
-		buffer_put(to, i);
+		buffer_put(to, i + 1);
 }
 
 // Read some elements from a buffer.

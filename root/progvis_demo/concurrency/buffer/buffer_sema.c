@@ -67,7 +67,7 @@ int buffer_get(struct buffer *b) {
 // Write some elements to a buffer.
 void write(struct buffer *to) {
 	for (int i = 0; i < 5; i++)
-		buffer_put(to, i);
+		buffer_put(to, i + 1);
 }
 
 // Read some elements from a buffer.
@@ -82,7 +82,7 @@ int main(void) {
 	struct buffer *b = buffer_create(3);
 
 	// Try with multiple readers and writers:
-	// thread_new(&write, b);
+	thread_new(&write, b);
 	// thread_new(&read, b);
 
 	thread_new(&write, b);
