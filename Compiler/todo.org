@@ -59,7 +59,7 @@
     but the scale of the issue should be assessed first.
   - [ ] Parsing core.lang.syntax.bnf takes about 80 ms, which is a bit on the high end when compiling code...
 
-* Loose ends so far [61/109]
+* Loose ends so far [62/109]
   - [ ] Serializing an object graph containing multiple references to the same string currently
     causes the string to be duplicated. This might not be ideal, and surprising since we break
     object identity (even if it generally does not matter for strings, as they are immutable).
@@ -125,7 +125,6 @@
   - [ ] In Basic Storm, writing 1.2 currently produces a float by default. Is this desirable?
   - [ ] Allow easy creation of subtypes similar to Ada, where one can something like: type Foo is (0 .. 99).
     Implement this as a library, eg. lang:bs:subtype
-  - [ ] Lambda functions can not infer their proper type when being assigned to Maybe<T>.
   - [ ] Expose all function pointers the Engine knows about to Storm using a similar API to what is used now.
     This allows other languages to use "internal" features, for example, to access global variables properly.
   - [ ] Generalize the "weak cast" functionality so that new types may "overload" them. This can for example
@@ -149,6 +148,7 @@
   - [ ] Move the 'assign' declaration to being purely a decorator (ie. Foo field(Foo v) : assign)?
   - [ ] If a type has a '==' or '<' outside the type itself, the corresponding operator will not be present in
     a Handle, like '<<' at the moment.
+  - [X] Lambda functions can not infer their proper type when being assigned to Maybe<T>.
   - [X] If a class contains a variable "center", and the layout library is imported, the class
     "center" in the library takes precedence over the class-local variable. This should probably not
     be the case.
