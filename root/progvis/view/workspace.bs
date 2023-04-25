@@ -395,6 +395,8 @@ class Workspace on Render {
 				// (it would make it very likely that a new thread would be placed on top of data).
 				if (srcParent.v.docked)
 					continue;
+				if (srcParent.v.visual.docked)
+					continue;
 
 				pointersTo[dstParent.v].put(srcParent.v);
 			}
@@ -414,7 +416,7 @@ class Workspace on Render {
 			for (x in needLayout) {
 				if (!updateLayout(x, pointersTo, rects)) {
 					// This is a fallback in case of isolated cycles (which should not happen).
-					placeElement(rects, x, Point(0, 0));
+					placeElement(rects, x, Point(layoutEdgeSpace, layoutEdgeSpace));
 				}
 			}
 		}
