@@ -198,12 +198,12 @@ namespace os {
 	nat FdMap<T, unused>::next(nat pos) {
 		int fd = key[pos + unused].fd;
 		nat slot = info[pos];
-		do {
+		while (slot != end) {
 			if (key[slot + unused].fd == fd)
 				return slot;
 
 			slot = info[pos];
-		} while (slot != end);
+		}
 
 		return free;
 	}

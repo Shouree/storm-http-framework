@@ -77,7 +77,7 @@ void StackInfoSet::format(GenericOutput &to, int id, void *fnBase, int offset) {
 	if (data[id]) {
 		data[id]->format(to, fnBase, offset);
 	} else {
-		to.put("Unknown function @");
+		to.put("Unknown function @0x");
 		to.putHex((size_t)fnBase + offset);
 	}
 }

@@ -267,7 +267,7 @@ void CppInfo::format(GenericOutput &to, void *fnBase, int offset) const {
 	if (hasSymName) {
 		outputSymbol(to, symbol);
 	} else {
-		to.put(L"Unknown function @");
+		to.put(L"Unknown function @0x");
 		to.putHex((size_t)ptr);
 	}
 }
@@ -401,7 +401,7 @@ void CppInfo::format(GenericOutput &to, void *base, int offset) const {
 	backtrace_pcinfo(state.state, (uintptr_t)base + offset, &fullFormatOk, &formatError, &data);
 
 	if (!data.any) {
-		to.put("Unknown function @");
+		to.put("Unknown function @0x");
 		to.putHex((size_t)base + offset);
 	}
 }
