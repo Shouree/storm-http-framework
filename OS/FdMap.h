@@ -2,13 +2,13 @@
 
 #include <iomanip>
 
-#if defined(POSIX)
+#ifdef POSIX
 #include <poll.h>
 #endif
 
 namespace os {
 
-#ifndef WINDOWS
+#ifdef POSIX
 
 	/**
 	 * A map for file descriptors (mainly relevant on UNIX-like systems).
@@ -57,6 +57,9 @@ namespace os {
 
 		// Print the contents for debugging.
 		void dbg_print();
+
+		// Validate the map.
+		bool dbg_verify();
 
 	private:
 		FdMap(const FdMap &);
@@ -161,6 +164,9 @@ namespace os {
 
 				// Redo linking.
 				nat to = freeSlot();
+				info[from] = to;
+
+				// Move the node itself.
 				info[to] = info[into];
 				key[to + unused] = key[into + unused];
 				val[to] = val[into];
@@ -202,7 +208,7 @@ namespace os {
 			if (key[slot + unused].fd == fd)
 				return slot;
 
-			slot = info[pos];
+			slot = info[slot];
 		}
 
 		return free;
@@ -284,6 +290,7 @@ namespace os {
 		val = new T *[n];
 		size = n;
 		lastFree = 0;
+		elems = 0;
 
 		// Initialize.
 		for (nat i = 0; i < size; i++) {
@@ -299,7 +306,7 @@ namespace os {
 					continue;
 
 				struct pollfd &k = oldKey[i + unused];
-				put(k, val[i]);
+				put(k, oldVal[i]);
 			}
 		}
 
@@ -327,6 +334,46 @@ namespace os {
 			}
 			std::wcout << endl;
 		}
+	}
+
+	template <class T, size_t unused>
+	bool FdMap<T, unused>::dbg_verify() {
+		if (capacity() == 0)
+			return true;
+
+		bool ok = true;
+
+		// Check indices.
+		for (nat i = 0; i < capacity(); i++) {
+			if (info[i] >= capacity() && info[i] != free && info[i] != end) {
+				std::wcout << "Element " << i << " has info out of bounds." << std::endl;
+				ok = false;
+			}
+		}
+
+		// Check so that all chains map back to the right primary slot.
+		for (nat i = 0; i < capacity(); i++) {
+			if (info[i] == free)
+				continue;
+
+			int fd = key[unused + i].fd;
+			nat slot = primarySlot(fd);
+			while (slot != i) {
+				slot = info[slot];
+				if (slot >= capacity()) {
+					std::wcout << "Chain from " << primarySlot(fd) << " does not reach " << i << std::endl;
+					ok = false;
+					break;
+				}
+			}
+		}
+
+		if (!ok) {
+			std::wcout << L"Invalid map contents:" << endl;
+			dbg_print();
+		}
+
+		return ok;
 	}
 
 #endif
