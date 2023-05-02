@@ -441,7 +441,7 @@ Str extraSerialization() {
 	MemOStream out;
 	original.writeExtra(ObjOStream(out));
 
-	showString(out.buffer);
+	// showString(out.buffer);
 
 	MemIStream in(out.buffer);
 	MissingData copy = MissingData:read(ObjIStream(in));
