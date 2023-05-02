@@ -1,6 +1,6 @@
 // #pragma once // GCC issues a warning when using 'pragma once' with precompiled headers...
-#ifndef TEST_LIB_H
-#define TEST_LIB_H
+#ifndef STORM_SQL_H
+#define STORM_SQL_H
 
 #ifdef __cplusplus
 
