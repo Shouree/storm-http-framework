@@ -72,7 +72,7 @@ dialog ProblemsDlg {
 		state.problem = info.id;
 
 		initial.visible = false;
-		if (info.attempted) {
+		if (info.attempted | state.isAdmin) {
 			// Show attempted panel.
 			firstTry.visible = false;
 			explore.visible = true;
@@ -103,6 +103,8 @@ package class ProblemState on Ui {
 			currentProblem = -1;
 		}
 	}
+
+	Bool isAdmin() { client.isAdmin; }
 
 	Response query(Request request) {
 		client.query(request);
@@ -155,6 +157,15 @@ package class ProblemState on Ui {
 			target.done(action);
 		}
 	}
+
+	void newImpl(Problem problem) {
+		done(ImplAction(settings, problem));
+	}
+
+	void newTest(Problem problem) {
+		done(TestAction(settings, problem));
+	}
+
 }
 
 window FirstTryPanel {
@@ -227,6 +238,8 @@ window CodeOverviewPanel {
 			expandCol: 0;
 			expandRow: 0;
 			Label statusLbl("Status:", VAlign:center) {}
+			Button newImpl("Admin: New impl.") {}
+			Button newTest("Admin: New test") {}
 			Button solve("Investigate") {}
 		}
 	}
@@ -237,6 +250,14 @@ window CodeOverviewPanel {
 	init(ProblemState state) {
 		init() {
 			state = state;
+		}
+
+		if (state.isAdmin) {
+			newImpl.onClick = &this.onNewImpl;
+			newTest.onClick = &this.onNewTest;
+		} else {
+			newImpl.visible = false;
+			newTest.visible = false;
 		}
 
 		solve.onClick = &this.onSolve;
@@ -300,6 +321,17 @@ window CodeOverviewPanel {
 				state.reloadProblem();
 		}
 	}
+
+	private void onNewImpl() {
+		if (showing)
+			state.newImpl(showing);
+	}
+
+	private void onNewTest() {
+		if (showing)
+			state.newTest(showing);
+	}
+
 }
 
 window ExploreImprovementPanel {

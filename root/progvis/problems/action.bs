@@ -76,6 +76,27 @@ class DebugAction extends Action {
 
 
 /**
+ * Action to submit a new problem, skips the "find error" part.
+ */
+class ImplAction extends Action {
+	init(progvis:Settings settings, Problem problem) {
+		init(settings, problem) {}
+	}
+
+	Url[] files() : override {
+		// To prevent modifications to the test code, we put it in an in-memory store.
+		MemoryProtocol mem;
+		Url test = problem.test.put("test", mem);
+		[implCode, test];
+	}
+
+	progvis:Behavior behavior(progvis:MainWin window, Client client) : override {
+		return progvis:ImproveBehavior(window, client, problem, testCode, implCode, "<none, admin action>");
+	}
+}
+
+
+/**
  * Test a problem (change the main function).
  */
 class TestAction extends Action {

@@ -26,14 +26,18 @@ class AuthResponse : extends Response, serializable {
 	// User name.
 	Str name;
 
+	// Is the user an admin?
+	Bool admin = false;
+
 	// Server version.
 	Version version;
 
 	// TODO: Other stats?
 
-	init(Str name) {
+	init(Str name, Bool admin) {
 		init {
 			name = name;
+			admin = admin;
 			version = named{PROGVIS_VERSION}.version;
 		}
 	}

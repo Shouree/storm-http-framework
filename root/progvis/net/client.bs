@@ -71,6 +71,7 @@ class Client on Network {
 		var response = query(AuthRequest(identity));
 		if (response as AuthResponse) {
 			uName = response.name;
+			admin = response.admin;
 			if (response.version > named{PROGVIS_VERSION}.version)
 				throw ServerError("Please upgrade Progvis. Version ${response.version} is available.");
 			print("Username: ${uName}");
@@ -88,6 +89,9 @@ class Client on Network {
 
 	private Str uName;
 	Str username() { uName; }
+
+	private Bool admin;
+	Bool isAdmin() { admin; }
 
 	// Perform a query to the server.
 	Response query(Request request) {

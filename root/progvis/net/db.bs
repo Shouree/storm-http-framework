@@ -9,7 +9,9 @@ DATABASE ProgvisDB {
 		// User name.
 		name TEXT ALLOW NULL,
 		// User display name.
-		displayName TEXT
+		displayName TEXT,
+		// User is administrator?
+		admin INTEGER DEFAULT 0
 	);
 
 	// Known clients in the system, and what users they map to.
@@ -141,8 +143,16 @@ class Database {
 
 	// Find a user's identity from its client key.
 	UserInfo? findUser(Str clientId) {
-		if (x = WITH db: SELECT ONE users.id, users.displayName FROM clients JOIN users ON clients.user == users.id WHERE clients.id == clientId) {
-			return UserInfo(x.users_id, x.users_displayName);
+		if (x = WITH db: SELECT ONE users.id, users.displayName, users.admin FROM clients JOIN users ON clients.user == users.id WHERE clients.id == clientId) {
+			return UserInfo(x.users_id, x.users_displayName, x.users_admin > 0);
+		}
+		null;
+	}
+
+	// Find user info from its ID.
+	UserInfo? findUser(Int userId) {
+		if (x = WITH db: SELECT ONE users.id, users.displayName, users.admin FROM users WHERE users.id == userId) {
+			return UserInfo(x.users_id, x.users_displayName, x.users_admin > 0);
 		}
 		null;
 	}
@@ -215,7 +225,7 @@ class Database {
 				// Note: We enforce that the previous setup must have contained an error, so we don't need to check that.
 				Error e = findError(row.problem, row.iId, row.tId);
 				if (e.success())
-					points += submittedImpl;
+					points += solvedImpl;
 
 				if (row.iAuthor == row.tAuthor)
 					points /= selfPenalty;
@@ -648,7 +658,10 @@ class UserInfo {
 	// Display name of the user.
 	Str name;
 
-	init(Int id, Str name) {
-		init { id = id; name = name; }
+	// Is the user an admin?
+	Bool admin;
+
+	init(Int id, Str name, Bool admin) {
+		init { id = id; name = name; admin = admin; }
 	}
 }

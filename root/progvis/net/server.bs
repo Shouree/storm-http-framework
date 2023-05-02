@@ -36,11 +36,17 @@ class ServerConn {
 	// Authenticated user ID.
 	private Int myUserId;
 
+	// Is the user an admin?
+	private Bool myAdmin;
+
 	// Client key for this user (for logout mainly).
 	private Str myClientId;
 
 	// Get user ID.
 	public Int userId() { myUserId; }
+
+	// Is the user an administrator?
+	public Bool isAdmin() { myAdmin; }
 
 	// Get the client ID.
 	public Str clientId() { myClientId; }
@@ -109,8 +115,9 @@ class ServerConn {
 			print("Checking for user: ${request.key}...");
 			if (user = db.findUser(request.key)) {
 				myUserId = user.id;
+				myAdmin = user.admin;
 				myClientId = request.key;
-				send(AuthResponse(user.name));
+				send(AuthResponse(user.name, user.admin));
 				return true;
 			} else {
 				// Note: This is fine since we know that the key is URL-safe.

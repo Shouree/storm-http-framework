@@ -56,7 +56,7 @@ class ChangeNicknameRequest : extends Request, serializable {
 
 	Response? execute(ServerConn server, Database db) : override {
 		db.changeName(server.userId, newName);
-		AuthResponse(newName);
+		AuthResponse(newName, server.isAdmin);
 	}
 }
 
@@ -75,17 +75,21 @@ class LeaderboardRequest : extends Request, serializable {
 		// Pick the top 10, and the current user.
 		Bool currentFound = false;
 		Score[] result;
+		Int place = 1;
 		for (i, score in scores) {
 			Bool add = (score.user == server.userId);
 			currentFound |= add;
-			add |= i < 10;
+			add |= place < 11;
 
 			if (currentFound & !add)
 				break;
 
 			if (add) {
-				if (user = db.findUserName(score.user))
-					result << Score(user, score.score, i.int + 1);
+				if (user = db.findUser(score.user)) {
+					if (!user.admin) {
+						result << Score(user.name, score.score, place++);
+					}
+				}
 			}
 		}
 
