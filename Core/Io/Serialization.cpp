@@ -440,7 +440,7 @@ namespace storm {
 		return created;
 	}
 
-	Variant ObjIStream::readClass(Nat typeId) {
+	Variant ObjIStream::readObject(Nat typeId) {
 		Desc *type = findInfo(typeId);
 		if (type->isValue()) {
 			Type *t = type->info->type;
@@ -571,9 +571,12 @@ namespace storm {
 				}
 
 				return r;
-			} else if (expected.read < -1) {
+			} else if (expected.read == -2) {
 				// Read one object into temporary storage and continue.
-				at.pushTemporary(readClass(expected.type));
+				at.pushTemporary(readObject(expected.type));
+			} else if (expected.read < -2) {
+				// Read one object, and ignore it.
+				readObject(expected.type);
 			} else /* if (expected.read > 0) */ {
 				// Retrieve a value from temporary storage.
 				r.expectedType = expected.type;
@@ -587,9 +590,19 @@ namespace storm {
 		if (depth->empty())
 			throw new (this) SerializationFormatError(S("Mismatched calls to startX during dedeserialization!"));
 
-		Cursor end = depth->last();
-		if (!end.atEnd())
-			throw new (this) SerializationFormatError(S("Missing fields during deserialization!"));
+		Cursor &at = depth->last();
+
+		// It is possible that there are things we should ignore at the end of the current data.
+		while (!at.atEnd()) {
+			const Member &member = at.current();
+			at.next();
+
+			if (member.read >= -2)
+				throw new (this) SerializationFormatError(S("Missing fields in the read constructor during serialization!"));
+
+			// Now, member.read is equal to -3, so ignore whatever we find.
+			readObject(member.type);
+		}
 
 		depth->pop();
 
@@ -660,6 +673,10 @@ namespace storm {
 		// Note: We can not check the types of members here, as all member types are not necessarily
 		// known at this point. This is instead done when 'readXxx' is called.
 
+		// Note: If the stream contains a member that is not present in the type, it will be stored
+		// in temporary storage, but never used. This is fine, as we clear the temporary storage
+		// fairly quickly, and we expect this case to be fairly rare.
+
 		// Check the members we need to find, and match them to the members in the stream. During
 		// the process, figure out how to use the temporary storage to store some members there if
 		// necessary.
@@ -679,6 +696,10 @@ namespace storm {
 					break;
 
 				// Store it in temporary storage and remember its location (indexed from 1).
+				// We could try to figure out which members can be ignored already, but that
+				// is probably excessive as we expect changes in the data format to be fairly
+				// rare, and the cost is not too large here. One potential problem is if the
+				// object is entirely empty, and we only have -3 values everywhere.
 				m.read = -2;
 				tempPos->put(mName, Member(m, tempPos->count() + 1));
 				streamPos++;
@@ -702,6 +723,13 @@ namespace storm {
 					 << S("and has no default value in the source code.");
 				throw new (this) SerializationFormatError(msg->toS());
 			}
+		}
+
+		// Catch extra members that are present at the end of the stream, but not in our type.
+		for (; streamPos < memberCount; streamPos++) {
+			// Note: We need to use the special "ignore" flag at the end. Otherwise, deserialization
+			// will not work properly.
+			stream->members->at(streamPos).read = -3;
 		}
 
 		// Remember the number of bytes required in temporary storage.

@@ -481,6 +481,7 @@ namespace storm {
 			// = 0: Read it immediately, as usual.
 			// =-1: Use default value.
 			// =-2: Read this member and push it onto temporary storage.
+			// =-3: Read this member and ignore it. Must only be used at the end.
 			// > 0: Read this member from temporary storage at 'read - 1'.
 			// This allows reading members in a different order compared to what is expected
 			// by the constructor of the object we're constructing. It does, however, incur
@@ -624,7 +625,7 @@ namespace storm {
 		void validateMaybe(Desc *desc);
 
 		// Read an object into a variant.
-		Variant readClass(Nat type);
+		Variant readObject(Nat type);
 
 		// Read a value (internal version, does not call 'start').
 		void readValueI(Desc *type, void *out);

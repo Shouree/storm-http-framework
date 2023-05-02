@@ -361,8 +361,8 @@ Bool shuffledSerialization() {
 }
 
 /**
- * Serializable class, with the ability to write a subset of members so that we can test our ability
- * to create new values.
+ * Serializable class, with the ability to write a subset, and a superset of members so that we can
+ * test our ability to create new values, and account for extra data.
  */
 class MissingData : serializable {
 	Str a = "Def A";
@@ -383,6 +383,24 @@ class MissingData : serializable {
 		if (to.startClass(desc, this)) {
 			b.write(to);
 			a.write(to);
+			to.end();
+		}
+	}
+
+	void writeExtra(ObjOStream to) {
+		SerializedStdType desc(named{MissingData}, &__init(MissingData, ObjIStream));
+		desc.add("extra1", named{core:Str});
+		desc.add("a", named{core:Str});
+		desc.add("extra2", named{core:Int});
+		desc.add("b", named{core:Str});
+		desc.add("extra3", named{core:Str});
+
+		if (to.startClass(desc, this)) {
+			"extra1".write(to);
+			a.write(to);
+			10.write(to); // as "extra2"
+			b.write(to);
+			"extra3".write(to);
 			to.end();
 		}
 	}
@@ -410,6 +428,20 @@ Str shuffledSerialization2() {
 	original.writeShuffled(ObjOStream(out));
 
 	// showString(out.buffer);
+
+	MemIStream in(out.buffer);
+	MissingData copy = MissingData:read(ObjIStream(in));
+
+	copy.toS;
+}
+
+// Serialize an object, but have the stream contain extra members.
+Str extraSerialization() {
+	MissingData original("Custom A", "Custom B");
+	MemOStream out;
+	original.writeExtra(ObjOStream(out));
+
+	showString(out.buffer);
 
 	MemIStream in(out.buffer);
 	MissingData copy = MissingData:read(ObjIStream(in));
