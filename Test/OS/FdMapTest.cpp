@@ -4,7 +4,7 @@
 
 #ifdef POSIX
 
-BEGIN_TEST_(FdMapTest, OS) {
+BEGIN_TEST(FdMapTest, OS) {
 	const int maxFds = 20;
 	const int numInserts = 20;
 	const int numRemoves = 10;
