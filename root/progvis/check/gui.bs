@@ -12,6 +12,7 @@ dialog Dialog {
 		nextLine;
 
 		Label message("") { colspan: 2; }
+		FillBox(300, 10) { row: 2; col: 0; }
 		nextLine;
 
 		Button ok("Cancel") { col: 1; }
@@ -37,6 +38,13 @@ dialog Dialog {
 
 	// Result, if any.
 	Result? result;
+
+	// Update status. Returns 'false' if we shall abort search.
+	private Bool update(Nat states, Nat edges, Nat unexplored) {
+		message.text = "Explored ${states} states and ${edges} transitions...";
+
+		return !cancel;
+	}
 
 	// Window closed. Abort any running task.
 	void windowDestroyed() {
@@ -64,7 +72,7 @@ dialog Dialog {
 		progress.progress = 1.0;
 		status.text = "Done!";
 		if (result) {
-			message.text = "Found an error of type: ${result.error.type}\nClick below to see the issue.";
+			message.text = "Found an error of type: ${result.error.type}\nClick \"Show\" below to see the issue.";
 			ok.text = "Show";
 		} else {
 			message.text = "No errors found, at least not with this main program.";
@@ -95,11 +103,16 @@ dialog Dialog {
 
 		Dialog owner;
 
-		void progress(Nat depth, Nat states, Nat edges, Nat unexplored) : override {
-			// print("P ${states} ${edges} ${unexplored}");
+		Moment lastCheck;
 
-			if (owner.cancel)
-				throw progvis:program:ExitError();
+		void progress(Nat depth, Nat states, Nat edges, Nat unexplored) : override {
+			Moment now;
+			if (now - lastCheck > 1 s) {
+				lastCheck = now;
+
+				if (!owner.update(states, edges, unexplored))
+					throw progvis:program:ExitError();
+			}
 		}
 	}
 }
