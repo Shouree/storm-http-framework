@@ -1050,7 +1050,7 @@ class SelectOneQuery extends SelectQuery {
 
 		// No type info - just return a Maybe<Row> object.
 		if (noTypeInfo)
-			return namedExpr(context, pos, "fetch", statement);
+			return namedExpr(context, pos, "fetchOne", statement);
 
 		// Otherwise, we want to return either <null> or an instance of the row-type.
 		TypedRow t = getTypedRow(types);
@@ -1061,7 +1061,7 @@ class SelectOneQuery extends SelectQuery {
 			throw InternalError("Could not find the maybe type for the generated row type.");
 
 		// Create an if-statement.
-		WeakMaybeCast cast(namedExpr(context, pos, "fetch", statement));
+		WeakMaybeCast cast(namedExpr(context, pos, "fetchOne", statement));
 		cast.name(SStr("x"));
 		If check(context, cast);
 
@@ -1105,7 +1105,7 @@ class CountQuery extends SelectBase {
 	// Return a Nat representing the number of rows.
 	Expr? result(Block context, Expr statement) {
 		pattern(context) {
-			if (row = ${statement}.fetch()) {
+			if (row = ${statement}.fetchOne()) {
 				row.getLong(0).nat;
 			} else {
 				// This should not happen...

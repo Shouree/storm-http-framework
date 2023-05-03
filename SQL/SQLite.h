@@ -40,7 +40,14 @@ namespace sql {
 
 		// Fetches a new row and returns nullptr if result is false or SQLITE_DONE-flag is set.
 		MAYBE(Row *) STORM_FN fetch() override;
+
+		// Called when fetching is done, releases locks from the database.
+		void STORM_FN done() override;
+
+		// Get the last row id.
 		Int STORM_FN lastRowId() const override;
+
+		// Get number of changes.
 		Nat STORM_FN changes() const override;
 
 	private:

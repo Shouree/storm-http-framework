@@ -143,6 +143,7 @@ class TypedIter extends Type {
 		addIter();
 		add(TypeCopyCtor(this));
 		add(TypeAssign(this));
+		add(TypeDefaultDtor(this));
 	}
 
 	// Add constructor.

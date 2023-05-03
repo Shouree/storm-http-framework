@@ -7,16 +7,59 @@ namespace sql {
 	//			   Statement		  //
 	/////////////////////////////////////
 
-	Statement::Statement() {}
+	Statement::Statement() : iteratorLive(0), iteratorGen(0) {}
 
-	Statement::Iter::Iter(Statement *stmt) : owner(stmt) {}
+	void Statement::invalidateIterators() {
+		atomicIncrement(iteratorGen);
+
+		Nat liveIters = atomicRead(iteratorLive);
+		if (liveIters) {
+			WARNING(liveIters << L" iterators to a query were live, but are invalidated.");
+		}
+		atomicWrite(iteratorLive, 0);
+	}
+
+	Statement::Iter::Iter(Statement *stmt) : owner(stmt), gen(atomicRead(stmt->iteratorGen)) {
+		atomicIncrement(owner->iteratorLive);
+	}
+
+	Statement::Iter::Iter(const Iter &other) : owner(other.owner), gen(other.gen) {
+		// Note: This will not work perfectly when using multiple threads. This is not expected to
+		// happen (other things will break then), but the atomics are mostly a safeguard to detect
+		// such errors.
+		if (atomicRead(owner->iteratorGen) == gen)
+			atomicIncrement(owner->iteratorLive);
+	}
+
+	Statement::Iter &Statement::Iter::operator =(const Iter &other) {
+		Iter tmp(other);
+		std::swap(owner, tmp.owner);
+		return *this;
+	}
+
+	Statement::Iter::~Iter() {
+		if (atomicRead(owner->iteratorGen) == gen) {
+			if (atomicDecrement(owner->iteratorLive) == 0) {
+				owner->done();
+			}
+		}
+	}
 
 	Row *Statement::Iter::next() {
-		return owner->fetch();
+		if (atomicRead(owner->iteratorGen) == gen)
+			return owner->fetch();
+		else
+			return null;
 	}
 
 	Statement::Iter Statement::iter() {
 		return Iter(this);
+	}
+
+	MAYBE(Row *) Statement::fetchOne() {
+		Row *result = fetch();
+		done();
+		return result;
 	}
 
 	/////////////////////////////////////

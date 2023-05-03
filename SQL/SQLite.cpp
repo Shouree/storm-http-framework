@@ -67,6 +67,8 @@ namespace sql {
 	void SQLite_Statement::execute() {
 		reset();
 
+		invalidateIterators();
+
 		int r = sqlite3_step(stmt);
 
 		if (r == SQLITE_DONE) {
@@ -90,6 +92,10 @@ namespace sql {
 			stmt = null;
 			result = false;
 		}
+	}
+
+	void SQLite_Statement::done() {
+		reset();
 	}
 
 	Row *SQLite_Statement::fetch() {

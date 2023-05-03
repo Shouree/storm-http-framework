@@ -58,11 +58,19 @@ namespace sql {
 		// Bind a null value.
 		virtual void STORM_FN bindNull(Nat pos) ABSTRACT;
 
-		// Finalize (dispose of) the statement.
+		// Finalize (dispose of) the statement. It will not be usable again.
         virtual void STORM_FN finalize() ABSTRACT;
 
 		// Fetch a row.
         virtual MAYBE(Row *) STORM_FN fetch() ABSTRACT;
+
+		// Fetch a single row. Equivalent to calling fetch once, and then calling done.
+		MAYBE(Row *) STORM_FN fetchOne();
+
+		// Indicate that we are not interested in additional results. This allows
+		// the underlying implementation to release resources required to fetch
+		// any remaining rows (e.g. releasing memory, releasing locks, etc.)
+		virtual void STORM_FN done() ABSTRACT;
 
 		// Get the last row id. TODO: Make it Long.
         virtual Int STORM_FN lastRowId() const ABSTRACT;
@@ -75,6 +83,9 @@ namespace sql {
             STORM_VALUE;
         public:
             Iter(Statement *stmt);
+			Iter(const Iter &other);
+			Iter &operator =(const Iter &other);
+			~Iter();
 
 			// Get the next element.
             MAYBE(Row *) STORM_FN next();
@@ -83,11 +94,32 @@ namespace sql {
 			Iter STORM_FN iter() { return *this; }
 
         private:
+			// Owning statement.
             Statement *owner;
+
+			// Generation for the iterator.
+			Nat gen;
         };
 
-		// Iterator interface.
+		// Iterator interface. Mixing usage of the iterator interface and the 'fetch' interface
+		// might not work well, since the iterators make sure to execute 'done' whenever the last
+		// iterator is destroyed.
         Iter STORM_FN iter();
+
+	protected:
+		// Called by derived classes to inform that a new query has been executed, and existing
+		// iterators should be invalidated.
+		void STORM_FN invalidateIterators();
+
+	private:
+		// Number of iterators that are currently alive. This allows calling 'finish' when all
+		// iterators have been destroyed.
+		Nat iteratorLive;
+
+		// Iterator generation. Set to an integer whenever a new query is executed. This allows
+		// iterators to detect when they have been kept alive for too long, so that such mistakes
+		// can be detected.
+		Nat iteratorGen;
     };
 
 
