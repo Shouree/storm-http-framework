@@ -96,7 +96,7 @@ int main(void) {
 
 	// Try with multiple readers and writers:
 	// thread_new(&write, b);
-	thread_new(&read, b);
+	// thread_new(&read, b);
 
 	thread_new(&write, b);
 	read(b);
