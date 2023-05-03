@@ -349,6 +349,22 @@ class MainWin extends Frame {
 		throw InternalError("Failed to acquire source for the current file.");
 	}
 
+	// Get all source code, as files in a memory listing.
+	public Url[] allCurrentSource() {
+		MemoryProtocol memory;
+		Url[] result;
+		for (f in currentFiles) {
+			if (text = painter.sourceFor(f)) {
+				MemOStream out;
+				Utf8Output tOut(out);
+				tOut.write(text);
+				tOut.flush();
+				result << memory.put(f.name, out.buffer);
+			}
+		}
+		result;
+	}
+
 	private void onSettings() {
 		SettingsDlg(settings, &this.applySettings).show(this);
 	}
@@ -411,9 +427,11 @@ class MainWin extends Frame {
 			return;
 		}
 
-		if (currentFiles.empty) {
+		// Note: 'allCurrentSource' picks the current version of the source, even if changed in the file system.
+		Url[] source = allCurrentSource();
+		if (source.empty) {
 			showMessage(this, "No files open", "You have no files open currently.");
-		} else if (result = check:findErrorsUi(this, currentFiles)) {
+		} else if (result = check:findErrorsUi(this, source)) {
 			onRestart();
 			updateBehavior(ReplayBehavior(this, result.sequence));
 		}
@@ -510,12 +528,13 @@ void debug() on Compiler {
 		// win.open(url / "pointers" / "locals.c");
 		// win.open(url / "pointers" / "ptr.c");
 		// win.open(url / "concurrency" / "lock_sema.c");
-		// win.open(url / "concurrency" / "bank" / "bank_good.c");
+		win.open(url / "concurrency" / "bank" / "bank_good.c");
 		// win.open(url / "test" / "error.c");
 		// win.open(url / "test" / "multi_locks.c");
 		// win.open(url / "test" / "step_error.c");
 		// win.open(url / "test" / "livelock.c");
-		win.open(url / "test" / "alloc_in_nostep.c");
+		// win.open(url / "test" / "alloc_in_nostep.c");
+		// win.open(url / "test" / "globals.cpp");
 		win.waitForClose();
 	}
 }
