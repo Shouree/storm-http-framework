@@ -539,6 +539,7 @@ private Set<Str> findSupportedFiles() on Compiler {
 }
 
 private void findSupportedFiles(Set<Str> out, Package pkg) on Compiler {
+	pkg.loadAll;
 	for (elem in pkg) {
 		if (elem as Package)
 			out.put(elem.name);
