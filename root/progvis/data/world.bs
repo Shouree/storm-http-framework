@@ -220,7 +220,8 @@ class World on Render {
 
 		// Add special data for some object.
 		void addData(unsafe:RawPtr object, Data data) {
-			dataMap.put(object, data);
+			if (object.any)
+				dataMap.put(object, data);
 		}
 
 		// Find data that a pointer refers to.

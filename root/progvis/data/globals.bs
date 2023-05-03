@@ -11,19 +11,17 @@ class Globals extends Composite {
 	init(GlobalVar[] globals) {
 		init(null) {}
 
-		Global[] g;
-
 		for (v in globals) {
-			g << Global(v.name, fromValue(v.type), unsafe:RawPtr:fromGlobal(v));
+			source << Global(v.name, fromValue(v.type), unsafe:RawPtr:fromGlobal(v));
 		}
 
 		// Make the order consistent.
-		g.sort((a, b) => a.name < b.name);
+		source.sort((a, b) => a.name < b.name);
 
-		// Add them.
-		for (v in g) {
-			parts << Part(v.name, 0, GlobalPtr(v.type, v.src), false);
-		}
+		// // Add them.
+		// for (v in g) {
+		// 	parts << Part(v.name, 0, GlobalPtr(v.type, v.src), false);
+		// }
 	}
 
 	// Copy.
@@ -46,17 +44,36 @@ class Globals extends Composite {
 		}
 	}
 
+	// Source data.
+	private Global[] source;
+
 	// Update.
 	void update(World:Traversal t, unsafe:RawPtr object, Nat offset) : override {
-		for (i, p in parts) {
-			p.value.update(t, unsafe:RawPtr(), 0);
+		Nat count = source.count;
+
+		if (parts.count != count) {
+			parts.clear();
+			parts.reserve(source.count);
+			for (s in source) {
+				parts << Part(s.name, 0, t.create(s.type), true);
+			}
+		}
+
+		for (Nat i = 0; i < count; i++) {
+			var val = parts[i].value;
+			var src = source[i].src;
+
+			t.addData(src, val);
+			val.update(t, src, 0);
 		}
 	}
 
 	// Traverse.
 	void traverse(World:Traversal t, unsafe:RawPtr object, Nat offset) : override {
+		// Note: At this point we should have resized parts to match source. If not, we either
+		// update too few elements, or we throw an exception. Both are fine, as none cause a crash.
 		for (i, p in parts) {
-			p.value.traverse(t, unsafe:RawPtr(), 0);
+			p.value.traverse(t, source[i].src, 0);
 		}
 	}
 
@@ -68,35 +85,5 @@ class Globals extends Composite {
 	// Copy.
 	protected Data copyObject() : override {
 		Globals(this);
-	}
-}
-
-/**
- * Pointer to a global object.
- */
-class GlobalPtr extends Pointer {
-	init(TypeInfo type, unsafe:RawPtr globalData) {
-		init(type.type) {
-			data = globalData;
-		}
-	}
-
-	// Copy.
-	init(GlobalPtr original) {
-		init(original) {
-			data = original.data;
-		}
-	}
-
-	// Pointer to the data in the global variable.
-	private unsafe:RawPtr data;
-
-	void traverse(World:Traversal t, unsafe:RawPtr object, Nat offset) : override {
-		traverse(t, data);
-	}
-
-	// Copy.
-	protected Data copyObject() : override {
-		GlobalPtr(this);
 	}
 }
