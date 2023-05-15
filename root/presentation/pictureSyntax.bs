@@ -39,6 +39,9 @@ class PictureBlock on Compiler {
 	// Get the block.
 	ExprBlock block() { root; }
 
+	// Get the sub-block. Used for integration into Basic Storm.
+	ExprBlock subBlock() { sub; }
+
 	// Add an expression.
 	void add(Expr expr) {
 		sub.add(expr);
