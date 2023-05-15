@@ -19,7 +19,7 @@ SPictureExpr => PictureElem(var, name, params, block)
 	: SName var #varName, "=", SType name, SParamList(block.sub) params, "{" [, (SPictureProperty(me), ";", )* ]+ "}";
 
 // Regular Basic Storm statements.
-SPictureExpr => add(block, expr) : SStmt(block.subBlock) expr;
+SPictureExpr => add(block, expr) : SStmt(block.sub) expr;
 
 // Properties.
 void SPictureProperty(PictureElem elem);
