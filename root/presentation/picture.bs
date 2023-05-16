@@ -536,7 +536,7 @@ class Edge extends PElement {
 
 	// Compute the bounding box.
 	Rect boundingBox() : override {
-		Rect(fromPt).include(toPt);
+		Rect(fromPt, Size()).include(toPt);
 	}
 
 	// Draw.
