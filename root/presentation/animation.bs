@@ -48,7 +48,12 @@ class Animation on Render {
 
 	// Convert to a smooth value in the range 0..1.
 	Float smoothVal(Duration d) {
-		Angle v = rad(val(d) * pi);
+		smooth(val(d));
+	}
+
+	// Convert a value in the range 0..1 to a "smooth" value in the same range.
+	Float smooth(Float x) : static {
+		Angle v = rad(x * pi);
 		0.5 - v.cos()*0.5;
 	}
 }
@@ -102,6 +107,96 @@ class Trigger extends Animation {
 
 
 /**
+ * Interface to simplify animations that animate the entrance of an object.
+ *
+ * Adapts the interface of Animation into an interface that is simpler to use, but less flexible.
+ */
+class AnimationIntro extends Animation {
+	// Init.
+	init(Nat step) {
+		init(step) {}
+	}
+
+	// Called before drawing the element.
+	Bool before(Element element, Graphics g, Nat cStep, Duration time) : override, final {
+		if (cStep == step) {
+			if (time < offset)
+				return false;
+			if (time < duration + offset)
+				before(element, g, val(time));
+		}
+
+		cStep >= step;
+	}
+
+	// Called after drawing the element.
+	void after(Element element, Graphics g, Nat cStep, Duration time) : override, final {
+		if (cStep == step) {
+			if (time < offset)
+				return;
+			if (time < duration + offset)
+				after(element, g);
+		}
+	}
+
+	// Override to update the graphics context. Expected to call "push" in some form. "pos" is a
+	// float in range 0..1 indicating the current position of the animation.
+	void before(Element element, Graphics g, Float pos) : abstract;
+
+	// Override to restore the graphics context. Default implementation simply pops it once.
+	void after(Element element, Graphics g) {
+		g.pop();
+	}
+}
+
+/**
+ * Interface to simplify animations that animate the disappearence of an object.
+ *
+ * Adapts the interface of Animation into an interface that is simpler to use, but less flexible.
+ */
+class AnimationOutro extends Animation {
+	// Init.
+	init(Nat step) {
+		init(step) {}
+	}
+
+	// Called before drawing the element.
+	Bool before(Element element, Graphics g, Nat cStep, Duration time) : override, final {
+		if (cStep == step) {
+			if (time < offset)
+				return true;
+			if (time < duration + offset) {
+				before(element, g, val(time));
+				return true;
+			}
+			return false;
+		}
+
+		cStep < step;
+	}
+
+	// Called after drawing the element.
+	void after(Element element, Graphics g, Nat cStep, Duration time) : override, final {
+		if (cStep == step) {
+			if (time < offset)
+				return;
+			if (time < duration + offset)
+				after(element, g);
+		}
+	}
+
+	// Override to update the graphics context. Expected to call "push" in some form. "pos" is a
+	// float in range 0..1 indicating the current position of the animation.
+	void before(Element element, Graphics g, Float pos) : abstract;
+
+	// Override to restore the graphics context. Default implementation simply pops it once.
+	void after(Element element, Graphics g) {
+		g.pop();
+	}
+}
+
+
+/**
  * Simple "show" animation. Simply displays the item at the specified step.
  */
 class ShowAnimation extends Animation {
@@ -148,32 +243,22 @@ class HideAnimation extends Animation {
 /**
  * Fade in animation.
  */
-class FadeInAnimation extends Animation {
+class FadeInAnimation extends AnimationIntro {
 	// Create.
 	init(Nat step) {
 		init(step) {}
 	}
 
 	// Set up the animation.
-	Bool before(Element element, Graphics g, Nat cStep, Duration time) : override {
-		if (cStep == step & time < duration + offset)
-			g.push(val(time));
-
-		cStep >= step;
+	void before(Element element, Graphics g, Float time) : override {
+		g.push(time);
 	}
-
-	// Tear down.
-	void after(Element element, Graphics g, Nat cStep, Duration time) : override {
-		if (cStep == step & time < duration + offset)
-			g.pop();
-	}
-
 }
 
 /**
  * Animation that raises the element slightly while fading in.
  */
-class RaiseAnimation extends Animation {
+class RaiseAnimation extends AnimationIntro {
 	// Create.
 	init(Nat step) {
 		init(step) {
@@ -192,21 +277,11 @@ class RaiseAnimation extends Animation {
 	Float height;
 
 	// Set up the animation.
-	Bool before(Element element, Graphics g, Nat cStep, Duration time) : override {
-		if (cStep == step & time < duration + offset) {
-			Float t = val(time);
-			g.push(t);
-			Float offset = 1 - rad((1 - t)*pi/2).cos;
-			g.transform = translate(Point(0, offset * height));
-		}
-
-		cStep >= step;
-	}
-
-	// Tear down.
-	void after(Element element, Graphics g, Nat cStep, Duration time) : override {
-		if (cStep == step & time < duration + offset)
-			g.pop();
+	void before(Element element, Graphics g, Float time) : override {
+		Float t = time;
+		g.push(t);
+		Float offset = 1 - rad((1 - t)*pi/2).cos;
+		g.transform = translate(Point(0, offset * height));
 	}
 }
 
@@ -214,61 +289,39 @@ class RaiseAnimation extends Animation {
 /**
  * Fade out animation.
  */
-class FadeOutAnimation extends Animation {
+class FadeOutAnimation extends AnimationOutro {
 	// Create.
 	init(Nat step) {
 		init(step) {}
 	}
 
 	// Set up the animation.
-	Bool before(Element element, Graphics g, Nat cStep, Duration time) : override {
-		if (cStep == step & time < duration + offset) {
-			g.push(1 - val(time));
-			return true;
-		}
-
-		cStep < step;
+	void before(Element element, Graphics g, Float time) : override {
+		g.push(1 - time);
 	}
-
-	// Tear down.
-	void after(Element element, Graphics g, Nat cStep, Duration time) : override {
-		if (cStep == step & time < duration + offset)
-			g.pop();
-	}
-
 }
 
 
 /**
  * Grow vertically.
  */
-class GrowAnimation extends Animation {
+class GrowAnimation extends AnimationIntro {
 	// Create.
 	init(Nat step) {
 		init(step) {}
 	}
 
 	// Set up the animation.
-	Bool before(Element element, Graphics g, Nat cStep, Duration time) : override {
-		if (cStep == step & time < duration + offset) {
-			Float scale = smoothVal(time);
-			g.push(scale);
+	void before(Element element, Graphics g, Float time) : override {
+		Float scale = smooth(time);
+		g.push(scale);
 
-			// The font drawing does not seem to like zero scaling, at least in the Y direction
-			// neither on Windows nor on Linux.
-			scale = max(scale, 0.05);
+		// The font drawing does not seem to like zero scaling, at least in the Y direction
+		// neither on Windows nor on Linux.
+		scale = max(scale, 0.05);
 
-			Point center = element.pos.center;
-			g.transform(scale(Point(1, scale), center));
-		}
-
-		cStep >= step;
-	}
-
-	// Tear down.
-	void after(Element element, Graphics g, Nat cStep, Duration time) : override {
-		if (cStep == step & time < duration + offset)
-			g.pop();
+		Point center = element.pos.center;
+		g.transform(scale(Point(1, scale), center));
 	}
 }
 
@@ -276,34 +329,23 @@ class GrowAnimation extends Animation {
 /**
  * Shrink vertically.
  */
-class ShrinkAnimation extends Animation {
+class ShrinkAnimation extends AnimationOutro {
 	// Create.
 	init(Nat step) {
 		init(step) {}
 	}
 
 	// Set up the animation.
-	Bool before(Element element, Graphics g, Nat cStep, Duration time) : override {
-		if (cStep == step & time < duration + offset) {
-			Float scale = 1 - smoothVal(time);
-			g.push(scale);
+	void before(Element element, Graphics g, Float time) : override {
+		Float scale = 1 - smooth(time);
+		g.push(scale);
 
-			// The font drawing does not seem to like zero scaling, at least in the Y direction
-			// neither on Windows nor on Linux.
-			scale = max(scale, 0.05);
+		// The font drawing does not seem to like zero scaling, at least in the Y direction
+		// neither on Windows nor on Linux.
+		scale = max(scale, 0.05);
 
-			Point center = element.pos.center;
-			g.transform(scale(Point(1, scale), center));
-			return true;
-		}
-
-		cStep < step;
-	}
-
-	// Tear down.
-	void after(Element element, Graphics g, Nat cStep, Duration time) : override {
-		if (cStep == step & time < duration + offset)
-			g.pop();
+		Point center = element.pos.center;
+		g.transform(scale(Point(1, scale), center));
 	}
 }
 
@@ -311,7 +353,7 @@ class ShrinkAnimation extends Animation {
 /**
  * Zoom in.
  */
-class ZoomInAnimation extends Animation {
+class ZoomInAnimation extends AnimationIntro {
 	// Create.
 	init(Nat step) {
 		init(step) {}
@@ -326,26 +368,16 @@ class ZoomInAnimation extends Animation {
 	Point? center;
 
 	// Set up the animation.
-	Bool before(Element element, Graphics g, Nat cStep, Duration time) : override {
-		if (cStep == step & time < duration + offset) {
-			Float scale = smoothVal(time);
-			g.push(scale);
+	void before(Element element, Graphics g, Float time) : override {
+		Float scale = smooth(time);
+		g.push(scale);
 
-			// The font drawing does not seem to like zero scaling, at least in the Y direction
-			// neither on Windows nor on Linux.
-			scale = max(scale, 0.05);
+		// The font drawing does not seem to like zero scaling, at least in the Y direction
+		// neither on Windows nor on Linux.
+		scale = max(scale, 0.05);
 
-			Point center = if (c = this.center) { c; } else { element.pos.center; };
-			g.transform(scale(Point(scale, scale), center));
-		}
-
-		cStep >= step;
-	}
-
-	// Tear down.
-	void after(Element element, Graphics g, Nat cStep, Duration time) : override {
-		if (cStep == step & time < duration + offset)
-			g.pop();
+		Point center = if (c = this.center) { c; } else { element.pos.center; };
+		g.transform(scale(Point(scale, scale), center));
 	}
 }
 
@@ -353,7 +385,7 @@ class ZoomInAnimation extends Animation {
 /**
  * Zoom out vertically.
  */
-class ZoomOutAnimation extends Animation {
+class ZoomOutAnimation extends AnimationOutro {
 	// Create.
 	init(Nat step) {
 		init(step) {}
@@ -368,26 +400,15 @@ class ZoomOutAnimation extends Animation {
 	Point? center;
 
 	// Set up the animation.
-	Bool before(Element element, Graphics g, Nat cStep, Duration time) : override {
-		if (cStep == step & time < duration + offset) {
-			Float scale = 1 - smoothVal(time);
-			g.push(scale);
+	void before(Element element, Graphics g, Float time) : override {
+		Float scale = 1 - smooth(time);
+		g.push(scale);
 
-			// The font drawing does not seem to like zero scaling, at least in the Y direction
-			// neither on Windows nor on Linux.
-			scale = max(scale, 0.05);
+		// The font drawing does not seem to like zero scaling, at least in the Y direction
+		// neither on Windows nor on Linux.
+		scale = max(scale, 0.05);
 
-			Point center = if (c = this.center) { c; } else { element.pos.center; };
-			g.transform(scale(Point(scale, scale), center));
-			return true;
-		}
-
-		cStep < step;
-	}
-
-	// Tear down.
-	void after(Element element, Graphics g, Nat cStep, Duration time) : override {
-		if (cStep == step & time < duration + offset)
-			g.pop();
+		Point center = if (c = this.center) { c; } else { element.pos.center; };
+		g.transform(scale(Point(scale, scale), center));
 	}
 }
