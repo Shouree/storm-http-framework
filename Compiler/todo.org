@@ -253,7 +253,11 @@
   - [X] Implement shrink() for Map<> as well.
   - [X] Handles and templates does not work with built-in types (like Int).
 
-* Improvements [6/24]
+* Improvements [6/25]
+  - [ ] In the language server: Add the ability to tell the parser to abort parsing after some time.
+    In cases where parsing takes much time, the results are typically very bad anyway, so it might be
+    a good strategy to actually just give up if parsing takes more than 100 ms or so, and try again later
+    (at least when re-parsing parts of the AST, maybe not on the initial parse, or in other situations).
   - [ ] Consider utilizing the transformations better in Basic Storm. We could, for example, skip the
     XxxDecl classes, and just have lists of AST nodes that are transformed as appropriate later in the
     compilation instead.
@@ -298,7 +302,8 @@
     to "thread_main" is skipped, and Progvis seems generally confused about
     what is happening: root/progvis_demo/test/step_error.c
 
-* C++ front-end (in Progvis) [7/14]
+* C++ front-end (in Progvis) [7/15]
+  - [ ] Global arrays (e.g. int x[2])
   - [ ] Ability to make const member functions.
   - [ ] Check if function resolution works somewhat properly with const parameters etc.
   - [ ] Ability to declare member functions outside the class.
