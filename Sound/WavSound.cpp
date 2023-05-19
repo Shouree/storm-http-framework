@@ -29,7 +29,7 @@ namespace sound {
 	template <class T>
 	void fill(IStream *from, T &out) {
 		GcPreArray<byte, sizeof(T)> data;
-		storm::Buffer b = from->read(storm::emptyBuffer(data));
+		storm::Buffer b = from->readAll(storm::emptyBuffer(data));
 		if (!b.full())
 			throw new (from) SoundOpenError(S("Not enough data."));
 

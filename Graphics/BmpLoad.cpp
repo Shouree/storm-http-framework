@@ -123,7 +123,7 @@ namespace graphics {
 	template <class T>
 	static bool fill(IStream *src, T &out) {
 		GcPreArray<byte, sizeof(T)> data;
-		Buffer r = src->read(emptyBuffer(data));
+		Buffer r = src->readAll(emptyBuffer(data));
 		if (r.filled() != sizeof(T))
 			return false;
 		memcpy(&out, r.dataPtr(), sizeof(T));
@@ -134,7 +134,7 @@ namespace graphics {
 	template <class T>
 	T *read(IStream *src, Nat count) {
 		Nat size = count*sizeof(T);
-		Buffer r = src->read(buffer(src->engine(), size));
+		Buffer r = src->readAll(buffer(src->engine(), size));
 		if (r.filled() != size)
 			return null;
 		return (T *)r.dataPtr();
@@ -157,7 +157,7 @@ namespace graphics {
 		Nat position = 0;
 
 		{
-			Buffer h = from->read(2);
+			Buffer h = from->readAll(2);
 			error = S("Invalid BMP header.");
 			if (h.filled() != 2)
 				return null;
@@ -254,7 +254,7 @@ namespace graphics {
 		Bitfield gBit(g);
 		Bitfield bBit(b);
 		Bitfield aBit(a);
-		from->read(untilStart);
+		from->readAll(untilStart);
 
 		Nat stride = w*4;
 		Buffer src = buffer(from->engine(), stride);
@@ -286,7 +286,7 @@ namespace graphics {
 		Nat h = to->height();
 
 		// Skip until the start of the file.
-		from->read(untilStart);
+		from->readAll(untilStart);
 
 		Nat stride = roundUp(w*3, Nat(4));
 		Buffer src = buffer(from->engine(), stride);
@@ -331,13 +331,13 @@ namespace graphics {
 		Bitfield aBit(a);
 
 		untilStart -= 3*sizeof(Nat);
-		from->read(untilStart);
+		from->readAll(untilStart);
 
 		Nat stride = roundUp(w*2, Nat(4));
 		Buffer src = buffer(from->engine(), stride);
 		for (Nat y = 0; y < h; y++) {
 			src.filled(0);
-			src = from->read(src);
+			src = from->readAll(src);
 			if (src.filled() != stride)
 				return false;
 
@@ -369,13 +369,13 @@ namespace graphics {
 			return false;
 
 		untilStart -= used * sizeof(ImageColor);
-		from->read(untilStart);
+		from->readAll(untilStart);
 
 		Nat stride = roundUp(w, Nat(4));
 		Buffer src = buffer(from->engine(), stride);
 		for (Nat y = 0; y < h; y++) {
 			src.filled(0);
-			src = from->read(src);
+			src = from->readAll(src);
 			if (src.filled() != stride)
 				return false;
 
@@ -409,13 +409,13 @@ namespace graphics {
 			return false;
 
 		untilStart -= used * sizeof(ImageColor);
-		from->read(untilStart);
+		from->readAll(untilStart);
 
 		Nat stride = roundUp((w + 1)/2, Nat(4));
 		Buffer src = buffer(from->engine(), stride);
 		for (Nat y = 0; y < h; y++) {
 			src.filled(0);
-			src = from->read(src);
+			src = from->readAll(src);
 			if (src.filled() != stride)
 				return false;
 
@@ -441,13 +441,13 @@ namespace graphics {
 		Nat w = to->width();
 		Nat h = to->height();
 
-		from->read(untilStart);
+		from->readAll(untilStart);
 
 		Nat stride = roundUp((w + 7)/8, Nat(4));
 		Buffer src = buffer(from->engine(), stride);
 		for (Nat y = 0; y < h; y++) {
 			src.filled(0);
-			src = from->read(src);
+			src = from->readAll(src);
 			if (src.filled() != stride)
 				return false;
 

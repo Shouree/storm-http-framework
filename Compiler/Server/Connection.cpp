@@ -110,7 +110,7 @@ namespace storm {
 
 		static Byte decodeByte(IStream *src, Bool &ok) {
 			GcPreArray<byte, 1> buf;
-			Buffer r = src->read(emptyBuffer(buf));
+			Buffer r = src->readAll(emptyBuffer(buf));
 
 			if (!r.full()) {
 				ok = false;
@@ -134,7 +134,7 @@ namespace storm {
 
 		static Nat decodeNat(IStream *src, Bool &ok) {
 			GcPreArray<byte, 4> buf;
-			Buffer r = src->read(emptyBuffer(buf));
+			Buffer r = src->readAll(emptyBuffer(buf));
 
 			if (!r.full()) {
 				ok = false;
@@ -268,7 +268,7 @@ namespace storm {
 			if (!ok)
 				return null;
 
-			Buffer str = from->read(len);
+			Buffer str = from->readAll(len);
 			if (str.filled() < len) {
 				ok = false;
 				return null;
@@ -287,7 +287,7 @@ namespace storm {
 			if (!ok)
 				return null;
 
-			Buffer str = from->read(len);
+			Buffer str = from->readAll(len);
 			if (str.filled() < len) {
 				ok = false;
 				return null;

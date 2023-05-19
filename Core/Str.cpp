@@ -746,7 +746,7 @@ namespace storm {
 
 	Str::Str(IStream *from) {
 		Nat count = from->readNat();
-		Buffer b = from->read(count);
+		Buffer b = from->readAll(count);
 		if (!b.full())
 			throw new (this) SerializationFormatError(S("Not enough data."));
 
@@ -765,7 +765,7 @@ namespace storm {
 		Nat count = from->readNat();
 		if (count >= limitBytes / sizeof(wchar))
 			throw new (this) SizeLimitReached(S("a string"), count * sizeof(wchar), limitBytes);
-		Buffer b = from->read(count);
+		Buffer b = from->readAll(count);
 		if (!b.full())
 			throw new (this) SerializationFormatError(S("Not enough data."));
 
@@ -789,7 +789,7 @@ namespace storm {
 	Str::Str(ObjIStream *from) {
 		Nat count = from->from->readNat();
 		from->checkArrayAlloc(sizeof(wchar), count);
-		Buffer b = from->from->read(count);
+		Buffer b = from->from->readAll(count);
 		if (!b.full())
 			throw new (this) SerializationFormatError(S("Not enough data."));
 
