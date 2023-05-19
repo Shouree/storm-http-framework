@@ -517,6 +517,10 @@ namespace ssl {
 		SChannelData *data = (SChannelData *)gcData;
 		os::Lock::L z(lock);
 
+		// Nothing to read?
+		if (to.free() == 0)
+			return;
+
 		if (data->decryptedStart >= data->decryptedEnd)
 			fill(data);
 

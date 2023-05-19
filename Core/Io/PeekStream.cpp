@@ -34,6 +34,10 @@ namespace storm {
 		Nat start = b.filled();
 		Nat read = b.count() - start;
 
+		// Nothing to read?
+		if (read == 0)
+			return b;
+
 		// Is there anything left in the lookahead for us to consume?
 		Nat avail = lookaheadAvail();
 		if (avail > 0) {

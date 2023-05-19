@@ -42,7 +42,8 @@ namespace ssl {
 	}
 
 	void Session::read(Buffer &to) {
-		data->read(to, gcData);
+		if (to.free() > 0)
+			data->read(to, gcData);
 	}
 
 	void Session::peek(Buffer &to) {

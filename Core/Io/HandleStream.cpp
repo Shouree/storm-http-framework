@@ -328,6 +328,9 @@ namespace storm {
 		if (!handle)
 			return b;
 
+		if (start >= b.count())
+			return b;
+
 		Nat r = storm::read(handle, attachedTo, b.dataPtr() + start, b.count() - start);
 		b.filled(r + start);
 		return b;
