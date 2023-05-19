@@ -21,7 +21,7 @@ class ServerConn {
 		init {
 			socket = stream;
 			input = ObjIStream(input);
-			output = ObjOStream(output);
+			output = ObjOStream(BufferedOStream(output));
 			db = db;
 		}
 

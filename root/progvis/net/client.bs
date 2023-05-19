@@ -65,7 +65,7 @@ class Client on Network {
 		init {
 			socket = socket;
 			input = ObjIStream(input);
-			output = ObjOStream(output);
+			output = ObjOStream(BufferedOStream(output));
 		}
 
 		var response = query(AuthRequest(identity));
