@@ -6,13 +6,14 @@ use core:geometry;
  * The grid is automatically sized to fit the constraints dictated by the contained components. Each
  * row and column will have their own size. To fill all available space, specify which rows and
  * columns are allowed to grow using 'expandRow' or 'expandCol'. A weight may additionally be
- * specified to allow different rows/columns to grow at different ratios with respect to each
- * other. There are two modes that can be applied to the expansion. The default is to assign any
- * extra space (according to the weights) to the expandable rows and columns. This means that they
- * will have different sizes based on the minimum size, but the additional space is allocated
- * fairly. The second mode is to base the extra assignment based on the total size of the
- * elements. That way, given equal weights, the layout will keep them at equal size. This means that
- * the minimum size of some components might be enlarged to keep the distribution.
+ * specified to allow different rows/columns to grow at different ratios with respect to each other.
+ * There are two modes that can be applied to the expansion. The default is to assign any extra
+ * space (according to the weights) to the expandable rows and columns. This means that they will
+ * have different sizes based on the minimum size, but the additional space is allocated fairly. The
+ * second mode (enabled using 'normalizeRows'/'normalizeCols') is to base the extra assignment based
+ * on the total size of the elements. That way, given equal weights, the layout will keep them at
+ * equal size. This means that the minimum size of some components might be enlarged to keep the
+ * distribution.
  *
  * Elements may also be positioned at absolute grid coordinates by specifying 'row' and 'col',
  * starting at index 0. Additional rows and columns are then created to accomodate all
