@@ -68,9 +68,11 @@ private Expr typedQueryExpr(SrcPos pos, Block block, Expr connection, Database c
 	// Execute it!
 	r.add(namedExpr(r, pos, "execute", prepared));
 
-	// Get the result, if desired.
+	// Get the result, if desired. Otherwise, finalize the query.
 	if (e = query.result(r, prepared))
 		r.add(e);
+	else
+		r.add(namedExpr(r, pos, "finalize", prepared));
 
 	r;
 }
