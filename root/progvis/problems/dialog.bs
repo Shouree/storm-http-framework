@@ -627,8 +627,6 @@ window CheckProgress {
 			return;
 		}
 
-		sleep(10 s);
-
 		client.query(StoreCheckResult(problem.id, problem.implId, problem.testId, result));
 	}
 

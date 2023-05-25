@@ -255,9 +255,14 @@
 
 * Improvements [6/25]
   - [ ] In the language server: Add the ability to tell the parser to abort parsing after some time.
-    In cases where parsing takes much time, the results are typically very bad anyway, so it might be
-    a good strategy to actually just give up if parsing takes more than 100 ms or so, and try again later
-    (at least when re-parsing parts of the AST, maybe not on the initial parse, or in other situations).
+    In cases where parsing takes much time, the results are typically very bad anyway, so it might
+    be a good strategy to actually just give up if parsing takes more than 100 ms or so, and try
+    again later (at least when re-parsing parts of the AST, maybe not on the initial parse, or in
+    other situations). Also: we probably want to ensure that we *always* schedule a full re-parse of
+    nodes that contain errors, even if the regexes match, or if the surrounding node is too large.
+    Otherwise, we might end up in situations where code right before- or after a comment is never
+    re-parsed into code (this is common when working with large-ish presentations when adding a new
+    slide after a comment block).
   - [ ] Consider utilizing the transformations better in Basic Storm. We could, for example, skip the
     XxxDecl classes, and just have lists of AST nodes that are transformed as appropriate later in the
     compilation instead.
