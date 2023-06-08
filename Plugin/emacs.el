@@ -137,7 +137,11 @@
       (save-excursion
 	(setq offset (1+ (string-to-number offset)))
 	(goto-char offset)
-	(+ (- offset (line-beginning-position)) compilation-first-column)))))
+	(if compilation-error-screen-columns
+	    (let ((tab-width 8))
+	      ;; If we are in "visual columns"-mode, use tab-width = 8, since that is what compilation-mode uses internally.
+	      (+ (current-column) compilation-first-column))
+	  (+ (- offset (line-beginning-position)) compilation-first-column))))))
 
 (defun storm-compute-col-begin ()
   (storm-compute-col (match-string-no-properties 2) (match-string-no-properties 3)))
