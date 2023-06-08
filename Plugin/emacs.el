@@ -49,10 +49,6 @@
 ;; Mark errors in compilation-mode properly.
 (require 'compile)
 
-;; Compilation mode assumes that error messages are in screen columns. This is typically not the
-;; case (for C++ or Storm).
-(setq-default compilation-error-screen-columns nil)
-
 (defun storm-find-error-buffer (full-file)
   (let ((buffer (find-buffer-visiting full-file)))
     (if buffer
