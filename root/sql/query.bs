@@ -13,29 +13,10 @@ private Nat newQueryID() on Compiler {
 }
 
 private Expr bindParam(SrcPos pos, Block block, Expr statement, Nat id, Expr param) on Compiler {
-	if (isMaybe(param.result.type)) {
-		WeakMaybeCast cast(param);
-		cast.name(SStr("x"));
-		If check(block, cast);
-
-		CondSuccess success(pos, block, cast);
-		check.trueCode = success;
-		if (created = cast.result) {
-			Actuals params;
-			params.add(NumLiteral(pos, id));
-			params.add(LocalVarAccess(pos, created));
-			success.set(namedExpr(block, pos, "bind", statement, params));
-		}
-
-		check.falseCode = namedExpr(block, pos, "bindNull", statement, Actuals(NumLiteral(pos, id)));
-
-		check;
-	} else {
-		Actuals params;
-		params.add(NumLiteral(pos, id));
-		params.add(param);
-		namedExpr(block, pos, "bind", statement, params);
-	}
+	Actuals params;
+	params.add(NumLiteral(pos, id));
+	params.add(param);
+	namedExpr(block, pos, "bind", statement, params);
 }
 
 // Create a query expression for a typed query. Helper.
