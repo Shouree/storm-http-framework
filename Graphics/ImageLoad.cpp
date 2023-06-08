@@ -17,7 +17,7 @@ namespace graphics {
 	// IO callbacks from libpng.
 	static void pngRead(png_structp png, byte *to, size_t length) {
 		IStream *src = (IStream*)png_get_io_ptr(png);
-		Buffer out = src->readAll(length);
+		Buffer out = src->fill(length);
 		if (out.count() > 0)
 			memcpy(to, out.dataPtr(), out.count());
 	}

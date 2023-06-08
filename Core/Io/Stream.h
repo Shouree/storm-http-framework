@@ -50,8 +50,11 @@ namespace storm {
 
 		// Attempts to fill the remainder of the buffer by reading data from the stream. Starts
 		// filling from the 'filled' parameter of the buffer. Returns the resulting buffer (which
-		// might point to the original data), with a modified 'filled' parameter. The resulting
-		// 'filled' parameter is never smaller than it was in the buffer passed to the stream.
+		// might point to the original data), with a modified 'filled' parameter.
+		// When the call returns, at least one byte has been read unless the end of stream was
+		// reached. This means that the 'filled' parameter is always larger after the call
+		// compared to before the call. This call does, however, not guarantee that the buffer
+		// is completely full after the call, even if the end of stream was not reached.
 		Buffer STORM_FN read(Nat maxBytes);
 		virtual Buffer STORM_FN read(Buffer to);
 
@@ -60,11 +63,11 @@ namespace storm {
 		Buffer STORM_FN peek(Nat maxBytes);
 		virtual Buffer STORM_FN peek(Buffer to);
 
-		// Reads data until the buffer is filled or at the end of stream. Compared to 'read', after
-		// calling 'readAll' you know that either your buffer is full or the end of the stream was
-		// reached.
-		Buffer STORM_FN readAll(Nat bytes);
-		Buffer STORM_FN readAll(Buffer to);
+		// Reads data until the buffer is filled or the end of stream is reached. In contrast to
+		// 'read', the only situation where the buffer is not filled after the call returns is when
+		// the end of stream is reached (or an error occurred).
+		Buffer STORM_FN fill(Nat bytes);
+		Buffer STORM_FN fill(Buffer to);
 
 		// Get a random access IStream. May return the same stream!
 		virtual RIStream *STORM_FN randomAccess();

@@ -105,7 +105,7 @@ class Settings : serializable {
 
 private Str generateId() {
 	RandomStream stream;
-	var data = stream.readAll(100);
+	var data = stream.fill(100);
 	stream.close();
 
 	StrBuf out;

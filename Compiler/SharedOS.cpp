@@ -14,7 +14,7 @@ namespace storm {
 	template <class T>
 	static bool fill(IStream *src, T &out) {
 		GcPreArray<byte, sizeof(T)> data;
-		Buffer r = src->readAll(emptyBuffer(data));
+		Buffer r = src->fill(emptyBuffer(data));
 		if (r.filled() != sizeof(T))
 			return false;
 		memcpy(&out, r.dataPtr(), sizeof(T));
@@ -25,7 +25,7 @@ namespace storm {
 	template <class T>
 	T *read(IStream *src, Nat count) {
 		Nat size = count*sizeof(T);
-		Buffer r = src->readAll(buffer(src->engine(), size));
+		Buffer r = src->fill(buffer(src->engine(), size));
 		if (r.filled() != size)
 			return null;
 		return (T *)r.dataPtr();

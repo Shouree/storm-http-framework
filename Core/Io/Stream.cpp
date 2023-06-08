@@ -31,14 +31,19 @@ namespace storm {
 		return to;
 	}
 
-	Buffer IStream::readAll(Nat c) {
-		return readAll(buffer(engine(), c));
+	Buffer IStream::fill(Nat c) {
+		return fill(buffer(engine(), c));
 	}
 
-	Buffer IStream::readAll(Buffer b) {
+	Buffer IStream::fill(Buffer b) {
 		b.filled(0);
-		while (!b.full() && more()) {
+		while (!b.full()) {
+			Nat old = b.filled();
 			b = read(b);
+
+			// End of stream reached?
+			if (b.filled() == old)
+				break;
 		}
 		return b;
 	}
@@ -98,14 +103,14 @@ namespace storm {
 
 	Byte IStream::readByte() {
 		GcPreArray<Byte, 1> d;
-		Buffer b = readAll(emptyBuffer(d));
+		Buffer b = fill(emptyBuffer(d));
 		checkBuffer(engine(), b);
 		return d.v[0];
 	}
 
 	Int IStream::readInt() {
 		GcPreArray<Byte, 4> d;
-		Buffer b = readAll(emptyBuffer(d));
+		Buffer b = fill(emptyBuffer(d));
 		checkBuffer(engine(), b);
 		Int r = Int(b[0]) << 24;
 		r |= Int(b[1]) << 16;
@@ -116,7 +121,7 @@ namespace storm {
 
 	Nat IStream::readNat() {
 		GcPreArray<Byte, 4> d;
-		Buffer b = readAll(emptyBuffer(d));
+		Buffer b = fill(emptyBuffer(d));
 		checkBuffer(engine(), b);
 		Nat r = Nat(b[0]) << 24;
 		r |= Nat(b[1]) << 16;
@@ -127,7 +132,7 @@ namespace storm {
 
 	Long IStream::readLong() {
 		GcPreArray<Byte, 8> d;
-		Buffer b = readAll(emptyBuffer(d));
+		Buffer b = fill(emptyBuffer(d));
 		checkBuffer(engine(), b);
 		Long r = Long(b[0]) << 56;
 		r |= Long(b[1]) << 48;
@@ -142,7 +147,7 @@ namespace storm {
 
 	Word IStream::readWord() {
 		GcPreArray<Byte, 8> d;
-		Buffer b = readAll(emptyBuffer(d));
+		Buffer b = fill(emptyBuffer(d));
 		checkBuffer(engine(), b);
 		Long r = Long(b[0]) << 56;
 		r |= Long(b[1]) << 48;

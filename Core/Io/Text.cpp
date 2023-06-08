@@ -143,7 +143,7 @@ namespace storm {
 	TextInput *STORM_FN readText(IStream *stream) {
 		nat16 bom = 0;
 
-		Buffer buf = stream->readAll(sizeof(bom));
+		Buffer buf = stream->fill(sizeof(bom));
 		if (buf.full()) {
 			// Read in network order.
 			bom = buf[0] << 8;

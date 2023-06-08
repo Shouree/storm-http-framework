@@ -15,7 +15,7 @@ namespace storm {
 
 	static Nat readNat(IStream *src) {
 		GcPreArray<byte, sizeof(Nat)> b;
-		Buffer buf = src->readAll(emptyBuffer(b));
+		Buffer buf = src->fill(emptyBuffer(b));
 
 		if (!buf.full())
 			return 0;
@@ -45,7 +45,7 @@ namespace storm {
 
 		src->seek(from);
 
-		return readText(new (src) MemIStream(src->readAll(to - from)))->readAll();
+		return readText(new (src) MemIStream(src->fill(to - from)))->readAll();
 	}
 
 	static Str *readBody(Url *src, Nat entry) {

@@ -29,7 +29,7 @@ namespace sound {
 	template <class T>
 	void fill(IStream *from, T &out) {
 		GcPreArray<byte, sizeof(T)> data;
-		storm::Buffer b = from->readAll(storm::emptyBuffer(data));
+		storm::Buffer b = from->fill(storm::emptyBuffer(data));
 		if (!b.full())
 			throw new (from) SoundOpenError(S("Not enough data."));
 
@@ -116,7 +116,7 @@ namespace sound {
 		Nat samples = free / ch;
 		dataPos = min(dataLength, dataPos + samples);
 
-		storm::Buffer src = this->src->readAll(samples * sampleSize);
+		storm::Buffer src = this->src->fill(samples * sampleSize);
 		Nat out = to.filled();
 		switch (sampleDepth) {
 		case 8:
