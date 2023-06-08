@@ -7,105 +7,104 @@
 
 namespace sql {
 
-	class SQLite;
-
 	/**
-	 * A class representing a SQLite statement.
-	 */
-	class SQLite_Statement : public Statement {
-		STORM_CLASS;
-	public:
-		// Constructor of an SQLite_Statement. Takes an SQLite database and an Str.
-		STORM_CTOR SQLite_Statement(const SQLite *database, Str *str);
-
-		// Destructor of an SQLite_Statement. Calls SQLite_Statement:finalize().
-		~SQLite_Statement();
-
-
-		// Binds for all relevant data types in SQLite. If a statement includes question marks,
-		// these are used to bind one string to a question mark.
-		// pos specifies which question mark is to be replaced by matched data type.
-		void STORM_FN bind(Nat pos, Str *str) override;
-		void STORM_FN bind(Nat pos, Bool b) override;
-		void STORM_FN bind(Nat pos, Int i) override;
-		void STORM_FN bind(Nat pos, Long l) override;
-		void STORM_FN bind(Nat pos, Double d) override;
-		void STORM_FN bindNull(Nat pos) override;
-
-		// Executes an SQLite statement, returns true if execute was successful.
-		void STORM_FN execute() override;
-
-		// Calls SQLite3_finalize on SQLite_Statement and cleans member variables.
-		void STORM_FN finalize() override;
-
-		// Fetches a new row and returns nullptr if result is false or SQLITE_DONE-flag is set.
-		MAYBE(Row *) STORM_FN fetch() override;
-
-		// Called when fetching is done, releases locks from the database.
-		void STORM_FN done() override;
-
-		// Get the last row id.
-		Int STORM_FN lastRowId() const override;
-
-		// Get number of changes.
-		Nat STORM_FN changes() const override;
-
-	private:
-		// The prepared statement.
-		UNKNOWN(PTR_NOGC) sqlite3_stmt *stmt;
-
-		// Owner.
-		const SQLite *db;
-
-		// Any result to produce from the statement?
-		// If 'true' means that we need to reset the statement before executing it again.
-		Bool result;
-
-		// Number of changes from last execute.
-		Nat lastChanges;
-
-		// Last row id.
-		Int lastId;
-
-		// Any error for the next call to "execute"?
-		Str *error;
-
-		// Reset if needed.
-		void reset();
-	};
-
-	/**
-	 * Database class specificly for SQLite.
+	 * Implementation of a connection to SQLite databases.
 	 */
 	class SQLite : public DBConnection {
 		STORM_CLASS;
 	public:
+		// Create a connection to an SQLite database in a file. The Url has to refer to a file that
+		// resides in the filesystem.
+		STORM_CTOR SQLite(Url *str);
 
-		// Destructor of an SQLite database connection. Calls SQLite:close().
-		virtual ~SQLite();
-
-		// Constructors of an SQLite database connection. either connected through a file
-		// on given URL or is created in memory.
-		STORM_CTOR SQLite(Url * str);
+		// Create a connection to a temporary, in-memory database.
 		STORM_CTOR SQLite();
 
-		// Returns an SQLite_Statement given an Str str.
-		Statement * STORM_FN prepare(Str *str) override;
+		// Destroy. Calls 'close'.
+		virtual ~SQLite();
 
-		// Calls sqlite3_close(db).
+		// Prepare a statement.
+		Statement *STORM_FN prepare(Str *str) override;
+
+		// Close the connection.
 		void STORM_FN close() override;
 
-		// Returns all names of tables in SQLite connection in an Array of Str.
+		// Returns all names of tables in SQLite connection in an Array of strings.
 		Array<Str*> *STORM_FN tables() override;
-
-		// Getter for member variable db.
-		sqlite3 * raw() const;
 
 		// Returns a Schema for SQLite connection.
 		MAYBE(Schema *) STORM_FN schema(Str *str);
 
 	private:
-		sqlite3 * db;
+		// The SQLite3 object.
+		UNKNOWN(PTR_NOGC) sqlite3 *db;
+
+	public:
+
+		/**
+		 * Prepared statements in SQLite.
+		 */
+		class Stmt : public Statement {
+			STORM_CLASS;
+		public:
+			// Create. Called by SQLite class.
+			Stmt(SQLite *owner, Str *statement);
+
+			// Destroy.
+			virtual ~Stmt();
+
+			// Bind parameters.
+			virtual void STORM_FN bind(Nat pos, Str *str) override;
+			virtual void STORM_FN bind(Nat pos, Bool b) override;
+			virtual void STORM_FN bind(Nat pos, Int i) override;
+			virtual void STORM_FN bind(Nat pos, Long i) override;
+			virtual void STORM_FN bind(Nat pos, Double d) override;
+			virtual void STORM_FN bindNull(Nat pos) override;
+
+			// Execute.
+			Statement::Result STORM_FN execute() override;
+
+			// Finalize the statement.
+			void STORM_FN finalize() override;
+
+		protected:
+			// Dispose results, re-create the statement.
+			void STORM_FN disposeResult() override;
+
+			// Get the next row.
+			MAYBE(Row *) STORM_FN nextRow() override;
+
+			// Get the last row id.
+			Int STORM_FN lastRowId() override { return lastId; }
+
+			// Get the number of changed rows.
+			Nat STORM_FN changes() override { return lastChanges; }
+
+		private:
+			// Owner.
+			SQLite *owner;
+
+			// Prepared statement.
+			UNKNOWN(PTR_NOGC) sqlite3_stmt *stmt;
+
+			// Last row id.
+			Int lastId;
+
+			// Last number of changed rows.
+			Nat lastChanges;
+
+			// Is the statement in a clean state?
+			Bool isClean;
+
+			// Do we have a row of results ready?
+			Bool hasRow;
+
+			// Do we have more results to read using step?
+			Bool moreRows;
+
+			// Ensure that the statement is ready for manipulation.
+			void reset();
+		};
 	};
 
 }

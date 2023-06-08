@@ -4,204 +4,52 @@
 
 namespace sql {
 
+	/**
+	 * The base SQLite connection.
+	 */
 
-	/////////////////////////////////////
-	//			  Statement			   //
-	/////////////////////////////////////
-
-	SQLite_Statement::SQLite_Statement(const SQLite *database, Str *str) {
-		db = database;
-		result = false;
-		lastId = 0;
-		lastChanges = 0;
-		error = null;
-
-		int ok = sqlite3_prepare_v2(db->raw(), str->utf8_str(), -1, &stmt, null);
-		if (ok != SQLITE_OK) {
-			Str *msg = new (this) Str((wchar *)sqlite3_errmsg16(db->raw()));
-			throw new (this) SQLError(msg);
+	SQLite::SQLite(Url *str) {
+		int rc = sqlite3_open16(str->format()->c_str(), &db);
+		if (rc) {
+			StrBuf *msg = new (this) StrBuf();
+			*msg << S("Unable to open database: ") << str->format()
+				 << S(". Error code: ") << rc;
+			throw new (this) InternalError(msg->toS());
 		}
 	}
 
-	SQLite_Statement::~SQLite_Statement() {
-		finalize();
-	}
-
-	void SQLite_Statement::reset() {
-		if (result)
-			sqlite3_reset(stmt);
-		result = false;
-		error = null;
-	}
-
-	void SQLite_Statement::bind(Nat pos, Str *str) {
-		reset();
-		sqlite3_bind_text(stmt, pos + 1, str->utf8_str(), -1, SQLITE_TRANSIENT);
-	}
-
-	void SQLite_Statement::bind(Nat pos, Bool b) {
-		reset();
-		sqlite3_bind_int(stmt, pos + 1, b ? 1 : 0);
-	}
-
-	void SQLite_Statement::bind(Nat pos, Int i) {
-		reset();
-		sqlite3_bind_int(stmt, pos + 1, i);
-	}
-
-	void SQLite_Statement::bind(Nat pos, Long l) {
-		reset();
-		sqlite3_bind_int64(stmt, pos + 1, l);
-	}
-
-	void SQLite_Statement::bind(Nat pos, Double d) {
-		reset();
-		sqlite3_bind_double(stmt, pos + 1, d);
-	}
-
-	void SQLite_Statement::bindNull(Nat pos) {
-		reset();
-		sqlite3_bind_null(stmt, pos + 1);
-	}
-
-	void SQLite_Statement::execute() {
-		reset();
-
-		invalidateIterators();
-
-		int r = sqlite3_step(stmt);
-
-		if (r == SQLITE_DONE) {
-			// No data. We're done.
-			lastId = (Int)sqlite3_last_insert_rowid(db->raw());
-			lastChanges = sqlite3_changes(db->raw());
-			sqlite3_reset(stmt);
-			result = false;
-		} else if (r == SQLITE_ROW) {
-			// We have data!
-			result = true;
-		} else {
-			Str *msg = new (this) Str((wchar*)sqlite3_errmsg16(db->raw()));
-			throw new (this) SQLError(msg);
+	SQLite::SQLite() {
+		int rc = sqlite3_open(":memory:", &db);
+		if (rc) {
+			StrBuf *msg = new (this) StrBuf();
+			*msg << S("Unable to open in-memory database: ") << rc;
+			throw new (this) InternalError(msg->toS());
 		}
 	}
-
-	void SQLite_Statement::finalize() {
-		if (stmt) {
-			sqlite3_finalize(stmt);
-			stmt = null;
-			result = false;
-		}
-	}
-
-	void SQLite_Statement::done() {
-		reset();
-	}
-
-	Row *SQLite_Statement::fetch() {
-		if (error) {
-			Str *msg = error;
-			error = null;
-			throw new (this) SQLError(msg);
-		}
-
-		// No result, don't do anything.
-		if (!result)
-			return null;
-
-		Engine &e = engine();
-		int num_column = sqlite3_column_count(stmt);
-		Array<Variant> *row = new (this) Array<Variant>();
-		row->reserve(Nat(num_column));
-
-		for (int i = 0; i < num_column; i++){
-			switch (sqlite3_column_type(stmt, i)) {
-			case SQLITE3_TEXT:
-				row->push(Variant(new (this)Str((wchar *)sqlite3_column_text16(stmt, i)), e));
-				break;
-			case SQLITE_INTEGER:
-				row->push(Variant(Long(sqlite3_column_int64(stmt, i)), e));
-				break;
-			case SQLITE_FLOAT:
-				row->push(Variant(sqlite3_column_double(stmt, i), e));
-				break;
-			case SQLITE_NULL:
-				row->push(Variant());
-				break;
-			default:
-				assert(false, L"Unknown column type from SQLite!");
-				break;
-			}
-		}
-
-
-		// Go to the next row.
-		int r = sqlite3_step(stmt);
-		if (r == SQLITE_DONE) {
-			sqlite3_reset(stmt);
-			result = false;
-		} else if (r != SQLITE_ROW) {
-			error = new (this) Str((wchar *)sqlite3_errmsg16(db->raw()));
-			sqlite3_reset(stmt);
-			result = false;
-		}
-
-		return new (this) Row(row);
-	}
-
-	Int SQLite_Statement::lastRowId() const {
-		return lastId;
-	}
-
-	Nat SQLite_Statement::changes() const {
-		return lastChanges;
-	}
-
-	////////////////////////////////////
-	//			   SQLite			  //
-	////////////////////////////////////
 
 	SQLite::~SQLite() {
 		close();
 	}
 
-	SQLite::SQLite(Url * str) {
-		int rc = sqlite3_open16(str -> format() -> c_str(), &db);
-
-		if (rc)
-			throw new (this) InternalError(TO_S(this, S("Can't open database: ") << rc));
-	}
-
-	SQLite::SQLite() {
-		int rc = sqlite3_open(":memory:", &db);
-
-		if (rc)
-			throw new (this) InternalError(TO_S(this, S("Can't open database: ") << rc));
-	}
-
-	Statement * SQLite::prepare(Str *str) {
-		return new (str) SQLite_Statement(this, str);
-	}
-
 	void SQLite::close() {
-		sqlite3_close(db);
+		if (db) {
+			sqlite3_close(db);
+			db = null;
+		}
 	}
 
-	sqlite3 *SQLite::raw() const {
-		return db;
+	Statement *SQLite::prepare(Str *str) {
+		return new (this) Stmt(this, str);
 	}
 
-	Array<Str*>* SQLite::tables(){
-		Str * str = new (this) Str(L"SELECT name FROM sqlite_master WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite%' ORDER BY 1");
+	Array<Str *> *SQLite::tables() {
+		Str *str = new (this) Str(S("SELECT name FROM sqlite_master WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite%'"));
+		Array<Str *> *names = new (this) Array<Str*>();
 
-		Array<Str*>* names = new (this) Array<Str*>;
+		Statement *stmt = prepare(str);
+		Statement::Result r = stmt->execute();
 
-		Statement * stmt = prepare(str);
-		stmt->execute();
-
-		Row * name;
-		Statement::Iter i = stmt->iter();
-		while (name = i.next())
+		while (Row *name = r.next())
 			names->push(name->getStr(0));
 
 		stmt->finalize();
@@ -372,8 +220,8 @@ namespace sql {
 		Str *query = new (this) Str(S("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?;"));
 		Statement *prepared = prepare(query);
 		prepared->bind(0, table);
-		prepared->execute();
-		Row *row = prepared->iter().next();
+		Statement::Result result = prepared->execute();
+		Row *row = result.next();
 		if (!row)
 			return null;
 
@@ -425,8 +273,7 @@ namespace sql {
 		query = new (this) Str(S("SELECT sql FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND sql IS NOT NULL;"));
 		prepared = prepare(query);
 		prepared->bind(0, table);
-		prepared->execute();
-		Statement::Iter iter = prepared->iter();
+		Statement::Result iter = prepared->execute();
 		while (Row *row = iter.next()) {
 			const wchar *data = row->getStr(0)->c_str();
 			const wchar *begin = data;
@@ -453,6 +300,156 @@ namespace sql {
 		prepared->finalize();
 
 		return new (this) Schema(tableName, cols, pk, indices);
+	}
+
+
+	/**
+	 * Statements.
+	 */
+
+	SQLite::Stmt::Stmt(SQLite *owner, Str *statement) : owner(owner), lastId(0), lastChanges(0) {
+		int status = sqlite3_prepare_v2(owner->db, statement->utf8_str(), -1, &stmt, null);
+		if (status != SQLITE_OK)
+			throw new (this) SQLError(new (this) Str((wchar *)sqlite3_errmsg16(owner->db)));
+		isClean = true;
+		hasRow = false;
+	}
+
+	SQLite::Stmt::~Stmt() {
+		finalize();
+	}
+
+	void SQLite::Stmt::finalize() {
+		if (stmt) {
+			invalidateResult();
+			sqlite3_finalize(stmt);
+			stmt = null;
+			moreRows = false;
+			hasRow = false;
+		}
+	}
+
+	void SQLite::Stmt::reset() {
+		if (isClean)
+			return;
+
+		invalidateResult();
+		sqlite3_reset(stmt);
+		isClean = true;
+		hasRow = false;
+		moreRows = false;
+	}
+
+	void SQLite::Stmt::bind(Nat pos, Str *str) {
+		reset();
+		sqlite3_bind_text(stmt, pos + 1, str->utf8_str(), -1, SQLITE_TRANSIENT);
+	}
+
+	void SQLite::Stmt::bind(Nat pos, Bool b) {
+		reset();
+		sqlite3_bind_int(stmt, pos + 1, b ? 1 : 0);
+	}
+
+	void SQLite::Stmt::bind(Nat pos, Int i) {
+		reset();
+		sqlite3_bind_int(stmt, pos + 1, i);
+	}
+
+	void SQLite::Stmt::bind(Nat pos, Long i) {
+		reset();
+		sqlite3_bind_int64(stmt, pos + 1, i);
+	}
+
+	void SQLite::Stmt::bind(Nat pos, Double d) {
+		reset();
+		sqlite3_bind_double(stmt, pos + 1, d);
+	}
+
+	void SQLite::Stmt::bindNull(Nat pos) {
+		reset();
+		sqlite3_bind_null(stmt, pos + 1);
+	}
+
+	Statement::Result SQLite::Stmt::execute() {
+		reset();
+
+		int r = sqlite3_step(stmt);
+		isClean = false;
+
+		if (r == SQLITE_DONE) {
+			// No data. We are done!
+			lastId = (Int)sqlite3_last_insert_rowid(owner->db);
+			lastChanges = sqlite3_changes(owner->db);
+			// Call reset here already, but act as if we need to call reset again later to make
+			// iterators behave correctly.
+			sqlite3_reset(stmt);
+		} else if (r == SQLITE_ROW) {
+			// We have data!
+			hasRow = true;
+			moreRows = true;
+		} else {
+			throw new (this) SQLError(new (this) Str((wchar *)sqlite3_errmsg16(owner->db)));
+		}
+
+		return Result(this);
+	}
+
+	void SQLite::Stmt::disposeResult() {
+		reset();
+	}
+
+	MAYBE(Row *) SQLite::Stmt::nextRow() {
+		// We are already done!
+		if (!moreRows)
+			return null;
+
+		if (hasRow) {
+			// We already have a row (i.e. execute was just called). Simply mark it as consumed.
+			hasRow = false;
+		} else {
+			// No row. Call step.
+			int r = sqlite3_step(stmt);
+			if (r == SQLITE_DONE) {
+				// Release resources now, even though it is not strictly needed.
+				sqlite3_reset(stmt);
+				moreRows = false;
+				// We don't set "isClean" to false to make iterators continue to work.
+				return null;
+			} else if (r != SQLITE_ROW) {
+				moreRows = false;
+				throw new (this) SQLError(new (this) Str((wchar *)sqlite3_errmsg16(owner->db)));
+			}
+		}
+
+		Engine &e = engine();
+		int cols = sqlite3_column_count(stmt);
+		Array<Variant> *row = new (this) Array<Variant>();
+		row->reserve(Nat(cols));
+
+		for (int i = 0; i < cols; i++) {
+			switch (sqlite3_column_type(stmt, i)) {
+			case SQLITE3_TEXT:
+				row->push(Variant(new (this) Str((wchar *)sqlite3_column_text16(stmt, i)), e));
+				break;
+			case SQLITE_INTEGER:
+				row->push(Variant(Long(sqlite3_column_int64(stmt, i)), e));
+				break;
+			case SQLITE_FLOAT:
+				row->push(Variant(sqlite3_column_double(stmt, i), e));
+				break;
+			case SQLITE_NULL:
+				row->push(Variant());
+				break;
+			default:
+			{
+				StrBuf *msg = new (this) StrBuf();
+				*msg << S("Unsupported column type from SQLite: ") << sqlite3_column_type(stmt, i);
+				throw new (this) SQLError(msg->toS());
+			}
+			}
+		}
+
+		return new (this) Row(row);
 	}
 
 }

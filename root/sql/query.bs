@@ -65,14 +65,16 @@ private Expr typedQueryExpr(SrcPos pos, Block block, Expr connection, Database c
 		r.add(bindParam(pos, r, prepared, i, x));
 	}
 
-	// Execute it!
-	r.add(namedExpr(r, pos, "execute", prepared));
+	// Execute it, and save the result.
+	var resultDecl = Var(r, SStr("result"), namedExpr(r, pos, "execute", prepared));
+	r.add(resultDecl);
 
 	// Get the result, if desired. Otherwise, finalize the query.
-	if (e = query.result(r, prepared))
+	LocalVarAccess resultAccess(pos, resultDecl.var);
+	if (e = query.result(r, resultAccess))
 		r.add(e);
 	else
-		r.add(namedExpr(r, pos, "finalize", prepared));
+		r.add(namedExpr(r, pos, "finalize", resultAccess));
 
 	r;
 }
@@ -99,14 +101,16 @@ private Expr untypedQueryExpr(SrcPos pos, Block block, Expr database, Query quer
 		r.add(namedExpr(r, pos, "bind", prepared, params));
 	}
 
-	// Execute it!
-	r.add(namedExpr(r, pos, "execute", prepared));
+	// Execute it, and save the result.
+	var resultDecl = Var(r, SStr("result"), namedExpr(r, pos, "execute", prepared));
+	r.add(resultDecl);
 
 	// Get the result, if desired. Otherwise, finalize the query.
-	if (e = query.result(r, prepared))
+	LocalVarAccess resultAccess(pos, resultDecl.var);
+	if (e = query.result(r, resultAccess))
 		r.add(e);
 	else
-		r.add(namedExpr(r, pos, "finalize", prepared));
+		r.add(namedExpr(r, pos, "finalize", resultAccess));
 
 	r;
 }
@@ -345,7 +349,7 @@ class Query on Compiler {
 	QueryBuilder build() : abstract;
 
 	// Compute the result of this query, if it should be available.
-	Expr? result(Block context, Expr statement) {
+	Expr? result(Block context, Expr result) {
 		null;
 	}
 }
@@ -459,8 +463,8 @@ class InsertQuery extends Query {
 	}
 
 	// Return the last created row ID.
-	Expr? result(Block context, Expr statement) {
-		namedExpr(context, pos, "lastRowId", statement);
+	Expr? result(Block context, Expr result) {
+		namedExpr(context, pos, "lastRowId", result);
 	}
 
 	// To string.
@@ -557,8 +561,8 @@ class UpdateQuery extends Query {
 	}
 
 	// Return the number of modified rows.
-	Expr? result(Block context, Expr statement) {
-		namedExpr(context, pos, "changes", statement);
+	Expr? result(Block context, Expr result) {
+		namedExpr(context, pos, "changes", result);
 	}
 
 	// To string.
@@ -638,8 +642,8 @@ class DeleteQuery extends Query {
 	}
 
 	// Return the number of modified rows.
-	Expr? result(Block context, Expr statement) {
-		namedExpr(context, pos, "changes", statement);
+	Expr? result(Block context, Expr result) {
+		namedExpr(context, pos, "changes", result);
 	}
 
 	// To string.
@@ -986,7 +990,7 @@ class SelectQuery extends SelectBase {
 	}
 
 	// Return a proper iterator.
-	Expr? result(Block context, Expr statement) {
+	Expr? result(Block context, Expr result) {
 		Bool noTypeInfo = cols.empty;
 
 		ValParam[] types;
@@ -1001,13 +1005,13 @@ class SelectQuery extends SelectBase {
 
 		// If we don't have type info, just return a plain iterator.
 		if (noTypeInfo)
-			return namedExpr(context, pos, "iter", statement);
+			return namedExpr(context, pos, "iter", result);
 
 		var iterType = getTypedIter(types);
-		unless (ctor = iterType.find("__init", [Value(iterType), statement.result.type.asRef(false)], Scope()) as Function)
+		unless (ctor = iterType.find("__init", [Value(iterType), result.result.type.asRef(false)], Scope()) as Function)
 			throw InternalError("Could not find a suitable constructor in the generated type.");
 
-		CtorCall(pos, context.scope, ctor, Actuals(statement));
+		CtorCall(pos, context.scope, ctor, Actuals(result));
 	}
 
 	// To string.
@@ -1037,7 +1041,7 @@ class SelectOneQuery extends SelectQuery {
 	}
 
 	// Modified result. Returns a single row (wrapped in Maybe) rather than an iterator.
-	Expr? result(Block context, Expr statement) {
+	Expr? result(Block context, Expr result) {
 		Bool noTypeInfo = cols.empty;
 
 		ValParam[] types;
@@ -1052,7 +1056,7 @@ class SelectOneQuery extends SelectQuery {
 
 		// No type info - just return a Maybe<Row> object.
 		if (noTypeInfo)
-			return namedExpr(context, pos, "fetchOne", statement);
+			return namedExpr(context, pos, "next", result);
 
 		// Otherwise, we want to return either <null> or an instance of the row-type.
 		TypedRow t = getTypedRow(types);
@@ -1063,7 +1067,7 @@ class SelectOneQuery extends SelectQuery {
 			throw InternalError("Could not find the maybe type for the generated row type.");
 
 		// Create an if-statement.
-		WeakMaybeCast cast(namedExpr(context, pos, "fetchOne", statement));
+		WeakMaybeCast cast(namedExpr(context, pos, "next", result));
 		cast.name(SStr("x"));
 		If check(context, cast);
 
@@ -1105,10 +1109,12 @@ class CountQuery extends SelectBase {
 	}
 
 	// Return a Nat representing the number of rows.
-	Expr? result(Block context, Expr statement) {
+	Expr? result(Block context, Expr result) {
 		pattern(context) {
-			if (row = ${statement}.fetchOne()) {
-				row.getLong(0).nat;
+			if (row = ${result}.next()) {
+				Nat r = row.getLong(0).nat;
+				${result}.finalize();
+				r;
 			} else {
 				// This should not happen...
 				0;

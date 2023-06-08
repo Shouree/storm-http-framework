@@ -1,70 +1,132 @@
 #include "stdafx.h"
 #include "SQL.h"
-#include "Core/Exception.h"
+#include "Exception.h"
 
 namespace sql {
-	/////////////////////////////////////
-	//			   Statement		  //
-	/////////////////////////////////////
 
-	Statement::Statement() : iteratorLive(0), iteratorGen(0) {}
+	/**
+	 * Bind helpers.
+	 */
 
-	void Statement::invalidateIterators() {
-		atomicIncrement(iteratorGen);
-
-		Nat liveIters = atomicRead(iteratorLive);
-		if (liveIters) {
-			WARNING(liveIters << L" iterators to a query were live, but are invalidated.");
-		}
-		atomicWrite(iteratorLive, 0);
+	void bind(Statement *to, Nat pos, MAYBE(Str *) str) {
+		if (str)
+			to->bind(pos, str);
+		else
+			to->bindNull(pos);
 	}
 
-	Statement::Iter::Iter(Statement *stmt) : owner(stmt), gen(atomicRead(stmt->iteratorGen)) {
-		atomicIncrement(owner->iteratorLive);
+	void bind(Statement *to, Nat pos, Maybe<Bool> v) {
+		if (v.any())
+			to->bind(pos, v.value());
+		else
+			to->bindNull(pos);
 	}
 
-	Statement::Iter::Iter(const Iter &other) : owner(other.owner), gen(other.gen) {
-		// Note: This will not work perfectly when using multiple threads. This is not expected to
-		// happen (other things will break then), but the atomics are mostly a safeguard to detect
-		// such errors.
-		if (atomicRead(owner->iteratorGen) == gen)
-			atomicIncrement(owner->iteratorLive);
+	void bind(Statement *to, Nat pos, Maybe<Int> v) {
+		if (v.any())
+			to->bind(pos, v.value());
+		else
+			to->bindNull(pos);
 	}
 
-	Statement::Iter &Statement::Iter::operator =(const Iter &other) {
-		Iter tmp(other);
-		std::swap(owner, tmp.owner);
-		return *this;
+	void bind(Statement *to, Nat pos, Maybe<Long> v) {
+		if (v.any())
+			to->bind(pos, v.value());
+		else
+			to->bindNull(pos);
 	}
 
-	Statement::Iter::~Iter() {
-		if (atomicRead(owner->iteratorGen) == gen) {
-			if (atomicDecrement(owner->iteratorLive) == 0) {
-				owner->done();
+	void bind(Statement *to, Nat pos, Maybe<Double> v) {
+		if (v.any())
+			to->bind(pos, v.value());
+		else
+			to->bindNull(pos);
+	}
+
+
+	/**
+	 * Statement.
+	 */
+
+	Statement::Statement() : resultAliveCount(0), resultSequence(0) {}
+
+	void Statement::invalidateResult() {
+		atomicIncrement(resultSequence);
+		atomicWrite(resultAliveCount, 0);
+	}
+
+
+	/**
+	 * Statement result.
+	 *
+	 * Note: We use atomics to update the shared data in Statement. This is mostly to be able to be
+	 * somewhat robust against the case where the API is misused from multiple threads. The
+	 * implementation is not thread-safe (there are cases where we will fail), but as this is mostly
+	 * a safeguard to be able to detect such cases, it is fine.
+	 */
+
+	Statement::Result::Result(Statement *stmt) : owner(stmt), sequence(atomicRead(stmt->resultSequence)) {
+		atomicIncrement(owner->resultAliveCount);
+	}
+
+	Statement::Result::~Result() {
+		if (atomicRead(owner->resultSequence) == sequence) {
+			if (atomicDecrement(owner->resultAliveCount) == 0) {
+				owner->disposeResult();
 			}
 		}
 	}
 
-	Row *Statement::Iter::next() {
-		if (atomicRead(owner->iteratorGen) == gen)
-			return owner->fetch();
-		else
+	Statement::Result::Result(const Result &other) : owner(other.owner), sequence(other.sequence) {
+		if (atomicRead(owner->resultSequence) == sequence) {
+			atomicIncrement(owner->resultAliveCount);
+		}
+	}
+
+	Statement::Result &Statement::Result::operator =(const Result &other) {
+		if (this == &other)
+			return *this;
+
+		Result tmp(other);
+		std::swap(owner, tmp.owner);
+		std::swap(sequence, tmp.sequence);
+		return *this;
+	}
+
+	MAYBE(Row *) Statement::Result::next() {
+		if (atomicRead(owner->resultSequence) != sequence)
 			return null;
+
+		return owner->nextRow();
 	}
 
-	Statement::Iter Statement::iter() {
-		return Iter(this);
+	Int Statement::Result::lastRowId() const {
+		if (atomicRead(owner->resultSequence) != sequence)
+			return -1;
+
+		return owner->lastRowId();
 	}
 
-	MAYBE(Row *) Statement::fetchOne() {
-		Row *result = fetch();
-		done();
-		return result;
+	Nat Statement::Result::changes() const {
+		if (atomicRead(owner->resultSequence) != sequence)
+			return 0;
+
+		return owner->changes();
 	}
 
-	/////////////////////////////////////
-	//				 Row			   //
-	/////////////////////////////////////
+	void Statement::Result::finalize() {
+		if (atomicRead(owner->resultSequence) == sequence)
+			owner->disposeResult();
+	}
+
+	void Statement::Result::deepCopy(CloneEnv *env) {
+		throw new (env) SQLError(new (env) Str(S("Deep copies of database iterators are not supported.")));
+	}
+
+
+	/**
+	 * Row.
+	 */
 
 	Row::Row() : v(null) {}
 

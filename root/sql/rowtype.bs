@@ -134,7 +134,7 @@ class TypedIter extends Type {
 		parentLookup = named{};
 
 		TypedRow toCreate = getTypedRow(types);
-		MemberVar iter("base", Value(named{Statement:Iter}), this);
+		MemberVar iter("base", Value(named{Statement:Result}), this);
 		iter.visibility = typePrivate();
 		add(iter);
 
@@ -148,15 +148,15 @@ class TypedIter extends Type {
 
 	// Add constructor.
 	private void addCtor() {
-		BSTreeCtor ctor([thisParam(this), ValParam(named{Statement}, "stmt")], SrcPos());
+		BSTreeCtor ctor([thisParam(this), ValParam(named{Statement:Result}, "result")], SrcPos());
 		CtorBody body(ctor, Scope(this, BSLookup()));
 
-		unless (stmtVar = body.variable(SimplePart("stmt")))
-			throw InternalError("Failed to find local variable 'stmt'.");
-		LocalVarAccess stmt(SrcPos(), stmtVar);
+		unless (resultVar = body.variable(SimplePart("result")))
+			throw InternalError("Failed to find local variable 'result'.");
+		LocalVarAccess result(SrcPos(), resultVar);
 
 		InitBlock init(SrcPos(), body, null);
-		init.init(Initializer(SStr("base"), namedExpr(body, SrcPos(), "iter", stmt)));
+		init.init(Initializer(SStr("base"), result));
 		body.add(init);
 
 		ctor.body = body;
