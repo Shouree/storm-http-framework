@@ -269,7 +269,7 @@ libPrefix=
 
 #No PCH for c-files.
 [windows]
-compile+=*.c:cl <defines> <file> <includes> <flags> <warnings> /c /Fo<output>
+compile+=*.c:1!cl <defines> <file> <includes> <flags> <warnings> /c /Fo<output>
 
 [unix]
 compile+=*.c:gcc -Wno-unknown-pragmas -Wno-pragmas -std=c99 -O3 <cflags> <defines> <warnings> -Wno-maybe-uninitialized <file> -c <includes> -o <output>
