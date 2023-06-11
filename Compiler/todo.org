@@ -140,7 +140,8 @@
   - [ ] Improve the preprocessor by generating toS() and deepCopy() if not present.
   - [ ] Finish the clone() functionality.
   - [ ] Destructors in maps and arrays are not working properly yet. Idea: add (yet another) member
-    to array headers, and let the user provide a custom destructor in there if neccessary.
+    to array headers, and let the user provide a custom destructor in there if neccessary. The same
+    is true for places that allocate plain GcArray:s.
   - [ ] Make sure Array<>, Map<> and Set<> clear the memory when an element is removed (and call destructors).
   - [ ] Function pointers should maybe allow casting to less specific types of parameters.
   - [ ] if (x = foo.bar) does not produce an error if 'foo.bar' is not Maybe<T>.

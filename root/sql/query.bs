@@ -1093,9 +1093,7 @@ class CountQuery extends SelectBase {
 	Expr? result(Block context, Expr result) {
 		pattern(context) {
 			if (row = ${result}.next()) {
-				Nat r = row.getLong(0).nat;
-				${result}.finalize();
-				r;
+				row.getLong(0).nat;
 			} else {
 				// This should not happen...
 				0;

@@ -49,8 +49,12 @@ namespace sql {
 		Statement *stmt = prepare(str);
 		Statement::Result r = stmt->execute();
 
-		while (Row *name = r.next())
-			names->push(name->getStr(0));
+		while (true) {
+			Maybe<Row> row = r.next();
+			if (row.empty())
+				break;
+			names->push(row.value().getStr(0));
+		}
 
 		stmt->finalize();
 		return names;
@@ -221,11 +225,11 @@ namespace sql {
 		Statement *prepared = prepare(query);
 		prepared->bind(0, table);
 		Statement::Result result = prepared->execute();
-		Row *row = result.next();
-		if (!row)
+		Maybe<Row> row = result.next();
+		if (row.empty())
 			return null;
 
-		const wchar *data = row->getStr(0)->c_str();
+		const wchar *data = row.value().getStr(0)->c_str();
 		const wchar *begin = data;
 		const wchar *end = data;
 
@@ -274,8 +278,11 @@ namespace sql {
 		prepared = prepare(query);
 		prepared->bind(0, table);
 		Statement::Result iter = prepared->execute();
-		while (Row *row = iter.next()) {
-			const wchar *data = row->getStr(0)->c_str();
+		while (true) {
+			Maybe<Row> row = iter.next();
+			if (row.empty())
+				break;
+			const wchar *data = row.value().getStr(0)->c_str();
 			const wchar *begin = data;
 			const wchar *end = data;
 
@@ -360,6 +367,11 @@ namespace sql {
 		sqlite3_bind_int64(stmt, pos + 1, i);
 	}
 
+	void SQLite::Stmt::bind(Nat pos, Float f) {
+		reset();
+		sqlite3_bind_double(stmt, pos + 1, f);
+	}
+
 	void SQLite::Stmt::bind(Nat pos, Double d) {
 		reset();
 		sqlite3_bind_double(stmt, pos + 1, d);
@@ -398,10 +410,10 @@ namespace sql {
 		reset();
 	}
 
-	MAYBE(Row *) SQLite::Stmt::nextRow() {
+	Maybe<Row> SQLite::Stmt::nextRow() {
 		// We are already done!
 		if (!moreRows)
-			return null;
+			return Maybe<Row>();
 
 		if (hasRow) {
 			// We already have a row (i.e. execute was just called). Simply mark it as consumed.
@@ -414,7 +426,7 @@ namespace sql {
 				sqlite3_reset(stmt);
 				moreRows = false;
 				// We don't set "isClean" to false to make iterators continue to work.
-				return null;
+				return Maybe<Row>();
 			} else if (r != SQLITE_ROW) {
 				moreRows = false;
 				throw new (this) SQLError(new (this) Str((wchar *)sqlite3_errmsg16(owner->db)));
@@ -423,22 +435,23 @@ namespace sql {
 
 		Engine &e = engine();
 		int cols = sqlite3_column_count(stmt);
-		Array<Variant> *row = new (this) Array<Variant>();
-		row->reserve(Nat(cols));
+		if (cols <= 0)
+			cols = 0;
 
+		Row::Builder builder = Row::builder(engine(), Nat(cols));
 		for (int i = 0; i < cols; i++) {
 			switch (sqlite3_column_type(stmt, i)) {
 			case SQLITE3_TEXT:
-				row->push(Variant(new (this) Str((wchar *)sqlite3_column_text16(stmt, i)), e));
+				builder.push(new (this) Str((const wchar *)sqlite3_column_text16(stmt, i)));
 				break;
 			case SQLITE_INTEGER:
-				row->push(Variant(Long(sqlite3_column_int64(stmt, i)), e));
+				builder.push(Long(sqlite3_column_int64(stmt, i)));
 				break;
 			case SQLITE_FLOAT:
-				row->push(Variant(sqlite3_column_double(stmt, i), e));
+				builder.push(Double(sqlite3_column_double(stmt, i)));
 				break;
 			case SQLITE_NULL:
-				row->push(Variant());
+				builder.pushNull();
 				break;
 			default:
 			{
@@ -449,7 +462,7 @@ namespace sql {
 			}
 		}
 
-		return new (this) Row(row);
+		return Maybe<Row>(Row(builder));
 	}
 
 }

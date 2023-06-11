@@ -58,6 +58,7 @@ namespace sql {
 			virtual void STORM_FN bind(Nat pos, Bool b) override;
 			virtual void STORM_FN bind(Nat pos, Int i) override;
 			virtual void STORM_FN bind(Nat pos, Long i) override;
+			virtual void STORM_FN bind(Nat pos, Float f) override;
 			virtual void STORM_FN bind(Nat pos, Double d) override;
 			virtual void STORM_FN bindNull(Nat pos) override;
 
@@ -72,7 +73,7 @@ namespace sql {
 			void STORM_FN disposeResult() override;
 
 			// Get the next row.
-			MAYBE(Row *) STORM_FN nextRow() override;
+			Maybe<Row> STORM_FN nextRow() override;
 
 			// Get the last row id.
 			Int STORM_FN lastRowId() override { return lastId; }

@@ -36,6 +36,13 @@ namespace sql {
 			to->bindNull(pos);
 	}
 
+	void bind(Statement *to, Nat pos, Maybe<Float> v) {
+		if (v.any())
+			to->bind(pos, v.value());
+		else
+			to->bindNull(pos);
+	}
+
 	void bind(Statement *to, Nat pos, Maybe<Double> v) {
 		if (v.any())
 			to->bind(pos, v.value());
@@ -93,9 +100,9 @@ namespace sql {
 		return *this;
 	}
 
-	MAYBE(Row *) Statement::Result::next() {
+	Maybe<Row> Statement::Result::next() {
 		if (atomicRead(owner->resultSequence) != sequence)
-			return null;
+			return Maybe<Row>();
 
 		return owner->nextRow();
 	}
@@ -123,69 +130,5 @@ namespace sql {
 		throw new (env) SQLError(new (env) Str(S("Deep copies of database iterators are not supported.")));
 	}
 
-
-	/**
-	 * Row.
-	 */
-
-	Row::Row() : v(null) {}
-
-	Row::Row(Array<Variant> * v) : v(v) {}
-
-	Str* Row::getStr(Nat idx) {
-		if (v) {
-			Variant z = v->at(idx);
-			if (z.empty())
-				return new (this) Str();
-			else
-				return z.get<Str *>();
-		} else {
-			throw new (this) ArrayError(0, 0);
-		}
-	}
-
-	Int Row::getInt(Nat idx) {
-		if (v) {
-			Variant z = v->at(idx);
-			if (z.empty())
-				return 0;
-			else
-				return (Int)z.get<Long>();
-		} else {
-			throw new (this) ArrayError(0, 0);
-		}
-	}
-
-	Long Row::getLong(Nat idx) {
-		if (v) {
-			Variant z = v->at(idx);
-			if (z.empty())
-				return 0;
-			else
-				return z.get<Long>();
-		} else {
-			throw new (this) ArrayError(0, 0);
-		}
-	}
-
-	Double Row::getDouble(Nat idx) {
-		if (v) {
-			Variant z = v->at(idx);
-			if (z.empty())
-				return 0;
-			else
-				return (Int)z.get<Double>();
-		} else {
-			throw new (this) ArrayError(0, 0);
-		}
-	}
-
-	Bool Row::isNull(Nat idx) {
-		if (v) {
-			return v->at(idx).empty();
-		} else {
-			throw new (this) ArrayError(0, 0);
-		}
-	}
 
 }

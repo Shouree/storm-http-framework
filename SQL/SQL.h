@@ -2,38 +2,10 @@
 #include "Core/Maybe.h"
 #include "Core/Array.h"
 #include "Core/Variant.h"
+#include "Row.h"
 #include "Schema.h"
 
 namespace sql {
-
-    /**
-     * Representation of a single row resulting from a database query.
-     */
-    class Row : public Object {
-        STORM_CLASS;
-    public:
-        STORM_CTOR Row();
-        STORM_CTOR Row(Array<Variant> * v);
-
-        //If column is of type Str, use this to get the result. (TEXT or VARCHAR in sqlite3)
-        Str* STORM_FN getStr(Nat idx);
-
-        //If column is of type Int, use this to get the result. (INTEGER in sqlite3)
-        Int STORM_FN getInt(Nat idx);
-
-		// Get a 64-bit integer.
-		Long STORM_FN getLong(Nat idx);
-
-        //If column is of type Double, use this to get the result. (REAL in sqlite3)
-        Double STORM_FN getDouble(Nat idx);
-
-		// Is a particular column null?
-		Bool STORM_FN isNull(Nat idx);
-
-    private:
-        Array<Variant> *v;
-    };
-
 
     /**
      * A prepared statement associated with a database connection.
@@ -50,6 +22,7 @@ namespace sql {
 		virtual void STORM_FN bind(Nat pos, Bool b) ABSTRACT;
         virtual void STORM_FN bind(Nat pos, Int i) ABSTRACT;
 		virtual void STORM_FN bind(Nat pos, Long i) ABSTRACT;
+		virtual void STORM_FN bind(Nat pos, Float f) ABSTRACT;
         virtual void STORM_FN bind(Nat pos, Double d) ABSTRACT;
 
 		// Bind a null value.
@@ -74,7 +47,7 @@ namespace sql {
 			~Result();
 
 			// Get the next row.
-			MAYBE(Row *) STORM_FN next();
+			Maybe<Row> STORM_FN next();
 
 			// Get the last inserted row ID.
 			Int STORM_FN lastRowId() const;
@@ -119,7 +92,7 @@ namespace sql {
 		virtual void STORM_FN disposeResult() ABSTRACT;
 
 		// Called by iterators to get the next row.
-		virtual MAYBE(Row *) STORM_FN nextRow() ABSTRACT;
+		virtual Maybe<Row> STORM_FN nextRow() ABSTRACT;
 
 		// Called by iterators to get the last row id.
 		virtual Int STORM_FN lastRowId() ABSTRACT;
@@ -144,7 +117,8 @@ namespace sql {
 	void STORM_FN bind(Statement *to, Nat pos, Maybe<Bool> b);
 	void STORM_FN bind(Statement *to, Nat pos, Maybe<Int> i);
 	void STORM_FN bind(Statement *to, Nat pos, Maybe<Long> l);
-	void STORM_FN bind(Statement *to, Nat pos, Maybe<Double> f);
+	void STORM_FN bind(Statement *to, Nat pos, Maybe<Float> f);
+	void STORM_FN bind(Statement *to, Nat pos, Maybe<Double> d);
 
 
     /**
