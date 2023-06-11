@@ -231,7 +231,7 @@ class Table {
 	}
 
 	// Create an SQL statement for this table declaration.
-	Str toSQL(Bool ifNotExists) {
+	Str toSQL(Bool ifNotExists, Str[] options) {
 		StrBuf buffer;
 		buffer << "CREATE TABLE ";
 		if (ifNotExists)
@@ -257,7 +257,11 @@ class Table {
 			buffer << ")";
 		}
 
-		buffer << ");";
+		buffer << ")";
+		if (options.any) {
+			buffer << " " << join(options, ", ");
+		}
+		buffer << ";";
 		buffer.toS;
 	}
 }
@@ -461,7 +465,11 @@ class TypedConnection {
 				}
 			} else {
 				// Create the table.
-				var stmt = connection.prepare(table.toSQL(false));
+				Str[] options;
+				// TODO: This should be handled in a more general way...
+				if (connection as SQLite)
+					options << "STRICT";
+				var stmt = connection.prepare(table.toSQL(false, options));
 				stmt.execute();
 				stmt.finalize();
 

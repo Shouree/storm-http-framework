@@ -1138,7 +1138,7 @@ class CreateQuery extends Query {
 	// Build the query.
 	QueryBuilder build() : override {
 		QueryBuilder r;
-		r.query << table.toSQL(ifNotExists);
+		r.query << table.toSQL(ifNotExists, []);
 		r;
 	}
 
