@@ -221,7 +221,7 @@ const wchar_t *Comment::parse(std::wostringstream &r, State &state, Params &par,
 		if (ch == '*')
 			state = multiBefore;
 		else if (!isWhitespace(ch))
-			return L"Expected an asterisk before the comment text.";
+			return L"Expected at least one asterisk before the comment text.";
 		return null;
 
 	case multiBefore:
@@ -234,6 +234,9 @@ const wchar_t *Comment::parse(std::wostringstream &r, State &state, Params &par,
 			par.empty++;
 			par.curr = 0;
 			state = multiNewline;
+		} else if (ch == '*') {
+			// The comment pads on LHS with asterisks, we allow that since that is what is done in SQLite.
+			state = multiBefore;
 		} else if (!isWhitespace(ch)) {
 			while (par.empty) {
 				r << '\n';
