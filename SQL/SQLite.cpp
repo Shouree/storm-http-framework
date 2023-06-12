@@ -433,7 +433,6 @@ namespace sql {
 			}
 		}
 
-		Engine &e = engine();
 		int cols = sqlite3_column_count(stmt);
 		if (cols <= 0)
 			cols = 0;
