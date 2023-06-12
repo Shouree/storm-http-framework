@@ -1,6 +1,7 @@
 []
 input=Main.cpp
 output=Storm<gcSuffix>
+execPath=..
 
 [unix]
 library+=dl

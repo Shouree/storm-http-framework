@@ -1,22 +1,22 @@
-Test
+#Test
 
 #CppTypes -a ../Compiler/ ../Core/ ../Code/ --compiler --template ../Core/Gen/CppTypes.cpp --out ../Compiler/Gen/CppTypes.cpp --asm ../Core/Gen/CppVTables.VS_X86 ../Compiler/Gen/CppVTables.asm --doc ../doc.doc --using storm
 
 #Basic UI test.
-#Main -a -r ../root/ -f tests.ui.simple
-#Main -a -r ../root/ -f tests.ui.main
-#Main -a -f ../root/ -f tests.ui.multi
-#Main -a -r ../root/ -f tests.ui.simpleUi
-#Main -a -r ../root/ -f tests.ui.multiline
-#Main -a -r ../root/ -f tests.ui.dialog
-#Main -a -r ../root/ -f tests.ui.overlay
-#Main -a -r ../root/ -f tests.ui.enterLeave
+#Main -a -f tests.ui.simple
+#Main -a -f tests.ui.main
+#Main -a -f tests.ui.multi
+#Main -a -f tests.ui.simpleUi
+#Main -a -f tests.ui.multiline
+#Main -a -f tests.ui.dialog
+#Main -a -f tests.ui.overlay
+#Main -a -f tests.ui.enterLeave
 #Main -a -f tests.ui.text
 #Main -a -f tests.layout.main
 #Main -a -f tests.layout.basicMain
 #Main -a -f tests.layout.gridTest
 #Main -a -f tests.layout.checkTest
-#Main -a -r ../root/ -f tests.ui.images
+#Main -a -f tests.ui.images
 #Main -a -f tests.ui.menu
 #Main -a -f tests.ui.fileDialog
 #Main -a -f tests.ui.testAbout
@@ -24,7 +24,7 @@ Test
 #Main -a -f presentation.test.test
 #Main -a -f presentation.test.simple
 #Main -a -f progvis.main
-#Main -a -f progvis.debug
+Main -a -f progvis.debug
 #Main -a -f progvis.debugServer
 #Main -a -f progvis.testCpp
 #Main -a -f trees.main
@@ -36,27 +36,29 @@ Test
 #Main -a -f tests.ssl.main
 
 #UI while running intensive memory allocations in the background.
-#Main -a -r ../root/ -f tests.ui.simpleMem
+#Main -a -r root/ -f tests.ui.simpleMem
 
 #Other tests.
-#Main -a -r ../root/ -f tests.asm.testInlineLabel
-#Main -a -r ../root/ -f tests.sound.play
-#Main -a -r ../root/ -f tests.pdf.test
+#Main -a -f tests.asm.testInlineLabel
+#Main -a -f tests.sound.play
+#Main -a -f tests.pdf.test
 #Main -a -f test.example.main
 #Main -a -t sql.tests
 
 #Presentations
-#Main -a -r ../root/ -i ../External/present -i ../External/final -f final.configura
-#Main -a -r ../root/ -i ../External/present -i ../External/final -f final.extendedMain
-#Main -a -r ../root/ -i ../External/present -i ../External/final -f final.main
-#Main -a -r ../root/ -i ../External/present -i ../External/green -f green.main
-#Main -a -r ../root/ -i ../External/present -i ../External/thesis -f thesis.main
-#Main -a -i ../External/sle -f sle.main
-#Main -a -i ../External/sle -f sle.debug
-#Main -a -i ../External/icer2019 -f icer2019.main
-#Main -a -i ../External/sigcse2020 -f sigcse2020.debug
-#Main -a ../External/koli2022
-#Main -a ../External/defence
+#Main -a -r root/ -i External/present -i External/final -f final.configura
+#Main -a -r root/ -i External/present -i External/final -f final.extendedMain
+#Main -a -r root/ -i External/present -i External/final -f final.main
+#Main -a -r root/ -i External/present -i External/green -f green.main
+#Main -a -r root/ -i External/present -i External/thesis -f thesis.main
+#Main -a -i External/sle -f sle.main
+#Main -a -i External/sle -f sle.debug
+#Main -a -i External/icer2019 -f icer2019.main
+#Main -a -i External/sigcse2020 -f sigcse2020.debug
+#Main -a External/koli2022
+#Main -a External/defence
+#Main -a External/workshop
+#Main -a External/kth
 
 :template yes
 :template-file yes
