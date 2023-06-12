@@ -662,6 +662,16 @@ BEGIN_TEST(VariantStormTest, BS) {
 	CHECK_EQ(::toS(runFn<Variant>(S("tests.bs.createStrVariant")).get<Str *>()), L"test");
 	CHECK_EQ(runFn<Variant>(S("tests.bs.createIntVariant")).get<Int>(), 15);
 
+	Variant intVariant(Int(10), gEngine());
+	Variant strVariant(new (gEngine()) Str(S("TEST")));
+
+	CHECK_EQ(runFn<Int>(S("tests.bs.castVariantInt"), intVariant), 10);
+	CHECK_EQ(runFn<Int>(S("tests.bs.castVariantInt"), strVariant), -1);
+	CHECK_EQ(runFn<Int>(S("tests.bs.castVariantInt"), Variant()), -1);
+	CHECK_EQ(*runFn<Str *>(S("tests.bs.castVariantStr"), intVariant), S(""));
+	CHECK_EQ(*runFn<Str *>(S("tests.bs.castVariantStr"), strVariant), S("TEST"));
+	CHECK_EQ(*runFn<Str *>(S("tests.bs.castVariantStr"), Variant()), S(""));
+
 	// Using it together with RawPtr:
 	CHECK(runFn<Bool>(S("tests.bs.variantRawObj")));
 	CHECK(runFn<Bool>(S("tests.bs.variantRawInt")));

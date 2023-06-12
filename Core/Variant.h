@@ -55,6 +55,9 @@ namespace storm {
 		// Does this variant contain the specified type?
 		Bool STORM_FN has(Type *type) const;
 
+		// Get contained type.
+		MAYBE(Type *) STORM_FN type() const;
+
 	public:
 
 		/**

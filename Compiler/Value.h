@@ -140,6 +140,7 @@ namespace storm {
 	Array<Value> *valList(Engine &e, Nat count, const Val&... rest) {
 		assert(sizeof...(rest) == count, L"'count' does not match the number of parameters passed to 'valList'.");
 		Array<Value> *v = new (e) Array<Value>();
+		v->reserve(count);
 
 		valListAdd(v, rest...);
 

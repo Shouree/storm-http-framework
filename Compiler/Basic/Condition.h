@@ -33,6 +33,10 @@ namespace storm {
 			// Generate code for the condition. This will create and initialize the "result"
 			// variable, if applicable. Will return a boolean value as the CodeResult value.
 			virtual void STORM_FN code(CodeGen *state, CodeResult *ok) ABSTRACT;
+
+			// Generate code to initialize 'result' in the true branch. It is possible to assume
+			// that 'code' was called previously.
+			virtual void STORM_FN trueCode(CodeGen *state);
 		};
 
 
@@ -98,6 +102,9 @@ namespace storm {
 			virtual void STORM_FN toS(StrBuf *to) const;
 
 		private:
+			// Associated condition.
+			Condition *cond;
+
 			// Contained expression.
 			MAYBE(Expr *) expr;
 		};

@@ -42,7 +42,7 @@ namespace storm {
 
 			*state->l << skipLbl;
 
-			successBlock->code(state, r);
+			successRoot->code(state, r);
 		}
 
 		void Unless::toS(StrBuf *to) const {

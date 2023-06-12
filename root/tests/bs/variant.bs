@@ -9,6 +9,21 @@ Variant createIntVariant() {
 	Variant(15);
 }
 
+Int castVariantInt(Variant x) {
+	if (x as Int) {
+		x;
+	} else {
+		-1;
+	}
+}
+
+Str castVariantStr(Variant x) {
+	if (x as Str)
+		x;
+	else
+		"";
+}
+
 Bool variantRawObj() {
 	Variant v("test");
 	RawPtr raw(v);

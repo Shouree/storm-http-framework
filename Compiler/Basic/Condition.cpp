@@ -21,6 +21,8 @@ namespace storm {
 			return null;
 		}
 
+		void Condition::trueCode(CodeGen *) {}
+
 
 		/**
 		 * Boolean condition.
@@ -69,7 +71,7 @@ namespace storm {
 		 * CondSuccess.
 		 */
 
-		CondSuccess::CondSuccess(SrcPos pos, Block *parent, Condition *cond) : Block(pos, parent) {
+		CondSuccess::CondSuccess(SrcPos pos, Block *parent, Condition *cond) : Block(pos, parent), cond(cond) {
 			if (LocalVar *var = cond->result())
 				add(var);
 		}
@@ -92,6 +94,10 @@ namespace storm {
 		}
 
 		void CondSuccess::blockCode(CodeGen *state, CodeResult *to) {
+			// Initialize new variable if required:
+			cond->trueCode(state);
+
+			// Then we can execute the contained expression!
 			if (expr)
 				expr->code(state, to);
 		}

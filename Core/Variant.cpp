@@ -106,6 +106,14 @@ namespace storm {
 		return runtime::isA(type, t->type);
 	}
 
+	MAYBE(Type *) Variant::type() const {
+		if (!data)
+			return null;
+
+		const GcType *t = runtime::gcTypeOf(data);
+		return t->type;
+	}
+
 	void *Variant::getValue() const {
 		GcArray<Byte> *alloc = (GcArray<Byte> *)data;
 		return alloc->v;

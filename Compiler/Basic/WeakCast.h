@@ -22,6 +22,8 @@ namespace storm {
 
 			/**
 			 * Interface from Condition.
+			 *
+			 * Note: 'code' and 'trueCode' are expected to be implemented by subclasses.
 			 */
 
 			// Get a suitable position for the cast.
@@ -30,8 +32,8 @@ namespace storm {
 			// Get the result variable created by this cast.
 			virtual MAYBE(LocalVar *) STORM_FN result();
 
-			// Code generation. Initializes the created variable if required.
-			virtual void STORM_FN code(CodeGen *state, CodeResult *ok);
+			// Make it more convenient to implement the 'trueCode' function.
+			virtual void STORM_FN trueCode(CodeGen *state);
 
 			/**
 			 * New interface implemented by subclasses.
@@ -44,8 +46,9 @@ namespace storm {
 			// Get the type of the variable we wish to create.
 			virtual Value STORM_FN resultType() ABSTRACT;
 
-			// Generate code for the type-cast.
-			virtual void STORM_FN castCode(CodeGen *state, CodeResult *ok, MAYBE(LocalVar *) var);
+			// Called to initialize the created variable in the 'true' branch. Only called if a
+			// variable is to be initialized.
+			virtual void STORM_FN initCode(CodeGen *state, LocalVar *var) ABSTRACT;
 
 			/**
 			 * New functionality provided here.
@@ -71,13 +74,13 @@ namespace storm {
 
 
 		/**
-		 * Weak downcast using 'as'.
+		 * Weak cast using 'as'.
 		 */
-		class WeakDowncast : public WeakCast {
-			STORM_CLASS;
+		class WeakAsCast : public WeakCast {
+			STORM_ABSTRACT_CLASS;
 		public:
 			// Create.
-			STORM_CTOR WeakDowncast(Block *block, Expr *expr, SrcName *type);
+			STORM_CTOR WeakAsCast(Block *block, Expr *expr, SrcName *type);
 
 			// Get a suitable position for the cast.
 			virtual SrcPos STORM_FN pos();
@@ -88,19 +91,59 @@ namespace storm {
 			// Get the result type.
 			virtual Value STORM_FN resultType();
 
-			// Generate code.
-			virtual void STORM_FN castCode(CodeGen *state, CodeResult *boolResult, MAYBE(LocalVar *) var);
-
 		protected:
 			// Output.
 			virtual void STORM_FN toS(StrBuf *to) const;
 
-		private:
 			// Expression to cast.
 			Expr *expr;
 
+			// Where was 'expr' stored in 'code', so that we may access it in 'trueCode'?
+			code::Var exprVar;
+
+			// Does 'exprVar' contain a reference?
+			Bool exprVarRef;
+
 			// Type to cast to.
 			Value to;
+		};
+
+
+		/**
+		 * Weak downcast using 'as'.
+		 */
+		class WeakDowncast : public WeakAsCast {
+			STORM_CLASS;
+		public:
+			// Create.
+			STORM_CTOR WeakDowncast(Block *block, Expr *expr, SrcName *type);
+
+			// Generate code.
+			virtual void STORM_FN code(CodeGen *state, CodeResult *boolResult);
+
+			// Generate code to initialize the variable.
+			virtual void STORM_FN initCode(CodeGen *state, LocalVar *var);
+		};
+
+
+		/**
+		 * Weak cast extracting values from the Variant type.
+		 */
+		class WeakVariantCast : public WeakAsCast {
+			STORM_CLASS;
+		public:
+			// Create.
+			STORM_CTOR WeakVariantCast(Block *Block, Expr *expr, SrcName *type);
+
+			// Generate code.
+			virtual void STORM_FN code(CodeGen *state, CodeResult *boolResult);
+
+			// Generate code to initialize the variable.
+			virtual void STORM_FN initCode(CodeGen *state, LocalVar *var);
+
+		private:
+			// The Variant type.
+			Type *variantType;
 		};
 
 
@@ -123,7 +166,10 @@ namespace storm {
 			virtual Value STORM_FN resultType();
 
 			// Generate code.
-			virtual void STORM_FN castCode(CodeGen *state, CodeResult *boolResult, MAYBE(LocalVar *) var);
+			virtual void STORM_FN code(CodeGen *state, CodeResult *boolResult);
+
+			// Generate code to initialize the variable.
+			virtual void STORM_FN initCode(CodeGen *state, LocalVar *var);
 
 		protected:
 			// Output.
@@ -133,11 +179,19 @@ namespace storm {
 			// Expression to cast.
 			Expr *expr;
 
+			// Variable used to store 'expr'.
+			code::Var exprVar;
+
+			// Type of 'exprVar'.
+			Value exprType;
+
 			// Generate code for class types.
-			void classCode(MaybeClassType *c, CodeGen *state, CodeResult *boolResult, MAYBE(LocalVar *) var);
+			void classCode(MaybeClassType *c, CodeGen *state, CodeResult *boolResult);
+			void classInit(MaybeClassType *c, CodeGen *state, LocalVar *var);
 
 			// Genereate code for value types.
-			void valueCode(MaybeValueType *c, Bool ref, CodeGen *state, CodeResult *boolResult, MAYBE(LocalVar *) var);
+			void valueCode(MaybeValueType *c, CodeGen *state, CodeResult *boolResult);
+			void valueInit(MaybeValueType *c, CodeGen *state, LocalVar *var);
 		};
 
 
