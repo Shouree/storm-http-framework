@@ -41,8 +41,13 @@ void SDef(Content content);
 SDef : "# *[a-zA-Z]+[^\n]*\n" #comment;
 
 // Global variables (We do not support initialization at the moment).
-SDef => addGlobal(content, pos, type, name) : ("static" #keyword ~)? - STypeName @type, SIdentifier name #varName, ";";
-SDef => globalInitError(pos) : STypeName, SIdentifier #varName, "=", SExpr, ";";
+SDef => addGlobal(content, pos, type, name, init) : SMaybeStatic - STypeName @type, SIdentifier name #varName, ("=", SExpr @init,)? ";";
+SDef => addGlobalArray(content, pos, type, name, count, init) : SMaybeStatic - STypeName @type, SIdentifier name #varName, "\[", SExpr @count, "\]", ("=", SArrayInit @init)?, ";";
+SDef => addGlobalArray(content, pos, type, name, init) : SMaybeStatic - STypeName @type, SIdentifier name #varName, "\[", "\]", "=", SArrayInit @init, ";";
+
+void SMaybeStatic();
+SMaybeStatic :;
+SMaybeStatic : "static" #keyword ~;
 
 // Class declarations
 
@@ -86,8 +91,7 @@ MemberVar SVarDecl(CppType type);
 SVarDecl => MemberVar(name.pos, name.v, t, type) : STypeName(type.scope) t, SIdentifier name #varName;
 
 // Function declarations
-SDef => content : SFnDecl -> add;
-SDef => content : "static" #keyword, SFnDecl -> add;
+SDef => content : SMaybeStatic - SFnDecl -> add;
 
 CppFnDecl SFnDecl();
 SFnDecl => CppFnDecl(res, name, formals, body) : STypeName@ res, SIdentifier name #fnName, "(", SFormals formals, ")", SFnTail body;
@@ -203,8 +207,7 @@ SStmt[10] => VarDecl(pos, block, type, name) : STypeName(block.scope) type, SIde
 SStmt[10] => VarDecl.assign(pos, block, type, name, init) : STypeName(block.scope) type, SIdentifier name #varName, "=", SExpr(block) init, ";";
 SStmt[10] => VarDecl.parens(pos, block, type, name, actuals) : STypeName(block.scope) type, SIdentifier name #varName, "(", SActuals(block) actuals, ")", ";";
 SStmt[10] => VarDecl.parens(pos, block, type, name, actuals) : STypeName(block.scope) type, SIdentifier name #varName, "{", SActuals(block) actuals, "}", ";";
-SStmt[10] => ArrayDecl(pos, block, type, name, size) : STypeName(block.scope) type, SIdentifier name #varName, "\[", SExpr(block) size, "\]", ";";
-SStmt[10] => arrayDecl(pos, block, type, name, size, init) : STypeName(block.scope) type, SIdentifier name #varName, "\[", "[0-9]+" size, "\]", "=", SArrayInit(block) init, ";";
+SStmt[10] => arrayDecl(pos, block, type, name, size, init) : STypeName(block.scope) type, SIdentifier name #varName, "\[", SExpr(block) size, "\]", ("=", SArrayInit(block) init,)? ";";
 SStmt[10] => arrayDecl(pos, block, type, name, init) : STypeName(block.scope) type, SIdentifier name #varName, "\[", "\]", "=", SArrayInit(block) init, ";";
 // "delete" is technically an expression, but we don't do that. That's crazy!
 SStmt[50] => DeleteStmt(pos, expr, false) : "delete" #keyword ~ SOp2(block) expr, ";";

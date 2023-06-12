@@ -528,13 +528,14 @@ void debug() on Compiler {
 		// win.open(url / "pointers" / "locals.c");
 		// win.open(url / "pointers" / "ptr.c");
 		// win.open(url / "concurrency" / "lock_sema.c");
-		win.open(url / "concurrency" / "bank" / "bank_good.c");
+		// win.open(url / "concurrency" / "bank" / "bank_good.c");
 		// win.open(url / "test" / "error.c");
 		// win.open(url / "test" / "multi_locks.c");
 		// win.open(url / "test" / "step_error.c");
 		// win.open(url / "test" / "livelock.c");
 		// win.open(url / "test" / "alloc_in_nostep.c");
 		// win.open(url / "test" / "globals.cpp");
+		win.open(url / "test" / "staticarrays.c");
 		win.waitForClose();
 	}
 }

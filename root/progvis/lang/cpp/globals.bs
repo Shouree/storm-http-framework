@@ -5,12 +5,18 @@ use lang:bs;
 
 on Compiler:
 
-void globalInitError(SrcPos pos) {
-	throw SyntaxError(pos, "Initializing global variables is currently not supported.");
+void addGlobal(Content content, SrcPos pos, STypeName type, SStr name, SExpr? init) {
+	if (init)
+		print("TODO: Handle initializers!");
+	content.add(CppGlobalDecl(pos, type, name.v));
 }
 
-void addGlobal(Content content, SrcPos pos, STypeName type, SStr name) {
-	content.add(CppGlobalDecl(pos, type, name.v));
+void addGlobalArray(Content content, SrcPos pos, STypeName type, SStr name, SExpr count, SArrayInit? init) {
+	print("TODO: Fixme!");
+}
+
+void addGlobalArray(Content content, SrcPos pos, STypeName type, SStr name, SArrayInit init) {
+	print("TODO: Fixme!");
 }
 
 /**

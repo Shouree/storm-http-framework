@@ -200,7 +200,7 @@ class VarDecl extends Stmt {
 }
 
 /**
- * Array variable declaration.
+ * Array variable declaration. No initialization.
  */
 class ArrayDecl extends Stmt {
 	init(SrcPos pos, Block parent, Value type, SStr name, Expr count) {
@@ -353,12 +353,21 @@ class InitArrayDecl extends Stmt {
 	}
 }
 
-InitArrayDecl arrayDecl(SrcPos pos, Block block, Value type, SStr name, Str countStr, Expr[] init) on Compiler {
-	Nat count = countStr.toNat();
-	InitArrayDecl(pos, block, type, name, count, init);
+Stmt arrayDecl(SrcPos pos, Block block, Value type, SStr name, Expr count, Maybe<Expr[]> init) on Compiler {
+	if (init) {
+		// Initializers present. Make sure that the expression is constant.
+		if (staticCount = count.staticValue() as Int) {
+			InitArrayDecl(pos, block, type, name, staticCount.nat, init);
+		} else {
+			throw SyntaxError(pos, "Can not use initializers with dynamically sized arrays!");
+		}
+	} else {
+		// No initializers. Allocate it with dynamic size.
+		ArrayDecl(pos, block, type, name, count);
+	}
 }
 
-InitArrayDecl arrayDecl(SrcPos pos, Block block, Value type, SStr name, Expr[] init) on Compiler {
+Stmt arrayDecl(SrcPos pos, Block block, Value type, SStr name, Expr[] init) on Compiler {
 	InitArrayDecl(pos, block, type, name, init.count, init);
 }
 

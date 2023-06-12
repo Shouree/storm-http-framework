@@ -1,0 +1,11 @@
+int intarray[4];
+struct lock lockarray[4];
+int globalinit = 3;
+
+int main() {
+	int z = 2;
+	int localdynarray[z]; // = { 1, 2 };
+	int localstaticarray[2] = { 1, 2 };
+	int localarray[] = { 1, 2, 3 };
+	return 0;
+}

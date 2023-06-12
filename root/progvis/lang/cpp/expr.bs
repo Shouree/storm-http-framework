@@ -37,6 +37,11 @@ class Expr extends Stmt {
 		temporary();
 	}
 
+	// Get a static value for this expression, if possible.
+	Variant staticValue() {
+		Variant();
+	}
+
 	// Generate code. 'desired' is the desired return type.
 	void code(CodeGen gen, CodeResult res) : abstract;
 
@@ -85,6 +90,10 @@ class IntLiteral extends Expr {
 
 	Bool suggestResult(Type t) : override {
 		return t is named{Byte} | t is named{Int} | t is named{Long} | t is named{Nat} | t is named{Word};
+	}
+
+	Variant staticValue() : override {
+		Variant(val.int);
 	}
 
 	void code(CodeGen gen, CodeResult res) : override {
