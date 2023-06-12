@@ -78,7 +78,12 @@ namespace storm {
 		// Call the output operator.
 		Array<Operand> *p = new (this) Array<Operand>();
 		p->push(strBuf);
-		p->push(param);
+		if (use->params->at(1).ref) {
+			*to->l << lea(ptrA, param);
+			p->push(ptrA);
+		} else {
+			p->push(param);
+		}
 		use->localCall(to, p, new (this) CodeResult(), false);
 
 		// Call 'toS' on the StrBuf to get the string.

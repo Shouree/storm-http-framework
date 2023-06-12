@@ -5,6 +5,7 @@
 #include "Named.h"
 #include "Type.h"
 #include "Exception.h"
+#include "Engine.h"
 
 namespace storm {
 	namespace bs {
@@ -123,10 +124,20 @@ namespace storm {
 			if (to->needed()) {
 				// Part of another expression.
 				code::Var v = to->location(s);
-				if (to->type().ref) {
+				Value toType = to->type();
+				if (toType.ref) {
 					*s->l << lea(v, var->var.v);
 				} else if (!to->suggest(s, var->var.v)) {
-					*s->l << mov(v, var->var.v);
+					// Need to copy it:
+					if (toType.isAsmType()) {
+						*s->l << mov(v, var->var.v);
+					} else {
+						*s->l << lea(ptrA, v);
+						*s->l << lea(ptrC, var->var.v);
+						*s->l << fnParam(engine().ptrDesc(), ptrA);
+						*s->l << fnParam(engine().ptrDesc(), ptrC);
+						*s->l << fnCall(toType.copyCtor(), false);
+					}
 				}
 				to->created(s);
 			}
