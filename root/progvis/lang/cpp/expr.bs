@@ -699,7 +699,8 @@ class FnCall extends ExprRef {
 		try {
 			return dynamicCall(fn, params);
 		} catch (UsageError error) {
-			// This is mostly a last resort.
+			// This is mostly a last resort. If something fails, we just state that we could not
+			// compute the value statically.
 			print(error.toS);
 			return Variant();
 		}

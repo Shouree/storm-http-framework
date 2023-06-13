@@ -6,32 +6,51 @@ use lang:bs;
 on Compiler:
 
 void addGlobal(Content content, SrcPos pos, STypeName type, SStr name, SExpr? init) {
-	if (init)
-		print("TODO: Handle initializers!");
-	content.add(CppGlobalDecl(pos, type, name.v));
+	content.add(CppGlobalScalarDecl(pos, type, name.v, init));
 }
 
 void addGlobalArray(Content content, SrcPos pos, STypeName type, SStr name, SExpr count, SArrayInit? init) {
-	print("TODO: Fixme!");
+	content.add(CppGlobalArrayDecl(pos, type, name.v, count, init));
 }
 
 void addGlobalArray(Content content, SrcPos pos, STypeName type, SStr name, SArrayInit init) {
-	print("TODO: Fixme!");
+	content.add(CppGlobalArrayDecl(pos, type, name.v, null, init));
 }
 
 /**
- * Declared global variable.
+ * Declared global variables.
  */
 class CppGlobalDecl on Compiler {
+	// Position of the declaration.
 	SrcPos pos;
-	STypeName type;
+
+	// Name of the variable.
 	Str name;
 
-	init(SrcPos pos, STypeName type, Str name) {
+	init(SrcPos pos, Str name) {
 		init() {
 			pos = pos;
-			type = type;
 			name = name;
+		}
+	}
+
+	void create(Package pkg) : abstract;
+}
+
+/**
+ * Declared global scalar variable.
+ */
+class CppGlobalScalarDecl extends CppGlobalDecl {
+	// Name of the type.
+	STypeName type;
+
+	// Initializer, if present.
+	SExpr? init;
+
+	init(SrcPos pos, STypeName type, Str name, SExpr? init) {
+		init(pos, name) {
+			type = type;
+			init = init;
 		}
 	}
 
@@ -41,36 +60,80 @@ class CppGlobalDecl on Compiler {
 }
 
 /**
- * Actual global variable.
+ * Declared global array variable.
+ *
+ * Note: at least one of 'count' or 'initializers' must be set.
+ */
+class CppGlobalArrayDecl extends CppGlobalDecl {
+	// Name of the type.
+	STypeName type;
+
+	// Number of elements in the array.
+	SExpr? count;
+
+	// Initializer for the array.
+	SArrayInit? initializers;
+
+	init(SrcPos pos, STypeName type, Str name, SExpr? count, SArrayInit? init) {
+		init(pos, name) {
+			type = type;
+			count = count;
+			initializers = init;
+		}
+	}
+
+	void create(Package pkg) {
+		pkg.add(CppGlobalArray(this, cppScope(pkg)));
+	}
+}
+
+/**
+ * Global scalar variable.
  */
 class CppGlobal extends GlobalVar {
-	init(CppGlobalDecl decl, Scope scope) {
+	init(CppGlobalScalarDecl decl, Scope scope) {
 		var type = decl.type.transform(scope).asRef(false);
 		if (!type.isValue)
-			throw SyntaxError(decl.pos, "Only value-types are supported. Did you declare this type in C++?");
+			throw SyntaxError(decl.pos, "Only value-types are supported. Did you declare this type in C or C++?");
 
 		var thread = named{ui:Render};
 
-		Function init = initFn(safeType(type, decl.pos), scope);
+		Function init = initFn(safeType(type, decl.pos), scope, decl.pos, decl.init);
 		init.parentLookup = scope.top;
 		init.runOn(thread);
+
+		print("TODO: Respect 'const' on the type. Should be doable using the same mechanism as the arrays.");
 
 		init(decl.name, type, thread, init.pointer()) {}
 	}
 
 	// Create a function that initializes the value.
-	Function initFn(Type type, Scope scope) : static {
+	Function initFn(Type type, Scope scope, SrcPos pos, SExpr? init) : static {
 		Listing l(false, type.typeDesc());
 
 		var v = l.createVar(l.root, type.size);
 		l << prolog();
-		l << lea(ptrA, v);
 
-		if (cpp = cppCtor(type, [], scope)) {
+		if (init) {
+			// Initializer expression?
+			DummyBlock b(pos, scope);
+			Expr expr = init.transform(b);
+
+			// Ensure that it is a constant expression. Otherwise, strange things may happen to the visualization!
+			if (expr.staticValue(type).empty)
+				throw SyntaxError(pos, "Initializers for global variables must be constant.");
+
+			// Generate code for the expression.
+			CodeGen gen(RunOn(), l);
+			expr.code(gen, CodeResult(type, v));
+		} else if (cpp = cppCtor(type, [], scope)) {
+			// C++ type?
+			l << lea(ptrA, v);
 			l << fnParam(ptrDesc, ptrA);
 			l << fnCall(cpp.ref, true);
 		} else if (storm = stormCtor(type, [], scope)) {
 			// TODO: Perhaps we should actually allocate this on the heap in case it is visualized...
+			l << lea(ptrA, v);
 			l << fnParam(ptrDesc, ptrA);
 			l << fnParam(intDesc, intConst(0));
 			l << fnCall(storm.ref, true);
@@ -85,9 +148,74 @@ class CppGlobal extends GlobalVar {
 }
 
 /**
+ * Global array variable.
+ *
+ * Note: We store these as if they are pointers to the allocation. We can't allocate an array of
+ * elements as we do for local array variables, since we use the standard GlobalVar here. This has
+ * implications for the visualization, but it is likely a good thing as it reduces the size of the
+ * Globals box.
+ */
+class CppGlobalArray extends GlobalVar {
+	init(CppGlobalArrayDecl decl, Scope scope) {
+		var type = decl.type.transform(scope).asRef(false);
+		if (!type.isValue)
+			throw SyntaxError(decl.pos, "Only value-types are supported. Did you declare this type in C or C++?");
+		Value ptrType = wrapPtr(type);
+
+		var thread = named{ui:Render};
+
+		Function init = initFn(safeType(ptrType, decl.pos), safeType(type, decl.pos), scope, decl.pos, decl.count, decl.initializers);
+		init.parentLookup = scope.top;
+		init.runOn(thread);
+
+		init(decl.name, ptrType, thread, init.pointer()) {}
+	}
+
+	// Create a function that initializes the value.
+	Function initFn(Type ptrType, Type type, Scope scope, SrcPos pos, SExpr? count, SArrayInit? init) : static {
+		DummyBlock block(pos, scope);
+
+		Nat arrayCount = 0;
+		if (count) {
+			Expr countExpr = count.transform(block);
+			if (c = countExpr.staticValue(named{Int}) as Int) {
+				if (c < 0)
+					throw SyntaxError(pos, "Array size can not be negative (it is ${staticCount})");
+				arrayCount = c.nat;
+			} else {
+				throw SyntaxError(pos, "Array size of global arrays must be constant.");
+			}
+
+			if (init) {
+				if (init.count != arrayCount)
+					throw SyntaxError(pos, "Initializer size (${init.count}) does not match array size (${arrayCount}).");
+			}
+		} else if (init) {
+			arrayCount = init.count;
+		} else {
+			// Should not happen if other code in the frontend works properly.
+			throw SyntaxError(pos, "Either array count or initializer must be specified.");
+		}
+
+
+		Listing l(false, ptrType.typeDesc());
+
+		var v = l.createVar(l.root, ptrType.size);
+
+		l << prolog();
+		l << fnRet(v);
+
+		Function fn(Value(ptrType), "init", []);
+		fn.setCode(DynamicCode(l));
+		fn;
+	}
+}
+
+/**
  * Access a global variable.
  */
 class GlobalVarAccess extends Expr {
+	// Variable to access.
 	GlobalVar var;
 
 	init(SrcPos pos, GlobalVar var) {
@@ -95,6 +223,10 @@ class GlobalVarAccess extends Expr {
 	}
 
 	Bool temporary() : override {
+		// If it is an array, act as if the pointer was a temporary. Otherwise it would be possible
+		// to modify what the global refers to!
+		if (var as CppGlobalArray)
+			return true;
 		false;
 	}
 

@@ -357,6 +357,8 @@ Stmt arrayDecl(SrcPos pos, Block block, Value type, SStr name, Expr count, Maybe
 	if (init) {
 		// Initializers present. Make sure that the expression is constant.
 		if (staticCount = count.staticValue(named{Int}) as Int) {
+			if (staticCount < 0)
+				throw SyntaxError(pos, "Array size can not be negative (it is ${staticCount}).");
 			InitArrayDecl(pos, block, type, name, staticCount.nat, init);
 		} else {
 			throw SyntaxError(pos, "Can not use initializers with dynamically sized arrays!");

@@ -99,6 +99,20 @@ class Block extends Stmt {
 	}
 }
 
+/**
+ * Block that is only used to get a scope for instantiating expressions. For example, in global initializers.
+ */
+class DummyBlock extends Block {
+	init(SrcPos pos, Scope parent) {
+		init(pos, parent) {}
+	}
+
+	Bool blockCode(CodeGen gen) : override {
+		throw InternalError("Should not generate code from a DummyBlock!");
+	}
+}
+
+
 // Create BlockLookup objects.
 private Scope blockScope(Block block, Scope parent) {
 	if (t = parent.top) {
