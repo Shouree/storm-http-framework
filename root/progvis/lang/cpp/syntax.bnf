@@ -63,7 +63,7 @@ SClassDecl => CppType(name, true, inherit, body) : "class" #keyword ~ SIdentifie
 SClassDecl => CppType(name, false, inherit, body) : "struct" #keyword ~ SIdentifier name #typeName, (SClassInherit @inherit,)? "{", SClassBody @body, "}";
 
 void SClassInherit(CppType me);
-SClassInherit : ":", (SClassAccess access,)? STypeName(me.scope) type;
+SClassInherit : ":", (SClassAccess access,)? STypeNamePlain(me.scope) type;
 
 Visibility SClassAccess() #keyword;
 SClassAccess => public() : "public";
@@ -147,25 +147,50 @@ SInitItem => Initializer(pos, name, expr) : SIdentifier name #varName, "{", SAct
 SStr SIdentifier();
 SIdentifier => v : "[A-Za-z_][A-Za-z0-9_]*" @v;
 
-// Type declarations. Transforms into a Value.
-Value STypeName(Scope scope);
-STypeName => original : STypeNameRec(scope) original - ("const" #keyword)?;
-STypeName => original : "const" #keyword, STypeNameEnd(scope) original;
-STypeName => wrapRef(original) : STypeNameRec(scope) original, "&";
-STypeName => wrapConstRef(original) : STypeNameRec(scope) original, "const" #keyword, "&";
-STypeName => wrapConstRef(original) : "const" #keyword, STypeNameEnd(scope) original, "&";
-STypeName => wrapRRef(original) : STypeNameRec(scope) original, "&&";
-STypeName => wrapConstRRef(original) : STypeNameRec(scope) original, "const" #keyword, "&&";
-STypeName => wrapConstRRef(original) : "const" #keyword, STypeNameEnd(scope) original, "&&";
+// Type declarations.
+// There are two kinds of them: STypeName and STypeNamePlain
+// The first requires that the type name ends with a non-alnum character (&* or space). The second one does not have
+// this requirement. The first is needed to not confuse "intx" as "int x". The second is needed to not require
+// spaces in template lists (e.g., x<int,int>).
 
-// Pointers with and without const.
+// Requires space or special character at the end.
+Value STypeName(Scope scope);
+STypeName => original : STypeNameRecWS(scope) original - ("const" #keyword ~)?;
+STypeName => original : "const" #keyword ~ STypeNameEnd(scope) original ~;
+STypeName => original : STypeNameCommon(scope) original;
+
+// Does not require space or special character at the end.
+Value STypeNamePlain(Scope scope);
+STypeNamePlain => original : STypeNameRecWS(scope) original - ("const" #keyword)?;
+STypeNamePlain => original : "const" #keyword ~ STypeNameEnd(scope) original;
+STypeNamePlain => original : STypeNameCommon(scope) original;
+
+// Common parts between STypeName and STypeNamePlain. All end in special characters.
+Value STypeNameCommon(Scope scope);
+STypeNameCommon => wrapRef(original) : STypeNameRec(scope) original, "&";
+STypeNameCommon => wrapConstRef(original) : STypeNameRecWS(scope) original - "const" #keyword, "&";
+STypeNameCommon => wrapConstRef(original) : "const" #keyword ~ STypeNameEnd(scope) original, "&";
+STypeNameCommon => wrapRRef(original) : STypeNameRec(scope) original, "&&";
+STypeNameCommon => wrapConstRRef(original) : STypeNameRecWS(scope) original - "const" #keyword, "&&";
+STypeNameCommon => wrapConstRRef(original) : "const" #keyword ~ STypeNameEnd(scope) original, "&&";
+
+
+// Recursive part of type declarations. WS version enforces a whitespace (or *) at the end.
 Value STypeNameRec(Scope scope);
 STypeNameRec => original : STypeNameEnd(scope) original;
 STypeNameRec => wrapPtr(original) : STypeNameRec(scope) original, "\*";
-STypeNameRec => wrapConstPtr(original) : STypeNameRec(scope) original, "const" #keyword, "\*";
-STypeNameRec => wrapConstPtr(original) : "const" #keyword, STypeNameEnd(scope) original, "\*";
+STypeNameRec => wrapConstPtr(original) : STypeNameRecWS(scope) original - "const" #keyword, "\*";
+STypeNameRec => wrapConstPtr(original) : "const" #keyword ~ STypeNameEnd(scope) original, "\*";
 
-// Actual type names.
+Value STypeNameRecWS(Scope scope);
+STypeNameRecWS => original : STypeNameEnd(scope) original ~;
+STypeNameRecWS => wrapPtr(original) : STypeNameRec(scope) original, "\*";
+STypeNameRecWS => wrapConstPtr(original) : STypeNameRecWS(scope) original - "const" #keyword, "\*";
+STypeNameRecWS => wrapConstPtr(original) : "const" #keyword ~ STypeNameEnd(scope) original, "\*";
+
+
+
+// Actual type names. Always ends with an identifier. Never matches spaces after that identifier.
 Value STypeNameEnd(Scope scope);
 STypeNameEnd[-1] => findType(pos, scope, first, rest) : SNamePart(scope) first #typeName - ("::", SNamePart(scope) rest #typeName)*;
 // "struct foo" is needed in C.
@@ -188,7 +213,7 @@ SNamePart => SimplePart(name.v, params) : SIdentifier name, "<", SNameParams(sco
 
 Array<Value> SNameParams(Scope scope);
 SNameParams => Array<Value>() :;
-SNameParams => Array<Value>() : STypeName(scope) -> push, (",", STypeName(scope) -> push)*;
+SNameParams => Array<Value>() : STypeNamePlain(scope) -> push, (",", STypeNamePlain(scope) -> push)*;
 
 // Block or statement, directly after keyword. Ensures that we must have a whitespace before a
 // statement, but does not require it before a block.
@@ -303,17 +328,17 @@ SOp3 => unaryOperator(block, op, n) : "\+" @op, SOp2(block) n;
 SOp3 => unaryOperator(block, op, n) : "-" @op, SOp2(block) n;
 SOp3 => operatorNoConst(block, op, n) : "\+\+" @op, SOp3(block) n;
 SOp3 => operatorNoConst(block, op, n) : "--" @op, SOp3(block) n;
-SOp3 => NewExpr(pos, block, type) : "new" #keyword ~ STypeName(block.scope) type;
-SOp3 => NewExpr(pos, block, type, actuals) : "new" #keyword ~ STypeName(block.scope) type, "(", SActuals(block) actuals, ")";
-SOp3 => NewExpr(pos, block, type, actuals) : "new" #keyword ~ STypeName(block.scope) type, "{", SActuals(block) actuals, "}";
-SOp3 => NewExpr(pos, block, type, count) : "new" #keyword ~ STypeName(block.scope) type, "\[", SExpr(block) count, "\]";
+SOp3 => NewExpr(pos, block, type) : "new" #keyword ~ STypeNamePlain(block.scope) type;
+SOp3 => NewExpr(pos, block, type, actuals) : "new" #keyword ~ STypeNamePlain(block.scope) type, "(", SActuals(block) actuals, ")";
+SOp3 => NewExpr(pos, block, type, actuals) : "new" #keyword ~ STypeNamePlain(block.scope) type, "{", SActuals(block) actuals, "}";
+SOp3 => NewExpr(pos, block, type, count) : "new" #keyword ~ STypeNamePlain(block.scope) type, "\[", SExpr(block) count, "\]";
 SOp3[10] => sizeofExpr(pos, type) : "sizeof" #keyword - SizeofType(block.scope) type;
-SOp3 => castError(pos) : "(", STypeName, ")", SOp3; // C-style cast.
+SOp3 => castError(pos) : "(", STypeNamePlain, ")", SOp3; // C-style cast.
 
 Value SizeofType(Scope scope);
-SizeofType => v : ~ STypeName(scope) v;
+SizeofType => v : ~ STypeNamePlain(scope) v;
 SizeofType => v : , "(", SizeofType(scope) v, ")";
-SizeofType => v : , "(", STypeName(scope) v, ")";
+SizeofType => v : , "(", STypeNamePlain(scope) v, ")";
 
 Expr SOp2(Block block);
 SOp2 => a : SAtom(block) a;
