@@ -37,8 +37,9 @@ class Expr extends Stmt {
 		temporary();
 	}
 
-	// Get a static value for this expression, if possible.
-	Variant staticValue() {
+	// Get a static value for this expression, if possible. Asks the result to have the type
+	// supplied in the call. If not, a void value is returned.
+	Variant staticValue(Type type) {
 		Variant();
 	}
 
@@ -92,8 +93,18 @@ class IntLiteral extends Expr {
 		return t is named{Byte} | t is named{Int} | t is named{Long} | t is named{Nat} | t is named{Word};
 	}
 
-	Variant staticValue() : override {
-		Variant(val.int);
+	Variant staticValue(Type type) : override {
+		if (type is named{Byte})
+			return Variant(val.byte);
+		if (type is named{Int})
+			return Variant(val.int);
+		if (type is named{Nat})
+			return Variant(val.nat);
+		if (type is named{Long})
+			return Variant(val);
+		if (type is named{Word})
+			return Variant(val.word);
+		Variant();
 	}
 
 	void code(CodeGen gen, CodeResult res) : override {
@@ -663,6 +674,35 @@ class FnCall extends ExprRef {
 	ExprResult result() : override {
 		// We make sure to return references.
 		fnResult.asRef();
+	}
+
+	Variant staticValue(Type type) : override {
+		// Only try to "constant fold" pure functions.
+		if (!fn.pure)
+			return Variant();
+
+		if (!Value(type).canStore(fnResult))
+			return Variant();
+
+		Variant[] params;
+		for (i, x in actuals) {
+			unless (type = fn.params[i].type)
+				return Variant();
+
+			Variant a = x.staticValue(type);
+			if (a.empty)
+				return Variant();
+
+			params << a;
+		}
+
+		try {
+			return dynamicCall(fn, params);
+		} catch (UsageError error) {
+			// This is mostly a last resort.
+			print(error.toS);
+			return Variant();
+		}
 	}
 
 	void code(CodeGen gen, CodeResult res) : override {

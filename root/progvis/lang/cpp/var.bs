@@ -356,7 +356,7 @@ class InitArrayDecl extends Stmt {
 Stmt arrayDecl(SrcPos pos, Block block, Value type, SStr name, Expr count, Maybe<Expr[]> init) on Compiler {
 	if (init) {
 		// Initializers present. Make sure that the expression is constant.
-		if (staticCount = count.staticValue() as Int) {
+		if (staticCount = count.staticValue(named{Int}) as Int) {
 			InitArrayDecl(pos, block, type, name, staticCount.nat, init);
 		} else {
 			throw SyntaxError(pos, "Can not use initializers with dynamically sized arrays!");

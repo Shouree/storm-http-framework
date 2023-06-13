@@ -5,7 +5,7 @@ int globalinit = 3;
 int main() {
 	int z = 2;
 	int localdynarray[z]; // = { 1, 2 };
-	int localstaticarray[2] = { 1, 2 };
+	int localstaticarray[1 + 1] = { 1, 2 };
 	int localarray[] = { 1, 2, 3 };
 	return 0;
 }
