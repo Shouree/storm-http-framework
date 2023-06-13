@@ -1,0 +1,61 @@
+use core:lang;
+
+on Compiler:
+
+// Output a tree-view of the root of the name tree. Does not attempt to compile any parts of the
+// name tree, so not all entities might be visible.
+void tree() {
+	tree(rootPkg);
+}
+
+// Output a tree-view of a part of the name tree. By default, does not attempt to compile any parts
+// of the name tree. The version with a boolean parameter provides the option to populate the name
+// tree.
+void tree(NameSet root) {
+	tree(root, false);
+}
+
+// Output a tree-view of a part of the name tree. Optionally populates the name tree as well.
+void tree(NameSet root, Bool load) {
+	StrBuf x;
+	tree(x, root, "", "", load);
+	print(x.toS);
+}
+
+private void tree(StrBuf out, Named at, Str firstPrefix, Str nextPrefix, Bool load) {
+	Named[] children;
+	if (set = at as NameSet) {
+		if (load)
+			set.forceLoad();
+
+		for (x in set) {
+			children << x;
+		}
+
+		children.sort((a, b) => a.name < b.name);
+	}
+
+	out << firstPrefix;
+	if (children.any)
+		out << "─┬ ";
+	else
+		out << "── ";
+	printElem(out, at);
+	out << "\n";
+
+	Str firstSub = nextPrefix + " ├";
+	Str subPrefix = nextPrefix + " │";
+	for (i, x in children) {
+		if (i < children.count - 1) {
+			tree(out, x, firstSub, subPrefix, load);
+		} else {
+			tree(out, x, nextPrefix + " └", nextPrefix + "  ", load);
+		}
+	}
+}
+
+private void printElem(StrBuf to, Named elem) {
+	to << elem.name;
+	if (elem.params.any)
+		to << "(" << join(elem.params, ", ") << ")";
+}
