@@ -401,7 +401,7 @@ class ThisPtr extends ExprRef {
 	FnRoot fn;
 
 	init(SrcPos pos, Scope scope) {
-		init(pos) { fn = findFnRoot(scope); }
+		init(pos) { fn = expectFnRoot(scope, pos); }
 	}
 
 	ExprResult result() : override {
@@ -550,9 +550,11 @@ class NameExpr extends Expr {
 		}
 
 		// Try to use 'this' if suitable.
-		if (member = findFnRoot(scope).memberOf) {
-			if (found = findCtx(Deref:ptr(ThisPtr(pos, scope)), actuals))
-				return found;
+		if (fnRoot = findFnRoot(scope)) {
+			if (member = fnRoot.memberOf) {
+				if (found = findCtx(Deref:ptr(ThisPtr(pos, scope)), actuals))
+					return found;
+			}
 		}
 
 		// Try the global scope.

@@ -1,4 +1,5 @@
 int intarray[4];
+int intarray2[2] = { 1, 2 };
 struct lock lockarray[4];
 int globalinit = 3;
 

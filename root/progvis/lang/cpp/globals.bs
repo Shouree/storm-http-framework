@@ -175,34 +175,57 @@ class CppGlobalArray extends GlobalVar {
 	Function initFn(Type ptrType, Type type, Scope scope, SrcPos pos, SExpr? count, SArrayInit? init) : static {
 		DummyBlock block(pos, scope);
 
+		Array<Expr> initExprs;
+		if (init) {
+			initExprs = init.transform(block);
+			for (i, x in initExprs) {
+				if (x.staticValue(type).empty)
+					throw SyntaxError(x.pos, "This expression is not constant, and can not be used to initialize a global array.");
+			}
+		}
+
 		Nat arrayCount = 0;
 		if (count) {
 			Expr countExpr = count.transform(block);
 			if (c = countExpr.staticValue(named{Int}) as Int) {
 				if (c < 0)
-					throw SyntaxError(pos, "Array size can not be negative (it is ${staticCount})");
+					throw SyntaxError(pos, "Array size can not be negative (it is ${c})");
 				arrayCount = c.nat;
 			} else {
 				throw SyntaxError(pos, "Array size of global arrays must be constant.");
 			}
 
 			if (init) {
-				if (init.count != arrayCount)
-					throw SyntaxError(pos, "Initializer size (${init.count}) does not match array size (${arrayCount}).");
+				if (initExprs.count != arrayCount)
+					throw SyntaxError(pos, "Initializer size (${initExprs.count}) does not match array size (${arrayCount}).");
 			}
 		} else if (init) {
-			arrayCount = init.count;
+			arrayCount = initExprs.count;
 		} else {
 			// Should not happen if other code in the frontend works properly.
 			throw SyntaxError(pos, "Either array count or initializer must be specified.");
 		}
-
 
 		Listing l(false, ptrType.typeDesc());
 
 		var v = l.createVar(l.root, ptrType.size);
 
 		l << prolog();
+
+		// Allocate memory.
+		l << fnParam(ptrDesc, type.typeRef);
+		l << fnParam(ptrDesc, ptrConst(arrayCount));
+		l << fnCall(ref(BuiltIn:allocArray), false, ptrDesc, ptrA);
+
+		// Save the pointer to the allocation in 'v'. Note: the offset field is 0 due to initialization.
+		l << mov(ptrRel(v, Offset()), ptrA);
+
+		// Set 'filled'.
+		Nat mask = AllocFlags:arrayAlloc.v;
+		l << mov(intRel(ptrA, Offset(sPtr)), natConst(mask | arrayCount));
+
+		print("TODO: Need to initialize each element of the array!");
+
 		l << fnRet(v);
 
 		Function fn(Value(ptrType), "init", []);

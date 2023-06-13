@@ -212,7 +212,7 @@ class StmtBlock extends Block {
  */
 class Return extends Stmt {
 	init(SrcPos pos, Block inside) {
-		FnRoot root = findFnRoot(inside);
+		FnRoot root = expectFnRoot(inside, pos);
 		init(pos) {
 			root = root;
 		}
@@ -221,7 +221,7 @@ class Return extends Stmt {
 	}
 
 	init(SrcPos pos, Block inside, Expr value) {
-		FnRoot root = findFnRoot(inside);
+		FnRoot root = expectFnRoot(inside, pos);
 		Value expect = root.result;
 		if (t = expect.type)
 			value = expectCast(value, t);
@@ -330,11 +330,21 @@ class Return extends Stmt {
 	}
 }
 
-FnRoot findFnRoot(Block inside) on Compiler {
+FnRoot expectFnRoot(Block inside, SrcPos pos) on Compiler {
+	expectFnRoot(inside.scope, pos);
+}
+
+FnRoot expectFnRoot(Scope inside, SrcPos pos) on Compiler {
+	unless (x = findFnRoot(inside))
+		throw SyntaxError(pos, "This statement must be used inside a function.");
+	x;
+}
+
+FnRoot? findFnRoot(Block inside) on Compiler {
 	findFnRoot(inside.scope);
 }
 
-FnRoot findFnRoot(Scope scope) on Compiler {
+FnRoot? findFnRoot(Scope scope) on Compiler {
 	NameLookup? at = scope.top;
 	while (curr = at as BlockLookup) {
 		if (fn = curr.block as FnRoot) {
@@ -344,7 +354,7 @@ FnRoot findFnRoot(Scope scope) on Compiler {
 		at = curr.parent;
 	}
 
-	throw InternalError("Unable to find the contained function from a block!");
+	return null;
 }
 
 /**
