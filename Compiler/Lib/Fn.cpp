@@ -318,4 +318,115 @@ namespace storm {
 		return c;
 	}
 
+	Variant dynamicCall(Function *function, Array<Variant> *params) {
+		Nat paramCount = function->params->count();
+		if (paramCount != params->count()) {
+			StrBuf *msg = new (function) StrBuf();
+			*msg << S("Incorrect number of parameters passed to 'dynamicCall'. ");
+			*msg << S("Expected ") << paramCount << S(" but got ") << params->count() << S(".");
+			throw new (function) UsageError(msg->toS());
+		}
+
+		// Figure out which thread to use:
+		RunOn runOn = function->runOn();
+		Thread *switchTo = null;
+
+		if (runOn.state == RunOn::runtime) {
+			Value firstType = params->at(0).type();
+			if (!firstType.isActor())
+				throw new (function) UsageError(S("First parameter to actor function is not an actor!"));
+
+			TObject *obj = (TObject *)params->at(0).getObject();
+			switchTo = obj->thread;
+		} else if (runOn.state == RunOn::named) {
+			switchTo = runOn.thread->thread();
+			// No switch needed for the compiler thread since we are running on that thread.
+			if (switchTo == Compiler::thread(function->engine()))
+				switchTo = null;
+		}
+
+		// If we need to switch threads, copy all parameters.
+		if (switchTo) {
+			Array<Variant> *copies = new (function) Array<Variant>();
+			CloneEnv *env = new (function) CloneEnv();
+			copies->reserve(paramCount);
+			for (Nat i = 0; i < paramCount; i++) {
+				copies->push(params->at(i));
+				copies->last().deepCopy(env);
+			}
+			params = copies;
+		}
+
+		// Array of parameters. These need to be ambiguous roots since we point inside the
+		// allocation in Variant. This array is passed directly to the FnCall interface later on.
+		RootArray<void, true> rawParams(function->engine().gc);
+		rawParams.resize(paramCount);
+
+		// Array of indirect parameters. Used when the function requires a reference.
+		RootArray<void, true> refParams(function->engine().gc);
+		refParams.resize(paramCount);
+
+		for (Nat i = 0; i < paramCount; i++) {
+			Value formal = function->params->at(i);
+			Variant &actual = params->at(i);
+
+			if (!formal.canStore(Value(actual.type()))) {
+				StrBuf *msg = new (function) StrBuf();
+				*msg << S("Incorrect type for parameter ") << (i + 1) << S(" to function ");
+				*msg << function->identifier() << S(". Expected ") << formal << S(" but got ");
+				*msg << Value(actual.type()) << S(".");
+				throw new (function) UsageError(msg->toS());
+			}
+
+			rawParams[i] = actual.getPointer();
+
+			if (formal.ref) {
+				refParams[i] = rawParams[i];
+				rawParams[i] = &refParams[i];
+			}
+		}
+
+		// Now we can create our FnCallRaw object.
+		os::FnCallRaw call(&rawParams[0], function->callThunk());
+
+		// Figure out which function to call.
+		const void *toCall = function->ref().address();
+		bool isMember = function->isMember();
+
+		// Is the result a value?
+		Value resultType = function->result;
+
+		if (resultType.isObject() || resultType.type == null) {
+			// Result is an object, or void.
+			RootObject *out = null;
+
+			if (switchTo) {
+				os::FutureSema<os::Sema> future;
+				os::UThread::spawnRaw(toCall, isMember, null, call, future, &out, &switchTo->thread());
+				future.result();
+				Variant result(out);
+				result.deepCopy(new (function) CloneEnv());
+				return result;
+			} else {
+				call.callRaw(toCall, isMember, null, &out);
+				return Variant(out);
+			}
+		} else {
+			// Result is a value.
+			Variant result(Variant::uninitializedValue(resultType.type));
+
+			if (switchTo) {
+				os::FutureSema<os::Sema> future;
+				os::UThread::spawnRaw(toCall, isMember, null, call, future, result.getValue(), &switchTo->thread());
+				future.result();
+				result.valueInitialized();
+				result.deepCopy(new (function) CloneEnv());
+				return result;
+			} else {
+				call.callRaw(toCall, isMember, null, result.getValue());
+				return result;
+			}
+		}
+	}
+
 }

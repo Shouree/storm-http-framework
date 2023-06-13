@@ -152,6 +152,18 @@ namespace storm {
 		return (RootObject *)data;
 	}
 
+	void *Variant::getPointer() {
+		if (!data)
+			return null;
+
+		const GcType *t = runtime::gcTypeOf(data);
+		if (t->kind == GcType::tArray) {
+			return getValue();
+		} else {
+			return &data;
+		}
+	}
+
 	Engine &Variant::engine() const {
 		const GcType *t = runtime::gcTypeOf(data);
 		return runtime::allocEngine((RootObject *)t->type);

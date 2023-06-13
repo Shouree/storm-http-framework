@@ -6,7 +6,7 @@ namespace storm {
 	/**
 	 * An array that makes sure to register its contents as a root with the GC.
 	 */
-	template <class T>
+	template <class T, bool ambiguous = false>
 	class RootArray : NoCopy {
 	public:
 		// Create.
@@ -38,7 +38,7 @@ namespace storm {
 
 			T **nData = new T*[nSize];
 			memset(nData, 0, sizeof(T*)*nSize);
-			Gc::Root *nRoot = gc.createRoot(nData, nSize);
+			Gc::Root *nRoot = gc.createRoot(nData, nSize, ambiguous);
 
 			if (data) {
 				for (nat i = 0; i < min(nSize, size); i++)

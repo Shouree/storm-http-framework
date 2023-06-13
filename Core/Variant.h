@@ -88,6 +88,11 @@ namespace storm {
 		// Get the object stored in here.
 		RootObject *getObject() const;
 
+		// Get a pointer to the contained data. If it is an object, get a pointer to the object
+		// pointer. If it is a value, get a pointer to the value. This is useful when calling
+		// functions through the FnCall interface.
+		void *getPointer();
+
 
 		/**
 		 * High-level API for C++.

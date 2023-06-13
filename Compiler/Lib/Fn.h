@@ -1,6 +1,7 @@
 #pragma once
 #include "ValueArray.h"
 #include "Type.h"
+#include "Core/Variant.h"
 
 namespace storm {
 	STORM_PKG(core.lang);
@@ -45,13 +46,17 @@ namespace storm {
 	};
 
 	// Find the function type.
-	Type *fnType(Array<Value> *params);
+	Type *fnType(Array<Value> *params) ON(Compiler);
 
 	// Create a function pointer pointing to a function in Storm. The second version binds a 'this'
 	// pointer to the first parameter of 'target'.
-	FnBase *STORM_FN pointer(Function *target);
-	FnBase *STORM_FN pointer(Function *target, Object *thisPtr);
-	FnBase *STORM_FN pointer(Function *target, TObject *thisPtr);
+	FnBase *STORM_FN pointer(Function *target) ON(Compiler);
+	FnBase *STORM_FN pointer(Function *target, Object *thisPtr) ON(Compiler);
+	FnBase *STORM_FN pointer(Function *target, TObject *thisPtr) ON(Compiler);
+
+	// Dynamic calls to functions by using Variants. Checks the types of parameters before
+	// performing the call.
+	Variant STORM_FN dynamicCall(Function *function, Array<Variant> *params) ON(Compiler);
 
 	// Low-level functionality required by generated machine code.
 	void CODECALL fnCallRaw(FnBase *b, void *output, os::CallThunk thunk, void **params, TObject *first);
