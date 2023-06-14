@@ -1,0 +1,52 @@
+value BaseVal {
+	Int a;
+
+	init(Int a) {
+		init { a = a; }
+	}
+}
+
+value DerivedVal extends BaseVal {
+	Int b;
+
+	init(Int a, Int b) {
+		init(a) { b = b; }
+	}
+}
+
+Int sliceInitVar() {
+	DerivedVal d(2, 3);
+	BaseVal base = d;
+	base.a;
+}
+
+Int sliceInitVarTmp() {
+	BaseVal base = DerivedVal(2, 3);
+	base.a;
+}
+
+Int sliceAssignVar() {
+	DerivedVal d(3, 4);
+	BaseVal base(1);
+	base = d;
+	base.a;
+}
+
+Int sliceAssignVarTmp() {
+	BaseVal base(1);
+	base = DerivedVal(3, 4);
+	base.a;
+}
+
+Int sliceBaseFn(BaseVal x) {
+	x.a;
+}
+
+Int sliceFnCall() {
+	DerivedVal d(4, 5);
+	sliceBaseFn(d);
+}
+
+Int sliceFnCallTmp() {
+	sliceBaseFn(DerivedVal(4, 5));
+}

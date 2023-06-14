@@ -61,30 +61,52 @@ namespace storm {
 			using namespace code;
 
 			Expr *expr = castTo(expressions->at(id), param, scope);
-			if (param.ref) {
+			if (!expr && param.ref) {
 				// If we failed, try to cast to a non-reference type and deal with that later.
 				expr = castTo(expressions->at(id), param.asRef(false), scope);
 			}
 			assert(expr,
 				L"Can not use " + ::toS(expressions->at(id)->result()) + L" as an actual value for parameter " + ::toS(param));
 
+			// Type to ask the expression for. This might differ from the type returned, since the
+			// expression might choose to do late-stage typecasting through the 'castPenalty'
+			// interface.
 			Value exprResult = expr->result().type();
+			Value askFor = param;
+
+			// If 'exprResult' returns a value type that is a derived type of what we are asking
+			// for, ask for the derived type instead. Otherwise, we might not allocate enough memory
+			// for the derived value. We don't need to bother if we are dealing with references all
+			// the way.
+			if (!param.ref || !exprResult.ref) {
+				if (askFor.type != exprResult.type && askFor.isValue() && askFor.mayReferTo(exprResult.asRef(false))) {
+					askFor = exprResult.asRef(false);
+				}
+			}
+
+			// Do we need to create a reference?
 			if (param.ref && !exprResult.ref) {
 				// We need to create a temporary variable and make a reference to it.
-				exprResult = param.asRef(false); // We need this since type casting can be done late by the Expr itself.
-				VarInfo tmpV = s->createVar(exprResult);
-				CodeResult *gr = new (this) CodeResult(exprResult, tmpV);
+				askFor.ref = false;
+				CodeResult *gr = new (this) CodeResult(askFor, s->block);
 				expr->code(s, gr);
 
 				VarInfo tmpRef = s->createVar(param);
-				*s->l << lea(tmpRef.v, ptrRel(tmpV.v, Offset()));
+				*s->l << lea(tmpRef.v, ptrRel(gr->location(s), Offset()));
 				tmpRef.created(s);
 				return tmpRef.v;
 			} else {
-				// 'expr' will handle the type we are giving it.
-				CodeResult *gr = new (this) CodeResult(param, s->block);
+				// 'expr' will handle the type we are giving it. If it reported that it can provide
+				// a reference, it needs to be able to provide a value as well.
+				CodeResult *gr = new (this) CodeResult(askFor, s->block);
 				expr->code(s, gr);
-				return gr->location(s);
+
+				// If it was not a reference, we might need to perform "slicing" to not confuse the
+				// remainder of the system.
+				if (!askFor.ref)
+					return xRel(param.size(), gr->location(s), Offset());
+				else
+					return gr->location(s);
 			}
 		}
 

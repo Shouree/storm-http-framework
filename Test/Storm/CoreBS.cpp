@@ -173,6 +173,15 @@ BEGIN_TEST(ValueMemberTest, BS) {
 	CHECK_EQ(runFn<Int>(S("tests.bs.testActorVal")), 10);
 } END_TEST
 
+BEGIN_TEST(ValueSliceTest, BS) {
+	CHECK_EQ(runFn<Int>(S("tests.bs.sliceInitVar")), 2);
+	CHECK_EQ(runFn<Int>(S("tests.bs.sliceInitVarTmp")), 2);
+	CHECK_EQ(runFn<Int>(S("tests.bs.sliceAssignVar")), 3);
+	CHECK_EQ(runFn<Int>(S("tests.bs.sliceAssignVarTmp")), 3);
+	CHECK_EQ(runFn<Int>(S("tests.bs.sliceFnCall")), 4);
+	CHECK_EQ(runFn<Int>(S("tests.bs.sliceFnCallTmp")), 4);
+} END_TEST
+
 
 /**
  * Autocast.
