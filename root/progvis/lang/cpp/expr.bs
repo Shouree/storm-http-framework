@@ -43,6 +43,14 @@ class Expr extends Stmt {
 		Variant();
 	}
 
+	// Get the reported result value.
+	Variant staticValue() : final {
+		if (t = result.type.type)
+			staticValue(t);
+		else
+			Variant();
+	}
+
 	// Generate code. 'desired' is the desired return type.
 	void code(CodeGen gen, CodeResult res) : abstract;
 
@@ -50,6 +58,24 @@ class Expr extends Stmt {
 	// Stores a base ptr in 'ptrB' and an offset in 'ecx'.
 	void codePtr(CodeGen gen, Type type) : abstract;
 }
+
+/**
+ * Convert a numeric value to a Nat.
+ */
+Int? variantToInt(Variant v) {
+	if (v as Byte)
+		return v.int;
+	if (v as Int)
+		return v;
+	if (v as Nat)
+		return v.int;
+	if (v as Long)
+		return v.int;
+	if (v as Word)
+		return v.int;
+	null;
+}
+
 
 /**
  * An expression that supports creating a value inside a pre-allocated variable.
@@ -491,6 +517,10 @@ class NameExpr extends Expr {
 
 	void codePtr(CodeGen gen, Type type) : override {
 		resolve.codePtr(gen, type);
+	}
+
+	Variant staticValue(Type t) : override {
+		resolve.staticValue(t);
 	}
 
 	Expr resolve() {
@@ -1108,7 +1138,7 @@ Expr operatorNoConst(Block block, Expr lhs, SStr op, Expr rhs) on Compiler {
 	// This is mostly to be able to re-use Storm operators. This does disallow some possible (but
 	// nonsensical) implementations of assignment operators in C++.
 	if (lhs.constant)
-		throw SyntaxError(op.pos, "Can not call operator ${op.v} with a constant left hand side.");
+		throw SyntaxError(op.pos, "Can not call operator ${op.v} with a left hand side marked with const.");
 
 	var lType = lhs.result.type;
 	var pos = lhs.pos.extend(rhs.pos);

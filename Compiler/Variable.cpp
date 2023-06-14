@@ -196,6 +196,14 @@ namespace storm {
 		}
 	}
 
+	Variant GlobalVar::value() {
+		if (hasArray) {
+			return Variant(dataPtr(), type.type);
+		} else {
+			return Variant(*(RootObject **)dataPtr());
+		}
+	}
+
 	void GlobalVar::toS(StrBuf *to) const {
 		Variable::toS(to);
 		*to << S(" on ") << owner->identifier();

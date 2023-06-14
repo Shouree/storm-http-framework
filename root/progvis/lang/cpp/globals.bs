@@ -91,8 +91,11 @@ class CppGlobalArrayDecl extends CppGlobalDecl {
  * Global scalar variable.
  */
 class CppGlobal extends GlobalVar {
+	// Constant variable?
+	Bool const;
+
 	init(CppGlobalScalarDecl decl, Scope scope) {
-		var type = decl.type.transform(scope).asRef(false);
+		var type = decl.type.transform(scope);
 		if (!type.isValue)
 			throw SyntaxError(decl.pos, "Only value-types are supported. Did you declare this type in C or C++?");
 
@@ -102,9 +105,9 @@ class CppGlobal extends GlobalVar {
 		init.parentLookup = scope.top;
 		init.runOn(thread);
 
-		// print("TODO: Respect 'const' on the type. Should be doable using the same mechanism as the arrays.");
-
-		init(decl.name, type, thread, init.pointer()) {}
+		init(decl.name, type.asRef(false), thread, init.pointer()) {
+			const = type.const;
+		}
 	}
 
 	// Create a function that initializes the value.
@@ -156,10 +159,10 @@ class CppGlobal extends GlobalVar {
  */
 class CppGlobalArray extends GlobalVar {
 	init(CppGlobalArrayDecl decl, Scope scope) {
-		var type = decl.type.transform(scope).asRef(false);
+		var type = decl.type.transform(scope);
 		if (!type.isValue)
 			throw SyntaxError(decl.pos, "Only value-types are supported. Did you declare this type in C or C++?");
-		Value ptrType = wrapPtr(type);
+		Value ptrType = if (type.const) { wrapConstPtr(type); } else { wrapPtr(type); };
 
 		var thread = named{ui:Render};
 
@@ -186,7 +189,7 @@ class CppGlobalArray extends GlobalVar {
 		Nat arrayCount = 0;
 		if (count) {
 			Expr countExpr = count.transform(block);
-			if (c = countExpr.staticValue(named{Int}) as Int) {
+			if (c = variantToInt(countExpr.staticValue())) {
 				if (c < 0)
 					throw SyntaxError(pos, "Array size can not be negative (it is ${c})");
 				arrayCount = c.nat;
@@ -303,15 +306,31 @@ class GlobalVarAccess extends Expr {
 	}
 
 	Bool temporary() : override {
+		false;
+	}
+
+	Bool constant() : override {
 		// If it is an array, act as if the pointer was a temporary. Otherwise it would be possible
 		// to modify what the global refers to!
 		if (var as CppGlobalArray)
 			return true;
+		if (var as CppGlobal)
+			return var.const;
 		false;
 	}
 
 	ExprResult result() : override {
 		var.type.asRef();
+	}
+
+	Variant staticValue(Type t) : override {
+		if (!constant)
+			return Variant();
+
+		if (Value(t).mayReferTo(var.type))
+			return var.value;
+
+		return Variant();
 	}
 
 	void code(CodeGen gen, CodeResult result) : override {

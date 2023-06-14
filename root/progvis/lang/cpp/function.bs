@@ -125,20 +125,24 @@ Bool returnByParam(Value type) {
 class CppPlainFunction extends CppFunction {
 	// Names of all formal parameters.
 	private SStr[] formals;
+	private Bool[] paramConst;
 	private FnBody body;
 	private Bool resultParam;
 
 	init(Scope scope, CppFnDecl decl, NameSet inside, FnBody body) {
 		Value[] fTypes;
+		Bool[] fConst;
 		SStr[] fNames;
 
 		// Do we need a this-pointer?
 		if (inside as Type) {
 			fTypes << Value(thisPtr(inside));
+			fConst << false;
 			fNames << SStr("this", decl.name.pos);
 
 			// We also need a hidden 'offset' ptr, that allows us to reconstruct a Ptr<> object.
 			fTypes << Value(named{Nat});
+			fConst << false;
 			fNames << SStr("offset", decl.name.pos);
 		}
 
@@ -147,18 +151,22 @@ class CppPlainFunction extends CppFunction {
 		Bool resultParam = returnByParam(result);
 		if (resultParam) {
 			fTypes << wrapPtr(result).asRef();
+			fConst << false;
 			fNames << SStr("ret", decl.name.pos);
 			result = Value();
 		}
 
 		for (f in decl.formals) {
+			var type = f.type.transform(scope);
 			// Everything is a reference in this C++ implementation.
-			fTypes << f.type.transform(scope).asRef();
+			fTypes << type.asRef();
+			fConst << type.const;
 			fNames << f.name;
 		}
 
 		init(scope, decl.name.pos, result, decl.name.v, fTypes) {
 			formals = fNames;
+			paramConst = fConst;
 			body = body;
 			resultParam = resultParam;
 		}
@@ -200,7 +208,7 @@ class CppPlainFunction extends CppFunction {
 		// Add parameters.
 		for (id, v in formals) {
 			if (id >= skip)
-				root.addParam(v.v, params[id], v.pos);
+				root.addParam(v.v, params[id], paramConst[id], v.pos);
 		}
 
 		body.stmt.transform(root);
@@ -255,9 +263,9 @@ class FnRoot extends StmtBlock {
 	}
 
 	// Add a parameter.
-	void addParam(Str name, Value type, SrcPos pos) {
+	void addParam(Str name, Value type, Bool const, SrcPos pos) {
 		if (t = type.type) {
-			LocalVar var(name, t, pos, false);
+			LocalVar var(name, t, pos, const, false);
 			add(var);
 			params << var;
 		}

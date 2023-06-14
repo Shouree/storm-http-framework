@@ -3,6 +3,24 @@ use core:asm;
 use lang:bs:macro;
 
 /**
+ * Extension of the Value class in Storm to also include information about 'const'. Used as a
+ * top-level construct in combination with pointers to model the type system in C/C++.
+ */
+value CppValue extends Value {
+	// Is this value a const value?
+	Bool const;
+
+	cast(Value x) {
+		init(x) { const = false; }
+	}
+
+	init(Value x, Bool const) {
+		init(x) { const = const; }
+	}
+}
+
+
+/**
  * Local variable in C++.
  *
  * Variables are always a pointer to an array allocation the size of one element, just like value
@@ -15,15 +33,19 @@ use lang:bs:macro;
  * above convention.
  */
 class LocalVar extends Named {
-	init(Str name, Type val, SrcPos pos, Bool array) {
+	init(Str name, Type val, SrcPos pos, Bool const, Bool array) {
 		init(pos, name) {
 			type = val;
 			array = array;
+			const = const;
 		}
 	}
 
 	// Value stored.
 	Type type;
+
+	// Is this variable marked 'const'? If it is an array, then the contents are const.
+	Bool const;
 
 	// Is this an array?
 	Bool array;
@@ -33,6 +55,9 @@ class LocalVar extends Named {
 
 	// Block to notify. Updated during code generation.
 	Block? notify;
+
+	// Initializer, if initialized to a constant value.
+	Variant initializer;
 
 	// Create the variable. OK to call twice.
 	void create(CodeGen gen) {
@@ -65,6 +90,18 @@ class LocalVarAccess extends Expr {
 
 	Bool temporary() : override {
 		false;
+	}
+
+	Bool constant() : override {
+		var.const;
+	}
+
+	Variant staticValue(Type t) : override {
+		if (var.const)
+			if (Value(t).mayReferTo(var.type))
+				return var.initializer;
+
+		Variant();
 	}
 
 	ExprResult result() : override {
@@ -113,9 +150,9 @@ class LocalVarTmpAccess extends LocalVarAccess {
  * Variable declaration.
  */
 class VarDecl extends Stmt {
-	init(SrcPos pos, Block parent, Value type, SStr name) {
+	init(SrcPos pos, Block parent, CppValue type, SStr name) {
 		init(pos) {
-			var(name.v, type.safeType(pos), name.pos, false);
+			var(name.v, type.safeType(pos), name.pos, type.const, false);
 		}
 
 		if (t = type.type) {
@@ -134,47 +171,54 @@ class VarDecl extends Stmt {
 		parent.add(var);
 	}
 
-	init(SrcPos pos, Block parent, Value type, SStr name, ExprRef init) {
+	// Parameter 'original' is to allow computing constant values if needed.
+	init(SrcPos pos, Block parent, CppValue type, SStr name, ExprRef init, Expr? original) {
 		init(pos) {
-			var(name.v, type.safeType(pos), name.pos, false);
+			var(name.v, type.safeType(pos), name.pos, type.const, false);
 			initExpr = init;
+		}
+
+		if (type.const) {
+			if (original) {
+				var.initializer = original.staticValue(var.type);
+			}
 		}
 
 		parent.add(var);
 	}
 
 	// Create from an = expression.
-	VarDecl assign(SrcPos pos, Block parent, Value type, SStr name, Expr init) : static {
+	VarDecl assign(SrcPos pos, Block parent, CppValue type, SStr name, Expr init) : static {
 		if (t = type.type) {
 			init = expectCast(init, t);
 
 			if (init as ExprRef) {
 				// Just use the expression to construct the object for us.
-				return VarDecl(pos, parent, type, name, init);
+				return VarDecl(pos, parent, type, name, init, init);
 			}
 
 			// We need to call the copy-ctor...
-			return VarDecl(pos, parent, type, name, copyCtorCall(t, init, parent.scope));
+			return VarDecl(pos, parent, type, name, copyCtorCall(t, init, parent.scope), init);
 		}
 
 		throw SyntaxError(pos, "The type ${type} does not have a copy constructor!");
 	}
 
 	// Create from an () expression.
-	VarDecl parens(SrcPos pos, Block parent, Value type, SStr name, Expr[] actuals) : static {
+	VarDecl parens(SrcPos pos, Block parent, CppValue type, SStr name, Expr[] actuals) : static {
 		if (t = type.type) {
 			if (actuals.count == 1 & t is actuals[0].result.type.type) {
 				// If there is only a single expression, we can use it to initialize the variable directly.
 				if (create = actuals[0] as ExprRef)
-					return VarDecl(pos, parent, type, name, create);
+					return VarDecl(pos, parent, type, name, create, create);
 			}
 
 			if (ctor = t.cppCtor(actuals, parent.scope)) {
-				return VarDecl(pos, parent, type, name, CtorCall(pos, ctor, actuals, true));
+				return VarDecl(pos, parent, type, name, CtorCall(pos, ctor, actuals, true), null);
 			}
 
 			if (ctor = t.stormCtor(actuals, parent.scope)) {
-				return VarDecl(pos, parent, type, name, CtorCall(pos, ctor, actuals, false));
+				return VarDecl(pos, parent, type, name, CtorCall(pos, ctor, actuals, false), null);
 			}
 		}
 
@@ -203,9 +247,9 @@ class VarDecl extends Stmt {
  * Array variable declaration. No initialization.
  */
 class ArrayDecl extends Stmt {
-	init(SrcPos pos, Block parent, Value type, SStr name, Expr count) {
+	init(SrcPos pos, Block parent, CppValue type, SStr name, Expr count) {
 		init(pos) {
-			var(name.v, type.safeType(pos), name.pos, true);
+			var(name.v, type.safeType(pos), name.pos, type.const, true);
 			countExpr = count;
 		}
 
@@ -294,10 +338,10 @@ class ArrayDecl extends Stmt {
  * Initialized array declaration. Does not support dynamic size of arrays.
  */
 class InitArrayDecl extends Stmt {
-	init(SrcPos pos, Block parent, Value type, SStr name, Nat count, Expr[] init) {
+	init(SrcPos pos, Block parent, CppValue type, SStr name, Nat count, Expr[] init) {
 		Type t = type.safeType(pos);
 		init(pos) {
-			var(name.v, t, name.pos, true);
+			var(name.v, t, name.pos, type.const, true);
 		}
 
 		if (count < init.count)
@@ -356,7 +400,7 @@ class InitArrayDecl extends Stmt {
 Stmt arrayDecl(SrcPos pos, Block block, Value type, SStr name, Expr count, Maybe<Expr[]> init) on Compiler {
 	if (init) {
 		// Initializers present. Make sure that the expression is constant.
-		if (staticCount = count.staticValue(named{Int}) as Int) {
+		if (staticCount = variantToInt(count.staticValue())) {
 			if (staticCount < 0)
 				throw SyntaxError(pos, "Array size can not be negative (it is ${staticCount}).");
 			InitArrayDecl(pos, block, type, name, staticCount.nat, init);

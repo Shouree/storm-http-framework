@@ -68,7 +68,15 @@ namespace storm {
 	Bool Value::mayStore(Value v) const {
 		if (ref != v.ref)
 			return false;
-		return mayStore(v.type);
+		if (mayStore(v.type))
+			return true;
+
+		if (ref && type) {
+			// If both are references, then we can use 'isA' for values as well!
+			return v.type->isA(type);
+		}
+
+		return false;
 	}
 
 	Bool Value::matches(Value v, NamedFlags flags) const {

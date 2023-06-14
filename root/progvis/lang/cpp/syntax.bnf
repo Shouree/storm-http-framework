@@ -88,7 +88,7 @@ SClassItem => state : SCtorDecl -> add;
 SClassItem => state : SDtorDecl -> add;
 
 MemberVar SVarDecl(CppType type);
-SVarDecl => MemberVar(name.pos, name.v, t, type) : STypeName(type.scope) t, SIdentifier name #varName;
+SVarDecl => CppMemberVar(name.pos, name.v, t, type) : STypeName(type.scope) t, SIdentifier name #varName;
 
 // Function declarations
 SDef => content : SMaybeStatic - SFnDecl -> add;
@@ -154,16 +154,18 @@ SIdentifier => v : "[A-Za-z_][A-Za-z0-9_]*" @v;
 // spaces in template lists (e.g., x<int,int>).
 
 // Requires space or special character at the end.
-Value STypeName(Scope scope);
-STypeName => original : STypeNameRecWS(scope) original - ("const" #keyword ~)?;
-STypeName => original : "const" #keyword ~ STypeNameEnd(scope) original ~;
-STypeName => original : STypeNameCommon(scope) original;
+CppValue STypeName(Scope scope);
+STypeName => CppValue(original) : STypeNameRecWS(scope) original;
+STypeName => CppValue(original, true) : STypeNameRecWS(scope) original - "const" #keyword ~;
+STypeName => CppValue(original, true) : "const" #keyword ~ STypeNameEnd(scope) original ~;
+STypeName => CppValue(original) : STypeNameCommon(scope) original;
 
 // Does not require space or special character at the end.
-Value STypeNamePlain(Scope scope);
-STypeNamePlain => original : STypeNameRecWS(scope) original - ("const" #keyword)?;
-STypeNamePlain => original : "const" #keyword ~ STypeNameEnd(scope) original;
-STypeNamePlain => original : STypeNameCommon(scope) original;
+CppValue STypeNamePlain(Scope scope);
+STypeNamePlain => CppValue(original) : STypeNameRec(scope) original;
+STypeNamePlain => CppValue(original, true) : STypeNameRecWS(scope) original - "const" #keyword;
+STypeNamePlain => CppValue(original, true) : "const" #keyword ~ STypeNameEnd(scope) original;
+STypeNamePlain => CppValue(original) : STypeNameCommon(scope) original;
 
 // Common parts between STypeName and STypeNamePlain. All end in special characters.
 Value STypeNameCommon(Scope scope);

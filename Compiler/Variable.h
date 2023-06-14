@@ -3,6 +3,7 @@
 #include "NamedThread.h"
 #include "RunOn.h"
 #include "Core/Fn.h"
+#include "Core/Variant.h"
 
 namespace storm {
 	STORM_PKG(core.lang);
@@ -103,6 +104,9 @@ namespace storm {
 
 		// Get a string representation of the value.
 		Str *STORM_FN strValue() const;
+
+		// Get a Variant that represents the value.
+		Variant STORM_FN value();
 
 		// Output.
 		virtual void STORM_FN toS(StrBuf *to) const;

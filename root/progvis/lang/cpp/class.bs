@@ -147,6 +147,17 @@ private Bool isCopyFn(Type type, Named fn) {
 }
 
 /**
+ * Member variables with support for 'const'.
+ */
+class CppMemberVar extends MemberVar {
+	init(SrcPos pos, Str name, CppValue type, Type memberOf) {
+		init(pos, name, type, memberOf) { const = type.const; }
+	}
+
+	Bool const;
+}
+
+/**
  * Member variable access.
  */
 class MemberVarAccess extends Expr {
@@ -158,6 +169,12 @@ class MemberVarAccess extends Expr {
 	}
 
 	Bool temporary() : override {
+		false;
+	}
+
+	Bool constant() : override {
+		if (var as CppMemberVar)
+			return var.constant;
 		false;
 	}
 
