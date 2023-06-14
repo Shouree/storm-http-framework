@@ -102,7 +102,7 @@ class CppGlobal extends GlobalVar {
 		init.parentLookup = scope.top;
 		init.runOn(thread);
 
-		print("TODO: Respect 'const' on the type. Should be doable using the same mechanism as the arrays.");
+		// print("TODO: Respect 'const' on the type. Should be doable using the same mechanism as the arrays.");
 
 		init(decl.name, type, thread, init.pointer()) {}
 	}
@@ -130,12 +130,11 @@ class CppGlobal extends GlobalVar {
 			// C++ type?
 			l << lea(ptrA, v);
 			l << fnParam(ptrDesc, ptrA);
+			l << fnParam(intDesc, natConst(sPtr*2));
 			l << fnCall(cpp.ref, true);
 		} else if (storm = stormCtor(type, [], scope)) {
-			// TODO: Perhaps we should actually allocate this on the heap in case it is visualized...
 			l << lea(ptrA, v);
 			l << fnParam(ptrDesc, ptrA);
-			l << fnParam(intDesc, intConst(0));
 			l << fnCall(storm.ref, true);
 		}
 
@@ -217,14 +216,72 @@ class CppGlobalArray extends GlobalVar {
 		l << fnParam(ptrDesc, ptrConst(arrayCount));
 		l << fnCall(ref(BuiltIn:allocArray), false, ptrDesc, ptrA);
 
-		// Save the pointer to the allocation in 'v'. Note: the offset field is 0 due to initialization.
+		// Save the pointer to the allocation in 'v'.
 		l << mov(ptrRel(v, Offset()), ptrA);
+		// Initialize the offset.
+		l << mov(intRel(v, Offset(sPtr)), natConst(sPtr * 2));
 
 		// Set 'filled'.
 		Nat mask = AllocFlags:arrayAlloc.v;
 		l << mov(intRel(ptrA, Offset(sPtr)), natConst(mask | arrayCount));
 
-		print("TODO: Need to initialize each element of the array!");
+		if (init.any) {
+			// Use initializer expressions.
+			CodeGen gen(RunOn(), l);
+			Value valType(type);
+			Size sz = valType.size;
+			for (i, x in initExprs) {
+				CodeResult result(type, gen.block);
+				x.code(gen, result);
+				result.created(gen);
+
+				// Copy it to the appropriate place. Since it is a statically known expression, we
+				// assume that the expression is copiable through Storm mechanisms. I.e. we don't
+				// bother with C++-style copy-ctors.
+				l << mov(ptrA, ptrRel(v, Offset()));
+				l << add(ptrA, ptrConst(sPtr*2 + sz*i));
+				if (valType.isAsmType) {
+					l << mov(xRel(sz, ptrA, Offset()), result.location(gen));
+				} else {
+					l << lea(ptrC, result.location(gen));
+					l << fnParam(ptrDesc, ptrA);
+					l << fnParam(ptrDesc, ptrC);
+					l << fnCall(valType.copyCtor, true);
+				}
+			}
+		} else {
+			// Use standard constructor. Emit a loop.
+			var loopTop = l.label();
+			var loopEnd = l.label();
+
+			// Note: default-initialized to zero.
+			var counter = l.createVar(l.root, sInt);
+			l << loopTop;
+			l << cmp(counter, natConst(arrayCount));
+			l << jmp(loopEnd, CondFlag:ifAboveEqual);
+
+			// Compute the offset from the start of the array.
+			l << icast(ptrA, counter);
+			l << mul(ptrA, ptrConst(type.size));
+			l << add(ptrA, ptrConst(sPtr*2));
+
+			if (cpp = cppCtor(type, [], scope)) {
+				// If it is a C++ constructor, pass the base and the offset to it.
+				l << fnParam(ptrDesc, ptrRel(v, Offset()));
+				l << fnParam(intDesc, eax); // implicit cast to nat
+				l << fnCall(cpp.ref, true);
+			} else if (storm = stormCtor(type, [], scope)) {
+				// If it is a Storm constructor, pass a proper pointer instead.
+				l << add(ptrA, ptrRel(v, Offset()));
+				l << fnParam(ptrDesc, ptrA);
+				l << fnCall(storm.ref, true);
+			}
+
+			l << add(counter, natConst(1));
+			l << jmp(loopTop);
+
+			l << loopEnd;
+		}
 
 		l << fnRet(v);
 
