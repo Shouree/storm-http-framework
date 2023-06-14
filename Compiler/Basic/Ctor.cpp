@@ -29,7 +29,7 @@ namespace storm {
 					throw new (this) SyntaxError(pos, msg);
 				}
 
-				if (!expected.canStore(params->at(1).type())) {
+				if (!expected.mayReferTo(params->at(1).type())) {
 					Str *msg = TO_S(engine(), S("This constructor needs to take a ")
 									<< expected << S(" as the first parameter, not " << params->at(1)));
 					throw new (this) SyntaxError(pos, msg);

@@ -55,7 +55,7 @@ namespace storm {
 		FnPtr::FnPtr(Expr *dot, Function *target, SrcPos pos) : Expr(pos), dotExpr(dot), target(target) {
 			checkDot(dotExpr);
 
-			if (target->params->empty() || !target->params->at(0).canStore(dot->result().type()))
+			if (target->params->empty() || !target->params->at(0).mayReferTo(dot->result().type()))
 				throw new (this) SyntaxError(dotExpr->pos, S("The first parameter of the specified function does not match the type of the provided expression."));
 
 			Array<Value> *formals = clone(target->params);
@@ -127,7 +127,7 @@ namespace storm {
 			Function *found = as<Function>(parent->scope.find(name));
 			if (!found)
 				return null;
-			if (!result.canStore(found->result))
+			if (!result.mayReferTo(found->result))
 				return null;
 
 			return found;

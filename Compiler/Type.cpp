@@ -1382,7 +1382,7 @@ namespace storm {
 			return p.type == c.type;
 		} else {
 			// Object, actor or reference. Regular inheritance rules apply.
-			return p.canStore(c.type);
+			return p.mayReferTo(c.type);
 		}
 	}
 

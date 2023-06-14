@@ -270,7 +270,7 @@ namespace storm {
 		Array<Value> *p = clone(target->params);
 		if (!thisPtr) {
 			p->insert(0, target->result);
-		} else if (p->count() > 0 && p->at(0).canStore(Value(runtime::typeOf(thisPtr)))) {
+		} else if (p->count() > 0 && p->at(0).mayReferTo(Value(runtime::typeOf(thisPtr)))) {
 			p->at(0) = target->result;
 		} else {
 			Str *msg;
@@ -370,7 +370,7 @@ namespace storm {
 			Value formal = function->params->at(i);
 			Variant &actual = params->at(i);
 
-			if (!formal.canStore(Value(actual.type()))) {
+			if (!formal.mayReferTo(Value(actual.type()))) {
 				StrBuf *msg = new (function) StrBuf();
 				*msg << S("Incorrect type for parameter ") << (i + 1) << S(" to function ");
 				*msg << function->identifier() << S(". Expected ") << formal << S(" but got ");

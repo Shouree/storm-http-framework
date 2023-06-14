@@ -13,7 +13,7 @@ namespace storm {
 		// functionality instead (such as casting to/from references). This will make things much cleaner!
 
 		// Our rules. We do not care about Maybe<T> here, it is done later.
-		static bool canStore(const Value &from, const Value &to) {
+		static bool mayReferTo(const Value &from, const Value &to) {
 			if (to.type == null)
 				return true;
 			if (from.type == null)
@@ -125,10 +125,10 @@ namespace storm {
 			Value f = from.type();
 
 			if (mode & namedMatchNoInheritance)
-				return (canStore(f, to) && f.type == to.type) ? 0 : -1;
+				return (mayReferTo(f, to) && f.type == to.type) ? 0 : -1;
 
 			// No work needed?
-			if (canStore(f, to)) {
+			if (mayReferTo(f, to)) {
 				if (f.type != null && to.type != null)
 					return f.type->distanceFrom(to.type);
 				else
@@ -151,7 +151,7 @@ namespace storm {
 			Value f = r.type();
 
 			// No work?
-			if (canStore(f, to))
+			if (mayReferTo(f, to))
 				return from;
 
 			// Supported cast?

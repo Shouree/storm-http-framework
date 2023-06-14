@@ -89,7 +89,7 @@ namespace storm {
 		}
 
 		Value pkgReader = thisPtr(PkgReader::stormType(pkg->engine()));
-		if (!pkgReader.canStore(createFn->result)) {
+		if (!pkgReader.mayReferTo(createFn->result)) {
 			StrBuf *msg = new (name) StrBuf();
 			*msg << L"Invalid return type for " << createFn << L": expected " << pkgReader;
 			throw new (msg) LangDefError(msg->toS());

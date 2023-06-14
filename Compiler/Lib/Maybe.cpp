@@ -253,7 +253,7 @@ namespace storm {
 			return null;
 
 		Value other = unwrapMaybe(o);
-		if (!param().canStore(other))
+		if (!param().mayReferTo(other))
 			return null;
 
 		Array<Value> *rr = new (this) Array<Value>(2, o.asRef(true));
@@ -274,7 +274,7 @@ namespace storm {
 
 		Value other = unwrapMaybe(o);
 
-		if (!param().canStore(other))
+		if (!param().mayReferTo(other))
 			return null;
 
 		Array<Value> *rr = new (this) Array<Value>(2, o.asRef(true));
@@ -718,7 +718,7 @@ namespace storm {
 			return null;
 
 		Value other = unwrapMaybe(o);
-		if (!param().canStore(other))
+		if (!param().mayReferTo(other))
 			return null;
 
 		Array<Value> *rr = new (this) Array<Value>(2, o.asRef(true));
@@ -739,7 +739,7 @@ namespace storm {
 
 		Value other = unwrapMaybe(o);
 
-		if (!param().canStore(other))
+		if (!param().mayReferTo(other))
 			return null;
 
 		Array<Value> *rr = new (this) Array<Value>(2, o.asRef(true));

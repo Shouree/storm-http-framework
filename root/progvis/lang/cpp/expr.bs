@@ -683,7 +683,7 @@ class FnCall extends ExprRef {
 		if (!fn.pure)
 			return Variant();
 
-		if (!Value(type).canStore(fnResult))
+		if (!Value(type).mayReferTo(fnResult))
 			return Variant();
 
 		Variant[] params;

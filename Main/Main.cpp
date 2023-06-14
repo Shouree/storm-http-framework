@@ -73,7 +73,7 @@ int runRepl(Engine &e, Duration bootTime, const Path &root, const wchar_t *lang,
 	}
 
 	Value replVal(Repl::stormType(e));
-	if (!replVal.canStore(replFn->result)) {
+	if (!replVal.mayReferTo(replFn->result)) {
 		wcerr << L"The function " << replName << L" must return a subtype of "
 			  << replVal << L", not " << replFn->result << endl;
 		return 1;

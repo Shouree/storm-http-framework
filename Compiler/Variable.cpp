@@ -110,7 +110,7 @@ namespace storm {
 			throw new (this) InternalError(S("Can not find 'call()' in the provided function pointer. Is the signature correct?"));
 
 		// Check the return type.
-		if (!type.canStore(callFn->result)) {
+		if (!type.mayReferTo(callFn->result)) {
 			Str *msg = TO_S(this, S("The global variable ") << name
 							<< S(" can not store the type returned from the initializer. Expected ")
 							<< type << S(", got ") << callFn->result << S("."));

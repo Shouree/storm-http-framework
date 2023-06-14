@@ -9,7 +9,7 @@ inline Res runFn(const wchar *name) {
 	Function *f = as<Function>(e.scope().find(sName));
 	assert(f, L"Function " + ::toS(sName) + L" not found!");
 	storm::Value r(StormInfo<Res>::type(e));
-	assert(r.canStore(f->result), L"Invalid return type of " + ::toS(sName) + L"!");
+	assert(r.mayReferTo(f->result), L"Invalid return type of " + ::toS(sName) + L"!");
 	os::FnCall<Res> c = os::fnCall();
 	return c.call(f->ref().address(), false);
 }
@@ -33,7 +33,7 @@ inline Res runFn(const wchar *name, T t) {
 	Function *f = as<Function>(e.scope().find(sName));
 	assert(f, L"Function " + ::toS(sName) + L" not found!");
 	storm::Value r(StormInfo<Res>::type(e));
-	assert(r.canStore(f->result), L"Invalid return type of " + ::toS(sName) + L"!");
+	assert(r.mayReferTo(f->result), L"Invalid return type of " + ::toS(sName) + L"!");
 	os::FnCall<Res> c = os::fnCall().add(t);
 	return c.call(f->ref().address(), false);
 }
@@ -47,7 +47,7 @@ inline Res runFn(const wchar *name, T t, U u) {
 	Function *f = as<Function>(e.scope().find(sName));
 	assert(f, L"Function " + ::toS(sName) + L" not found!");
 	storm::Value r(StormInfo<Res>::type(e));
-	assert(r.canStore(f->result), L"Invalid return type of " + ::toS(sName) + L"!");
+	assert(r.mayReferTo(f->result), L"Invalid return type of " + ::toS(sName) + L"!");
 	os::FnCall<Res> c = os::fnCall().add(t).add(u);
 	return c.call(f->ref().address(), false);
 }

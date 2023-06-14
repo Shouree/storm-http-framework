@@ -36,28 +36,46 @@ namespace storm {
 		return !(*this == o);
 	}
 
-	Bool Value::canStore(MAYBE(Type *) o) const {
+	Bool Value::mayReferTo(MAYBE(Type *) o) const {
 		if (type == null)
-			return true; // void can 'store' all types.
+			return true; // void can refer to all types.
 		if (o == null)
-			return false; // void can not be 'upcasted' to anything else.
-		return o->isA(type);
+			return false; // no types may refer to void.
+		return o->isA(type); // otherise: use inheritance
 	}
 
-	Bool Value::canStore(Value v) const {
+	Bool Value::mayReferTo(Value v) const {
 		// For objects: We can not create references from values.
 		// For values, we need to be able to. In the future, maybe const refs from values?
 		if (ref && !v.ref)
 			if (isObject() || v.isObject())
 				return false;
-		return canStore(v.type);
+		return mayReferTo(v.type);
+	}
+
+	Bool Value::mayStore(MAYBE(Type *) o) const {
+		if (type == o)
+			return true;
+		if (type == null) // note: implies o->type == null
+			return false;
+		// Only check inheritance for objects. We don't have to make sure that both are objects,
+		// since 'isA' will fail if one is an object and another is a value.
+		if ((type->typeFlags & typeClass) == typeClass)
+			return o->isA(type);
+		return false;
+	}
+
+	Bool Value::mayStore(Value v) const {
+		if (ref != v.ref)
+			return false;
+		return mayStore(v.type);
 	}
 
 	Bool Value::matches(Value v, NamedFlags flags) const {
 		if (flags & namedMatchNoInheritance)
 			return type == v.type;
 		else
-			return canStore(v);
+			return mayReferTo(v);
 	}
 
 	Value common(Value a, Value b) {

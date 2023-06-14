@@ -325,7 +325,7 @@ class Return extends Stmt {
 	}
 
 	private void checkType(Value type) {
-		if (!root.result.canStore(type))
+		if (!root.result.mayReferTo(type))
 			throw SyntaxError(pos, "Incompatible return type. Got ${type}, expected ${root.result}.");
 	}
 }

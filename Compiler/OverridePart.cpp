@@ -36,18 +36,18 @@ namespace storm {
 		// otherwise we will bail out with a 'multiple possible matches' message.
 		Int penalty = 0;
 
-		if (params->at(0).canStore(c->at(0))) {
+		if (params->at(0).mayReferTo(c->at(0))) {
 			// Candidate is in a subclass wrt us.
 			for (nat i = 1; i < c->count(); i++) {
 				// Candidate needs to accept wider inputs than us.
-				if (!c->at(i).canStore(params->at(i)))
+				if (!c->at(i).mayReferTo(params->at(i)))
 					return -1;
 			}
-		} else if (c->at(0).canStore(params->at(0))) {
+		} else if (c->at(0).mayReferTo(params->at(0))) {
 			// Candidate is in a superclass wrt us.
 			for (nat i = 1; i < c->count(); i++) {
 				// We need to accept wider inputs than candidate.
-				if (!params->at(i).canStore(c->at(i)))
+				if (!params->at(i).mayReferTo(c->at(i)))
 					return -1;
 
 				// See if it was an exact match or not. There is no scale here, only 'match' and 'no match'.

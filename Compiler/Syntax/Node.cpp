@@ -56,7 +56,7 @@ namespace storm {
 				par->push(param2);
 			SimplePart *part = new (type) SimplePart(new (type) Str(L"transform"), par);
 			if (Function *fn = as<Function>(type->find(part, root))) {
-				if (!result.canStore(fn->result)) {
+				if (!result.mayReferTo(fn->result)) {
 					Str *msg = TO_S(type, S("The function ") << fn->identifier() << S(" returns ")
 									<< fn->result << S(", which is incompatible with ") << result);
 					throw new (type) InternalError(msg);

@@ -120,7 +120,7 @@ namespace storm {
 
 			// Note that toExecute->params may not be equal to params->values()
 			// since some actual parameters may report that they can return a
-			// reference to a value. However, we know that toExecute->params.canStore(params->values())
+			// reference to a value. However, we know that toExecute->params.mayReferTo(params->values())
 			// so it is OK to take toExecute->params directly.
 			Array<Value> *values = toExecute->params;
 			Array<code::Operand> *vars = new (this) Array<code::Operand>(values->count());

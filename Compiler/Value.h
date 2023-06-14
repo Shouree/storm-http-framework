@@ -41,12 +41,29 @@ namespace storm {
 		Bool STORM_FN operator ==(Value o) const;
 		Bool STORM_FN operator !=(Value o) const;
 
-		// Can this value store a type of 'x'?
-		Bool STORM_FN canStore(MAYBE(Type *) x) const;
-		Bool STORM_FN canStore(Value v) const;
+		// Check if a value of this type may refer to a value of type 'x'. As the name implies, this
+		// check is performed with references in mind. As such, this is used to determine if formal
+		// parameters of a function matches actual parameters, or when figuring out if a (copy)
+		// assignment should be allowed.
+		// Note: 'void' is considered to be able to refer to all other types.
+		// Note: This definition is separate from storage. Since the size of derived value types
+		// differ, it is not possible to store a derived type in a variable sized after the
+		// super type (without slicing), even if the super type may refer to the derived type.
+		//
+		// Note: This function was previously named 'canStore', but was split due to to the possible
+		// confusion with storage size.
+		Bool STORM_FN mayReferTo(MAYBE(Type *) x) const;
+		Bool STORM_FN mayReferTo(Value x) const;
 
-		// Does this value match another value according to NamedFlags? Note that this relation is not reflexive.
-		// If no special flags are set, then it is equivalent to 'canStore'.
+		// See if it is possible to store a value of 'x' inside a value of this type without any
+		// conversions. Works like 'generalizes', except that value types use strict equality, and
+		// 'void' is not considered to be able to store any other types.
+		Bool STORM_FN mayStore(MAYBE(Type *) x) const;
+		Bool STORM_FN mayStore(Value x) const;
+
+		// Does this value match another value according to NamedFlags? Works like 'mayReferTo',
+		// but flags effect the outcome. Note that this relation is not reflexive. If no special
+		// flags are set, then it is equivalent to 'mayReferTo'.
 		Bool STORM_FN matches(Value v, NamedFlags flags) const;
 
 		/**

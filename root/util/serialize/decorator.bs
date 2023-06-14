@@ -78,7 +78,7 @@ private:
 // Find a function inside 'type', and make sure it has the proper return type.
 Function? findFn(Type type, Str name, Value[] params, Value result) {
 	if (fn = type.findHere(SimplePart(name, params), Scope(type)) as Function) {
-		if (result.canStore(fn.result)) {
+		if (result.mayReferTo(fn.result)) {
 			return fn;
 		}
 	}

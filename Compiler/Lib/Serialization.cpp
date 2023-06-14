@@ -27,7 +27,7 @@ namespace storm {
 			SimplePart *name = new (e) SimplePart(S("read"));
 			name->params->push(iStream);
 			if (Function *found = as<Function>(type->findHere(name, scope))) {
-				if (Value(type).canStore(found->result))
+				if (Value(type).mayReferTo(found->result))
 					read = found;
 			}
 		}

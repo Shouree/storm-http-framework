@@ -104,7 +104,7 @@ class LayoutBlock extends LayoutRoot {
 		// TODO: Allow 'this' as a first parameter to constructors?
 		Expr src = namedExpr(block, name, sane(params));
 		Expr? preWrap;
-		if (!Value(named{Component}).canStore(src.result.type)) {
+		if (!Value(named{Component}).mayReferTo(src.result.type)) {
 			// Store 'src' in a variable, before calling 'component', so that we may access it later!
 			Var raw(block, SStr("@ raw"), src);
 			block.add(raw);

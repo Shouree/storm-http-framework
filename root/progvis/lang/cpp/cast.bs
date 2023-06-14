@@ -38,12 +38,12 @@ Expr expectCast(Expr of, Type to) {
 
 	if (inside = to.isCppRRef()) {
 		// Possible to make it an r-value reference?
-		if (of.temporary & Value(inside).canStore(type.asRef(false)))
+		if (of.temporary & Value(inside).mayReferTo(type.asRef(false)))
 			return MakeRRef(of);
 	} else if (inside = to.isCppRef()) {
 		// Regular reference?
 		if (!to.isCppConst() & of.temporary) {
-		} else if (Value(inside).canStore(type.asRef(false))) {
+		} else if (Value(inside).mayReferTo(type.asRef(false))) {
 			return MakeRef(of);
 		}
 	}
@@ -79,14 +79,14 @@ Int castPenalty(Expr e, Type to) {
 
 	if (inside = to.isCppRRef()) {
 		// If we're a temporary, we can be bound to an rvalue reference.
-		if (e.temporary & Value(inside).canStore(type.asRef(false)))
+		if (e.temporary & Value(inside).mayReferTo(type.asRef(false)))
 			return 0;
 	} else if (inside = to.isCppRef()) {
 		// Is it possible that "to" is a reference? Make this a bit more expensive, to make the
 		// rvalue ref take precedence if we have multiple options.
 		if (!to.isCppConst() & (e.temporary | e.constant))
 			return -1;
-		if (Value(inside).canStore(type.asRef(false)))
+		if (Value(inside).mayReferTo(type.asRef(false)))
 			return 1;
 	}
 
@@ -103,7 +103,7 @@ Bool castablePtr(Type from, Type to) {
 	if (!from.isPtr | !to.isPtr)
 		return false;
 
-	if (!to.params[0].canStore(from.params[0]))
+	if (!to.params[0].mayReferTo(from.params[0]))
 		return false;
 
 	// Matching const, or can we add const?

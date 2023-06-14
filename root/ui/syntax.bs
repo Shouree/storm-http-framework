@@ -217,7 +217,7 @@ class CtorBodyWrap extends SCtorBody {
 		pos++;
 		{
 			var me = namedExpr(block, layout.pos, "this", Actuals());
-			if (!Value(named{Container}).canStore(me.result.type))
+			if (!Value(named{Container}).mayReferTo(me.result.type))
 				throw SyntaxError(real.pos, "A class that uses the UI layout syntax must inherit from the class ui.Container.");
 
 			CtorCall cb(layout.pos, block.scope, named{AddCallback:__init<AddCallback, Container>}, Actuals(me));
@@ -260,7 +260,7 @@ class LayoutDeclBlock extends LayoutBlock {
 
 		Expr? preWrap;
 		Expr src = namedExpr(block, SStr("layout:" + member.v, member.pos), Actuals());
-		if (!Value(named{layout:Component}).canStore(src.result.type)) {
+		if (!Value(named{layout:Component}).mayReferTo(src.result.type)) {
 			preWrap = src;
 			src = namedExpr(block, member.pos, "component", src);
 		}

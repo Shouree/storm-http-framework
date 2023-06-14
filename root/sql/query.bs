@@ -103,7 +103,7 @@ Expr queryExpr(SrcPos pos, Block block, Expr expr, Query query) on Compiler {
 	if (x = result.type as DatabaseType) {
 		// Typed version.
 		return typedQueryExpr(pos, block, expr, x.contents, query);
-	} else if (Value(named{DBConnection}).canStore(result)) {
+	} else if (Value(named{DBConnection}).mayReferTo(result)) {
 		// Untyped version.
 		return untypedQueryExpr(pos, block, expr, query);
 	} else {
@@ -115,7 +115,7 @@ Expr queryExpr(SrcPos pos, Block block, Expr expr, Query query) on Compiler {
 class QueryBlock extends ExprBlock {
 	init(SrcPos pos, Block parent, Expr db) {
 		var result = db.result.type;
-		if (Value(named{DBConnection}).canStore(result)) {
+		if (Value(named{DBConnection}).mayReferTo(result)) {
 		} else if (result.type as DatabaseType) {
 		} else {
 			throw SyntaxError(db.pos, "Expected a database connection (typed or untyped).");
@@ -412,7 +412,7 @@ class InsertQuery extends Query {
 			if (col.allowNull)
 				result = unwrapMaybe(result);
 
-			if (!Value(col.datatype.storm).canStore(result))
+			if (!Value(col.datatype.storm).mayReferTo(result))
 				throw SyntaxError(values[i].pos, "Can not store a value of type ${result} in the column \"${col.name}\".");
 		}
 	}
@@ -461,7 +461,7 @@ class InsertQuery extends Query {
 // Helper to check that a condition returns a boolean. Assumes that the condition was resolved beforehand.
 private void checkCondition(SQLExpr condition) on Compiler {
 	var result = condition.result;
-	if (!Value(named{Bool}).canStore(unwrapMaybe(result)))
+	if (!Value(named{Bool}).mayReferTo(unwrapMaybe(result)))
 		throw SyntaxError(condition.pos, "Expressions in WHERE and ON clauses are expected to return a Bool, not ${result}.");
 }
 
@@ -511,7 +511,7 @@ class UpdateQuery extends Query {
 					throw NoSuchColumn(x.column.pos, x.column.v, table.name);
 
 				Value result(x.value.result);
-				if (!Value(column.datatype.storm).canStore(result))
+				if (!Value(column.datatype.storm).mayReferTo(result))
 					throw SyntaxError(x.value.pos, "Cannot assign a ${result} to column ${column.name}");
 			}
 		}
