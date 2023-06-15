@@ -102,12 +102,20 @@ namespace storm {
 			if (t.isValue() && !t.isPrimitive()) {
 				Expr *ctor = null;
 
-				if (initCtor)
+				if (initCtor) {
 					ctor = initCtor;
-				else if (initExpr)
-					ctor = copyCtor(pos, scope, t.type, initExpr);
-				else
+				} else if (initExpr) {
+					// If the expression has a suitable type, we can avoid calling the copy
+					// constructor and instead ask the expression to create the value in the correct
+					// location directly. This is similar copy-ctor elison in C++.
+					if (var->result.mayStore(initExpr->result().type())) {
+						ctor = initExpr;
+					} else {
+						ctor = copyCtor(pos, scope, t.type, initExpr);
+					}
+				} else {
 					ctor = defaultCtor(pos, scope, t.type);
+				}
 
 				if (ctor) {
 					CodeResult *gr = new (this) CodeResult(var->result, var->var);
