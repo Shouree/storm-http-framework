@@ -133,7 +133,7 @@ class CppGlobal extends GlobalVar {
 			// C++ type?
 			l << lea(ptrA, v);
 			l << fnParam(ptrDesc, ptrA);
-			l << fnParam(intDesc, natConst(sPtr*2));
+			l << fnParam(intDesc, natConst(0));
 			l << fnCall(cpp.ref, true);
 		} else if (storm = stormCtor(type, [], scope)) {
 			l << lea(ptrA, v);
