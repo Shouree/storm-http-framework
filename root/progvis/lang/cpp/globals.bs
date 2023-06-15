@@ -232,7 +232,7 @@ class CppGlobalArray extends GlobalVar {
 			// Use initializer expressions.
 			CodeGen gen(RunOn(), l);
 			Value valType(type);
-			Size sz = valType.size;
+			Size sz = valType.size.aligned;
 			for (i, x in initExprs) {
 				CodeResult result(type, gen.block);
 				x.code(gen, result);
@@ -265,7 +265,7 @@ class CppGlobalArray extends GlobalVar {
 
 			// Compute the offset from the start of the array.
 			l << icast(ptrA, counter);
-			l << mul(ptrA, ptrConst(type.size));
+			l << mul(ptrA, ptrConst(type.size.aligned));
 			l << add(ptrA, ptrConst(sPtr*2));
 
 			if (cpp = cppCtor(type, [], scope)) {

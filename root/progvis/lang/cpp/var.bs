@@ -308,7 +308,7 @@ class ArrayDecl extends Stmt {
 			Label start = gen.l.label();
 			Label again = gen.l.label();
 
-			gen.l << mov(current, ptrConst(0));
+			// gen.l << mov(current, ptrConst(0)); // Note: this is the default.
 			gen.l << jmp(start);
 
 			gen.l << again;
