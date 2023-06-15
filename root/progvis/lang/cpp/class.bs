@@ -174,7 +174,7 @@ class MemberVarAccess extends Expr {
 
 	Bool constant() : override {
 		if (var as CppMemberVar)
-			return var.constant;
+			return var.const;
 		false;
 	}
 

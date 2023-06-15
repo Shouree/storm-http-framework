@@ -102,22 +102,28 @@ class CppCtor extends CppFunction {
 	private Initializer[] init;
 	private SStmtList? body;
 	private SStr[] formals;
+	private Bool[] paramConst;
 
 	init(Scope scope, SrcPos pos, NameSet inside, CppCtorDecl decl) {
 		Value[] fTypes;
+		Bool[] fConst;
 		SStr[] fNames;
 
 		if (inside as Type) {
 			fTypes << Value(thisPtr(inside));
+			fConst << false;
 			fNames << SStr("this", pos);
 
 			// We also need a hidden 'offset' ptr, that allows us to reconstruct a Ptr<> object.
 			fTypes << Value(named{Nat});
+			fConst << false;
 			fNames << SStr("offset", pos);
 		}
 
 		for (f in decl.formals) {
-			fTypes << f.type.transform(scope).asRef();
+			var t = f.type.transform(scope);
+			fTypes << t.asRef();
+			fConst << t.const;
 			fNames << f.name;
 		}
 
@@ -125,6 +131,7 @@ class CppCtor extends CppFunction {
 			body = decl.body;
 			init = decl.init;
 			formals = fNames;
+			paramConst = fConst;
 		}
 
 		setCode(LazyCode(&this.code));
@@ -137,7 +144,7 @@ class CppCtor extends CppFunction {
 		// Add parameters. 'this' and 'offset' are handled as a special case.
 		for (id, v in formals) {
 			if (id > 1)
-				root.addParam(v.v, params[id], v.pos);
+				root.addParam(v.v, params[id], paramConst[id], v.pos);
 		}
 
 		if (body) {
