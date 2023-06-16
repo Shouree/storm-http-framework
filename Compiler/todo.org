@@ -59,7 +59,11 @@
     but the scale of the issue should be assessed first.
   - [ ] Parsing core.lang.syntax.bnf takes about 80 ms, which is a bit on the high end when compiling code...
 
-* Loose ends so far [62/109]
+* Loose ends so far [62/110]
+  - [ ] Introduce "negative matches" or "lookahead" in the BNF grammar. This would make it easier
+    to write rules for matching "int" that do not match "intx" by having the "int" rule like:
+    Primitive : "int" - !"[A-Za-z]"; or
+    Primitive : "int" - !SIdentifier;
   - [ ] Serializing an object graph containing multiple references to the same string currently
     causes the string to be duplicated. This might not be ideal, and surprising since we break
     object identity (even if it generally does not matter for strings, as they are immutable).
