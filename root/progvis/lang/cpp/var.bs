@@ -56,7 +56,8 @@ class LocalVar extends Named {
 	// Block to notify. Updated during code generation.
 	Block? notify;
 
-	// Initializer, if initialized to a constant value.
+	// Initializer, if initialized to a constant value. In case of arrays, set to a number equal to the
+	// size of the variable if its size is known.
 	Variant initializer;
 
 	// Create the variable. OK to call twice.
@@ -253,6 +254,8 @@ class ArrayDecl extends Stmt {
 			countExpr = count;
 		}
 
+		var.initializer = count.staticValue();
+
 		if (t = type.type) {
 			if (ctor = t.cppCtor([], parent.scope)) {
 				initExpr = CtorCall(pos, ctor, [], true);
@@ -343,6 +346,8 @@ class InitArrayDecl extends Stmt {
 		init(pos) {
 			var(name.v, t, name.pos, type.const, true);
 		}
+
+		var.initializer = count;
 
 		if (count < init.count)
 			throw SyntaxError(pos, "Too many initializers. The array has size ${count} but ${init.count} initializers.");

@@ -190,13 +190,134 @@ class IntLiteral extends Expr {
 /**
  * Sizeof expression.
  */
-IntLiteral sizeofExpr(SrcPos pos, Expr expr) {
-	IntLiteral(pos, expr.result.type.size.aligned.current.long);
+Expr sizeofExpr(SrcPos pos, SizeofParam param) {
+	if (type = param.type) {
+		return IntLiteral(pos, type.size.aligned.current.long);
+	} else if (local = param.arraySrc as LocalVar) {
+		// We know that it is an array due to the ctor in SizeofParam.
+		if (count = variantToInt(local.initializer))
+			return IntLiteral(pos, count.long * local.type.size.aligned.current.long);
+		else
+			return DynamicSizeof(pos, local);
+	} else if (global = param.arraySrc as CppGlobalArray) {
+		var ptr = unsafe:RawPtr:fromGlobal(global);
+		var alloc = ptr.readPtr(0);
+		Long total = alloc.readCount.long * alloc.readSize.long;
+		return IntLiteral(pos, total);
+	}
+
+	throw SyntaxError(pos, "Invalid parameter to 'sizeof'.");
 }
 
-IntLiteral sizeofExpr(SrcPos pos, Value type) {
-	IntLiteral(pos, type.size.aligned.current.long);
+/**
+ * What to return from a sizeof expression?
+ */
+class SizeofParam on Compiler {
+	// Create from known type:
+	init(Value t) {
+		// Note: We don't need a position in this case!
+		init { type = t.type; }
+	}
+
+	// Create from expression:
+	init(Expr expr) {
+		init { pos = expr.pos; type = expr.result.type.type; }
+	}
+
+	// Create from possibly ambiguous name:
+	init(Block block, SStr name) {
+		init { pos = name.pos; }
+
+		SimpleName simple(name.v);
+		var found = block.scope.find(simple);
+		if (found as Type) {
+			this.type = found;
+		} else if (found as LocalVar) {
+			if (found.array) {
+				this.arraySrc = found;
+			} else {
+				this.type = found.type;
+			}
+		} else if (found as CppGlobalArray) {
+			this.arraySrc = found;
+		} else {
+			// Fall back.
+			var expr = NameExpr(name.pos, block.scope, simple).resolve();
+			this.type = expr.result.type.type;
+		}
+	}
+
+	// Location.
+	SrcPos pos;
+
+	// Type described, if any.
+	Type? type;
+
+	// Special case if we describe an array.
+	Named? arraySrc;
+
+	// Extract the type from here. Used for 'malloc'.
+	Type extract() {
+		unless (type)
+			throw SyntaxError(pos, "Invalid sizeof expression for use with 'malloc'.\nThis implementation needs to know the type of memory allocations to function properly. Try 'malloc(n*sizeof(type))' instead.");
+		type;
+	}
 }
+
+
+/**
+ * Dynamic sizeof for dynamic sized arrays.
+ */
+class DynamicSizeof extends Expr {
+	init(SrcPos pos, LocalVar var) {
+		init(pos) { var = var; }
+	}
+
+	LocalVar var;
+
+	ExprResult result() {
+		return ExprResult(named{Int});
+	}
+
+	void code(CodeGen gen, CodeResult res) {
+		if (!res.needed())
+			return;
+
+		var to = res.location(gen);
+		if (res.type.ref) {
+			CppVar var = allocType(gen, named{Int});
+
+			gen.l << fnParam(ptrDesc, this.var.var.v);
+			gen.l << fnCall(named{readArraySize<unsafe:RawPtr>}.ref, false, intDesc, ecx);
+
+			var.adjust(gen, ptrA);
+			gen.l << mov(intRel(ptrA), ecx);
+			var.created(gen);
+		} else {
+			gen.l << fnParam(ptrDesc, var.var.v);
+			gen.l << fnCall(named{readArraySize<unsafe:RawPtr>}.ref, false, intDesc, to);
+		}
+		res.created(gen);
+	}
+
+	void codePtr(CodeGen gen, Type type) {
+		CppVar var = allocTemporary(gen, type);
+
+		gen.l << fnParam(ptrDesc, this.var.var.v);
+		gen.l << fnCall(named{readArraySize<unsafe:RawPtr>}.ref, false, intDesc, ecx);
+
+		var.adjust(gen, ptrA);
+		gen.l << mov(intRel(ptrA), ecx);
+		var.created(gen);
+		gen.l << location(SrcPos());
+		var.ptr(gen);
+	}
+
+	private Nat readArraySize(unsafe:RawPtr alloc) : static {
+		alloc.readSize * alloc.readCount;
+	}
+}
+
 
 /**
  * Char literal.

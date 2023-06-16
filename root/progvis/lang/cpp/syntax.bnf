@@ -197,15 +197,17 @@ Value STypeNameEnd(Scope scope);
 STypeNameEnd[-1] => findType(pos, scope, first, rest) : SNamePart(scope) first #typeName - ("::", SNamePart(scope) rest #typeName)*;
 // "struct foo" is needed in C.
 STypeNameEnd[-1] => findType(pos, scope, first, rest) : "struct" #keyword ~ SNamePart(scope) first #typeName - ("::", SNamePart(scope) rest #typeName)*;
+STypeNameEnd => x : SPrimitiveType x;
 
 // Built-in types.
-STypeNameEnd => charType() : "char" #typeName;
-STypeNameEnd => intType() : "int" #typeName;
-STypeNameEnd => uIntType() : "unsigned" #typeName, "int" #typeName;
-STypeNameEnd => longType() : "long" #typeName;
-STypeNameEnd => uLongType() : "unsigned" #typeName, "long" #typeName;
-STypeNameEnd => boolType() : "bool" #typeName;
-STypeNameEnd => Value() : "void" #keyword;
+Value SPrimitiveType();
+SPrimitiveType => charType() : "char" #typeName;
+SPrimitiveType => intType() : "int" #typeName;
+SPrimitiveType => uIntType() : "unsigned" #typeName, "int" #typeName;
+SPrimitiveType => longType() : "long" #typeName;
+SPrimitiveType => uLongType() : "unsigned" #typeName, "long" #typeName;
+SPrimitiveType => boolType() : "bool" #typeName;
+SPrimitiveType => Value() : "void" #keyword;
 // ...
 
 // Parts of a name.
@@ -334,13 +336,24 @@ SOp3 => NewExpr(pos, block, type) : "new" #keyword ~ STypeNamePlain(block.scope)
 SOp3 => NewExpr(pos, block, type, actuals) : "new" #keyword ~ STypeNamePlain(block.scope) type, "(", SActuals(block) actuals, ")";
 SOp3 => NewExpr(pos, block, type, actuals) : "new" #keyword ~ STypeNamePlain(block.scope) type, "{", SActuals(block) actuals, "}";
 SOp3 => NewExpr(pos, block, type, count) : "new" #keyword ~ STypeNamePlain(block.scope) type, "\[", SExpr(block) count, "\]";
-SOp3[10] => sizeofExpr(pos, type) : "sizeof" #keyword - SizeofType(block.scope) type;
+SOp3[10] => sizeofExpr(pos, x) : "sizeof" #keyword - SSizeofParam(block) x;
 SOp3 => castError(pos) : "(", STypeNamePlain, ")", SOp3; // C-style cast.
 
-Value SizeofType(Scope scope);
-SizeofType => v : ~ STypeNamePlain(scope) v;
-SizeofType => v : , "(", SizeofType(scope) v, ")";
-SizeofType => v : , "(", STypeNamePlain(scope) v, ")";
+SizeofParam SSizeofParam(Block block);
+SSizeofParam => x : ~ SSizeofInner(block) x;
+SSizeofParam => x : , "(", SSizeofRec(block) x, ")";
+SSizeofParam => SizeofParam(x) : ~ SOp3(block) x;
+
+SizeofParam SSizeofRec(Block block);
+SSizeofRec => x : SSizeofInner(block) x;
+SSizeofRec => x : , "(", SSizeofRec(block) x, ")";
+SSizeofRec => SizeofParam(x) : SExpr(block) x;
+
+SizeofParam SSizeofInner(Block block);
+SSizeofInner => SizeofParam(t) : STypeNamePlain(block.scope) t;
+SSizeofInner => SizeofParam(expr) : SOp3(block) expr; // Expressions, but proper priority.
+SSizeofInner[100] => SizeofParam(block, name) : SIdentifier name #varName; // Ambiguous case: we don't know if it is an expression or a type.
+SSizeofInner[500] => SizeofParam(t) : SPrimitiveType t; // For proper syntax highlighting, and resolution of standard types.
 
 Expr SOp2(Block block);
 SOp2 => a : SAtom(block) a;
@@ -401,9 +414,9 @@ SPrintfFmt => v : "%%" @v;
 SOp2[10] => DeleteStmt(pos, expr, true) : "free" #fnName, "(", SExpr(block) expr, ")";
 
 // We special-case "malloc" for regular variables and for arrays.
-SOp2[10] => NewExpr(pos, block, type) : "malloc" #fnName, "(", "sizeof" #keyword - SizeofType(block.scope) type, ")";
-SOp2[10] => NewExpr(pos, block, type, count) : "malloc" #fnName, "(", SOp5(block) count, "\*", "sizeof" #keyword - SizeofType(block.scope) type, ")";
-SOp2[10] => NewExpr(pos, block, type, count) : "malloc" #fnName, "(", "sizeof" #keyword - SizeofType(block.scope) type, "\*", SOp5(block) count, ")";
+SOp2[10] => NewExpr(pos, block, type.extract) : "malloc" #fnName, "(", "sizeof" #keyword - SSizeofParam(block) type, ")";
+SOp2[10] => NewExpr(pos, block, type.extract, count) : "malloc" #fnName, "(", SOp5(block) count, "\*", "sizeof" #keyword - SSizeofParam(block) type, ")";
+SOp2[10] => NewExpr(pos, block, type.extract, count) : "malloc" #fnName, "(", "sizeof" #keyword - SSizeofParam(block) type, "\*", SOp5(block) count, ")";
 
 // Fallback to give decent error messages.
 SOp2[5] => mallocError(pos) : "malloc" #fnName, "(", SExpr, ")";

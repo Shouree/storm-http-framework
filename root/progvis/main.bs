@@ -535,7 +535,8 @@ void debug() on Compiler {
 		// win.open(url / "test" / "livelock.c");
 		// win.open(url / "test" / "alloc_in_nostep.c");
 		// win.open(url / "test" / "globals.cpp");
-		win.open(url / "test" / "staticarrays.c");
+		// win.open(url / "test" / "staticarrays.c");
+		win.open(url / "test" / "sizeof.c");
 		win.waitForClose();
 	}
 }

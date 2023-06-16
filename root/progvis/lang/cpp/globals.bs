@@ -198,8 +198,11 @@ class CppGlobalArray extends GlobalVar {
 			}
 
 			if (init) {
-				if (initExprs.count != arrayCount)
-					throw SyntaxError(pos, "Initializer size (${initExprs.count}) does not match array size (${arrayCount}).");
+				if (initExprs.count > arrayCount)
+					throw SyntaxError(pos, "Too many initializers. The array has size ${arrayCount} but ${initExprs.count} initializers.");
+
+				while (initExprs.count < arrayCount)
+					initExprs << defCtorCall(pos, type, scope);
 			}
 		} else if (init) {
 			arrayCount = initExprs.count;
