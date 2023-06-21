@@ -7,23 +7,23 @@
 
 namespace sql {
 
-    /**
-     * A prepared statement associated with a database connection.
+	/**
+	 * A prepared statement associated with a database connection.
 	 *
 	 * Abstract base class that is overridden by different database implementations.
-     */
-    class Statement : public Object {
-        STORM_ABSTRACT_CLASS;
-    public:
-        STORM_CTOR Statement();
+	 */
+	class Statement : public Object {
+		STORM_ABSTRACT_CLASS;
+	public:
+		STORM_CTOR Statement();
 
 		// Bind parameters.
-        virtual void STORM_FN bind(Nat pos, Str *str) ABSTRACT;
+		virtual void STORM_FN bind(Nat pos, Str *str) ABSTRACT;
 		virtual void STORM_FN bind(Nat pos, Bool b) ABSTRACT;
-        virtual void STORM_FN bind(Nat pos, Int i) ABSTRACT;
+		virtual void STORM_FN bind(Nat pos, Int i) ABSTRACT;
 		virtual void STORM_FN bind(Nat pos, Long i) ABSTRACT;
 		virtual void STORM_FN bind(Nat pos, Float f) ABSTRACT;
-        virtual void STORM_FN bind(Nat pos, Double d) ABSTRACT;
+		virtual void STORM_FN bind(Nat pos, Double d) ABSTRACT;
 
 		// Bind a null value.
 		virtual void STORM_FN bindNull(Nat pos) ABSTRACT;
@@ -82,7 +82,7 @@ namespace sql {
 		// Finalize is called automatically by the destructor of derived classes,
 		// but since finalization by the GC may not happen instantly, calling
 		// finalize manually can make resource reclamation quicker.
-        virtual void STORM_FN finalize() ABSTRACT;
+		virtual void STORM_FN finalize() ABSTRACT;
 
 	protected:
 		// Called by derived classes to invalidate existing Result instances.
@@ -108,7 +108,7 @@ namespace sql {
 		// Query sequence number. Used to invalidate iterators for previous executions of the
 		// statement.
 		Nat resultSequence;
-    };
+	};
 
 	// Wrappers that allow binding maybe types conveniently.
 	// Note: These can not be member functions since the string overload
@@ -121,26 +121,26 @@ namespace sql {
 	void STORM_FN bind(Statement *to, Nat pos, Maybe<Double> d);
 
 
-    /**
+	/**
 	 * A database connection.
 	 *
 	 * A connection to some database. This is the generic interface that the rest of the database
 	 * system utilizes.
 	 */
 	class DBConnection : public Object {
-        STORM_ABSTRACT_CLASS;
-    public:
+		STORM_ABSTRACT_CLASS;
+	public:
 		// Returns an SQLite_Statement given an Str str.
-        virtual Statement * STORM_FN prepare(Str * str) ABSTRACT;
+		virtual Statement * STORM_FN prepare(Str * str) ABSTRACT;
 
 		// Calls sqlite3_close(db).
-        virtual void STORM_FN close() ABSTRACT;
+		virtual void STORM_FN close() ABSTRACT;
 
 		// Returns all names of tables in SQLite connection in an Array of Str.
-        virtual Array<Str*>* STORM_FN tables() ABSTRACT;
+		virtual Array<Str*>* STORM_FN tables() ABSTRACT;
 
 		// Returns a Schema for the connection.
-        virtual MAYBE(Schema *) STORM_FN schema(Str * str) ABSTRACT;
-    };
+		virtual MAYBE(Schema *) STORM_FN schema(Str * str) ABSTRACT;
+	};
 
 }
