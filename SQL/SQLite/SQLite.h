@@ -2,7 +2,6 @@
 #include "SQLite/sqlite3.h"
 #include "Core/Io/Url.h"
 #include "Core/Array.h"
-#include "Core/Variant.h"
 #include "SQL.h"
 
 namespace sql {
@@ -24,7 +23,7 @@ namespace sql {
 		virtual ~SQLite();
 
 		// Prepare a statement.
-		Statement *STORM_FN prepare(Str *str) override;
+		Statement *STORM_FN prepare(Str *query) override;
 
 		// Close the connection.
 		void STORM_FN close() override;
@@ -33,7 +32,7 @@ namespace sql {
 		Array<Str*> *STORM_FN tables() override;
 
 		// Returns a Schema for SQLite connection.
-		MAYBE(Schema *) STORM_FN schema(Str *str);
+		MAYBE(Schema *) STORM_FN schema(Str *table);
 
 	private:
 		// The SQLite3 object.

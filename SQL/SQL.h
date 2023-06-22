@@ -130,17 +130,17 @@ namespace sql {
 	class DBConnection : public Object {
 		STORM_ABSTRACT_CLASS;
 	public:
-		// Returns an SQLite_Statement given an Str str.
-		virtual Statement * STORM_FN prepare(Str * str) ABSTRACT;
+		// Returns a prepared statement.
+		virtual Statement *STORM_FN prepare(Str *query) ABSTRACT;
 
 		// Calls sqlite3_close(db).
 		virtual void STORM_FN close() ABSTRACT;
 
 		// Returns all names of tables in SQLite connection in an Array of Str.
-		virtual Array<Str*>* STORM_FN tables() ABSTRACT;
+		virtual Array<Str*> *STORM_FN tables() ABSTRACT;
 
-		// Returns a Schema for the connection.
-		virtual MAYBE(Schema *) STORM_FN schema(Str * str) ABSTRACT;
+		// Returns a Schema for a particular table.
+		virtual MAYBE(Schema *) STORM_FN schema(Str *table) ABSTRACT;
 	};
 
 }

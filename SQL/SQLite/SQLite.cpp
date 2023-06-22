@@ -38,8 +38,8 @@ namespace sql {
 		}
 	}
 
-	Statement *SQLite::prepare(Str *str) {
-		return new (this) Stmt(this, str);
+	Statement *SQLite::prepare(Str *query) {
+		return new (this) Stmt(this, query);
 	}
 
 	Array<Str *> *SQLite::tables() {
