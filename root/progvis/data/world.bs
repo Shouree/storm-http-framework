@@ -283,6 +283,18 @@ class World on Render {
 			return create(type, unsafe:RawPtr());
 		}
 
+		// Create data suitable to show 'object', in the context of a global variable. This is
+		// nearly identical to 'create' above, but it lets the ViewHints object treat globals
+		// specially if it desires to do so.
+		Data create(core:lang:GlobalVar global, TypeInfo type) {
+			for (h in owner.hints) {
+				if (d = h.createGlobal(this, type, global))
+					return d;
+			}
+
+			return Unknown();
+		}
+
 		// Create data suitable to show 'object'. Creates the data in the context of a stack
 		// allocation, and therefore discards references in some cases.
 		Data createStack(unsafe:RawPtr object) {

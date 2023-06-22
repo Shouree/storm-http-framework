@@ -18,6 +18,12 @@ class ViewHints on Render {
 	// aspects into account when deciding how to interpret it.
 	Data? createData(World:Traversal t, TypeInfo type, unsafe:RawPtr root) : abstract;
 
+	// Allow special-case for global variables. The original Named is passed in case the
+	// implementation wishes to inspect it. The default implementation simply calls 'createData'.
+	Data? createGlobal(World:Traversal t, TypeInfo type, core:lang:GlobalVar global) {
+		return createData(t, type, unsafe:RawPtr());
+	}
+
 	// Create an allocation for the given data. This is called for the ViewHints object that created
 	// the data object. The default implementation just uses a simple Allocation object.
 	Allocation createAllocation(unsafe:RawPtr ptr, Data data) {

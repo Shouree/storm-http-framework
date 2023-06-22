@@ -15,7 +15,8 @@ int main() {
 	// Static size, should work.
 	int local[csz] = { 1, 2, 3 };
 
-	intarray[0] = 1;
+	int *x = intarray + 1;
+	*x = 10;
 
 	struct lock *lck = lockarray + 1;
 	lock_init(&lockarray[1]);

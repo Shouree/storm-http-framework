@@ -12,7 +12,7 @@ class Globals extends Composite {
 		init(null) {}
 
 		for (v in globals) {
-			source << Global(v.name, fromValue(v.type), unsafe:RawPtr:fromGlobal(v));
+			source << Global(v);
 		}
 
 		// Make the order consistent.
@@ -31,15 +31,18 @@ class Globals extends Composite {
 
 	// Source data for globals.
 	private value Global {
+		GlobalVar named;
 		Str name;
 		TypeInfo type;
 		unsafe:RawPtr src;
 
-		init(Str name, TypeInfo type, unsafe:RawPtr src) {
+		init(GlobalVar v) {
+			// Extract data here to make it quicker to update everything later on.
 			init {
-				name = name;
-				type = type;
-				src = src;
+				named = v;
+				name = v.name;
+				type = fromValue(v.type);
+				src = unsafe:RawPtr:fromGlobal(v);
 			}
 		}
 	}
@@ -55,7 +58,7 @@ class Globals extends Composite {
 			parts.clear();
 			parts.reserve(source.count);
 			for (s in source) {
-				parts << Part(s.name, 0, t.create(s.type), true);
+				parts << Part(s.name, 0, t.create(s.named, s.type), true);
 			}
 		}
 

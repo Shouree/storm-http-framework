@@ -44,6 +44,22 @@ class CppViewHints extends ViewHints {
 		defaultHints.createData(t, info, root);
 	}
 
+	// Allow special-case for global variables. The original Named is passed in case the
+	// implementation wishes to inspect it. The default implementation simply calls 'createData'.
+	Data? createGlobal(World:Traversal t, TypeInfo info, GlobalVar global) : override {
+		if (global as CppGlobalArray) {
+			// Special case: this is stored as a pointer, but we should remove the indirection to be
+			// consistent with the visualization of stack-allocated arrays.
+			if (ptrType = info.type as PtrType) {
+				if (inside = ptrType.inside) {
+					return CppIndirectArray(inside);
+				}
+			}
+		}
+
+		super:createGlobal(t, info, global);
+	}
+
 	// Create a custom allocation.
 	Allocation createAllocation(unsafe:RawPtr ptr, Data data) {
 		HeapAllocation(ptr, data);
@@ -483,6 +499,48 @@ class CppArray extends Array {
 		return contents[element].atOffset(type, offset - element*elemSize);
 	}
 }
+
+/**
+ * Special case of the above to support global arrays.
+ *
+ * Global arrays are actually stored as a pointer to the array. We hide this fact to make the
+ * visualization consistent with how arrays are visualized on the stack.
+ */
+class CppIndirectArray extends CppArray {
+	// Create.
+	init(Type elemType) {
+		print("Type: ${elemType}");
+		init(elemType) {}
+	}
+
+	// Copy.
+	init(CppIndirectArray original) {
+		init(original) {}
+	}
+
+	// Update.
+	void update(World:Traversal t, unsafe:RawPtr ptr, Nat offset) {
+		var array = ptr.readPtr(offset);
+		if (array.any) {
+			t.addData(array, this);
+			super:update(t, array, 0);
+		}
+	}
+
+	// Traverse.
+	void traverse(World:Traversal t, unsafe:RawPtr ptr, Nat offset) {
+		var array = ptr.readPtr(offset);
+		if (array.any) {
+			super:traverse(t, array, 0);
+		}
+	}
+
+	// Copy. Note: copyData is fine to not override, we don't introduce extra data.
+	protected Data copyObject() : override {
+		CppIndirectArray(this);
+	}
+}
+
 
 /**
  * View of the array in C++. It differs from the "original" visualization in that it draws each part
