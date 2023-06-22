@@ -509,7 +509,6 @@ class CppArray extends Array {
 class CppIndirectArray extends CppArray {
 	// Create.
 	init(Type elemType) {
-		print("Type: ${elemType}");
 		init(elemType) {}
 	}
 
