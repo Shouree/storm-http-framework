@@ -40,7 +40,9 @@ namespace storm {
 		GcArray<Byte> *(*allocBuffer)(Engine &e, size_t size);
 		void *(*allocObject)(size_t size, Type *type);
 		void *(*allocArray)(Engine &e, const GcType *type, size_t count);
+		void *(*allocArrayRehash)(Engine &e, const GcType *type, size_t count);
 		void *(*allocWeakArray)(Engine &e, size_t count);
+		void *(*allocWeakArrayRehash)(Engine &e, size_t count);
 		void *(*allocCode)(Engine &e, size_t code, size_t refs);
 		size_t (*codeSize)(const void *code);
 		GcCode *(*codeRefs)(void *code);

@@ -330,6 +330,22 @@ namespace storm {
 			info->v[i].status = Info::free;
 	}
 
+	void MapBase::allocRehash(nat cap) {
+		assert(info == null);
+		assert(key == null);
+		assert(val == null);
+		assert(isPowerOfTwo(cap));
+
+		size = 0;
+		lastFree = 0;
+		info = runtime::allocArrayRehash<Info>(engine(), &infoType, cap);
+		key = runtime::allocArrayRehash<byte>(engine(), keyT.gcArrayType, cap);
+		val = runtime::allocArrayRehash<byte>(engine(), valT.gcArrayType, cap);
+
+		for (nat i = 0; i < cap; i++)
+			info->v[i].status = Info::free;
+	}
+
 	void MapBase::grow() {
 		nat c = capacity();
 		if (c == 0) {
@@ -385,7 +401,7 @@ namespace storm {
 		GcArray<byte> *oldVal = val; val = null;
 		GcWatch *oldWatch = watch; watch = runtime::createWatch(engine());
 
-		alloc(cap);
+		allocRehash(cap);
 
 		// Anything to do
 		if (oldInfo == null)
@@ -431,7 +447,7 @@ namespace storm {
 		GcArray<byte> *oldVal = val; val = null;
 		GcWatch *oldWatch = watch; watch = runtime::createWatch(engine());
 
-		alloc(cap);
+		allocRehash(cap);
 
 		// Anything to do?
 		if (oldInfo == null)

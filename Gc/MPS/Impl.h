@@ -63,9 +63,15 @@ namespace storm {
 		// Allocate an array of objects.
 		void *allocArray(const GcType *type, size_t count);
 
+		// Allocate an array of objects in response to stale location dependency.
+		void *allocArrayRehash(const GcType *type, size_t count);
+
 		// Allocate an array of weak pointers. 'type' is always a GcType instance that is set to
 		// WeakArray with one pointer as elements.
 		void *allocWeakArray(const GcType *type, size_t count);
+
+		// Allocate a weak array in response to a stale location dependency.
+		void *allocWeakArrayRehash(const GcType *type, size_t count);
 
 		// See if an object is live, ie. not finalized.
 		static Bool liveObject(RootObject *obj);
@@ -145,6 +151,11 @@ namespace storm {
 		mps_pool_t weakPool;
 		mps_ap_t weakAllocPoint;
 		util::Lock weakAllocLock;
+
+		// Special allocation point for 'pool' above. Used when we re-allocate hashtables due to
+		// stale location dependencies.
+		mps_ap_t hashReallocAp;
+		util::Lock hashReallocLock;
 
 #ifdef MPS_USE_IO_POOL
 		// Non-moving, non-protected pool for interaction with foreign code (eg. IO operations in

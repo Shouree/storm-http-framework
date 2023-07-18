@@ -143,6 +143,9 @@ namespace storm {
 		// Allocate data for a specific capacity. Assumes 'info', 'key' and 'value' are null.
 		void alloc(nat capacity);
 
+		// Allocate data for capacity, assumes we are re-hashing.
+		void allocRehash(nat capacity);
+
 		// Grow (if needed) to fit at least one more element.
 		void grow();
 

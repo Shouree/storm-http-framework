@@ -149,9 +149,22 @@ namespace storm {
 			return impl->allocArray(type, count);
 		}
 
+		// Allocate an array of objects in response to a stale location dependency that requires us
+		// to re-hash a hash table.
+		inline void *allocArrayRehash(const GcType *type, size_t count) {
+			assert(type->kind == GcType::tArray, L"Wrong type for calling allocArray().");
+
+			return impl->allocArrayRehash(type, count);
+		}
+
 		// Allocate an array of weak pointers.
 		inline void *allocWeakArray(size_t count) {
 			return impl->allocWeakArray(&weakArrayType, count);
+		}
+
+		// Allocate a weak array in response to a stale location dependency.
+		inline void *allocWeakArrayRehash(size_t count) {
+			return impl->allocWeakArrayRehash(&weakArrayType, count);
 		}
 
 		// See if the object is live. An object is considered live until it has been

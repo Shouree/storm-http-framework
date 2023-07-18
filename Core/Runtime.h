@@ -97,12 +97,30 @@ namespace storm {
 			return (GcArray<T> *)allocArray(e, type, count);
 		}
 
+		// Allocate an array of objects in response to a re-hash. Affects the behavior of the GC in
+		// respect to scheduling collections.
+		void *allocArrayRehash(Engine &e, const GcType *type, size_t count);
+
+		template <class T>
+		inline GcArray<T> *allocArrayRehash(Engine &e, const GcType *type, size_t count) {
+			return (GcArray<T> *)allocArrayRehash(e, type, count);
+		}
+
 		// Allocate a weak array of pointers.
 		void *allocWeakArray(Engine &e, size_t count);
 
 		template <class T>
 		inline GcWeakArray<T> *allocWeakArray(Engine &e, size_t count) {
 			return (GcWeakArray<T> *)allocWeakArray(e, count);
+		}
+
+		// Allocate a weak array of pointers in response to a re-hash. Affects the behavior of the
+		// GC in respect to scheduling collections.
+		void *allocWeakArrayRehash(Engine &e, size_t count);
+
+		template <class T>
+		inline GcWeakArray<T> *allocWeakArrayRehash(Engine &e, size_t count) {
+			return (GcWeakArray<T> *)allocWeakArrayRehash(e, count);
 		}
 
 		// Allocate a code segment with at least 'code' bytes of memory for the code, and 'refs'

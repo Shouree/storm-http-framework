@@ -140,8 +140,16 @@ namespace storm {
 			return e.gc.allocArray(type, count);
 		}
 
+		void *allocArrayRehash(Engine &e, const GcType *type, size_t count) {
+			return e.gc.allocArrayRehash(type, count);
+		}
+
 		void *allocWeakArray(Engine &e, size_t count) {
 			return e.gc.allocWeakArray(count);
+		}
+
+		void *allocWeakArrayRehash(Engine &e, size_t count) {
+			return e.gc.allocWeakArrayRehash(count);
 		}
 
 		GcWatch *createWatch(Engine &e) {

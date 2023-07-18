@@ -200,6 +200,20 @@ namespace storm {
 			info->v[i].status = Info::free;
 	}
 
+	void WeakSetBase::allocRehash(nat cap) {
+		assert(info == null);
+		assert(data == null);
+		assert(isPowerOfTwo(cap));
+
+		size = 0;
+		lastFree = 0;
+		info = runtime::allocArrayRehash<Info>(engine(), &infoType, cap);
+		data = runtime::allocWeakArrayRehash<TObject>(engine(), cap);
+
+		for (nat i = 0; i < cap; i++)
+			info->v[i].status = Info::free;
+	}
+
 	void WeakSetBase::grow() {
 		nat c = capacity();
 		if (c == 0) {
@@ -258,7 +272,7 @@ namespace storm {
 		GcWeakArray<TObject> *oldData = data; data = null;
 		GcWatch *oldWatch = watch; watch = runtime::createWatch(engine());
 
-		alloc(cap);
+		allocRehash(cap);
 
 		// Anything to do?
 		if (oldInfo == null)
@@ -305,7 +319,7 @@ namespace storm {
 		GcWeakArray<TObject> *oldData = data; data = null;
 		GcWatch *oldWatch = watch; watch = runtime::createWatch(engine());
 
-		alloc(cap);
+		allocRehash(cap);
 
 		// Anything to do?
 		if (oldInfo == null)

@@ -157,8 +157,16 @@ namespace storm {
 			return (*fwd.allocArray)(e, type, count);
 		}
 
+		void *allocArrayRehash(Engine &e, const GcType *type, size_t count) {
+			return (*fwd.allocArrayRehash)(e, type, count);
+		}
+
 		void *allocWeakArray(Engine &e, size_t count) {
 			return (*fwd.allocWeakArray)(e, count);
+		}
+
+		void *allocWeakArrayRehash(Engine &e, size_t count) {
+			return (*fwd.allocWeakArrayRehash)(e, count);
 		}
 
 		void *allocCode(Engine &e, size_t code, size_t refs) {

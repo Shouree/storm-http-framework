@@ -326,6 +326,11 @@ namespace storm {
 #endif
 		} MPS_ARGS_END(args);
 
+		MPS_ARGS_BEGIN(args) {
+			MPS_ARGS_ADD(args, MPS_KEY_AP_HASH_ARRAYS, (mps_bool_t)true);
+			check(mps_ap_create_k(&hashReallocAp, pool, args), S("Failed to create hash allocation point."));
+		} MPS_ARGS_END(args);
+
 		// GcType-objects are stored in a manually managed pool. We prefer this to just malloc()ing
 		// them since we can remove all of them easily whenever the Gc object is destroyed.
 		MPS_ARGS_BEGIN(args) {
@@ -431,6 +436,7 @@ namespace storm {
 		checkFinalizersLocked();
 
 		// Destroy the global allocation points.
+		mps_ap_destroy(hashReallocAp);
 		mps_ap_destroy(typeAllocPoint);
 		mps_ap_destroy(weakAllocPoint);
 		mps_ap_destroy(codeAllocPoint);
@@ -658,6 +664,29 @@ namespace storm {
 		return result;
 	}
 
+	void *GcImpl::allocArrayRehash(const GcType *type, size_t elements) {
+		assert(type->kind == GcType::tArray, L"Wrong type for calling allocArray().");
+
+		size_t size = overflowSizeArray(type, elements);
+		if (size == 0)
+			throwError(S("Allocation too large for system (alloc array)."));
+
+		util::Lock::L z(hashReallocLock);
+
+		mps_ap_t &ap = hashReallocAp;
+		mps_addr_t memory;
+		void *result;
+		do {
+			check(mps_reserve(&memory, ap, size), S("Out of memory (alloc array)."));
+			result = initArray(memory, type, size, elements);
+		} while (!mps_commit(ap, memory, size));
+
+		if (type->finalizer)
+			mps_finalize(arena, &result);
+
+		return result;
+	}
+
 	void *GcImpl::allocWeakArray(const GcType *type, size_t elements) {
 		if (elements == 0)
 			return null;
@@ -677,6 +706,11 @@ namespace storm {
 		} while (!mps_commit(ap, memory, size));
 
 		return result;
+	}
+
+	void *GcImpl::allocWeakArrayRehash(const GcType *type, size_t elements) {
+		// The special case for hash array is only available for the AMC pool.
+		return allocWeakArray(type, elements);
 	}
 
 	size_t GcImpl::mpsTypeSize(size_t entries) {
