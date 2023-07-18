@@ -1,0 +1,23 @@
+asm64_unalignedRead PROTO C
+asm64_unalignedWrite PROTO C
+asm64_shortUnalignedWrite PROTO C
+
+.code
+
+asm64_unalignedRead proc
+	xor rax, rax
+	lock add rax, [rcx]
+	ret
+asm64_unalignedRead endp
+
+asm64_unalignedWrite proc
+	lock xchg [rcx], rdx
+	ret
+asm64_unalignedWrite endp
+
+asm64_shortUnalignedWrite proc
+	lock xchg [rcx], edx
+	ret
+asm64_shortUnalignedWrite endp
+
+end

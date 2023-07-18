@@ -63,7 +63,6 @@ void atomicWrite(volatile nat &v, nat value);
 #include <intrin.h>
 
 #ifdef X64
-#error "Revise atomics for 64-bit!"
 
 inline nat atomicIncrement(volatile nat &v) {
 	return (size_t)_InterlockedIncrement((volatile LONG *)&v);
@@ -110,11 +109,11 @@ inline void atomicWrite(volatile nat &v, nat value) {
 
 // Note: The InterlockedCompareExchangePointer does is not inlined in VS 2008.
 inline size_t atomicCAS(volatile size_t &v, size_t compare, size_t exchange) {
-	return (size_t)_InterlockedCompareExchange64(&v, exchange, compare);
+	return (size_t)_InterlockedCompareExchange64((volatile LONG64 *)&v, exchange, compare);
 }
 
 inline void *atomicCAS(void *volatile &v, void *compare, void *exchange) {
-	return _InterlockedCompareExchange64(&v, exchange, compare);
+	return (void *)_InterlockedCompareExchange64((volatile LONG64 *)&v, (LONG64)exchange, (LONG64)compare);
 }
 
 #else
@@ -211,7 +210,16 @@ inline void shortUnalignedAtomicWrite(volatile nat &v, nat value) {
 }
 
 #else
-#error "Implement unaligned atomics for X86-64 as well!"
+
+extern "C" size_t asm64_unalignedRead(volatile const size_t &v);
+extern "C" void asm64_unalignedWrite(volatile size_t &v, size_t value);
+extern "C" void asm64_shortUnalignedWrite(volatile nat &v, nat value);
+
+// Need to be implemented in ASM files: inline ASM is not supported in 64-bit mode.
+size_t unalignedAtomicRead(volatile const size_t &v) { return asm64_unalignedRead(v); }
+void unalignedAtomicWrite(volatile size_t &v, size_t value) { return asm64_unalignedWrite(v, value); }
+void shortUnalignedAtomicWrite(volatile nat &v, nat value) { return asm64_shortUnalignedWrite(v, value); }
+
 #endif
 
 #elif defined(GCC)

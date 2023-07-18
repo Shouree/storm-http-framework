@@ -8,7 +8,7 @@ class FileTypes {
 public:
 	// Create with a collection name, such as "Music files", "Video files", or "All supported files"
 	FileTypes(const String &collName);
-	
+
 	// Add a new file type. Example: "*.txt", "Text files", or "*.jpg;*.jpeg", "JPEG files"
 	void add(const String &ext, const String &name);
 
@@ -16,7 +16,7 @@ public:
 	void addAll();
 
 	// Get the number of elements.
-	inline nat size() const { return types.size(); }
+	inline nat size() const { return (nat)types.size(); }
 
 	struct Elem {
 		String ext, name;

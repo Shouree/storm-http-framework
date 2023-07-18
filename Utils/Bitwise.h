@@ -146,6 +146,16 @@ inline bool multiplyOverflow(size_t a, size_t b, size_t &out) {
 	return !__builtin_mul_overflow(a, b, &out);
 }
 
+#elif defined(VISUAL_STUDIO) && defined(X64)
+
+#include <intrin.h>
+
+inline bool multiplyOverflow(size_t a, size_t b, size_t &out) {
+	unsigned __int64 high;
+	out = _umul128(a, b, &high);
+	return high == 0;
+}
+
 #else
 
 #if defined(X86)

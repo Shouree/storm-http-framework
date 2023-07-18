@@ -28,7 +28,20 @@ inline Fn asMemberPtr(const void *fn) {
  * This is currently unexplored, but likely works as above.
  */
 
-#error "Implement this!"
+template <class T>
+inline const void *address(T fn) {
+	TODO(L"VERIFY");
+	return (const void *&)fn;
+}
+
+template <class Fn>
+inline Fn asMemberPtr(const void *fn) {
+	TODO(L"VERIFY");
+	Fn result;
+	memset(&result, 0, sizeof(result));
+	memcpy(&result, &fn, sizeof(fn));
+	return result;
+}
 
 #elif defined(GCC) && defined(POSIX) && defined(X64)
 

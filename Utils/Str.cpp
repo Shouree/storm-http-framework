@@ -94,11 +94,11 @@ namespace std {
 }
 #endif
 
-String String::left(nat size) const {
+String String::left(size_t size) const {
 	return String(*this, 0, size);
 }
 
-String String::right(nat size) const {
+String String::right(size_t size) const {
 	nat start = 0;
 	if (size < this->size()) start = this->size() - size;
 	return String(*this, start);

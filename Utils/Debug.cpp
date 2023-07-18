@@ -35,7 +35,7 @@ namespace util {
 	static void debugConsoleOutput(const wchar_t *data) {
 		std::string str = String(data).toChar();
 		DWORD result;
-		WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), str.c_str(), str.size(), &result, NULL);
+		WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), str.c_str(), (DWORD)str.size(), &result, NULL);
 	}
 
 	void setDebugTarget(DebugTarget target) {

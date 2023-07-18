@@ -23,8 +23,8 @@ public:
 	}
 
 	// Substr ctors
-	inline String(const String &original, nat start) : std::wstring(original, start) {}
-	inline String(const String &original, nat start, nat length) : std::wstring(original, start, length) {}
+	inline String(const String &original, size_t start) : std::wstring(original, start) {}
+	inline String(const String &original, size_t start, size_t length) : std::wstring(original, start, length) {}
 
 	// Conversion to and from ANSI/UTF-8 strings
 	explicit String(const char *str);
@@ -58,11 +58,11 @@ public:
 
 	// Neat functions inspired from the CString in MFC. All are safe in the sense that they
 	// will return a result, even if the parameter indicates something strange.
-	String left(nat size) const;
-	String right(nat size) const;
-	inline String mid(nat start) const { return String(*this, start); }
-	inline String mid(nat start, nat length) const { return String(*this, start, length); }
-	inline String substr(nat start, nat length = npos) const { return String(*this, start, length); }
+	String left(size_t size) const;
+	String right(size_t size) const;
+	inline String mid(size_t start) const { return String(*this, start); }
+	inline String mid(size_t start, size_t length) const { return String(*this, start, length); }
+	inline String substr(size_t start, size_t length = npos) const { return String(*this, start, length); }
 
 	// Convert a string to other datatypes.
 	double toDouble() const;

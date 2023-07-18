@@ -12,8 +12,8 @@ CppName CppName::operator +(const String &part) const {
 		return CppName(String::operator +(L"::" + part));
 }
 
-static nat lastDots(const String &str) {
-	nat z = str.rfind(':');
+static size_t lastDots(const String &str) {
+	size_t z = str.rfind(':');
 	if (z == 0 || z == String::npos)
 		return String::npos;
 
@@ -24,7 +24,7 @@ static nat lastDots(const String &str) {
 }
 
 String CppName::last() const {
-	nat z = lastDots(*this);
+	size_t z = lastDots(*this);
 	if (z == String::npos)
 		return *this;
 
@@ -32,7 +32,7 @@ String CppName::last() const {
 }
 
 CppName CppName::parent() const {
-	nat z = lastDots(*this);
+	size_t z = lastDots(*this);
 	if (z == String::npos)
 		return CppName(L"");
 	else

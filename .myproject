@@ -112,6 +112,10 @@ all+=mps
 [build,smm]
 all+=smm
 
+# Forward 64-bit flag if present.
+[build,64]
+all+=64
+
 #Add variables that indicate the GC choice. We add them to the entire project, even though
 #it is only necessary for Gc, Test and Main
 [mps]
@@ -127,11 +131,17 @@ include+=./
 include+=../
 
 [storm_debug]
+#Turn on some runtime checks (implemented purely in Storm).
+define+=FAST_DEBUG
+
+[storm_debug,!64]
 buildDir=build/
 execDir=../debug/
 
-#Turn on some runtime checks (implemented purely in Storm).
-define+=FAST_DEBUG
+[storm_debug,64]
+buildDir=build64/
+execDir=../debug64/
+linkFlags+=/MACHINE:X64
 
 [storm_debug,windows]
 #Generate pdb file.
@@ -151,9 +161,14 @@ opt+=-O1
 flags+=-g
 cflags+=-g
 
-[storm_release]
+[storm_release,!64]
 buildDir=release/
 execDir=../release/
+
+[storm_release,64]
+buildDir=release64/
+execDir=../release64/
+linkFlags+=/MACHINE:X64
 
 [storm_release,windows]
 #Enable link-time code generation. Too slow to use regularly, but gives good performance!
@@ -186,10 +201,17 @@ define+=NOSTATIC_BUILD
 define+=_UNICODE
 define+=UNICODE
 
+[windows,!64]
 #Compile asm files on X86
 ext+=asm
 noIncludes+=*.asm
 compile+=*.asm:1!ml /c /nologo /Fo<output> /safeseh /W3 /Zi <file>
+
+[windows,64]
+#Compile asm files on X64
+ext+=asm64
+noIncludes+=*.asm64
+compile+=*.asm64:1!ml64 /c /nologo /Fo<output> /W3 /Zi /Ta<file>
 
 [unix]
 flags+=-Wno-unknown-pragmas
