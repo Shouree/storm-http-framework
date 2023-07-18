@@ -110,7 +110,7 @@ int _tmain(int argc, const wchar_t *argv[]) {
 
 	// Put the files in our global, so we can use SrcPos later on.
 	SrcPos::files = findHeaders(config.useDirs);
-	SrcPos::firstExport = SrcPos::files.size();
+	SrcPos::firstExport = nat(SrcPos::files.size());
 	SrcPos::files += findHeaders(config.dirs);
 	if (SrcPos::files.empty()) {
 		PLN("No header files found.");

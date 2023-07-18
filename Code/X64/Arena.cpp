@@ -14,7 +14,7 @@ namespace code {
 		Arena::Arena() {}
 
 		Listing *Arena::transform(Listing *l) const {
-#if defined(POSIX) && defined(X64)
+#if (defined(WINDOWS) || defined(POSIX)) && defined(X64)
 			code::eh::activateInfo();
 #endif
 
@@ -161,6 +161,11 @@ namespace code {
 		Reg Arena::functionDispatchReg() {
 			return ptrA;
 		}
+
+
+		WindowsArena::WindowsArena() {}
+
+		PosixArena::PosixArena() {}
 
 	}
 }

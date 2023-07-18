@@ -9,7 +9,7 @@ bool readable(const void *addr) {
 		return false;
 
 	MEMORY_BASIC_INFORMATION info;
-	nat r = VirtualQuery(addr, &info, sizeof(info));
+	SIZE_T r = VirtualQuery(addr, &info, sizeof(info));
 	if (r != sizeof(info))
 		return false;
 
@@ -31,7 +31,7 @@ bool readable(const void *addr) {
 // Print some information about 'addr' for debugging.
 void memFlags(const void *addr) {
 	MEMORY_BASIC_INFORMATION info;
-	nat r = VirtualQuery(addr, &info, sizeof(info));
+	SIZE_T r = VirtualQuery(addr, &info, sizeof(info));
 	assert(r == sizeof(info));
 
 	printf("%p:", addr);

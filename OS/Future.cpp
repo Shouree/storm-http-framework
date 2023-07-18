@@ -130,10 +130,6 @@ namespace os {
 
 #ifdef CUSTOM_EXCEPTION_PTR
 
-#ifndef X86
-#error "Only X86 is supported now. Please revise the code or use a compiler with support for exception_ptr"
-#endif
-
 	/**
 	 * Implementation more or less copied from Boost exception_ptr.
 	 */
@@ -281,6 +277,10 @@ namespace os {
 
 
 	int FutureBase::filter(EXCEPTION_POINTERS *info, bool pointer) {
+#ifdef X64
+		TODO(L"VERIFY THIS!");
+#endif
+
 		EXCEPTION_RECORD *record = info->ExceptionRecord;
 
 		if (!isCppException(record)) {

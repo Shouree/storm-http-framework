@@ -1,5 +1,6 @@
 #pragma once
 #include "Utils/Platform.h"
+#include "Utils/Templates.h"
 
 namespace storm {
 	class Place;
@@ -13,10 +14,6 @@ namespace os {
 
 	namespace impl {
 
-
-#ifndef USE_VA_TEMPLATE
-#error "The generic FnCall implementation requires varidic templates."
-#endif
 
 		// Helper macro, enabling the function (with void return value) if 'U' is a pointer.
 #define IF_POINTER(U) typename std::enable_if<std::is_pointer<U>::value>::type
@@ -33,6 +30,8 @@ namespace os {
 		// Decide if we shall perform a member or nonmember call depending on what the function pointer looks like.
 		inline bool memberCall(bool member, const void *fn);
 
+
+#ifdef USE_VA_TEMPLATE
 
 		/**
 		 * Generic implementation:
@@ -186,6 +185,252 @@ namespace os {
 			}
 		}
 
+#else
+
+		/**
+		 * Implementation that does not rely on variadic arguments. Limits number of parameters.
+		 *
+		 * Made to be used on the VS2008 compiler in 64-bit mode. Here, it is OK to return a void
+		 * expression, so we don't have to special case the return type at least.
+		 */
+
+		template <class P1, class P2, class P3, class P4, class P5, class P6>
+		struct Params6 {
+			template <class Result>
+			static Result call(const void *fn, void *first, void **rest) {
+				typedef Result CODECALL(*Fn)(P1, P2, P3, P4, P5, P6);
+				Fn p = (Fn)fn;
+				return (*p)(*(P1 *)first, *(P2 *)rest[0], *(P3 *)rest[1], *(P4 *)rest[2], *(P5 *)rest[3], *(P6 *)rest[4]);
+			}
+
+			template <class Result, class Type>
+			static Result callMember(const void *fn, Type *first, void **rest) {
+				typedef Result CODECALL (Type::*Fn)(P1, P2, P3, P4, P5) const;
+				Fn p = null;
+				toMember(p, fn);
+				return (first->*p)(*(P1 *)rest[0], *(P2 *)rest[1], *(P3 *)rest[2], *(P4 *)rest[3], *(P5 *)rest[4], *(P6 *)rest[5]);
+			}
+
+			template <class T>
+			struct Prepend {
+				typedef Params6<T, P1, P2, P3, P4, P5> T;
+			};
+		};
+
+		template <class P1, class P2, class P3, class P4, class P5>
+		struct Params5 {
+			template <class Result>
+			static Result call(const void *fn, void *first, void **rest) {
+				typedef Result CODECALL(*Fn)(P1, P2, P3, P4, P5);
+				Fn p = (Fn)fn;
+				return (*p)(*(P1 *)first, *(P2 *)rest[0], *(P3 *)rest[1], *(P4 *)rest[2], *(P5 *)rest[3]);
+			}
+
+			template <class Result, class Type>
+			static Result callMember(const void *fn, Type *first, void **rest) {
+				typedef Result CODECALL (Type::*Fn)(P1, P2, P3, P4, P5) const;
+				Fn p = null;
+				toMember(p, fn);
+				return (first->*p)(*(P1 *)rest[0], *(P2 *)rest[1], *(P3 *)rest[2], *(P4 *)rest[3], *(P5 *)rest[4]);
+			}
+
+			template <class T>
+			struct Prepend {
+				typedef Params6<T, P1, P2, P3, P4, P5> T;
+			};
+		};
+
+		template <class P1, class P2, class P3, class P4>
+		struct Params4 {
+			template <class Result>
+			static Result call(const void *fn, void *first, void **rest) {
+				typedef Result CODECALL(*Fn)(P1, P2, P3, P4);
+				Fn p = (Fn)fn;
+				return (*p)(*(P1 *)first, *(P2 *)rest[0], *(P3 *)rest[1], *(P4 *)rest[2]);
+			}
+
+			template <class Result, class Type>
+			static Result callMember(const void *fn, Type *first, void **rest) {
+				typedef Result CODECALL (Type::*Fn)(P1, P2, P3, P4) const;
+				Fn p = null;
+				toMember(p, fn);
+				return (first->*p)(*(P1 *)rest[0], *(P2 *)rest[1], *(P3 *)rest[2], *(P4 *)rest[3]);
+			}
+
+			template <class T>
+			struct Prepend {
+				typedef Params5<T, P1, P2, P3, P4> T;
+			};
+		};
+
+		template <class P1, class P2, class P3>
+		struct Params3 {
+			template <class Result>
+			static Result call(const void *fn, void *first, void **rest) {
+				typedef Result CODECALL(*Fn)(P1, P2, P3);
+				Fn p = (Fn)fn;
+				return (*p)(*(P1 *)first, *(P2 *)rest[0], *(P3 *)rest[1]);
+			}
+
+			template <class Result, class Type>
+			static Result callMember(const void *fn, Type *first, void **rest) {
+				typedef Result CODECALL (Type::*Fn)(P1, P2, P3) const;
+				Fn p = null;
+				toMember(p, fn);
+				return (first->*p)(*(P1 *)rest[0], *(P2 *)rest[1], *(P3 *)rest[2]);
+			}
+
+			template <class T>
+			struct Prepend {
+				typedef Params4<T, P1, P2, P3> T;
+			};
+		};
+
+		template <class P1, class P2>
+		struct Params2 {
+			template <class Result>
+			static Result call(const void *fn, void *first, void **rest) {
+				typedef Result CODECALL(*Fn)(P1, P2);
+				Fn p = (Fn)fn;
+				return (*p)(*(P1 *)first, *(P2 *)rest[0]);
+			}
+
+			template <class Result, class Type>
+			static Result callMember(const void *fn, Type *first, void **rest) {
+				typedef Result CODECALL (Type::*Fn)(P1, P2) const;
+				Fn p = null;
+				toMember(p, fn);
+				return (first->*p)(*(P1 *)rest[0], *(P2 *)rest[1]);
+			}
+
+			template <class T>
+			struct Prepend {
+				typedef Params3<T, P1, P2> T;
+			};
+		};
+
+		template <class P1>
+		struct Params1 {
+			template <class Result>
+			static Result call(const void *fn, void *first, void **rest) {
+				typedef Result CODECALL (*Fn)(P1);
+				Fn p = (Fn)fn;
+				return (*p)(*(P1 *)first);
+			}
+
+			template <class Result, class Type>
+			static Result callMember(const void *fn, Type *first, void **rest) {
+				typedef Result CODECALL (Type::*Fn)(P1) const;
+				Fn p = null;
+				toMember(p, fn);
+				return (first->*p)(*(P1 *)rest[0]);
+			}
+
+			template <class T>
+			struct Prepend {
+				typedef Params2<T, P1> T;
+			};
+		};
+
+		struct Params0 {
+			template <class Result>
+			static Result call(const void *fn, void *first, void **) {
+				typedef Result CODECALL (*Fn)();
+				Fn p = (Fn)fn;
+				return (*p)();
+			}
+
+			template <class Result, class Type>
+			static Result callMember(const void *fn, Type *first, void **) {
+				typedef Result CODECALL (Type::*Fn)() const;
+				Fn p = null;
+				toMember(p, fn);
+				return (first->*p)();
+			}
+
+			template <class T>
+			struct Prepend {
+				typedef Params1<T> T;
+			};
+		};
+
+
+		template <class ParPack>
+		struct ExpandPack {
+			typedef typename ExpandPack<typename ParPack::PrevType>::T::Prepend<typename ParPack::HereType>::T T;
+		};
+
+		template <>
+		struct ExpandPack<Param<void, void>> {
+			typedef Params0 T;
+		};
+
+		template <class Result, class First, class All>
+		struct CallHelpI {
+			static Result call(const void *fn, bool member, void *first, void **params) {
+				return ExpandPack<All>::T::call<Result>(fn, first, params);
+			}
+		};
+
+		template <class Result, class First, class All>
+		struct CallHelpI<Result, First *, All> {
+			static Result call(const void *fn, bool member, void *first, void **params) {
+				if (member) {
+					return ExpandPack<typename All::PrevType>::T
+						::callMember<Result, First>(fn, *(First **)first, params);
+				}
+
+				return ExpandPack<All>::T::call<Result>(fn, first, params);
+			}
+		};
+
+		template <class Result, class Par>
+		struct CallHelp {
+			static void call(const void *fn, bool member, void *first, void **params, void *result) {
+				new (storm::Place(result)) Result(
+					CallHelpI<Result, typename Par::HereType, Par>::call(fn, member, first, params));
+			}
+		};
+
+		template <class Result>
+		struct CallHelp<Result, Param<void, void>> {
+			static void call(const void *fn, bool member, void *first, void **params, void *result) {
+				new (storm::Place(result)) Result(
+					CallHelpI<Result, void, Param<void, void>>::call(fn, member, first, params));
+			}
+		};
+
+		template <class Par>
+		struct CallHelp<void, Par> {
+			static void call(const void *fn, bool member, void *first, void **params, void *result) {
+				CallHelpI<void, typename Par::HereType, Par>::call(fn, member, first, params);
+			}
+		};
+
+		template <>
+		struct CallHelp<void, Param<void, void>> {
+			static void call(const void *fn, bool member, void *first, void **params, void *result) {
+				CallHelpI<void, void, Param<void, void>>::call(fn, member, first, params);
+			}
+		};
+
+		template <class Result, class Par>
+		void call(const void *fn, bool member, void **params, void *first, void *result) {
+			member = memberCall(member, fn);
+
+			void *firstParam;
+			if (first) {
+				firstParam = &first;
+			} else {
+				firstParam = params[0];
+				params = params + 1;
+			}
+
+			CallHelp<Result, Par>::call(fn, member, firstParam, params, result);
+		}
+
+#endif
+
 		/**
 		 * Platform specific implementations:
 		 */
@@ -218,6 +463,17 @@ namespace os {
 			// its assumptions that 'this' pointers are not null and may thus crash 'too early' in
 			// some cases.
 			return member && (size_t(fn) & 0x1);
+		}
+
+#elif defined(VISUAL_STUDIO) && defined(WINDOWS) && defined(X64)
+
+		template <class R>
+		void toMember(R &to, const void *from) {
+			to = asMemberPtr<R>(from);
+		}
+
+		inline bool memberCall(bool member, const void *fn) {
+			return member;
 		}
 
 #else

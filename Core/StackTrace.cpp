@@ -78,7 +78,7 @@ namespace storm {
 
 		void init(size_t count) {
 			if (count > 0)
-				result.reserve(count);
+				result.reserve(Nat(count));
 		}
 
 		void put(const StackFrame &frame) {

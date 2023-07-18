@@ -6,7 +6,8 @@ namespace code {
 		STORM_PKG(core.asm.x64);
 
 		/**
-		 * Arena for X86-64 (TODO: factor windows/unix versions of this one!)
+		 * Arena for X86-64. Use WindowsArena or PosixArena for different flavours of the 64-bit
+		 * arena.
 		 */
 		class Arena : public code::Arena {
 			STORM_CLASS;
@@ -43,6 +44,22 @@ namespace code {
 			virtual Nat STORM_FN firstParamId(MAYBE(TypeDesc *) desc);
 			virtual Operand STORM_FN firstParamLoc(Nat id);
 			virtual Reg STORM_FN functionDispatchReg();
+		};
+
+
+		class WindowsArena : public Arena {
+			STORM_CLASS;
+		public:
+			// Create.
+			STORM_CTOR WindowsArena();
+		};
+
+
+		class PosixArena : public Arena {
+			STORM_CLASS;
+		public:
+			// Create.
+			STORM_CTOR PosixArena();
 		};
 
 	}

@@ -20,7 +20,7 @@ public:
 		if (lookup.count(v->name))
 			throw Error(L"The name " + toS(v->name) + L" is defined twice!", v->pos);
 
-		lookup.insert(make_pair(v->name, order.size()));
+		lookup.insert(make_pair(v->name, nat(order.size())));
 		order.push_back(v);
 	}
 
@@ -37,7 +37,7 @@ public:
 
 	// Total number of elements.
 	nat size() const {
-		return order.size();
+		return nat(order.size());
 	}
 
 	// Access elements.

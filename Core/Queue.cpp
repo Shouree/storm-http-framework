@@ -32,7 +32,7 @@ namespace storm {
 		if (n == 0)
 			return;
 
-		Nat oldCap = data ? data->count : 0;
+		Nat oldCap = data ? Nat(data->count) : 0;
 		if (oldCap >= n)
 			return;
 
@@ -84,16 +84,16 @@ namespace storm {
 
 		head++;
 		if (head >= data->count)
-			head -= data->count;
+			head -= Nat(data->count);
 		data->filled--;
 	}
 
 	void QueueBase::pushRaw(const void *elem) {
 		ensure(count() + 1);
 
-		Nat to = head + data->filled;
+		Nat to = head + Nat(data->filled);
 		if (to >= data->count)
-			to -= data->count;
+			to -= Nat(data->count);
 		handle.safeCopy(ptr(to), elem);
 		data->filled++;
 	}
@@ -155,7 +155,7 @@ namespace storm {
 		}
 		Nat i = owner->head + index;
 		if (i >= owner->data->count)
-			i -= owner->data->count;
+			i -= Nat(owner->data->count);
 		return owner->ptr(i);
 	}
 

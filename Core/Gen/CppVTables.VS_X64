@@ -1,0 +1,9 @@
+.data
+
+; // VS_X64_DECL
+
+.code
+
+; // VS_X64_IMPL
+	
+end

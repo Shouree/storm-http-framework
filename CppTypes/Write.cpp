@@ -81,10 +81,11 @@ void generateFile(const Path &src, const Path &dest, const GenerateMap &actions,
 	try {
 		while (read->more()) {
 			String line = read->getLine();
+
 			write->put(line);
 			write->put(endl);
 
-			nat pos = line.find(L"// ");
+			size_t pos = line.find(L"// ");
 			if (pos != String::npos) {
 				String part = line.substr(pos + 3);
 				String indent = findIndentation(line);
@@ -134,10 +135,10 @@ void generateDoc(const Path &out, World &world) {
 
 	// Offset the indexes to make room for the table itself.
 	for (nat i = 0; i < index.size(); i++)
-		index[i] += sizeof(nat)*index.size();
+		index[i] += nat(sizeof(nat)*index.size());
 
 	// Write everything to file.
 	FileStream file(out, Stream::mWrite);
-	file.write(sizeof(nat)*index.size(), &index[0]);
+	file.write(nat(sizeof(nat)*index.size()), &index[0]);
 	file.write(&data);
 }

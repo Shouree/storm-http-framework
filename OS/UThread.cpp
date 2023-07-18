@@ -904,10 +904,81 @@ namespace os {
 		return address(&doEndDetour);
 	}
 
+#elif defined(VISUAL_STUDIO) && defined(X64)
+
+	void UThreadData::initStack() {
+		// Not necessary on X64.
+	}
+
+	void UThreadData::updateOwner(UThreadState *state) {
+		// Not necessary on X64.
+		(void)state;
+	}
+
+	static void *&stackPtr(Stack &stack) {
+		return stack.desc->low;
+	}
+
+	void UThreadData::push(void *v) {
+		void **esp = (void **)stackPtr(stack);
+		*--esp = v;
+		stackPtr(stack) = esp;
+	}
+
+	void UThreadData::push(uintptr_t v) {
+		void **esp = (void **)stackPtr(stack);
+		*--esp = (void *)v;
+		stackPtr(stack) = esp;
+	}
+
+	void UThreadData::push(intptr_t v) {
+		void **esp = (void **)stackPtr(stack);
+		*--esp = (void *)v;
+		stackPtr(stack) = esp;
+	}
+
+	void UThreadData::pushContext(const void *fn) {
+		pushContext(fn, null);
+	}
+
+	void UThreadData::pushContext(const void *fn, void *param) {
+		TODO(L"FIXME!");
+	}
+
+	// Logical location where thread switches are made. Used to get good backtraces.
+	// Note: This is a label in asm, so the interesting thing about this is its address.
+	extern "C" char doSwitchReturnLoc;
+
+	StackDesc *UThreadData::pushSubContext(const void *fn, void *param) {
+		StackDesc *old = stack.desc;
+
+		TODO(L"FIXME!");
+
+		return old;
+	}
+
+	void UThreadData::restoreContext(StackDesc *desc) {
+		atomicWrite(stack.desc, (StackDesc *)desc);
+	}
+
+	// Called from UThreadX64.S
+	extern "C" void doEndDetour2(void **result) {
+		UThreadState::current()->endDetour(result);
+	}
+
+	extern "C" void doEndDetour();
+	extern "C" void doEndDetourMember();
+
+	static const void *endDetourFn(bool member) {
+		return member
+			? address(doEndDetourMember)
+			: address(doEndDetour);
+	}
+
 #elif defined(GCC) && defined(X64)
 
 	void UThreadData::initStack() {
-		// Not necessary on ARM.
+		// Not necessary on X64.
 	}
 
 	void UThreadData::updateOwner(UThreadState *state) {

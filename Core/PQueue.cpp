@@ -84,7 +84,7 @@ namespace storm {
 
 		n++; // We need an additional element for swap space during heap operations.
 
-		Nat oldCap = data ? data->count : 0;
+		Nat oldCap = data ? Nat(data->count) : 0;
 		if (oldCap >= n)
 			return;
 

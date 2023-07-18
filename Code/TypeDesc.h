@@ -148,11 +148,11 @@ namespace code {
 
 		Primitive &STORM_FN at(Nat id) {
 			if (id >= v->count)
-				throw new (this) storm::ArrayError(id, v->count);
+				throw new (this) storm::ArrayError(id, Nat(v->count));
 			return v->v[id];
 		}
 		Nat STORM_FN count() const {
-			return v->count;
+			return Nat(v->count);
 		}
 
 		// Sort primitives.

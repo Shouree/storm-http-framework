@@ -85,9 +85,6 @@ public:
 
 	// Split string.
 	vector<String> split(const String &delim) const;
-
-	// Redefine npos, since sizeof(nat) may not be equal to sizeof(size_t)
-	static const nat npos = -1;
 };
 
 inline String operator +(const String &a, const wchar_t *b) {

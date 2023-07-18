@@ -76,7 +76,7 @@ namespace code {
 	};
 
 	static void clear(GcArray<Param> *array) {
-		for (Nat i = array->filled; i < array->count; i++)
+		for (size_t i = array->filled; i < array->count; i++)
 			array->v[i].clear();
 	}
 
@@ -145,7 +145,7 @@ namespace code {
 		stackSize = roundUp(stackSize, param.size().align64());
 
 		if (!stackPar || stackPar->count == stackPar->filled) {
-			Nat newSize = stackPar ? stackPar->filled * 2 : 10;
+			Nat newSize = stackPar ? Nat(stackPar->filled) * 2 : 10;
 			GcArray<StackParam> *copy = runtime::allocArray<StackParam>(engine(), &stackParamType, newSize);
 			copy->filled = 0;
 			if (stackPar) {

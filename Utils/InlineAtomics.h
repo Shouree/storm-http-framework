@@ -116,6 +116,10 @@ inline void *atomicCAS(void *volatile &v, void *compare, void *exchange) {
 	return (void *)_InterlockedCompareExchange64((volatile LONG64 *)&v, (LONG64)exchange, (LONG64)compare);
 }
 
+inline nat atomicCAS(volatile nat &v, nat compare, nat exchange) {
+	return _InterlockedCompareExchange((volatile LONG *)&v, exchange, compare);
+}
+
 #else
 
 inline size_t atomicIncrement(volatile size_t &v) {
@@ -216,9 +220,9 @@ extern "C" void asm64_unalignedWrite(volatile size_t &v, size_t value);
 extern "C" void asm64_shortUnalignedWrite(volatile nat &v, nat value);
 
 // Need to be implemented in ASM files: inline ASM is not supported in 64-bit mode.
-size_t unalignedAtomicRead(volatile const size_t &v) { return asm64_unalignedRead(v); }
-void unalignedAtomicWrite(volatile size_t &v, size_t value) { return asm64_unalignedWrite(v, value); }
-void shortUnalignedAtomicWrite(volatile nat &v, nat value) { return asm64_shortUnalignedWrite(v, value); }
+inline size_t unalignedAtomicRead(volatile const size_t &v) { return asm64_unalignedRead(v); }
+inline void unalignedAtomicWrite(volatile size_t &v, size_t value) { return asm64_unalignedWrite(v, value); }
+inline void shortUnalignedAtomicWrite(volatile nat &v, nat value) { return asm64_shortUnalignedWrite(v, value); }
 
 #endif
 

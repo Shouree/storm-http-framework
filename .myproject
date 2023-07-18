@@ -253,10 +253,16 @@ docName=doc
 preBuild+=<execpath|stormpp> <stormProvides> <stormppUses*stormUses> --template ../Core/Gen/CppTypes.cpp --out Gen/CppTypes.cpp --asm <stormppAsmTemplate> <stormppAsmOut> --doc <path|packagePath><docName> <stormppUsing*stormUsingNamespace> <stormppFlags>
 preBuildCreates+=Gen/CppTypes.cpp
 
-[stormpp,windows]
+[stormpp,windows,!64]
 stormppAsmTemplate=../Core/Gen/CppVTables.VS_X86
 stormppAsmOut=Gen/CppVTables.asm
 preBuildCreates+=Gen/CppVTables.asm
+
+[stormpp,windows,64]
+stormppAsmTemplate=../Core/Gen/CppVTables.VS_X64
+stormppAsmOut=Gen/CppVTables.asm64
+preBuildCreates+=Gen/CppVTables.asm64
+
 
 [stormpp,unix]
 stormppAsmTemplate=../Core/Gen/CppVTables.GCC

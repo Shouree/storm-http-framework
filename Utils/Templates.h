@@ -72,6 +72,19 @@ struct IsPointer<T *> {
 	enum { value = true };
 };
 
+/**
+ * Remove pointer (if any)
+ */
+template <class D>
+struct Dereference {
+	typedef D T;
+};
+
+template <class D>
+struct Dereference<D *> {
+	typedef D T;
+};
+
 
 /**
  * Is the type void?

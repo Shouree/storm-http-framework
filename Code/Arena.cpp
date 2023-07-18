@@ -82,9 +82,13 @@ namespace code {
 	Arena *arena(EnginePtr e) {
 		return new (e.v) x86::Arena();
 	}
+#elif defined(X64) && defined(WINDOWS)
+	Arena *arena(EnginePtr e) {
+		return new (e.v) x64::WindowsArena();
+	}
 #elif defined(X64) && defined(POSIX)
 	Arena *arena(EnginePtr e) {
-		return new (e.v) x64::Arena();
+		return new (e.v) x64::PosixArena();
 	}
 #elif defined(ARM64) && defined(POSIX)
 	Arena *arena(EnginePtr e) {

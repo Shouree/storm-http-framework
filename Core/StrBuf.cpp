@@ -120,7 +120,7 @@ namespace storm {
 	StrBuf::StrBuf(Str *src) {
 		clear();
 		buf = copyBuf(src->data);
-		pos = buf->count;
+		pos = Nat(buf->count);
 	}
 
 	void StrBuf::deepCopy(CloneEnv *env) {
@@ -155,7 +155,7 @@ namespace storm {
 		if (!lastNewline())
 			return;
 
-		Nat iLen = indentStr->charCount();
+		Nat iLen = Nat(indentStr->charCount());
 		Nat iTot = iLen * indentation;
 		ensure(pos + iTot);
 
@@ -215,7 +215,7 @@ namespace storm {
 	StrBuf *StrBuf::add(const wchar *data) {
 		Nat len = 0;
 		Nat points = 0;
-		Nat iLen = indentStr->charCount();
+		Nat iLen = Nat(indentStr->charCount());
 		Nat iTot = iLen * indentation;
 
 		// Compute the length.
@@ -507,7 +507,7 @@ namespace storm {
 	void StrBuf::ensure(Nat capacity) {
 		Nat curr = 0;
 		if (buf)
-			curr = buf->count - 1;
+			curr = Nat(buf->count) - 1;
 
 		if (curr >= capacity)
 			return;

@@ -132,7 +132,7 @@ namespace storm {
 		GcWatch *watch;
 
 		// Our capacity.
-		inline nat capacity() const { return info ? info->count : 0; }
+		inline nat capacity() const { return info ? nat(info->count) : 0; }
 
 		// Get locations for keys or values.
 		inline void *keyPtr(nat id) { return key->v + id*keyT.size; }

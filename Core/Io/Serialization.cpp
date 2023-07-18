@@ -506,7 +506,7 @@ namespace storm {
 
 		// Check so that we are not over capacity.
 		Type *type = actual->info->type;
-		checkAllocSize(runtime::typeGc(type)->stride);
+		checkAllocSize(Nat(runtime::typeGc(type)->stride));
 
 		// Allocate the object and deserialize by calling the constructor, just like we do with value types.
 		Object *created = (Object *)runtime::allocObject(0, type);

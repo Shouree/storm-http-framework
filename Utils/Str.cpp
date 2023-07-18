@@ -8,7 +8,7 @@
 #ifdef WINDOWS
 
 String::String(const char *chars) {
-	nat size = strlen(chars);
+	nat size = nat(strlen(chars));
 	// Allocate memory for the worst case.
 	nat bufferSize = size * 2 + 1;
 	wchar *outBuffer = new wchar[bufferSize];
@@ -25,11 +25,11 @@ String::String(const char *chars) {
 
 std::string String::toChar() const {
 	// Worst case is 4 chars per wchar in UTF-8
-	nat bufferSize = size() * 4 + 1;
+	nat bufferSize = nat(size() * 4 + 1);
 	char *outBuffer = new char[bufferSize];
 	outBuffer[0] = 0;
 
-	int count = WideCharToMultiByte(CP_UTF8, 0, data(), size(), outBuffer, bufferSize - 1, NULL, NULL);
+	int count = WideCharToMultiByte(CP_UTF8, 0, data(), nat(size()), outBuffer, bufferSize - 1, NULL, NULL);
 	assert(count >= 0);
 	outBuffer[count] = 0;
 
@@ -99,8 +99,9 @@ String String::left(size_t size) const {
 }
 
 String String::right(size_t size) const {
-	nat start = 0;
-	if (size < this->size()) start = this->size() - size;
+	size_t start = 0;
+	if (size < this->size())
+		start = this->size() - size;
 	return String(*this, start);
 }
 
@@ -118,8 +119,9 @@ bool String::startsWith(const String &str) const {
 }
 
 bool String::endsWith(const String &str) const {
-	if (size() < str.size()) return false;
-	nat delta = size() - str.size();
+	if (size() < str.size())
+		return false;
+	size_t delta = size() - str.size();
 	const wchar_t *ourStart = c_str() + delta;
 	return wcscmp(ourStart, str.c_str()) == 0;
 }
@@ -130,7 +132,7 @@ bool String::startsWithNC(const String &str) const {
 
 bool String::endsWithNC(const String &str) const {
 	if (size() < str.size()) return false;
-	nat delta = size() - str.size();
+	size_t delta = size() - str.size();
 	const wchar_t *ourStart = c_str() + delta;
 	return wcscasecmp(ourStart, str.c_str()) == 0;
 }
@@ -174,7 +176,7 @@ String String::toLower() const {
 String String::trim() const {
 	if (size() == 0) return L"";
 
-	nat start = 0, end = size() - 1;
+	size_t start = 0, end = size() - 1;
 	for (start = 0; start < size(); start++) {
 		if (!isspace((*this)[start])) break;
 	}
@@ -195,8 +197,8 @@ vector<String> String::split(const String &delim) const {
 vector<String> split(const String &str, const String &delimiter) {
 	vector<String> r;
 
-	nat start = 0;
-	nat end = str.find(delimiter);
+	size_t start = 0;
+	size_t end = str.find(delimiter);
 	while (end != String::npos) {
 		r.push_back(str.substr(start, end - start));
 
@@ -416,7 +418,7 @@ String String::escape(wchar_t c) {
 	}
 }
 
-static nat firstParameterEnd(const String &str) {
+static size_t firstParameterEnd(const String &str) {
 	bool content = false;
 	bool inString = false;
 	bool lastQuoted = false;
@@ -448,7 +450,7 @@ static nat firstParameterEnd(const String &str) {
 }
 
 String String::firstParam() const {
-	nat end = firstParameterEnd(*this);
+	size_t end = firstParameterEnd(*this);
 
 	String toReturn = left(end).trim();
 
@@ -459,7 +461,7 @@ String String::firstParam() const {
 }
 
 String String::restParams() const {
-	nat end = firstParameterEnd(*this);
+	size_t end = firstParameterEnd(*this);
 
 	if (end == size())
 		return L"";

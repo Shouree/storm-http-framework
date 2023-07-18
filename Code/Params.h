@@ -149,7 +149,7 @@ namespace code {
 
 		// Get number of registers.
 		Nat STORM_FN registerCount() const {
-			return regs ? regs->filled : 0;
+			return regs ? Nat(regs->filled) : 0;
 		}
 
 		// Get register to store part of data inside. The register size indicates the size of the data.
@@ -225,7 +225,7 @@ namespace code {
 
 		// Get the total number of elements on the stack.
 		Nat STORM_FN stackCount() const {
-			return stackPar ? stackPar->filled : 0;
+			return stackPar ? Nat(stackPar->filled) : 0;
 		}
 
 		// Get stack element number 'n'.
@@ -254,14 +254,14 @@ namespace code {
 
 		// Total number of registers to examine.
 		Nat STORM_FN registerCount() const {
-			return integer->count + real->count;
+			return Nat(integer->count + real->count);
 		}
 
 		// Get the contents of a register. Might be empty.
 		Param STORM_FN registerParam(Nat n) const {
 			if (n < integer->count)
 				return integer->v[n];
-			n -= integer->count;
+			n -= Nat(integer->count);
 			if (n < real->count)
 				return real->v[n];
 			return Param();

@@ -6,7 +6,7 @@ namespace storm {
 
 	struct GcBitset : private GcArray<byte> {
 		inline nat count() const {
-			return filled;
+			return nat(filled);
 		}
 
 		inline bool has(nat bit) const {

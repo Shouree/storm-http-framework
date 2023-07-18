@@ -12,7 +12,7 @@ namespace storm {
 
 		const Nat invalid = -1;
 
-#if defined(VISUAL_STUDIO) && defined(X86)
+#if defined(VISUAL_STUDIO) && (defined(X86) || defined(X64))
 
 		// Visual Studio stores something at offset -1, so we use -2!
 		const Nat extraOffset = 2;

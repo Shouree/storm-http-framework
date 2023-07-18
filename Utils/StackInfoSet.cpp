@@ -23,7 +23,7 @@ int StackInfoSet::attach(const StackInfo &lookup) {
 	for (size_t i = 0; i < data.size(); i++) {
 		if (!data[i]) {
 			data[i] = &lookup;
-			return i;
+			return int(i);
 		}
 	}
 
@@ -63,7 +63,7 @@ int StackInfoSet::translate(void *ip, void *&fnBase, int &offset) {
 	for (size_t i = data.size(); i > 0; i--) {
 		if (data[i - 1])
 			if (data[i - 1]->translate(ip, fnBase, offset))
-				return i - 1;
+				return int(i) - 1;
 	}
 
 	// The C++ backend will do just fine. We should not get here though.

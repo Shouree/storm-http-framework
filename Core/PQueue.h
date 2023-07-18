@@ -53,7 +53,7 @@ namespace storm {
 		const Handle &handle;
 
 		// Get size.
-		virtual Nat STORM_FN count() const { return data ? data->filled : 0; }
+		virtual Nat STORM_FN count() const { return data ? Nat(data->filled) : 0; }
 
 		// Reserve space for 'count' elements.
 		virtual void STORM_FN reserve(Nat count);

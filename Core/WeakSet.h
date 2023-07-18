@@ -78,7 +78,7 @@ namespace storm {
 		Nat STORM_FN countMaxChain() const;
 
 		// Get the current capacity.
-		inline Nat STORM_FN capacity() const { return info ? info->count : 0; }
+		inline Nat STORM_FN capacity() const { return info ? Nat(info->count) : 0; }
 
 	private:
 		// Number of slots that are currently occupied. This may decrease during the next rehash.

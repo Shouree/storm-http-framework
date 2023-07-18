@@ -32,7 +32,7 @@ Path::Path(const String &path) : isDirectory(false) {
 Path::Path() : isDirectory(false) {}
 
 void Path::parseStr(const String &str) {
-	nat numPaths = std::count(str.begin(), str.end(), '\\');
+	size_t numPaths = std::count(str.begin(), str.end(), '\\');
 	numPaths += std::count(str.begin(), str.end(), '/');
 	parts.reserve(numPaths + 1);
 
@@ -136,7 +136,7 @@ String Path::title() const {
 
 String Path::titleNoExt() const {
 	String t = title();
-	nat last = t.rfind('.');
+	size_t last = t.rfind('.');
 	return t.substr(0, last);
 }
 
@@ -147,7 +147,7 @@ bool Path::hasExt(const String &ext) const {
 
 String Path::ext() const {
 	String t = title();
-	nat p = t.rfind('.');
+	size_t p = t.rfind('.');
 	if (p == String::npos)
 		return L"";
 	else
@@ -211,7 +211,7 @@ bool Path::isSubPath(const Path &other) const {
 }
 
 void Path::common(const Path &path) {
-	nat to = min(parts.size(), path.parts.size());
+	size_t to = min(parts.size(), path.parts.size());
 	for (nat i = 0; i < to; i++) {
 		if (parts[i] != path.parts[i]) {
 			to = i;

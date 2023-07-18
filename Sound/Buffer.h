@@ -20,10 +20,10 @@ namespace sound {
 		STORM_CTOR Buffer();
 
 		// Number of bytes in total.
-		inline Nat STORM_FN count() const { return data ? data->count : 0; }
+		inline Nat STORM_FN count() const { return data ? Nat(data->count) : 0; }
 
 		// Number of bytes containing valid data. Constrains 'filled' to not be larger than 'count'.
-		inline Nat STORM_FN filled() const { return data ? data->filled : 0; }
+		inline Nat STORM_FN filled() const { return data ? Nat(data->filled) : 0; }
 		inline void STORM_FN filled(Nat p) { if (data) data->filled = min(p, count()); }
 
 		// Element access.

@@ -82,7 +82,7 @@ namespace storm {
 			Nat toRead = min(to.free(), filled);
 			if (readPos + toRead > data->count) {
 				// Need two memcpy.
-				Nat first = data->count - readPos;
+				Nat first = Nat(data->count) - readPos;
 				memcpy(to.dataPtr() + to.filled(), data->v + readPos, first);
 				memcpy(to.dataPtr() + to.filled() + first, data->v, toRead - first);
 			} else {
@@ -95,7 +95,7 @@ namespace storm {
 				filled -= toRead;
 				readPos += toRead;
 				if (readPos >= data->count)
-					readPos -= data->count;
+					readPos -= Nat(data->count);
 
 				// Now we can write more data!
 				waitWrite->set();
@@ -131,7 +131,7 @@ namespace storm {
 
 			Nat tail = readPos + filled;
 			if (tail >= data->count)
-				tail -= data->count;
+				tail -= Nat(data->count);
 
 			// Take wrapping into account.
 			toWrite = min(Nat(data->count) - tail, toWrite);

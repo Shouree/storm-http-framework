@@ -452,7 +452,7 @@ static void genFnParams(wostream &to, World &w) {
 			continue;
 
 
-		nat params = f.params.size();
+		size_t params = f.params.size();
 
 		String name = f.name.last();
 		if (name == L"operator ++" || name == L"operator --")
@@ -892,7 +892,7 @@ static void outputStr(wostream &to, const String &str) {
 	while (start < str.size() && str[start] == '\n')
 		start++;
 
-	nat end = str.size();
+	size_t end = str.size();
 	while (end > start && str[end-1] == '\n')
 		end--;
 
@@ -1017,8 +1017,8 @@ static String vsVTableName(const CppName &typeName) {
 
 	r << L"??_7";
 
-	nat last = typeName.size();
-	for (nat i = typeName.size(); i > 0; i--) {
+	size_t last = typeName.size();
+	for (size_t i = typeName.size(); i > 0; i--) {
 		if (typeName[i-1] != ':')
 			continue;
 
@@ -1052,6 +1052,31 @@ static void genVsX86Impl(wostream &to, World &w) {
 		String sName = stormVTableName(t.name);
 		to << sName << L" proc\n";
 		to << L"\tmov eax, " << vsVTableName(t.name) << L"\n";
+		to << L"\tret\n";
+		to << sName << L" endp\n\n";
+	}
+}
+
+static void genVsX64Decl(wostream &to, World &w) {
+	for (nat i = 0; i < w.types.size(); i++) {
+		const Type &t = *w.types[i];
+		if (!hasVTable(t))
+			continue;
+
+		to << vsVTableName(t.name) << L" proto\n";
+		to << stormVTableName(t.name) << L" proto\n\n";
+	}
+}
+
+static void genVsX64Impl(wostream &to, World &w) {
+	for (nat i = 0; i < w.types.size(); i++) {
+		const Type &t = *w.types[i];
+		if (!hasVTable(t))
+			continue;
+
+		String sName = stormVTableName(t.name);
+		to << sName << L" proc\n";
+		to << L"\tmov rax, " << vsVTableName(t.name) << L"\n";
 		to << L"\tret\n";
 		to << sName << L" endp\n\n";
 	}
@@ -1125,6 +1150,8 @@ GenerateMap asmMap() {
 	static E e[] = {
 		{ L"VS_X86_DECL", &genVsX86Decl },
 		{ L"VS_X86_IMPL", &genVsX86Impl },
+		{ L"VS_X64_DECL", &genVsX64Decl },
+		{ L"VS_X64_IMPL", &genVsX64Impl },
 		{ L"GCC_X64", &genGccX64 },
 		{ L"GCC_ARM64", &genGccArm64 },
 	};

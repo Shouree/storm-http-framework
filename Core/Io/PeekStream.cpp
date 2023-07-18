@@ -78,7 +78,7 @@ namespace storm {
 		if (!lookahead)
 			return 0;
 
-		return lookahead->filled - lookaheadStart;
+		return Nat(lookahead->filled) - lookaheadStart;
 	}
 
 	Nat PeekIStream::doLookahead(Nat bytes) {
@@ -111,7 +111,7 @@ namespace storm {
 		}
 
 		// We need to re-allocate...
-		Nat preserve = lookahead->filled - lookaheadStart;
+		Nat preserve = Nat(lookahead->filled) - lookaheadStart;
 		GcArray<byte> *t = runtime::allocArray<byte>(engine(), &bufType, n);
 		t->filled = preserve;
 		memcpy(t->v, lookahead->v + lookaheadStart, preserve);

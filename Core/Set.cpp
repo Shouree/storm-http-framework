@@ -41,7 +41,7 @@ namespace storm {
 		if (keyT.deepCopyFn) {
 			for (size_t i = 0; i < capacity(); i++) {
 				if (info->v[i].status != Info::free) {
-					(*keyT.deepCopyFn)(keyPtr(i), env);
+					(*keyT.deepCopyFn)(keyPtr(Nat(i)), env);
 				}
 			}
 		}
