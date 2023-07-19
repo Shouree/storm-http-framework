@@ -941,8 +941,37 @@ namespace os {
 		pushContext(fn, null);
 	}
 
+	extern "C" void doStartThread();
+
 	void UThreadData::pushContext(const void *fn, void *param) {
-		TODO(L"FIXME!");
+		push((void *)0); // alignment (X64 does not like when esp is at the absolute top of the stack)
+		push((void *)0); // alignment
+
+		push((void *)doStartThread); // Return to.
+		push((void *)0); // rbp
+		push((void *)fn); // rbx
+		push((void *)param); // rdi
+		push((void *)0); // rsi
+		push((void *)0); // r12
+		push((void *)0); // r13
+		push((void *)0); // r14
+		push((void *)0); // r15
+
+		push((void *)0); // alignment
+
+		for (size_t i = 0; i < 10; i++) {
+			push((void *)0); // XMM register
+			push((void *)0); // 2 words
+		}
+
+		push((void *)0); // alignment
+
+		push(stack.desc->high);
+		push(stack.desc->dummy);
+		push(stack.desc->low);
+
+		// Set the 'desc' of 'stack' to the actual stack pointer, so that we can run code on this stack.
+		atomicWrite(stack.desc, (StackDesc *)(stack.desc->low));
 	}
 
 	// Logical location where thread switches are made. Used to get good backtraces.
@@ -969,6 +998,7 @@ namespace os {
 	extern "C" void doEndDetour();
 
 	static const void *endDetourFn(bool member) {
+		TODO(L"Fix detours!");
 		return address(doEndDetour);
 	}
 

@@ -1,13 +1,113 @@
-
 doSwitch PROTO
+doEndDetour PROTO
+doStartThread PROTO
 
 .code
 
-doSwitch proc
+	;; Parameters:
+	;; rcx, rdx, r8, r9
 
+	;; Needs preservation:
+	;; rbx, rbp, rdi, rsi, rsp, r12, r13, r14, r15
+	;; xmm6 - xmm15
+
+doSwitch proc frame
+	;; "newDesc": rcx
+	;; "oldDesc": rdx
+
+	;; Prolog, we simply preserve all registers.
+	push rbp
+	.pushreg rbp
+	mov rbp, rsp
+
+	push rbx
+	.pushreg rbx
+	push rdi
+	.pushreg rdi
+	push rsi
+	.pushreg rsi
+	push r12
+	.pushreg r12
+	push r13
+	.pushreg r13
+	push r14
+	.pushreg r14
+	push r15
+	.pushreg r15
+	;; We need space for:
+	;; 10 xmm registers (16 bytes each)
+	;; 3 words for the stack desc
+	;; Note: We push 8 words above, so we need one wasted before XMM, and one wasted before the desc.
+	sub rsp, 0C8h
+	.allocstack 0C8h
+	.endprolog
+
+	;; Store xmm registers.
+	movaps [rsp+0B0h], xmm6
+	movaps [rsp+0A0h], xmm7
+	movaps [rsp+090h], xmm8
+	movaps [rsp+080h], xmm9
+	movaps [rsp+070h], xmm10
+	movaps [rsp+060h], xmm11
+	movaps [rsp+050h], xmm12
+	movaps [rsp+040h], xmm13
+	movaps [rsp+030h], xmm14
+	movaps [rsp+020h], xmm15
+
+	;; Store stack limits
+	mov rax, gs:[8h]
+	mov [rsp+10h], rax
+	mov rax, gs:[10h]
+	mov [rsp+08h], rax
+	mov [rsp+00h], rsp
+
+	;; Report the state for the old thread.
+	mov [rdx], rsp
+
+	;; Switch to the new stack.
+	mov rsp, [rcx]
+
+doSwitchReturnLoc:
+
+	;; Restore state.
+	mov rax, [rsp+10h]
+	mov gs:[8h], rax
+	mov rax, [rsp+08h]
+	mov gs:[10h], rax
+
+	;; xmm registers.
+	movaps xmm6, [rsp+0B0h]
+	movaps xmm7, [rsp+0A0h]
+	movaps xmm8, [rsp+090h]
+	movaps xmm9, [rsp+080h]
+	movaps xmm10, [rsp+070h]
+	movaps xmm11, [rsp+060h]
+	movaps xmm12, [rsp+050h]
+	movaps xmm13, [rsp+040h]
+	movaps xmm14, [rsp+030h]
+	movaps xmm15, [rsp+020h]
+
+	;; Epilog. Bonus: restores clobbered registers.
+	add rsp, 0C8h
+	pop r15
+	pop r14
+	pop r13
+	pop r12
+	pop rsi
+	pop rdi
+	pop rbx
+	pop rbp
 	ret
 
 doSwitch endp
+
+doStartThread proc
+	;; Trampoline to fix stack alignment when starting threads.
+	;; Stack is currently aligned at even boundary. We need to have it at an odd when we reach 'fn'.
+	push 0
+	mov rcx, rdi 		; This is the convention from 'pushContext'.
+	jmp rbx
+doStartThread endp
 
 doEndDetour proc
 
