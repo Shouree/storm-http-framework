@@ -4,14 +4,23 @@
 
 output=Gc<gcSuffix>
 
-[storm_debug]
+[storm_debug,!64]
 buildDir=build<gcSuffix>/
 
-[storm_release]
+[storm_release,!64]
 buildDir=release<gcSuffix>/
 
-[storm_slow]
+[storm_slow,!64]
 buildDir=slow<gcSuffix>/
+
+[storm_debug,64]
+buildDir=build<gcSuffix>64/
+
+[storm_release,64]
+buildDir=release<gcSuffix>64/
+
+[storm_slow,64]
+buildDir=slow<gcSuffix>64/
 
 [mps]
 define+=STORM_GC=STORM_GC_MPS
