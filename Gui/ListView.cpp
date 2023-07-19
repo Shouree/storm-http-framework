@@ -263,7 +263,7 @@ namespace gui {
 	void ListView::multiSelect(Bool v) {
 		multiSel = v;
 		if (created()) {
-			LONG_PTR old = GetWindowLong(handle().hwnd(), GWL_STYLE);
+			LONG old = GetWindowLong(handle().hwnd(), GWL_STYLE);
 			if (multiSel)
 				old &= ~LVS_SINGLESEL;
 			else

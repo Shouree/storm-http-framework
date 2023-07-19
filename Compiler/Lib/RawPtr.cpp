@@ -140,7 +140,7 @@ namespace storm {
 			return 0;
 
 		const GcType *t = runtime::gcTypeOf(ptr);
-		return t->stride;
+		return Nat(t->stride);
 	}
 
 	// To make the calling convention behave correctly.

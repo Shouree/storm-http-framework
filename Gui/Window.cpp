@@ -307,7 +307,7 @@ namespace gui {
 				return msgResult(0);
 			break;
 		case WM_CHAR:
-			if (onChar(msg.wParam))
+			if (onChar(Nat(msg.wParam)))
 				return msgResult(0);
 			break;
 		}

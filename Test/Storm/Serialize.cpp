@@ -86,10 +86,10 @@ BEGIN_TEST(SerializeLimits, BS) {
 } END_TEST
 
 static void deserializeBuffer(byte *data, size_t size) {
-	Buffer b = buffer(gEngine(), size);
-	for (size_t i = 0; i < size; i++)
+	Buffer b = buffer(gEngine(), Nat(size));
+	for (Nat i = 0; i < size; i++)
 		b[i] = data[i];
-	b.filled(size);
+	b.filled(Nat(size));
 
 	runFn<void>(S("tests.bs.deserializeBuffer"), b);
 }

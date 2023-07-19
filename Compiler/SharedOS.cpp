@@ -113,7 +113,7 @@ namespace storm {
 		for (Nat i = 0; i < nameCount; i++) {
 			if (!seekSection(src, names[i], sections, sectionCount))
 				return false;
-			char *data = read<char>(src, findSize + 1);
+			char *data = read<char>(src, Nat(findSize + 1));
 			if (!data)
 				return false;
 

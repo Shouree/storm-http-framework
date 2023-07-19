@@ -39,7 +39,7 @@ namespace sound {
 
 	Buffer fullBuffer(GcArray<Float> *data) {
 		Buffer r(data);
-		r.filled(data->count);
+		r.filled(Nat(data->count));
 		return r;
 	}
 

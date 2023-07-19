@@ -26,7 +26,7 @@ namespace ssl {
 	WinSSLCert *WinSSLCert::fromPEM(Str *data) {
 		std::vector<BYTE> raw(decodeBase64(data));
 
-		const CERT_CONTEXT *c = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, &raw[0], raw.size());
+		const CERT_CONTEXT *c = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, &raw[0], DWORD(raw.size()));
 		if (!c)
 			throwError(data->engine(), S("Failed to decode certificate data: "), GetLastError());
 
@@ -76,12 +76,12 @@ namespace ssl {
 
 		DWORD size = 0;
 		if (!CryptDecodeObjectEx(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, PKCS_RSA_PRIVATE_KEY,
-									&raw[0], raw.size(), 0, NULL, NULL, &size))
+									&raw[0], DWORD(raw.size()), 0, NULL, NULL, &size))
 			throwError(data->engine(), S("Failed to decode the key: "), GetLastError());
 
 		std::vector<BYTE> decoded(size, 0);
 		if (!CryptDecodeObjectEx(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, PKCS_RSA_PRIVATE_KEY,
-									&raw[0], raw.size(), 0, NULL, &decoded[0], &size))
+									&raw[0], DWORD(raw.size()), 0, NULL, &decoded[0], &size))
 			throwError(data->engine(), S("Failed to decode the key: "), GetLastError());
 
 		return new WinSSLCertKey(decoded);
@@ -134,7 +134,7 @@ namespace ssl {
 		}
 
 		// Add the key!
-		if (!CryptImportKey(provider, &k->data[0], k->data.size(), NULL, 0, &key)) {
+		if (!CryptImportKey(provider, &k->data[0], DWORD(k->data.size()), NULL, 0, &key)) {
 			DWORD error = GetLastError();
 			CryptReleaseContext(provider, 0);
 			throwError(runtime::someEngine(), S("Failed to import the key: "), error);

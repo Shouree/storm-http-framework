@@ -84,7 +84,7 @@ namespace storm {
 		TypeChain *superChain() const;
 
 		// Size of the chain.
-		inline Nat chainCount() const { return chain ? chain->count : 1; }
+		inline Nat chainCount() const { return chain ? Nat(chain->count) : 1; }
 
 		// Element 'n' in the chain.
 		inline TypeChain *chainAt(Nat n) const { return chain ? chain->v[n] : const_cast<TypeChain *>(this); }

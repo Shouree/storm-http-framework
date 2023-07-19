@@ -1,0 +1,18 @@
+
+doSwitch PROTO
+
+.code
+
+doSwitch proc
+
+	ret
+
+doSwitch endp
+
+doEndDetour proc
+
+	ret
+
+doEndDetour endp
+
+end

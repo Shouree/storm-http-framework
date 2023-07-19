@@ -32,7 +32,7 @@ namespace storm {
 
 			Nat ParentReq::max() const {
 				if (data)
-					return data->count * bitsPerEntry;
+					return Nat(data->count) * bitsPerEntry;
 				else
 					return 0;
 			}
@@ -69,7 +69,7 @@ namespace storm {
 
 				// Check size of the resulting structure...
 				Nat count = 0;
-				Nat to = ::min(data->count, other.data->count);
+				Nat to = Nat(::min(data->count, other.data->count));
 				for (Nat i = 0; i < to; i++) {
 					if (data->v[i] & ~other.data->v[i])
 						count = i + 1;
@@ -94,7 +94,7 @@ namespace storm {
 				if (other.data->count > data->count)
 					return false;
 
-				Nat to = other.data->count;
+				Nat to = Nat(other.data->count);
 				for (Nat i = 0; i < to; i++) {
 					if ((data->v[i] & other.data->v[i]) != other.data->v[i])
 						return false;

@@ -45,10 +45,10 @@ namespace storm {
 					return;
 
 				// TODO: Optimize this somehow. A lot of time is spent here!
-				Nat chunkCount = chunks ? chunks->filled : 0;
+				Nat chunkCount = chunks ? Nat(chunks->filled) : 0;
 				for (nat c = 0; c < chunkCount; c++) {
 					GcArray<State> *chunk = chunks->v[c];
-					Nat cnt = chunk->filled;
+					Nat cnt = Nat(chunk->filled);
 					for (nat i = 0; i < cnt; i++) {
 						State &old = chunk->v[i];
 						if (old == s) {
@@ -74,7 +74,7 @@ namespace storm {
 				}
 
 				if (last->filled >= chunkSize) {
-					ensure(chunks->filled + 1);
+					ensure(Nat(chunks->filled + 1));
 					last = chunks->v[chunks->filled - 1];
 				}
 
@@ -86,7 +86,7 @@ namespace storm {
 				if (chunks == null || chunks->count < n) {
 					Nat newCount = 1;
 					if (chunks)
-						newCount = 2 * chunks->count;
+						newCount = 2 * Nat(chunks->count);
 					newCount = max(n, newCount);
 
 					GcArray<GcArray<State> *> *old = chunks;

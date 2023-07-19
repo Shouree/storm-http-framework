@@ -9,7 +9,7 @@ namespace graphics {
 	// check the header in the stream
 	// zeroTerm - Zero-terminated string in the file?
 	bool checkHeader(storm::IStream *file, const char *header, bool zeroTerm) {
-		nat len = strlen(header);
+		nat len = nat(strlen(header));
 		if (zeroTerm)
 			len++;
 

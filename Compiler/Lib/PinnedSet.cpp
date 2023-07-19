@@ -126,7 +126,7 @@ namespace storm {
 	}
 
 	Bool PinnedSet::has(const void *query) {
-		return has(query, 0, objSize(query));
+		return has(query, 0, Nat(objSize(query)));
 	}
 
 	Bool PinnedSet::has(const void *query, Nat start) {
@@ -178,7 +178,7 @@ namespace storm {
 
 			size_t offset = size_t(*found) - size_t(query);
 			if (offset >= header)
-				*result << (offset - header);
+				*result << Nat(offset - header);
 		}
 
 		return result;

@@ -140,8 +140,8 @@ namespace storm {
 						return 0;
 					if (chunks->filled == 0)
 						return 0;
-					nat last = chunks->filled - 1;
-					return last*chunkSize + chunks->v[last]->filled;
+					nat last = Nat(chunks->filled - 1);
+					return last*chunkSize + Nat(chunks->v[last]->filled);
 				}
 
 				// Get an element in this set.

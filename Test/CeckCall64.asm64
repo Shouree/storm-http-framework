@@ -1,0 +1,69 @@
+checkCall PROTO
+
+.code
+
+checkCall proc frame
+	;; 'fn' is in ecx
+	;; 'param' is in edx
+	;; 'regs' is in r8
+
+	;; Save 'regs' in home space.
+	mov [rsp+08h], r8
+
+	;; Push all volatile registers, so that unwinding works properly.
+	push rbx
+	.pushreg rbx
+	push rdi
+	.pushreg rdi
+	push rsi
+	.pushreg rsi
+	push r12
+	.pushreg r12
+	push r13
+	.pushreg r13
+	push r14
+	.pushreg r14
+	push r15
+	.pushreg r15
+	;; Note: stack is now 16-byte aligned!
+	.endprolog
+	
+
+	;; Apply values in volatile registers.
+	mov rbx, [r8+00h]
+	mov rdi, [r8+08h]
+	mov rsi, [r8+10h]
+	mov r12, [r8+18h]
+	mov r13, [r8+20h]
+	mov r14, [r8+28h]
+	mov r15, [r8+30h]
+
+	;; Call!
+	mov r8, rcx
+	mov rcx, rdx
+	call r8
+
+	;; Save values after call.
+	mov r8, [rsp+40h]
+	mov [r8+00h], rbx
+	mov [r8+08h], rdi
+	mov [r8+10h], rsi
+	mov [r8+18h], r12
+	mov [r8+20h], r13
+	mov [r8+28h], r14
+	mov [r8+30h], r15
+
+	;; Restore in epilog. Note: don't do anything fancy here.
+	pop r15
+	pop r14
+	pop r13
+	pop r12
+	pop rsi
+	pop rdi
+	pop rbx
+
+	ret
+
+checkCall endp
+
+end

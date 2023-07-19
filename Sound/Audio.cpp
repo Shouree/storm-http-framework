@@ -168,7 +168,7 @@ namespace sound {
 		if (!working) {
 			AudioMgr *m = audioMgr(e);
 			m->allEvents(events);
-			count = events.size();
+			count = nat(events.size());
 		}
 
 		DWORD z = WaitForMultipleObjectsEx(count - first, &events[first], FALSE, ms, FALSE);

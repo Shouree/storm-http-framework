@@ -87,7 +87,7 @@ namespace gui {
 		reset();
 
 		// Shift the states around.
-		for (nat i = layerHistory->count - 1; i > 0; i--) {
+		for (nat i = nat(layerHistory->count - 1); i > 0; i--) {
 			layerHistory->v[i] = layerHistory->v[i - 1];
 		}
 		layerHistory->v[0] = layers->count() - minFreeLayers;

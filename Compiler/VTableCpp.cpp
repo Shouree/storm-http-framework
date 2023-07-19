@@ -167,7 +167,7 @@ namespace storm {
 	}
 
 	nat VTableCpp::size() const {
-		return count() * sizeof(const void *) + vtableAllocOffset();
+		return Nat(count() * sizeof(const void *) + vtableAllocOffset());
 	}
 
 	bool VTableCpp::used() const {

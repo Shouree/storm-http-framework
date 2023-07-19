@@ -117,7 +117,7 @@ namespace storm {
 
 			// Number of children.
 			inline Nat STORM_FN count() const {
-				return children->count;
+				return Nat(children->count);
 			}
 
 			// Get child at offset.

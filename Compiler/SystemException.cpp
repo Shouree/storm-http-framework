@@ -192,6 +192,12 @@ namespace storm {
 	}
 #endif
 
+#ifdef X64
+	static const void *instructionPtr(CONTEXT *context) {
+		return (const void *)context->Rip;
+	}
+#endif
+
 	static Engine *findEngine(LPEXCEPTION_POINTERS info) {
 		void *code = codeTable().find(instructionPtr(info->ContextRecord));
 		Engine *e = null;
@@ -221,7 +227,7 @@ namespace storm {
 		if (!e)
 			return;
 
-		DWORD address = er->ExceptionInformation[1];
+		ULONG_PTR address = er->ExceptionInformation[1];
 		MEMORY_BASIC_INFORMATION memInfo;
 		VirtualQuery((LPCVOID)address, &memInfo, sizeof(memInfo));
 		if (memInfo.State == MEM_COMMIT)

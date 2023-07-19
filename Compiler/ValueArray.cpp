@@ -47,7 +47,7 @@ namespace storm {
 		if (n == 0)
 			return;
 
-		Nat oldCap = data ? data->count : 0;
+		Nat oldCap = data ? Nat(data->count) : 0;
 		if (oldCap >= n)
 			return;
 

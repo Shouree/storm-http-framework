@@ -23,7 +23,7 @@ namespace sql {
 		void STORM_FN deepCopy(CloneEnv *env);
 
 		// Get number of columns.
-		Nat STORM_FN count() const { return data->count; }
+		Nat STORM_FN count() const { return Nat(data->count); }
 
 		// Get a column as a string.
 		Str *STORM_FN getStr(Nat index) const;

@@ -160,7 +160,7 @@ namespace sound {
 		if (filled == 0)
 			atEnd = true;
 
-		to.filled(to.filled() + filled/sizeof(float));
+		to.filled(to.filled() + Nat(filled/sizeof(float)));
 		return to;
 	}
 

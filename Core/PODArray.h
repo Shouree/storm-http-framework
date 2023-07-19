@@ -69,7 +69,7 @@ namespace storm {
 
 		// Count.
 		nat count() const {
-			return data->filled;
+			return Nat(data->filled);
 		}
 
 		// Clear (does not clear storage)
@@ -102,7 +102,7 @@ namespace storm {
 
 		// Grow storage.
 		void grow() {
-			nat newCount = data->count * 2;
+			nat newCount = Nat(data->count) * 2;
 			GcArray<T> *d = runtime::allocArray<T>(e, &pod::Gc<T>::type, newCount);
 			d->filled = data->filled;
 			memcpy(d->v, data->v, sizeof(T) * data->filled);

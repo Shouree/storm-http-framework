@@ -967,12 +967,9 @@ namespace os {
 	}
 
 	extern "C" void doEndDetour();
-	extern "C" void doEndDetourMember();
 
 	static const void *endDetourFn(bool member) {
-		return member
-			? address(doEndDetourMember)
-			: address(doEndDetour);
+		return address(doEndDetour);
 	}
 
 #elif defined(GCC) && defined(X64)

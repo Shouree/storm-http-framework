@@ -62,7 +62,7 @@ namespace storm {
 	Str::Str() : data(&storm::empty) {}
 
 	Str::Str(const wchar *s) {
-		nat count = wcslen(s);
+		nat count = nat(wcslen(s));
 		allocData(count + 1);
 		for (nat i = 0; i < count; i++)
 			data->v[i] = s[i];
@@ -78,7 +78,7 @@ namespace storm {
 #endif
 
 	Str::Str(const wchar *from, const wchar *to) {
-		nat count = to - from;
+		nat count = nat(to - from);
 		allocData(count + 1);
 		for (nat i = 0; i < count; i++)
 			data->v[i] = from[i];
@@ -92,7 +92,7 @@ namespace storm {
 	}
 
 	Str::Str(const wchar *fromA, const wchar *toA, const wchar *fromB, const wchar *toB) {
-		nat count = (toA - fromA) + (toB - fromB);
+		nat count = nat((toA - fromA) + (toB - fromB));
 		allocData(count + 1);
 		wchar *to = data->v;
 		copy(to, fromA, toA);
@@ -102,7 +102,7 @@ namespace storm {
 	}
 
 	Str::Str(const Str *src, const Iter &pos, const Str *insert) {
-		nat count = src->charCount() + insert->charCount();
+		nat count = nat(src->charCount() + insert->charCount());
 		allocData(count + 1);
 		wchar *to = data->v;
 
@@ -192,8 +192,8 @@ namespace storm {
 #endif
 
 	Str::Str(const Str *a, const Str *b) {
-		size_t aSize = a->data->count - 1;
-		size_t bSize = b->data->count - 1;
+		nat aSize = nat(a->data->count - 1);
+		nat bSize = nat(b->data->count - 1);
 
 		allocData(aSize + bSize + 1);
 		for (size_t i = 0; i < aSize; i++)
@@ -204,8 +204,8 @@ namespace storm {
 	}
 
 	Str::Str(const Str *a, const wchar *b) {
-		size_t aSize = a->data->count - 1;
-		size_t bSize = wcslen(b);
+		nat aSize = nat(a->data->count - 1);
+		nat bSize = nat(wcslen(b));
 
 		allocData(aSize + bSize + 1);
 		for (size_t i = 0; i < aSize; i++)
@@ -220,7 +220,7 @@ namespace storm {
 	}
 
 	Str::Str(const Str *a, Nat times) {
-		size_t s = a->data->count - 1;
+		nat s = nat(a->data->count - 1);
 		allocData(s*times + 1);
 
 		size_t at = 0;
@@ -306,7 +306,7 @@ namespace storm {
 
 	Float Str::toFloat() const {
 		Float r;
-		StdIBuf<100> buf(data->v, data->count - 1);
+		StdIBuf<100> buf(data->v, nat(data->count - 1));
 		std::wistream input(&buf);
 		input.imbue(std::locale::classic());
 		if (!(input >> r))
@@ -321,7 +321,7 @@ namespace storm {
 
 	Double Str::toDouble() const {
 		Double r;
-		StdIBuf<100> buf(data->v, data->count - 1);
+		StdIBuf<100> buf(data->v, nat(data->count - 1));
 		std::wistream input(&buf);
 		input.imbue(std::locale::classic());
 		if (!(input >> r))
@@ -553,7 +553,7 @@ namespace storm {
 	}
 
 	Bool Str::endsWith(const wchar *s) const {
-		nat sLen = wcslen(s);
+		nat sLen = nat(wcslen(s));
 		if (sLen > charCount())
 			return false;
 		nat offset = charCount() - sLen;
@@ -657,7 +657,7 @@ namespace storm {
 	}
 
 	Nat Str::peekLength() const {
-		return data->count - 1;
+		return nat(data->count - 1);
 	}
 
 	void Str::allocData(nat count) {
@@ -871,9 +871,9 @@ namespace storm {
 			return 0;
 
 		if (!this->owner)
-			thisPos = owner->data->count - 1;
+			thisPos = nat(owner->data->count - 1);
 		if (!o.owner)
-			otherPos = owner->data->count - 1;
+			otherPos = nat(owner->data->count - 1);
 
 		Nat diff = 0;
 		for (Nat at = otherPos; at < thisPos; diff++) {

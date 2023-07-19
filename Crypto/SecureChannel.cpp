@@ -433,12 +433,12 @@ namespace ssl {
 		if (status == SEC_E_OK) {
 			{
 				SecBuffer *plaintext = findBuffer(bufferDesc, SECBUFFER_DATA);
-				m.plaintextStart = (byte *)plaintext->pvBuffer - data.dataPtr();
+				m.plaintextStart = Nat((byte *)plaintext->pvBuffer - data.dataPtr());
 				m.plaintextEnd = m.plaintextStart + plaintext->cbBuffer;
 			}
 
 			if (SecBuffer *ciphertext = findBuffer(bufferDesc, SECBUFFER_EXTRA)) {
-				m.remainingStart = (byte *)ciphertext->pvBuffer - data.dataPtr();
+				m.remainingStart = Nat((byte *)ciphertext->pvBuffer - data.dataPtr());
 			} else {
 				m.remainingStart = data.filled();
 			}

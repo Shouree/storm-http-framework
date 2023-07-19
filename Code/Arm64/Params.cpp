@@ -78,7 +78,7 @@ namespace code {
 
 			// Uniform FP struct (HFA)?
 			if (uniformFp(type)) {
-				Nat regs = type->v->count;
+				Nat regs = Nat(type->v->count);
 				if (regs <= 4 && hasReal(regs)) {
 					// Pass it in the next fp registers.
 					for (Nat i = 0; i < regs; i++) {
@@ -149,7 +149,7 @@ namespace code {
 
 			// Uniform FP struct (HFA)?
 			if (uniformFp(type)) {
-				Nat regs = type->v->count;
+				Nat regs = Nat(type->v->count);
 				if (regs <= 4) {
 					resultData = Result::inRegisters(engine(), regs);
 					for (Nat i = 0; i < regs; i++) {

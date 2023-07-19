@@ -64,7 +64,7 @@ int64 callFn(const void *fnPtr, int64 p) {
 	return r;
 }
 
-#elif (defined(X64) || defined(ARM64)) && defined(GCC)
+#elif (defined(X64) || defined(ARM64))
 #include "CheckCall64.h"
 
 int callFn(const void *fnPtr, int p) {

@@ -143,7 +143,7 @@ namespace storm {
 				STORM_CTOR ItemSet();
 
 				// Element access.
-				inline Nat STORM_FN count() const { return data ? data->filled : 0; }
+				inline Nat STORM_FN count() const { return data ? Nat(data->filled) : 0; }
 				inline const Item &at(Nat id) const { return data->v[id]; }
 				Item STORM_FN operator [](Nat id) const;
 

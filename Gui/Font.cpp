@@ -251,7 +251,7 @@ namespace gui {
 		if (length == 0) {
 			GetTextExtentPoint32(dc, L"A", 1, &size);
 		} else {
-			GetTextExtentPoint32(dc, start, length, &size);
+			GetTextExtentPoint32(dc, start, int(length), &size);
 		}
 
 		update.cx = max(update.cx, size.cx);

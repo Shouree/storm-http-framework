@@ -26,7 +26,7 @@ namespace storm {
 			}
 
 			Nat Parser::byteCount() const {
-				nat stepCount = steps ? steps->count : 0;
+				nat stepCount = steps ? Nat(steps->count) : 0;
 				return sizeof(Parser)
 					+ stepCount * (sizeof(void *) + sizeof(StateSet))
 					+ stateCount() * sizeof(State);
@@ -347,9 +347,9 @@ namespace storm {
 			}
 
 			nat Parser::lastStep() const {
-				for (nat i = steps->count - 1; i > 0; i--) {
+				for (size_t i = steps->count - 1; i > 0; i--) {
 					if (steps->v[i]->count() > 0)
-						return i;
+						return nat(i);
 				}
 
 				// First step is never empty.

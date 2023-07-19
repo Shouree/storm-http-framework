@@ -27,6 +27,9 @@ static const TestEntry seq[] = {
 nat align(nat v) {
 	return roundUp(v, Nat(sizeof(void *)));
 }
+size_t align(size_t v) {
+	return roundUp(v, sizeof(void *));
+}
 
 void verify(const RootArray<void> &data) {
 	nat pos = 0;

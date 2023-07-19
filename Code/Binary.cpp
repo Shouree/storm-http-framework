@@ -55,8 +55,8 @@ namespace code {
 			return;
 		}
 
-		nat size = runtime::codeSize(code);
-		for (nat i = 0; i < size; i++) {
+		size_t size = runtime::codeSize(code);
+		for (size_t i = 0; i < size; i++) {
 			if (i % columns == 0) {
 				*to << S("\n") << hex(i) << S(" -");
 			}
@@ -174,28 +174,28 @@ namespace code {
 	}
 
 	void Binary::cleanup(StackFrame &frame) {
-		for (Nat i = frame.block; i != code::Block().key(); i = blocks->v[i]->parent) {
+		for (size_t i = frame.block; i != code::Block().key(); i = blocks->v[i]->parent) {
 			Block *b = blocks->v[i];
 
 			// Reverse order is common.
-			for (Nat j = b->count; j > 0; j--) {
+			for (size_t j = b->count; j > 0; j--) {
 				cleanup(frame, b->vars[j - 1]);
 			}
 		}
 	}
 
 	Nat Binary::cleanup(StackFrame &frame, Nat until) {
-		for (Nat i = frame.block; i != code::Block().key(); i = blocks->v[i]->parent) {
+		for (size_t i = frame.block; i != code::Block().key(); i = blocks->v[i]->parent) {
 			Block *b = blocks->v[i];
 
 			// Reverse order is common.
-			for (Nat j = b->count; j > 0; j--) {
+			for (size_t j = b->count; j > 0; j--) {
 				cleanup(frame, b->vars[j - 1]);
 			}
 
 			// Done?
 			if (i == until)
-				return blocks->v[i]->parent;
+				return Nat(blocks->v[i]->parent);
 		}
 
 		// Outside of all blocks.
@@ -267,9 +267,9 @@ namespace code {
 		if (!tryBlocks)
 			return false;
 
-		for (Nat block = active; block != code::Block().key(); block = blocks->v[block]->parent) {
+		for (size_t block = active; block != code::Block().key(); block = blocks->v[block]->parent) {
 			TryInfo *end = tryBlocks->v + tryBlocks->count;
-			TryInfo *found = std::lower_bound(tryBlocks->v, end, block, Compare());
+			TryInfo *found = std::lower_bound(tryBlocks->v, end, Nat(block), Compare());
 
 			// Check all possible matches.
 			for (; found != end && found->blockId == block; found++) {

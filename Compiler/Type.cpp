@@ -195,7 +195,7 @@ namespace storm {
 
 	void Type::makeType(Engine &e, GcType *src) {
 		// Find the entry containing OFFSET_OF(Type, myGcType).
-		nat myTypePos = src->count;
+		nat myTypePos = Nat(src->count);
 		for (nat i = 0; i < src->count; i++) {
 			if (src->offset[i] == OFFSET_OF(Type, myGcType)) {
 				myTypePos = i;

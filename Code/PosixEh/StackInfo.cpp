@@ -27,7 +27,7 @@ namespace code {
 				}
 
 				fnBase = start;
-				offset = (byte *)ip - start;
+				offset = int((byte *)ip - start);
 				return true;
 			}
 

@@ -171,17 +171,17 @@ namespace storm {
 	 */
 	struct CppTypeRef {
 		// Invalid index.
-		static const size_t invalid = -1;
+		static const nat invalid = -1;
 
 		// Index used for 'void'.
-		static const size_t tVoid = -2;
+		static const nat tVoid = -2;
 
 		// Type or template index. If 'params' is null, this is a type index, otherwise it is a
 		// template index and 'params' indicates the parameters to that template.
-		size_t id;
+		nat id;
 
 		// If we're a template, this array is populated. It ends with 'invalid', but may also contain 'tVoid'.
-		const size_t *params;
+		const nat *params;
 
 		// Is this a reference to the type?
 		bool ref;

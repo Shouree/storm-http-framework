@@ -176,7 +176,7 @@ namespace code {
 		for (Nat i = 0; i < integer->filled; i++)
 			*to << S("\n") << name(registerSrc(i)) << S(":") << integer->v[i];
 		for (Nat i = 0; i < real->filled; i++)
-			*to << S("\n") << name(registerSrc(i + integer->count)) << S(":") << real->v[i];
+			*to << S("\n") << name(registerSrc(i + Nat(integer->count))) << S(":") << real->v[i];
 
 		if (stackCount() > 0) {
 			*to << S("\nOn stack:");
@@ -189,10 +189,10 @@ namespace code {
 	Param Params::totalParam(Nat n) const {
 		if (n < integer->count)
 			return integer->v[n];
-		n -= integer->count;
+		n -= Nat(integer->count);
 		if (n < real->count)
 			return real->v[n];
-		n -= real->count;
+		n -= Nat(real->count);
 		if (stackPar && n < stackPar->filled)
 			return stackPar->v[n].param;
 		assert(false, L"Out of bounds.");

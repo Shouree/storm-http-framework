@@ -39,7 +39,7 @@ namespace storm {
 			if (states == o.states)
 				return true;
 
-			Nat c = states->count;
+			Nat c = Nat(states->count);
 			if (c != o.states->count)
 				return false;
 
@@ -179,7 +179,7 @@ namespace storm {
 			for (Nat i = 0; i < states->count; i++)
 				if (T(states->v[i].match.first) != s[i + start])
 					return NO_MATCH;
-			return start + states->count;
+			return start + Nat(states->count);
 		}
 
 		template <class T>
@@ -190,7 +190,7 @@ namespace storm {
 				if (!states->v[i].match.contains(s[i + start]))
 					return NO_MATCH;
 			}
-			return start + states->count;
+			return start + Nat(states->count);
 		}
 
 		template <class T>
@@ -214,7 +214,7 @@ namespace storm {
 
 			current->push(0);
 
-			nat stateCount = states->count;
+			nat stateCount = nat(states->count);
 
 			// We can simply move through the source string character by character.
 			// Note: we exit when there are no more states to process. Otherwise the outer
@@ -416,7 +416,7 @@ namespace storm {
 
 		nat Regex::Set::count() const {
 			if (chars)
-				return chars->count;
+				return Nat(chars->count);
 			else if (first != EMPTY)
 				return 1;
 			else

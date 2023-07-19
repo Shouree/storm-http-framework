@@ -107,7 +107,7 @@ namespace storm {
 				void grow(Nat n);
 
 				// Number of elements in 'data' currently.
-				inline Nat count() const { return data ? data->count : 0; }
+				inline Nat count() const { return data ? Nat(data->count) : 0; }
 
 				// Wrap 'n' to the size of data.
 				inline Nat wrap(Nat n) const { return data ? (n & (data->count - 1)) : 0; }

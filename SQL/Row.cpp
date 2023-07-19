@@ -27,7 +27,7 @@ namespace sql {
 
 	const Row::Element &Row::checkIndex(Nat index) const {
 		if (!data || index >= data->count)
-			throw new (runtime::someEngine()) ArrayError(index, data ? data->count : 0);
+			throw new (runtime::someEngine()) ArrayError(index, data ? Nat(data->count) : 0);
 		return data->v[index];
 	}
 
@@ -130,7 +130,7 @@ namespace sql {
 
 	Row::Element &Row::Builder::next() {
 		if (data->filled >= data->count)
-			throw new (runtime::someEngine()) ArrayError(data->filled, data->count);
+			throw new (runtime::someEngine()) ArrayError(Nat(data->filled), Nat(data->count));
 
 		return data->v[data->filled++];
 	}

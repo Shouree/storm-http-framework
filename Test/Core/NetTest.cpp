@@ -96,7 +96,7 @@ BEGIN_TEST(NetConnectTest, Core) {
 	VERIFY(sock);
 
 	const char *data = "Hello!";
-	sock->output()->write(buffer(e, (const Byte *)data, strlen(data)));
+	sock->output()->write(buffer(e, (const Byte *)data, nat(strlen(data))));
 
 	// We should get the same data back!
 	Buffer r = sock->input()->read(50);
@@ -163,7 +163,7 @@ struct NetDuplex {
 		// On Linux, writing to a socket with a non-full output buffer will not block, we need to
 		// fill the buffer to verify the behaviour of the queuing system!
 		const char *data = "World!";
-		Buffer b = buffer(e, (const Byte *)data, strlen(data));
+		Buffer b = buffer(e, (const Byte *)data, nat(strlen(data)));
 
 		while (!choked)
 			client->output()->write(b);

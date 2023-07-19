@@ -251,9 +251,9 @@ namespace gui {
 	}
 
 	Key keycode(WPARAM vk) {
-		Key result = lookup(vk);
+		Key result = lookup(Nat(vk));
 		if (result == key::unknown) {
-			UINT c = MapVirtualKey(vk, MAPVK_VK_TO_CHAR);
+			UINT c = MapVirtualKey(Nat(vk), MAPVK_VK_TO_CHAR);
 			c &= 0x7FFFFFFF; // The highest bit is used to indicate dead keys. We do not care at this point.
 
 			// Windows gives uppercase for A-Z, but lowercase to any other characters that have uppercase forms...

@@ -25,7 +25,7 @@ namespace storm {
 		virtual void STORM_FN deepCopy(CloneEnv *env);
 
 		// Size.
-		inline Nat STORM_FN count() const { return data ? data->filled : 0; }
+		inline Nat STORM_FN count() const { return data ? Nat(data->filled) : 0; }
 
 		// Clear.
 		void STORM_FN clear();

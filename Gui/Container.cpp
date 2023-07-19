@@ -163,7 +163,7 @@ namespace gui {
 
 	bool Container::onNotify(const Message &msg) {
 		NMHDR *data = (NMHDR *)msg.lParam;
-		nat id = data->idFrom;
+		nat id = nat(data->idFrom);
 
 		IdMap::Iter i = ids->find(id);
 		if (i == ids->end())

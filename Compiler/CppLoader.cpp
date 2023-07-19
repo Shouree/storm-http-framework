@@ -276,13 +276,13 @@ namespace storm {
 					if (!updated[type.super])
 						continue;
 
-					into->types[i]->setSuper(into->types[type.super]);
+					into->types[i]->setSuper(into->types[Nat(type.super)]);
 					break;
 				case CppType::tSuperThread:
 					if (TObject::stormType(*e) == null)
 						continue;
 
-					into->types[i]->setThread(into->namedThreads[type.super]);
+					into->types[i]->setThread(into->namedThreads[Nat(type.super)]);
 					break;
 				case CppType::tCustom:
 				case CppType::tEnum:

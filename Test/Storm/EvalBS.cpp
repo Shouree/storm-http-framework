@@ -12,11 +12,11 @@ static T callFn(Function *f) {
 
 static int64 findResult(const Str *name) {
 	const wchar *str = name->c_str();
-	nat len = wcslen(str);
+	size_t len = wcslen(str);
 	int64 r = 0;
 	int64 pos = 1;
 
-	for (nat i = len; i > 0; i--) {
+	for (size_t i = len; i > 0; i--) {
 		wchar ch = str[i-1];
 		if (ch >= '0' && ch <= '9') {
 			r += (ch - '0') * pos;

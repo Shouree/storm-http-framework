@@ -1,0 +1,12 @@
+
+doStackCall PROTO
+
+.code
+
+doStackCall proc
+
+	ret
+
+doStackCall endp
+
+end

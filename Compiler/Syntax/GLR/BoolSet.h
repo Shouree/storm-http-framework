@@ -38,7 +38,7 @@ namespace storm {
 
 				// Current count.
 				inline Nat count() const {
-					return data ? data->count*bitsPerEntry : 0;
+					return data ? Nat(data->count*bitsPerEntry) : 0;
 				}
 
 				// Compute bit entry and offset.

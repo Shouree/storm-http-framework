@@ -49,7 +49,7 @@ namespace storm {
 
 	nat Layout::fillGcType(Size parentSize, const GcType *parent, GcType *to) {
 		Size s = parentSize;
-		nat pos = parent ? parent->count : 0;
+		nat pos = parent ? Nat(parent->count) : 0;
 
 		// Copy entries from the parent.
 		if (to && parent) {

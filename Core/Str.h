@@ -223,7 +223,7 @@ namespace storm {
 		GcArray<wchar> *data;
 
 		// Number of characters in 'data'.
-		inline size_t charCount() const { return data->count - 1; }
+		inline nat charCount() const { return nat(data->count - 1); }
 
 		// Concatenation constructor.
 		Str(const Str *a, const Str *b);

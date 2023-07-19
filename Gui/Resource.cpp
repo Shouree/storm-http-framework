@@ -119,7 +119,7 @@ namespace gui {
 		Nat currMin = offset;
 		Nat currMax = offset;
 		if (more)
-			currMax = more->count + 1;
+			currMax = Nat(more->count + 1);
 		else if (firstRefs)
 			currMax = offset + 1;
 

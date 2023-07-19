@@ -45,8 +45,8 @@
 
 namespace storm {
 
-	static const size_t NONE = size_t(-1);
-	static const size_t VOID = size_t(-2);
+	static const nat NONE = nat(-1);
+	static const nat VOID = nat(-2);
 
 	/**
 	 * Add type flags depending on characteristics of T.

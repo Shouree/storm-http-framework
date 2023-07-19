@@ -52,7 +52,7 @@ namespace storm {
 	}
 
 	Nat VTableStorm::count() const {
-		return table ? table->filled : 0;
+		return table ? Nat(table->filled) : 0;
 	}
 
 	Nat VTableStorm::dtorSlot() const {

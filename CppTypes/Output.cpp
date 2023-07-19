@@ -365,7 +365,7 @@ static void templateParams(ResolvedTemplateType *t, wostream &to, set<String> &c
 
 		vector<Long> ids = templateParamsId(t);
 
-		to << L"static const size_t " << name << L"[] = { ";
+		to << L"static const nat " << name << L"[] = { ";
 		for (size_t i = 0; i < ids.size(); i++) {
 			if (ids[i] == -2)
 				to << L"VOID, ";
