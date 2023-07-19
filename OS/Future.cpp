@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Future.h"
 #include "PtrThrowable.h"
+#include "Utils/TIB.h"
 
 namespace os {
 
@@ -136,14 +137,30 @@ namespace os {
 
 	const nat cppExceptionCode = 0xE06D7363;
 	const nat cppExceptionMagic = 0x19930520;
+#if defined(X86)
 	const nat cppExceptionParams = 3;
-#if _MSC_VER==1310
+
+#if _MSC_VER == 1310
 	const nat exceptionInfoOffset = 0x74;
 #elif (_MSC_VER == 1400 || _MSC_VER == 1500)
 	const nat exceptionInfoOffset = 0x80;
 #else
 #error "Unknown MSC version."
 #endif
+
+#elif defined(X64)
+	const nat cppExceptionParams = 4;
+
+#if _MSC_VER==1310
+	const nat exceptionInfoOffset = /* probably 0xE0 - 0xC*2, but untested */;
+#elif (_MSC_VER == 1400 || _MSC_VER == 1500)
+	const nat exceptionInfoOffset = 0xE0;
+#else
+#error "Unknown MSC version."
+#endif
+
+#endif
+
 
 	struct DummyException {};
 	typedef int(DummyException::*CopyCtor)(void * src);
@@ -160,50 +177,75 @@ namespace os {
 		virtualBaseType = 4,
 	};
 
+	// Note: pointers below are offsets relative to the HINSTANCE on 64-bit systems.
+
 	struct CppTypeInfo {
 		unsigned flags;
-		std::type_info * typeInfo;
+		DWORD typeInfoOffset;
 		int thisOffset;
 		int vbaseDescr;
 		int vbaseOffset;
-		unsigned long size;
-		CppCopyCtor copyCtor;
+		unsigned int size;
+		DWORD copyCtorOffset;
+
+		std::type_info *typeInfo(HINSTANCE instance) const {
+			return (std::type_info *)(size_t(instance) + size_t(typeInfoOffset));
+		}
+		CppCopyCtor copyCtor(HINSTANCE instance) const {
+			size_t ptr = size_t(instance) + size_t(copyCtorOffset);
+			CppCopyCtor result;
+			result.normal = asMemberPtr<CopyCtor>((void *)ptr);
+			return result;
+		}
 	};
 
 	struct CppTypeInfoTable {
 		unsigned count;
-		const CppTypeInfo *info[1];
+		DWORD infoOffset[1];
+
+		const CppTypeInfo *info(HINSTANCE instance) const {
+			return (const CppTypeInfo *)(size_t(instance) + size_t(infoOffset[0]));
+		}
 	};
 
 	struct CppExceptionType {
 		unsigned flags;
-		Dtor dtor;
-		void(*handler)();
-		const CppTypeInfoTable *table;
+		DWORD dtorOffset;
+		DWORD handlerOffset; // void (*handler)()
+		DWORD tableOffset;
+
+		Dtor dtor(HINSTANCE instance) const {
+			return asMemberPtr<Dtor>((void *)(size_t(instance) + size_t(dtorOffset)));
+		}
+		const CppTypeInfoTable *table(HINSTANCE instance) const {
+			return (const CppTypeInfoTable *)(size_t(instance) + size_t(tableOffset));
+		}
 	};
 
-	static const CppTypeInfo *getCppTypeInfo(const CppExceptionType *t) {
-		const CppTypeInfo *info = t->table->info[0];
+	static const CppTypeInfo *getCppTypeInfo(const CppExceptionType *t, HINSTANCE instance) {
+		const CppTypeInfo *info = t->table(instance)->info(instance);
 		assert(info);
 		return info;
 	}
 
-	static void copyException(void *to, void *from, const CppTypeInfo *info) {
-		bool copyCtor = (info->flags & simpleType) == 0;
-		copyCtor &= info->copyCtor.normal != null;
+	static void copyException(void *to, void *from, const CppTypeInfo *info, HINSTANCE instance) {
+		CppCopyCtor copy = info->copyCtor(instance);
 
-		if (copyCtor) {
+		bool useCopyCtor = (info->flags & simpleType) == 0;
+		useCopyCtor &= copy.normal != null;
+
+		if (useCopyCtor) {
 			DummyException *p = (DummyException *)to;
 			if (info->flags & virtualBaseType)
-				(p->*(info->copyCtor.virtualCtor))(from, to);
+				(p->*(copy.virtualCtor))(from, to);
 			else
-				(p->*(info->copyCtor.normal))(from);
+				(p->*(copy.normal))(from);
 		} else {
 			memmove(to, from, info->size);
 		}
 	}
 
-	FutureBase::ExceptionPtr::ExceptionPtr() : data(null), type(null) {}
+	FutureBase::ExceptionPtr::ExceptionPtr() : data(null), type(null), instance(null) {}
 
 	FutureBase::ExceptionPtr::~ExceptionPtr() {
 		clear();
@@ -211,27 +253,31 @@ namespace os {
 
 	void FutureBase::ExceptionPtr::clear() {
 		if (data) {
-			if (type->dtor) {
+			Dtor dtor = type->dtor(instance);
+			if (dtor) {
 				DummyException *p = (DummyException *)data;
-				(p->*(type->dtor))();
+				(p->*dtor)();
 			}
 			free(data);
 		}
 		data = null;
 		type = null;
+		instance = null;
 	}
 
 	void FutureBase::ExceptionPtr::rethrow() {
 		// It is safe to keep stuff at the stack here. catch-blocks are executed
 		// on top of this stack, ie this stack frame will not be reclaimed until
 		// the catch-blocks have been executed.
-		const CppTypeInfo *info = getCppTypeInfo(type);
+		const CppTypeInfo *info = getCppTypeInfo(type, instance);
 		void *dst = _alloca(info->size);
-		copyException(dst, data, info);
+		copyException(dst, data, info, instance);
 		ULONG_PTR args[cppExceptionParams];
 		args[0] = cppExceptionMagic;
 		args[1] = (ULONG_PTR)dst;
 		args[2] = (ULONG_PTR)type;
+		if (cppExceptionParams >= 4)
+			args[3] = (ULONG_PTR)instance;
 		RaiseException(cppExceptionCode, EXCEPTION_NONCONTINUABLE, cppExceptionParams, args);
 	}
 
@@ -242,29 +288,33 @@ namespace os {
 		args[0] = cppExceptionMagic;
 		args[1] = (ULONG_PTR)&copy;
 		args[2] = (ULONG_PTR)type;
+		if (cppExceptionParams >= 4)
+			args[3] = (ULONG_PTR)instance;
 		RaiseException(cppExceptionCode, EXCEPTION_NONCONTINUABLE, cppExceptionParams, args);
 	}
 
-	void FutureBase::ExceptionPtr::set(void *src, const CppExceptionType *type) {
+	void FutureBase::ExceptionPtr::set(void *src, const CppExceptionType *type, HINSTANCE instance) {
 		clear();
 
 		this->type = type;
-		const CppTypeInfo *ti = getCppTypeInfo(type);
+		this->instance = instance;
+		const CppTypeInfo *ti = getCppTypeInfo(type, instance);
 		data = malloc(ti->size);
 		try {
-			copyException(data, src, ti);
+			copyException(data, src, ti, instance);
 		} catch (...) {
 			free(data);
 			throw;
 		}
 	}
 
-	void FutureBase::ExceptionPtr::setPtr(void *src, const CppExceptionType *type, PtrThrowable *&store) {
+	void FutureBase::ExceptionPtr::setPtr(void *src, const CppExceptionType *type, HINSTANCE instance, PtrThrowable *&store) {
 		clear();
 
 		// Indicate that we need an external pointer for this!
 		data = null;
 		this->type = type;
+		this->instance = instance;
 		store = *(PtrThrowable **)src;
 	}
 
@@ -275,38 +325,39 @@ namespace os {
 			&& record->ExceptionInformation[0] == cppExceptionMagic;
 	}
 
-
 	int FutureBase::filter(EXCEPTION_POINTERS *info, bool pointer) {
-#ifdef X64
-		TODO(L"VERIFY THIS!");
-#endif
-
 		EXCEPTION_RECORD *record = info->ExceptionRecord;
 
 		if (!isCppException(record)) {
-			WARNING(L"Not a C++ exception!");
+			WARNING(L"Thrown exception is not a C++ exception!");
 			return EXCEPTION_CONTINUE_SEARCH;
 		}
 
 		if (!record->ExceptionInformation[2]) {
 			// It was a re-throw. We need to go look up the exception record from tls!
-			byte *t = (byte *)_errno();
-			record = *(EXCEPTION_RECORD **)(t + exceptionInfoOffset);
-			//record = *reinterpret_cast<EXCEPTION_RECORD **>(reinterpret_cast<char *>(_errno()) + exceptionInfoOffset);
+			byte *base = (byte *)_errno();
+			record = *(EXCEPTION_RECORD **)(base + exceptionInfoOffset);
 		}
 
 		if (!isCppException(record)) {
-			WARNING(L"Not a C++ exception!");
+			WARNING(L"Thrown exception is a C++ exception, but stored is not.");
 		}
 		assert(record->ExceptionInformation[2]);
+
+		HINSTANCE instance = 0;
+#ifdef X64
+		instance = (HINSTANCE)record->ExceptionInformation[3];
+#endif
 
 		if (pointer)
 			exceptionData.setPtr((void *)record->ExceptionInformation[1],
 								(const CppExceptionType *)record->ExceptionInformation[2],
+								instance,
 								ptrException);
 		else
 			exceptionData.set((void *)record->ExceptionInformation[1],
-							(const CppExceptionType *)record->ExceptionInformation[2]);
+							(const CppExceptionType *)record->ExceptionInformation[2],
+							instance);
 
 		return EXCEPTION_EXECUTE_HANDLER;
 	}

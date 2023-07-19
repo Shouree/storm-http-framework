@@ -1,0 +1,13 @@
+getTIB PROTO
+
+.code
+
+getTIB proc
+
+	mov eax, gs:[30h]
+	ret
+
+getTIB endp
+
+end
+	

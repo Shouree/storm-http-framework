@@ -26,13 +26,13 @@ Gc &gc();
 
 
 // Basic threading, no GC yet.
-SUITEX(OS, 0);
+SUITE(OS, 0); // TODO: Disable
 // Basic gc operation, scanning simple objects without anything strange.
-SUITEX(GcScan, 1);
+SUITE(GcScan, 1); // TODO: Disable
 // Gc operation on Storm objects declared in C++.
-SUITEX(GcObjects, 2);
+SUITE(GcObjects, 2); // TODO: Disable
 // GC along with threads.
-SUITEX(GcThreads, 3);
+SUITE(GcThreads, 3); // TODO: Disable
 // Basic operation of the runtime. No code generation yet.
 SUITE(Core, 4);
 // Basic tests of the code generation backend. Further tests rely on these to work.

@@ -94,6 +94,9 @@ namespace os {
 			void *data;
 			const CppExceptionType *type;
 
+			// Only used on 64-bit systems.
+			HINSTANCE instance;
+
 			// Rethrow this exception.
 			void rethrow();
 			void rethrowPtr(PtrThrowable *&ptr);
@@ -102,10 +105,10 @@ namespace os {
 			void clear();
 
 			// Copy from an exception.
-			void set(void *from, const CppExceptionType *type);
+			void set(void *from, const CppExceptionType *type, HINSTANCE instance);
 
 			// Copy a pointer from an exception.
-			void setPtr(void *from, const CppExceptionType *type, PtrThrowable *&store);
+			void setPtr(void *from, const CppExceptionType *type, HINSTANCE instance, PtrThrowable *&store);
 		};
 
 		// The exception.
