@@ -33,12 +33,14 @@ namespace storm {
 		// In debug mode, Visual Studio links all functions to a global table of "jmp X" (probably
 		// to make incremental linking easier). We need to detect and follow this! Returns 'code' if
 		// is not a 'jmp' instruction.
+		// Note: Some functions only consist of a single jump. Importantly, this means that the
+		// function can't be a vtable call, so it is fine do do this misclassification.
 		static const void *followJmp(const void *code) {
 			const byte *c = (const byte *)code;
 
 			if (c[0] == 0xE9) {
 				// Found you!
-				const Nat *rel = (const Nat *)(c + 1);
+				const int *rel = (const int *)(c + 1);
 				return c + *rel + 5;
 			} else {
 				return code;
@@ -48,6 +50,7 @@ namespace storm {
 		Nat fnSlot(const void *fn) {
 			fn = followJmp(fn);
 
+#if defined(X86)
 			// This is the code the compiler generates for a vtable call using cdecl calling
 			// convention (VS2008). We simply need to read the machine code and verify it, and then
 			// extract the last byte/4 bytes and divide them by sizeof(void *)
@@ -61,9 +64,21 @@ namespace storm {
 				// or [eax+XXXXXXXX]
 				// 0xFF, 0xA0, 0xXX, 0xXX, 0xXX, 0xXX
 			};
+#elif defined(X64)
+			// This is for 64-bit. Similar, but not identical.
+			static const byte fnData[] = {
+				// mov rax, [rcx]
+				0x48, 0x8b, 0x01,
+				// jmp [rax+xx]
+				0xFF, // 0x60, 0xXX
+				// or [eax+xxxxxxxx]
+				// 0xFF, 0xA0, 0xXX, 0xXX, 0xXX, 0xXX
+			};
+#endif
 
 			const byte *data = (const byte *)fn;
 			Nat size = ARRAY_COUNT(fnData);
+			PVAR(data);
 			if (memcmp(fnData, data, size) != 0) {
 				return invalid;
 				// For debugging:

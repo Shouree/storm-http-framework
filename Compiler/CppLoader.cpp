@@ -329,14 +329,14 @@ namespace storm {
 
 			for (Nat i = 0; i < entries; i++) {
 				// Uncheckable?
-				if (ref.offsets[i] == size_t(-1))
+				if (ref.offsets[i] == nat(-1))
 					continue;
 
 				assert(t->offset[i] == ref.offsets[i], L"Type offset mismatch for " + ::toS(type.name) + L" member #" +
 					::toS(i) + L". Storm offset: " + ::toS(t->offset[i]) + L", C++ offset: " + ::toS(ref.offsets[i]));
 			}
 
-			assert(ref.offsets[entries] == size_t(-1), L"There is more data for " + ::toS(type.name));
+			assert(ref.offsets[entries] == nat(-1), L"There is more data for " + ::toS(type.name));
 		}
 #endif
 

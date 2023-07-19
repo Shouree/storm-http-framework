@@ -266,7 +266,8 @@ namespace storm {
 	}
 
 	static void initialize() {
-		AddVectoredExceptionHandler(0, &SysExceptionFilter);
+		TODO(L"Re-enable exceptions!");
+		// AddVectoredExceptionHandler(0, &SysExceptionFilter);
 	}
 
 #endif

@@ -5,8 +5,9 @@ asm64_shortUnalignedWrite PROTO C
 .code
 
 asm64_unalignedRead proc
-	xor rax, rax
-	lock add rax, [rcx]
+	;; xor rax, rax
+	;; lock add rax, [rcx]
+	mov rax, [rcx]
 	ret
 asm64_unalignedRead endp
 
