@@ -194,6 +194,9 @@ namespace os {
 		 * expression, so we don't have to special case the return type at least.
 		 */
 
+		// To make vtable calls work.
+		class DummyClass : NoCopy {};
+
 		template <class P1, class P2, class P3, class P4, class P5, class P6>
 		struct Params6 {
 			template <class Result>
@@ -205,16 +208,17 @@ namespace os {
 
 			template <class Result, class Type>
 			static Result callMember(const void *fn, Type *first, void **rest) {
-				typedef Result CODECALL (Type::*Fn)(P1, P2, P3, P4, P5) const;
+				typedef Result CODECALL (DummyClass::*Fn)(P1, P2, P3, P4, P5) const;
+				DummyClass *f = (DummyClass *)first;
 				Fn p = null;
 				toMember(p, fn);
-				return (first->*p)(*(P1 *)rest[0], *(P2 *)rest[1], *(P3 *)rest[2], *(P4 *)rest[3], *(P5 *)rest[4], *(P6 *)rest[5]);
+				return (f->*p)(*(P1 *)rest[0], *(P2 *)rest[1], *(P3 *)rest[2], *(P4 *)rest[3], *(P5 *)rest[4], *(P6 *)rest[5]);
 			}
 
-			template <class T>
-			struct Prepend {
-				typedef Params6<T, P1, P2, P3, P4, P5> T;
-			};
+			// template <class T>
+			// struct Append {
+			// 	typedef Params6<P1, P2, P3, P4, P5, T> T;
+			// };
 		};
 
 		template <class P1, class P2, class P3, class P4, class P5>
@@ -228,15 +232,16 @@ namespace os {
 
 			template <class Result, class Type>
 			static Result callMember(const void *fn, Type *first, void **rest) {
-				typedef Result CODECALL (Type::*Fn)(P1, P2, P3, P4, P5) const;
+				typedef Result CODECALL (DummyClass::*Fn)(P1, P2, P3, P4, P5) const;
+				DummyClass *f = (DummyClass *)first;
 				Fn p = null;
 				toMember(p, fn);
-				return (first->*p)(*(P1 *)rest[0], *(P2 *)rest[1], *(P3 *)rest[2], *(P4 *)rest[3], *(P5 *)rest[4]);
+				return (f->*p)(*(P1 *)rest[0], *(P2 *)rest[1], *(P3 *)rest[2], *(P4 *)rest[3], *(P5 *)rest[4]);
 			}
 
 			template <class T>
-			struct Prepend {
-				typedef Params6<T, P1, P2, P3, P4, P5> T;
+			struct Append {
+				typedef Params6<P1, P2, P3, P4, P5, T> T;
 			};
 		};
 
@@ -251,15 +256,16 @@ namespace os {
 
 			template <class Result, class Type>
 			static Result callMember(const void *fn, Type *first, void **rest) {
-				typedef Result CODECALL (Type::*Fn)(P1, P2, P3, P4) const;
+				typedef Result CODECALL (DummyClass::*Fn)(P1, P2, P3, P4) const;
+				DummyClass *f = (DummyClass *)first;
 				Fn p = null;
 				toMember(p, fn);
-				return (first->*p)(*(P1 *)rest[0], *(P2 *)rest[1], *(P3 *)rest[2], *(P4 *)rest[3]);
+				return (f->*p)(*(P1 *)rest[0], *(P2 *)rest[1], *(P3 *)rest[2], *(P4 *)rest[3]);
 			}
 
 			template <class T>
-			struct Prepend {
-				typedef Params5<T, P1, P2, P3, P4> T;
+			struct Append {
+				typedef Params5<P1, P2, P3, P4, T> T;
 			};
 		};
 
@@ -274,15 +280,16 @@ namespace os {
 
 			template <class Result, class Type>
 			static Result callMember(const void *fn, Type *first, void **rest) {
-				typedef Result CODECALL (Type::*Fn)(P1, P2, P3) const;
+				typedef Result CODECALL (DummyClass::*Fn)(P1, P2, P3) const;
+				DummyClass *f = (DummyClass *)first;
 				Fn p = null;
 				toMember(p, fn);
-				return (first->*p)(*(P1 *)rest[0], *(P2 *)rest[1], *(P3 *)rest[2]);
+				return (f->*p)(*(P1 *)rest[0], *(P2 *)rest[1], *(P3 *)rest[2]);
 			}
 
 			template <class T>
-			struct Prepend {
-				typedef Params4<T, P1, P2, P3> T;
+			struct Append {
+				typedef Params4<P1, P2, P3, T> T;
 			};
 		};
 
@@ -297,15 +304,16 @@ namespace os {
 
 			template <class Result, class Type>
 			static Result callMember(const void *fn, Type *first, void **rest) {
-				typedef Result CODECALL (Type::*Fn)(P1, P2) const;
+				typedef Result CODECALL (DummyClass::*Fn)(P1, P2) const;
+				DummyClass *f = (DummyClass *)first;
 				Fn p = null;
 				toMember(p, fn);
-				return (first->*p)(*(P1 *)rest[0], *(P2 *)rest[1]);
+				return (f->*p)(*(P1 *)rest[0], *(P2 *)rest[1]);
 			}
 
 			template <class T>
-			struct Prepend {
-				typedef Params3<T, P1, P2> T;
+			struct Append {
+				typedef Params3<P1, P2, T> T;
 			};
 		};
 
@@ -320,15 +328,16 @@ namespace os {
 
 			template <class Result, class Type>
 			static Result callMember(const void *fn, Type *first, void **rest) {
-				typedef Result CODECALL (Type::*Fn)(P1) const;
+				typedef Result CODECALL (DummyClass::*Fn)(P1) const;
+				DummyClass *f = (DummyClass *)first;
 				Fn p = null;
 				toMember(p, fn);
-				return (first->*p)(*(P1 *)rest[0]);
+				return (f->*p)(*(P1 *)rest[0]);
 			}
 
 			template <class T>
-			struct Prepend {
-				typedef Params2<T, P1> T;
+			struct Append {
+				typedef Params2<P1, T> T;
 			};
 		};
 
@@ -342,14 +351,15 @@ namespace os {
 
 			template <class Result, class Type>
 			static Result callMember(const void *fn, Type *first, void **) {
-				typedef Result CODECALL (Type::*Fn)() const;
+				typedef Result CODECALL (DummyClass::*Fn)() const;
+				DummyClass *f = (DummyClass *)first;
 				Fn p = null;
 				toMember(p, fn);
-				return (first->*p)();
+				return (f->*p)();
 			}
 
 			template <class T>
-			struct Prepend {
+			struct Append {
 				typedef Params1<T> T;
 			};
 		};
@@ -357,7 +367,7 @@ namespace os {
 
 		template <class ParPack>
 		struct ExpandPack {
-			typedef typename ExpandPack<typename ParPack::PrevType>::T::Prepend<typename ParPack::HereType>::T T;
+			typedef typename ExpandPack<typename ParPack::PrevType>::T::Append<typename ParPack::HereType>::T T;
 		};
 
 		template <>
@@ -421,12 +431,14 @@ namespace os {
 			void *firstParam;
 			if (first) {
 				firstParam = &first;
+
+				CallHelp<Result, Param<void *, Par>>::call(fn, member, firstParam, params, result);
 			} else {
 				firstParam = params[0];
 				params = params + 1;
-			}
 
-			CallHelp<Result, Par>::call(fn, member, firstParam, params, result);
+				CallHelp<Result, Par>::call(fn, member, firstParam, params, result);
+			}
 		}
 
 #endif

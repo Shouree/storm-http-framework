@@ -1,10 +1,78 @@
-
 doStackCall PROTO
+fnCallCatch PROTO
 
 .code
 
-doStackCall proc
+doStackCall proc frame
+	;; "current" is in rcx
+	;; "callOn"  is in rdx
+	;; "fn"      is in r8
+	;; "fnCall"  is in r9
+	;; "member"  is at [ebp+30h]
+	;; "result"  is at [ebp+38h]
 
+	;; Can trash rax, rcx, rdx, r8, r9, r10, r11
+
+	;; Set up ebp for simplicity
+	push rbp
+	.pushreg rbp
+	mov rbp, rsp
+	;; Store in shadow space
+	mov [rbp+10h], rcx
+
+	;; Allocate 32 bytes for stack description.
+	sub rsp, 32
+	.allocstack 32
+	.endprolog
+
+	;; Store the stack description in the thread.
+	mov rax, QWORD PTR gs:[8]
+	mov [rsp+10h], rax
+	mov rax, QWORD PTR gs:[16]
+	mov [rsp+08h], rax
+	mov [rsp+00h], rsp
+
+	;; Store state in the old description.
+	mov [rcx+10h], rsp 	; current.desc = rsp
+	mov [rcx+20h], rdx 	; current.detourTo = callOn
+
+	;; Switch to the other stack.
+	mov rax, [rdx+10h] 	; rax = callOn.desc
+	mov rsp, [rax] 		; rsp = callOn.desc->low
+	mov QWORD PTR [rdx+10h], 0 ; callOn.desc = 0
+
+	;; Fix gs:4 and gs:8 with the new stack information to make exception handling work.
+	mov r10, [rax+10h]
+	mov QWORD PTR gs:[8], r10
+	mov r10, [rax+8h]
+	mov QWORD PTR gs:[0], r10
+
+	;; Done with updates! Now we can call 'callRaw':
+	mov rcx, r9
+	mov rdx, r8
+	mov r8, QWORD PTR [ebp+30h]
+	mov r9, 0
+	sub rsp, 30h
+	mov rax, [ebp+38h]
+	mov [rsp+20h], rax
+	call fnCallCatch
+	add rsp, 30h
+
+	;; Now, switch back to the old stack!
+	mov rcx, [rbp+10h]	; Load back old "current"
+	mov QWORD PTR [rcx+20h], 0 ; current.detourTo = callOn
+	mov rax, [rcx+10h]	   ; load "current.desc"
+	mov rsp, [rax]		   ; restore stack pointer
+
+	;; Now we just need to restore gs:[8] and gs:[16]
+	mov rax, [rsp+10h]
+	mov QWORD PTR gs:[8], rax
+	mov rax, [rsp+08h]
+	mov QWORD PTR gs:[16], rax
+
+	;; Epilog.
+	add rsp, 32
+	pop rbp
 	ret
 
 doStackCall endp
