@@ -24,6 +24,8 @@ namespace code {
 	 *
 	 * Note: Only saves either 32-bit or 64-bit size of the parameter as it is typically not
 	 * relevant to make platform-agnostic stack layouts.
+	 *
+	 * Note: the use64 parameter determines whether to use the 32-bit or 64-bit size of the type.
 	 */
 	class Param {
 		STORM_VALUE;

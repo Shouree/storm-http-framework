@@ -20,25 +20,6 @@ namespace code {
 		return src;
 	}
 
-	Listing *Arena::transform(Listing *src) const {
-		assert(false);
-		return src;
-	}
-
-	void Arena::output(Listing *src, Output *to) const {
-		assert(false);
-	}
-
-	LabelOutput *Arena::labelOutput() const {
-		assert(false);
-		return null;
-	}
-
-	CodeOutput *Arena::codeOutput(Binary *owner, Array<Nat> *offsets, Nat size, Nat refs) const {
-		assert(false);
-		return null;
-	}
-
 	CodeOutput *Arena::codeOutput(Binary *owner, LabelOutput *src) const {
 		return codeOutput(owner, src->offsets, src->size, src->refs);
 	}
@@ -47,34 +28,6 @@ namespace code {
 		from->remove(ptrA);
 		from->remove(ptrB);
 		from->remove(ptrC);
-	}
-
-	Listing *Arena::redirect(Bool member, TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand param) {
-		assert(false);
-		return null;
-	}
-
-	Listing *Arena::engineRedirect(TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand engine) {
-		assert(false);
-		return null;
-	}
-
-	Nat Arena::firstParamId(MAYBE(TypeDesc *) desc) {
-		assert(false);
-		if (desc)
-			return 0;
-		else
-			return 1;
-	}
-
-	Operand Arena::firstParamLoc(Nat id) {
-		assert(false);
-		return Operand();
-	}
-
-	Reg Arena::functionDispatchReg() {
-		assert(false);
-		return noReg;
 	}
 
 

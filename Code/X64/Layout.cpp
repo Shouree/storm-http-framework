@@ -2,6 +2,7 @@
 #include "Layout.h"
 #include "Exception.h"
 #include "Asm.h"
+#include "Arena.h"
 #include "../Binary.h"
 #include "../Layout.h"
 #include "../PosixEh/FnState.h"
@@ -27,7 +28,7 @@ namespace code {
 		};
 
 
-		Layout::Layout() {}
+		Layout::Layout(const Arena *arena) : arena(arena) {}
 
 		void Layout::before(Listing *dest, Listing *src) {
 			// Initialize some state.
@@ -35,7 +36,7 @@ namespace code {
 			usingEH = src->exceptionAware();
 
 			// Compute the layout of all parameters.
-			params = new (this) Params();
+			params = arena->createParams();
 			params->result(src->result);
 			Array<Var> *p = src->allParams();
 			for (Nat i = 0; i < p->count(); i++) {

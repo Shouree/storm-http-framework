@@ -211,10 +211,10 @@ BEGIN_TEST(CodeHereTest, CodeBasic) {
 	CHECK_EQ((*fn)(), address(&triggerCollect));
 } END_TEST
 
-BEGIN_TEST(CodeX64Layout, CodeBasic) {
+BEGIN_TEST(CodeX64PosixLayout, CodeBasic) {
 	Engine &e = gEngine();
 
-	code::x64::Params *p = new (e) code::x64::Params();
+	code::x64::PosixParams *p = new (e) code::x64::PosixParams();
 	p->add(0, new (e) PrimitiveDesc(intPrimitive()));
 	p->add(1, new (e) PrimitiveDesc(floatPrimitive()));
 

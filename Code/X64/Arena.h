@@ -1,5 +1,6 @@
 #pragma once
 #include "../Arena.h"
+#include "Params.h"
 
 namespace code {
 	namespace x64 {
@@ -7,10 +8,10 @@ namespace code {
 
 		/**
 		 * Arena for X86-64. Use WindowsArena or PosixArena for different flavours of the 64-bit
-		 * arena.
+		 * arena. The main difference between the two systems is the calling convention.
 		 */
 		class Arena : public code::Arena {
-			STORM_CLASS;
+			STORM_ABSTRACT_CLASS;
 		public:
 			// Create.
 			STORM_CTOR Arena();
@@ -41,9 +42,18 @@ namespace code {
 
 			virtual Listing *STORM_FN redirect(Bool member, TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand param);
 			virtual Listing *STORM_FN engineRedirect(TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand engine);
-			virtual Nat STORM_FN firstParamId(MAYBE(TypeDesc *) desc);
-			virtual Operand STORM_FN firstParamLoc(Nat id);
 			virtual Reg STORM_FN functionDispatchReg();
+
+
+			/**
+			 * Parameter layout (new interface here):
+			 */
+
+			// Create parameter layout.
+			virtual code::Params *createParams() const ABSTRACT;
+
+			// Layout parameters.
+			code::Params *layoutParams(TypeDesc *result, Array<TypeDesc *> *params);
 		};
 
 
@@ -52,6 +62,15 @@ namespace code {
 		public:
 			// Create.
 			STORM_CTOR WindowsArena();
+
+			/**
+			 * Parameters.
+			 */
+			virtual Nat STORM_FN firstParamId(MAYBE(TypeDesc *) desc);
+			virtual Operand STORM_FN firstParamLoc(Nat id);
+			virtual code::Params *createParams() const {
+				return new (this) WindowsParams();
+			}
 		};
 
 
@@ -60,6 +79,20 @@ namespace code {
 		public:
 			// Create.
 			STORM_CTOR PosixArena();
+
+			/**
+			 * Transform.
+			 */
+
+
+			/**
+			 * Parameters.
+			 */
+			virtual Nat STORM_FN firstParamId(MAYBE(TypeDesc *) desc);
+			virtual Operand STORM_FN firstParamLoc(Nat id);
+			virtual code::Params *createParams() const {
+				return new (this) PosixParams();
+			}
 		};
 
 	}

@@ -10,6 +10,8 @@ namespace code {
 	namespace x64 {
 		STORM_PKG(core.asm.x64);
 
+		class Arena;
+
 		/**
 		 * Transform that removes invalid or otherwise non-supported OP-codes, replacing them with
 		 * an equivalent sequence of supported OP-codes. For example:
@@ -20,7 +22,7 @@ namespace code {
 		class RemoveInvalid : public Transform {
 			STORM_CLASS;
 		public:
-			STORM_CTOR RemoveInvalid();
+			STORM_CTOR RemoveInvalid(const Arena *arena);
 
 			// Start transform.
 			virtual void STORM_FN before(Listing *dest, Listing *src);
@@ -32,6 +34,9 @@ namespace code {
 			virtual void STORM_FN after(Listing *dest, Listing *src);
 
 		private:
+			// Arena for platform specific concerns.
+			const Arena *arena;
+
 			// Used registers for each line.
 			Array<RegSet *> *used;
 

@@ -18,7 +18,7 @@ namespace code {
 	 * Abstract class, there is one instantiation for each supported platform.
 	 */
 	class Arena : public ObjectOn<Compiler> {
-		STORM_CLASS;
+		STORM_ABSTRACT_CLASS;
 	public:
 		// Create an arena.
 		Arena();
@@ -33,20 +33,20 @@ namespace code {
 
 		// Transform the code in preparation for this backend's code generation. This is
 		// backend-specific. 'owner' is the binary object that will be called to handle exceptions.
-		virtual Listing *STORM_FN transform(Listing *src) const;
+		virtual Listing *STORM_FN transform(Listing *src) const ABSTRACT;
 
 		// Translate a previously transformed listing into machine code for this arena.
-		virtual void STORM_FN output(Listing *src, Output *to) const;
+		virtual void STORM_FN output(Listing *src, Output *to) const ABSTRACT;
 
 		/**
 		 * Create output objects for this backend.
 		 */
 
 		// Create an offset-computing output.
-		virtual LabelOutput *STORM_FN labelOutput() const;
+		virtual LabelOutput *STORM_FN labelOutput() const ABSTRACT;
 
 		// Create a code-generating output. 'lblOffsets' and 'size' are obtained through 'labelOutput'.
-		virtual CodeOutput *STORM_FN codeOutput(Binary *owner, Array<Nat> *offsets, Nat size, Nat refs) const;
+		virtual CodeOutput *STORM_FN codeOutput(Binary *owner, Array<Nat> *offsets, Nat size, Nat refs) const ABSTRACT;
 		CodeOutput *STORM_FN codeOutput(Binary *owner, LabelOutput *src) const;
 
 		// Remove all registers not preserved during a function call on this platform. This
@@ -66,12 +66,12 @@ namespace code {
 		// the redirect) takes params as defined by 'params' and returns 'result'.
 		//
 		// These redirect objects are *not* platform independent!
-		virtual Listing *STORM_FN redirect(Bool member, TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand param);
+		virtual Listing *STORM_FN redirect(Bool member, TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand param) ABSTRACT;
 
 		// Create a function that calls another (pre-determined) function and appends an 'EnginePtr'
 		// object as the first parameter to the other function. Calling member functions in this
 		// manner is not supported.
-		virtual Listing *STORM_FN engineRedirect(TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand engine);
+		virtual Listing *STORM_FN engineRedirect(TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand engine) ABSTRACT;
 
 
 		/**
@@ -89,14 +89,14 @@ namespace code {
 		 */
 
 		// Get the ID of the location of the first param.
-		virtual Nat STORM_FN firstParamId(MAYBE(TypeDesc *) desc);
+		virtual Nat STORM_FN firstParamId(MAYBE(TypeDesc *) desc) ABSTRACT;
 
 		// Access the location of the first parameter in a function size. The returned Operand is
 		// always pointer-sized.
-		virtual Operand STORM_FN firstParamLoc(Nat id);
+		virtual Operand STORM_FN firstParamLoc(Nat id) ABSTRACT;
 
 		// Get a parameter that can safely be used to implement function dispatches.
-		virtual Reg STORM_FN functionDispatchReg();
+		virtual Reg STORM_FN functionDispatchReg() ABSTRACT;
 	};
 
 	// Create an arena for this platform.

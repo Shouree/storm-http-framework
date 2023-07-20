@@ -61,19 +61,21 @@ namespace code {
 		}
 
 
+		/**
+		 * Windows version:
+		 */
 
-		Params::Params() : code::Params(6, 8, 8, 16) {}
+		WindowsParams::WindowsParams() : code::Params(4, 4, 8, 16) {}
 
-		Reg Params::registerSrc(Nat id) const {
+		Reg WindowsParams::registerSrc(Nat id) const {
 			static Reg v[] = {
-				ptrDi, ptrSi, ptrD, ptrC, ptr8, ptr9,
-				xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
+				ptrC, ptrD, ptr8, ptr9,
+				xmm0, xmm1, xmm2, xmm3,
 			};
 			return v[id];
 		}
 
-
-		void Params::resultPrimitive(Primitive p) {
+		void WindowsParams::resultPrimitive(Primitive p) {
 			if (p.kind() == primitive::none)
 				resultData = Result::empty();
 			else if (p.kind() == primitive::real)
@@ -82,13 +84,90 @@ namespace code {
 				resultData = Result::inRegister(engine(), asSize(ptrA, p.size()));
 		}
 
-		void Params::resultComplex(ComplexDesc *desc) {
+		void WindowsParams::resultComplex(ComplexDesc *desc) {
+			resultData = Result::inMemory(ptrC);
+			addInt(Param(Param::returnId(), desc->size(), true, 0, true));
+		}
+
+		void WindowsParams::resultSimple(SimpleDesc *desc) {
+			Nat size = desc->size().size64();
+
+			if (size == 0) {
+				resultData = Result::empty();
+				return;
+			}
+
+			if (size > 8) {
+				// Return on stack.
+				resultData = Result::inMemory(ptrC);
+				addInt(Param(Param::returnId(), desc->size(), true, 0, true));
+			}
+
+			// Put it in a register.
+			resultData = Result::inRegisters(engine(), 1);
+			if (size >= 8)
+				resultData.putRegister(rax, 0);
+			else if (size >= 4)
+				resultData.putRegister(eax, 0);
+			else
+				resultData.putRegister(al, 0);
+		}
+
+		void WindowsParams::addPrimitive(Nat id, Primitive p) {
+			switch (p.kind()) {
+			case primitive::none:
+				break;
+			case primitive::pointer:
+			case primitive::integer:
+				addInt(Param(id, p, true));
+				break;
+			case primitive::real:
+				addReal(Param(id, p, true));
+				break;
+			}
+		}
+
+		void WindowsParams::addComplex(Nat id, ComplexDesc *desc) {
+			addInt(Param(id, desc->size(), true, 0, true));
+		}
+
+		void WindowsParams::addSimple(Nat id, SimpleDesc *desc) {
+			// Seems to always be passed in memory.
+			addInt(Param(id, desc->size(), true, 0, true));
+		}
+
+
+		/**
+		 * Posix version:
+		 */
+
+		PosixParams::PosixParams() : code::Params(6, 8, 8, 16) {}
+
+		Reg PosixParams::registerSrc(Nat id) const {
+			static Reg v[] = {
+				ptrDi, ptrSi, ptrD, ptrC, ptr8, ptr9,
+				xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7
+			};
+			return v[id];
+		}
+
+
+		void PosixParams::resultPrimitive(Primitive p) {
+			if (p.kind() == primitive::none)
+				resultData = Result::empty();
+			else if (p.kind() == primitive::real)
+				resultData = Result::inRegister(engine(), asSize(xmm0, p.size()));
+			else
+				resultData = Result::inRegister(engine(), asSize(ptrA, p.size()));
+		}
+
+		void PosixParams::resultComplex(ComplexDesc *desc) {
 			resultData = Result::inMemory(ptrDi);
 			// Add "dummy" parameter:
 			addInt(Param(Param::returnId(), desc->size(), true, 0, true));
 		}
 
-		void Params::resultSimple(SimpleDesc *desc) {
+		void PosixParams::resultSimple(SimpleDesc *desc) {
 			Nat size = desc->size().size64();
 
 			if (size == 0) {
@@ -137,7 +216,7 @@ namespace code {
 		}
 
 
-		void Params::addPrimitive(Nat id, Primitive p) {
+		void PosixParams::addPrimitive(Nat id, Primitive p) {
 			switch (p.kind()) {
 			case primitive::none:
 				break;
@@ -151,11 +230,11 @@ namespace code {
 			}
 		}
 
-		void Params::addComplex(Nat id, ComplexDesc *desc) {
+		void PosixParams::addComplex(Nat id, ComplexDesc *desc) {
 			addInt(Param(id, desc->size(), true, 0, true));
 		}
 
-		void Params::addSimple(Nat id, SimpleDesc *desc) {
+		void PosixParams::addSimple(Nat id, SimpleDesc *desc) {
 			// Here, we should check 'type' to see if we shall pass parts of it in registers.
 			// It seems the algorithm works roughly as follows (from the offical documentation
 			// and examining the output of GCC from Experiments/call64.cpp):
@@ -198,15 +277,6 @@ namespace code {
 				// Full, push it on the stack.
 				addStack(Param(id, desc->size(), true, 0, false));
 			}
-		}
-
-
-		Params *layoutParams(TypeDesc *result, Array<TypeDesc *> *params) {
-			Params *layout = new (params) Params();
-			layout->result(result);
-			for (Nat i = 0; i < params->count(); i++)
-				layout->add(i, params->at(i));
-			return layout;
 		}
 
 	}

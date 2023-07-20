@@ -19,10 +19,10 @@ namespace code {
 #endif
 
 			// Remove unsupported OP-codes, replacing them with their equivalents.
-			l = code::transform(l, this, new (this) RemoveInvalid());
+			l = code::transform(l, this, new (this) RemoveInvalid(this));
 
 			// Expand variables and function calls as well as function prolog and epilog.
-			l = code::transform(l, this, new (this) Layout());
+			l = code::transform(l, this, new (this) Layout(this));
 
 			return l;
 		}
@@ -133,11 +133,30 @@ namespace code {
 			return l;
 		}
 
-		Nat Arena::firstParamId(MAYBE(TypeDesc *) desc) {
+		Reg Arena::functionDispatchReg() {
+			return ptrA;
+		}
+
+		Params *Arena::layoutParams(TypeDesc *result, Array<TypeDesc *> *params) {
+			Params *layout = createParams();
+			layout->result(result);
+			for (Nat i = 0; i < params->count(); i++)
+				layout->add(i, params->at(i));
+			return layout;
+		}
+
+
+		/**
+		 * Windows version.
+		 */
+
+		WindowsArena::WindowsArena() {}
+
+		Nat WindowsArena::firstParamId(MAYBE(TypeDesc *) desc) {
 			if (!desc)
 				return 2;
 
-			Params *p = new (this) Params();
+			Params *p = new (this) WindowsParams();
 			p->result(desc);
 			if (p->result().memoryRegister() == noReg)
 				return 0;
@@ -145,7 +164,39 @@ namespace code {
 				return 1;
 		}
 
-		Operand Arena::firstParamLoc(Nat id) {
+		Operand WindowsArena::firstParamLoc(Nat id) {
+			switch (id) {
+			case 0:
+				// In a register, first parameter.
+				return ptrC;
+			case 1:
+				// In memory, second parameter.
+				return ptrD;
+			default:
+				return Operand();
+			}
+		}
+
+
+		/**
+		 * Posix version.
+		 */
+
+		PosixArena::PosixArena() {}
+
+		Nat PosixArena::firstParamId(MAYBE(TypeDesc *) desc) {
+			if (!desc)
+				return 2;
+
+			Params *p = new (this) PosixParams();
+			p->result(desc);
+			if (p->result().memoryRegister() == noReg)
+				return 0;
+			else
+				return 1;
+		}
+
+		Operand PosixArena::firstParamLoc(Nat id) {
 			switch (id) {
 			case 0:
 				// In a register, first parameter.
@@ -158,14 +209,7 @@ namespace code {
 			}
 		}
 
-		Reg Arena::functionDispatchReg() {
-			return ptrA;
-		}
 
-
-		WindowsArena::WindowsArena() {}
-
-		PosixArena::PosixArena() {}
 
 	}
 }

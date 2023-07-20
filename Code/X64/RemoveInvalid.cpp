@@ -78,7 +78,7 @@ namespace code {
 			return isComplexParam(l, op.var());
 		}
 
-		RemoveInvalid::RemoveInvalid() {}
+		RemoveInvalid::RemoveInvalid(const Arena *arena) : arena(arena) {}
 
 		void RemoveInvalid::before(Listing *dest, Listing *src) {
 			used = usedRegs(dest->arena, src).used;
@@ -274,7 +274,7 @@ namespace code {
 				throw new (this) InvalidValue(S("Using a fnCall that was not created properly."));
 			}
 
-			emitFnCall(dest, t->src(), t->dest(), t->type, false, currentBlock, used->at(line), params);
+			emitFnCall(arena, dest, t->src(), t->dest(), t->type, false, currentBlock, used->at(line), params);
 			params->clear();
 		}
 
@@ -284,7 +284,7 @@ namespace code {
 				throw new (this) InvalidValue(S("Using a fnCall that was not created properly."));
 			}
 
-			emitFnCall(dest, t->src(), t->dest(), t->type, true, currentBlock, used->at(line), params);
+			emitFnCall(arena, dest, t->src(), t->dest(), t->type, true, currentBlock, used->at(line), params);
 			params->clear();
 		}
 

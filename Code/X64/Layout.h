@@ -12,6 +12,8 @@ namespace code {
 	namespace x64 {
 		STORM_PKG(core.asm.x64);
 
+		class Arena;
+
 		/**
 		 * Transform all accesses to local variables into ebp-relative addresses. In the process,
 		 * also generates function prolog and epilog as well as any construction/destruction
@@ -25,7 +27,7 @@ namespace code {
 		class Layout : public Transform {
 			STORM_CLASS;
 		public:
-			STORM_CTOR Layout();
+			STORM_CTOR Layout(const Arena *arena);
 
 			// Start transform.
 			virtual void STORM_FN before(Listing *dest, Listing *src);
@@ -37,6 +39,9 @@ namespace code {
 			virtual void STORM_FN after(Listing *dest, Listing *src);
 
 		private:
+			// Arena, for platform-specific concerns.
+			const Arena *arena;
+
 			// Layout of all parameters for this function.
 			Params *params;
 

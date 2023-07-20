@@ -2,6 +2,7 @@
 #include "FnCall.h"
 #include "Params.h"
 #include "Asm.h"
+#include "Arena.h"
 #include "../Instr.h"
 #include "../Exception.h"
 #include "Utils/Bitwise.h"
@@ -424,12 +425,12 @@ namespace code {
 		 * The actual entry-point.
 		 */
 
-		void emitFnCall(Listing *dest, Operand toCall, Operand resultPos, TypeDesc *resultType,
+		void emitFnCall(const Arena *arena, Listing *dest, Operand toCall, Operand resultPos, TypeDesc *resultType,
 						Bool resultRef, Block currentBlock, RegSet *used, Array<ParamInfo> *params) {
 
 			Block block;
 			bool complex = hasComplex(params);
-			Params *layout = new (dest) Params();
+			Params *layout = arena->createParams();
 			layout->result(resultType);
 			for (Nat i = 0; i < params->count(); i++)
 				layout->add(i, params->at(i).type);
