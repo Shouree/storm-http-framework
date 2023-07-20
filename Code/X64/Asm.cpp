@@ -317,23 +317,6 @@ namespace code {
 		const Reg *fnDirtyRegs = dirtyRegs;
 		const size_t fnDirtyCount = ARRAY_COUNT(dirtyRegs);
 
-		static void saveResult(Listing *dest, primitive::PrimitiveKind k, nat &i, nat &r, Offset offset) {
-			static const Reg intReg[2] = { ptrA, ptrD };
-			static const Reg realReg[2] = { xmm0, xmm1 };
-
-			switch (k) {
-			case primitive::none:
-				break;
-			case primitive::integer:
-			case primitive::pointer:
-				*dest << mov(ptrRel(ptrStack, offset), intReg[i++]);
-				break;
-			case primitive::real:
-				*dest << mov(longRel(ptrStack, offset), realReg[r++]);
-				break;
-			}
-		}
-
 		void put(Output *to, OpCode op) {
 			if (op.prefix)
 				to->putByte(op.prefix);
