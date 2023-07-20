@@ -160,7 +160,9 @@ doSwitchReturnLoc:
 	.align 4
 launchThreadStub:
 	mov x0, x27
+	mov x27, xzr # clear saved regs to avoid accidental GC retention
 	mov x30, x26
+	mov x26, zxr # clear saved regs to avoid accidental GC retention
 	br x28
 
 

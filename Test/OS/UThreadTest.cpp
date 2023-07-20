@@ -383,7 +383,7 @@ BEGIN_TEST(UThreadTracesTest, OS) {
 
 	size_t numUThreads = 0;
 	for (size_t i = 0; i < traces.size(); i++) {
-		// PLN(L"Thread " << i);
+		// PLN(L"UThread " << i);
 		// PLN(format(traces[i]));
 		if (countFn(traces[i], address(recurseInner)) >= 3)
 			numUThreads++;

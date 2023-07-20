@@ -944,14 +944,15 @@ namespace os {
 	extern "C" void doStartThread();
 
 	void UThreadData::pushContext(const void *fn, void *param) {
-		push((void *)0); // alignment (X64 does not like when esp is at the absolute top of the stack)
-		push((void *)0); // alignment
+		// Allocate shadow space for register parameters, in case the first function needs it.
+		for (size_t i = 0; i < 4; i++)
+			push((void *)0);
 
 		push((void *)doStartThread); // Return to.
 		push((void *)0); // rbp
-		push((void *)fn); // rbx
-		push((void *)param); // rdi
-		push((void *)0); // rsi
+		push((void *)fn); // rbx (call function)
+		push((void *)param); // rdi (parameter)
+		push((void *)0); // rsi (simulated return ptr)
 		push((void *)0); // r12
 		push((void *)0); // r13
 		push((void *)0); // r14
@@ -970,6 +971,12 @@ namespace os {
 		push(stack.desc->dummy);
 		push(stack.desc->low);
 
+		// Shadow space for any calls done by 'doSwitch'. We technically don't need it for 'doSwitch'
+		// itself, but rather for when we push a sub-context, so that the function called in the sub
+		// context gets its shadow space.
+		for (size_t i = 0; i < 4; i++)
+			push((void *)0);
+
 		// Set the 'desc' of 'stack' to the actual stack pointer, so that we can run code on this stack.
 		atomicWrite(stack.desc, (StackDesc *)(stack.desc->low));
 	}
@@ -980,8 +987,21 @@ namespace os {
 
 	StackDesc *UThreadData::pushSubContext(const void *fn, void *param) {
 		StackDesc *old = stack.desc;
+		const size_t regCount = 38;
 
-		TODO(L"FIXME!");
+		// Copy the old context to the top of the stack again.
+		size_t *oldStack = (size_t *)old;
+		size_t *newStack = oldStack - regCount;
+		memcpy(newStack, oldStack, sizeof(void *) * regCount);
+
+		// Update the copy:
+		newStack[regCount - 1] = size_t(&doStartThread); // return to, use our thunk
+		newStack[regCount - 3] = size_t(fn); // rbx, function to call
+		newStack[regCount - 4] = size_t(param); // rdi, parameter
+		newStack[regCount - 5] = size_t(&doSwitchReturnLoc); // return pointer when called, used for stack traces
+
+		// Install the new frame.
+		atomicWrite(stack.desc, (StackDesc *)(newStack));
 
 		return old;
 	}
@@ -998,7 +1018,9 @@ namespace os {
 	extern "C" void doEndDetour();
 
 	static const void *endDetourFn(bool member) {
-		TODO(L"Fix detours!");
+		// Note: We don't need to do anything special for member functions. MSVC uses thunks for
+		// vtable lookups.
+		(void)member;
 		return address(doEndDetour);
 	}
 

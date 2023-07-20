@@ -1,6 +1,8 @@
 doSwitch PROTO
 doEndDetour PROTO
+doEndDetour2 PROTO
 doStartThread PROTO
+PUBLIC doSwitchReturnLoc
 
 .code
 
@@ -38,28 +40,29 @@ doSwitch proc frame
 	;; 10 xmm registers (16 bytes each)
 	;; 3 words for the stack desc
 	;; Note: We push 8 words above, so we need one wasted before XMM, and one wasted before the desc.
-	sub rsp, 0C8h
-	.allocstack 0C8h
+	;; Note: We need to provide a shadow space, so that any detours do not trash important data on the stack.
+	sub rsp, 0E8h
+	.allocstack 0E8h
 	.endprolog
 
 	;; Store xmm registers.
-	movaps [rsp+0B0h], xmm6
-	movaps [rsp+0A0h], xmm7
-	movaps [rsp+090h], xmm8
-	movaps [rsp+080h], xmm9
-	movaps [rsp+070h], xmm10
-	movaps [rsp+060h], xmm11
-	movaps [rsp+050h], xmm12
-	movaps [rsp+040h], xmm13
-	movaps [rsp+030h], xmm14
-	movaps [rsp+020h], xmm15
+	movaps [rsp+0D0h], xmm6
+	movaps [rsp+0C0h], xmm7
+	movaps [rsp+0B0h], xmm8
+	movaps [rsp+0A0h], xmm9
+	movaps [rsp+090h], xmm10
+	movaps [rsp+080h], xmm11
+	movaps [rsp+070h], xmm12
+	movaps [rsp+060h], xmm13
+	movaps [rsp+050h], xmm14
+	movaps [rsp+040h], xmm15
 
 	;; Store stack limits
 	mov rax, gs:[8h]
-	mov [rsp+10h], rax
+	mov [rsp+30h], rax
 	mov rax, gs:[10h]
-	mov [rsp+08h], rax
-	mov [rsp+00h], rsp
+	mov [rsp+28h], rax
+	mov [rsp+20h], rsp
 
 	;; Report the state for the old thread.
 	mov [rdx], rsp
@@ -67,28 +70,31 @@ doSwitch proc frame
 	;; Switch to the new stack.
 	mov rsp, [rcx]
 
-doSwitchReturnLoc:
+	;; Clear the new stack's desc, so that it will be scanned using our stack pointer instead.
+	mov QWORD PTR [rcx], 0
+
+doSwitchReturnLoc::
 
 	;; Restore state.
-	mov rax, [rsp+10h]
+	mov rax, [rsp+30h]
 	mov gs:[8h], rax
-	mov rax, [rsp+08h]
-	mov gs:[10h], rax
+	mov rax, [rsp+28h]
+	mov gs:[20h], rax
 
 	;; xmm registers.
-	movaps xmm6, [rsp+0B0h]
-	movaps xmm7, [rsp+0A0h]
-	movaps xmm8, [rsp+090h]
-	movaps xmm9, [rsp+080h]
-	movaps xmm10, [rsp+070h]
-	movaps xmm11, [rsp+060h]
-	movaps xmm12, [rsp+050h]
-	movaps xmm13, [rsp+040h]
-	movaps xmm14, [rsp+030h]
-	movaps xmm15, [rsp+020h]
+	movaps xmm6, [rsp+0D0h]
+	movaps xmm7, [rsp+0C0h]
+	movaps xmm8, [rsp+0B0h]
+	movaps xmm9, [rsp+0A0h]
+	movaps xmm10, [rsp+090h]
+	movaps xmm11, [rsp+080h]
+	movaps xmm12, [rsp+070h]
+	movaps xmm13, [rsp+060h]
+	movaps xmm14, [rsp+050h]
+	movaps xmm15, [rsp+040h]
 
 	;; Epilog. Bonus: restores clobbered registers.
-	add rsp, 0C8h
+	add rsp, 0E8h
 	pop r15
 	pop r14
 	pop r13
@@ -102,16 +108,65 @@ doSwitchReturnLoc:
 doSwitch endp
 
 doStartThread proc
+
 	;; Trampoline to fix stack alignment when starting threads.
 	;; Stack is currently aligned at even boundary. We need to have it at an odd when we reach 'fn'.
-	push 0
+	;; Use whatever is in rsi as a simulated return address. We don't expect to use it, but
+	;; it is necessary for stack traces.
+	push rsi
+	xor rsi, rsi 		; Avoid accidental GC retention
 	mov rcx, rdi 		; This is the convention from 'pushContext'.
+	xor rdi, rdi		; Avoid accidental GC retention
 	jmp rbx
+
 doStartThread endp
 
-doEndDetour proc
+doEndDetour proc frame
+	;; Save registers required to call functions, then call to 'doEndDetour2'.
 
-	ret
+	;; Allocate space on the stack. Note: we also need shadow space for the function call!
+	;; Note: alignment.
+	sub rsp, 0A8h
+	.allocstack 0A8h
+	.endprolog
+
+	;; Save all registers needed to call a function (just after shadow space)
+	mov [rsp+20h], rcx
+	mov [rsp+28h], rdx
+	mov [rsp+30h], r8
+	mov [rsp+38h], r9
+
+	movaps [rsp+40h], xmm0
+	movaps [rsp+50h], xmm1
+	movaps [rsp+60h], xmm2
+	movaps [rsp+70h], xmm3
+	movaps [rsp+80h], xmm4
+	movaps [rsp+90h], xmm5
+
+	;; Call the end detour function. We give it a pointer to [rsp+A0h] since we use that
+	;; location to store the jump target.
+	lea rcx, [rsp+0A0h]
+	call doEndDetour2
+
+	;; Now we can simply restore the state.
+	mov rcx, [rsp+20h]
+	mov rdx, [rsp+28h]
+	mov r8, [rsp+30h]
+	mov r9, [rsp+38h]
+
+	movaps xmm0, [rsp+40h]
+	movaps xmm1, [rsp+50h]
+	movaps xmm2, [rsp+60h]
+	movaps xmm3, [rsp+70h]
+	movaps xmm4, [rsp+80h]
+	movaps xmm5, [rsp+90h]
+
+	;; Load jump target before the epilog.
+	mov rax, [rsp+0A0h]
+
+	;; Epilog.
+	add rsp, 0A8h
+	jmp rax
 
 doEndDetour endp
 

@@ -78,7 +78,6 @@ namespace storm {
 
 			const byte *data = (const byte *)fn;
 			Nat size = ARRAY_COUNT(fnData);
-			PVAR(data);
 			if (memcmp(fnData, data, size) != 0) {
 				return invalid;
 				// For debugging:
