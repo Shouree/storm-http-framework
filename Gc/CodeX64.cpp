@@ -96,10 +96,6 @@ namespace storm {
 				writeJump(code, ref);
 				break;
 #endif
-			case GcCodeRef::unwindInfo:
-				if (ref.pointer)
-					DwarfChunk::updateFn((FDE *)ref.pointer, code);
-				break;
 			default:
 				dbg_assert(false, L"Only 'jump' is supported by this backend.");
 				break;
@@ -107,16 +103,7 @@ namespace storm {
 		}
 
 		void finalize(void *code) {
-			GcCode *refs = Gc::codeRefs(code);
-			for (size_t i = 0; i < refs->refCount; i++) {
-				GcCodeRef &ref = refs->refs[i];
-				if (ref.kind == GcCodeRef::unwindInfo && ref.pointer) {
-					FDE *ptr = (FDE *)ref.pointer;
-					// Set it to null so we do not accidentally scan or free it again.
-					atomicWrite(ref.pointer, null);
-					dwarfTable().free(ptr);
-				}
-			}
+			(void)code;
 		}
 
 	}

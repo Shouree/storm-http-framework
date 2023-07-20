@@ -32,7 +32,7 @@ namespace code {
 
 			CodeTable::Handle unwind = codeTable().add(code);
 			refs->refs[2].offset = 0;
-			refs->refs[2].kind = GcCodeRef::unwindInfo;
+			refs->refs[2].kind = GcCodeRef::codeInfo;
 			refs->refs[2].pointer = unwind;
 		}
 

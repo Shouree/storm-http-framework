@@ -54,14 +54,18 @@ namespace storm {
 			// falling back to long jumps where necessary.
 			jump = 0x61,
 
-			// Update an entry in a separate table containing unwinding information. 'pointer' is a
-			// pointer to the location that shall be updated. Architecture specific.
-			unwindInfo = 0x70,
+			// Update an entry in CodeTable, for unwinding information. 'pointer' is a pointer to
+			// the location that shall be updated.
+			codeInfo = 0x70,
+
+			// Update an entry in DwarfTable, for unwinding information. 'pointer' is a pointer to
+			// the location that shall be updated.
+			dwarfInfo = 0x80,
 
 			// ARM-specific version of "relativeHere". Writes an offset to the "pointer" member in
 			// this struct at the offset indicated in 'offset'. This offset must be aligned to 4
 			// bytes. This option assumes that it updates a 19-bit immediate located at bits 5..23.
-			relativeHereImm19 = 0x81,
+			relativeHereImm19 = 0x91,
 
 			// ...
 		};

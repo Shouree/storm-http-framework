@@ -3,6 +3,9 @@
 #include "Gc.h"
 #include "Core/GcCode.h"
 
+#include "CodeTable.h"
+#include "DwarfTable.h"
+
 #include "CodeX86.h"
 #include "CodeX64.h"
 #include "CodeArm64.h"
@@ -55,6 +58,14 @@ namespace storm {
 				shortUnalignedAtomicWrite(*(nat *)write, nat(ptr - (size_t(write) + sizeof(nat))));
 				invalidateSingleICache(write);
 				break;
+			case GcCodeRef::codeInfo:
+				if (ref.pointer)
+					CodeTable::update(ref.pointer, code);
+				break;
+			case GcCodeRef::dwarfInfo:
+				if (ref.pointer)
+					DwarfChunk::updateFn((FDE *)ref.pointer, code);
+				break;
 			default:
 				// Pass on to the architecture specific parts:
 				ARCH::writePtr(code, refs, id);
@@ -77,6 +88,24 @@ namespace storm {
 		}
 
 		void finalize(void *code) {
+			GcCode *refs = Gc::codeRefs(code);
+			for (size_t i = 0; i < refs->refCount; i++) {
+				GcCodeRef &ref = refs->refs[i];
+				if (ref.pointer) {
+					if (ref.kind == GcCodeRef::codeInfo) {
+						CodeTable::Handle h = ref.pointer;
+
+						atomicWrite(ref.pointer, null);
+						codeTable().remove(h);
+					} else if (ref.kind == GcCodeRef::dwarfInfo) {
+						FDE *ptr = (FDE *)ref.pointer;
+
+						atomicWrite(ref.pointer, null);
+						dwarfTable().free(ptr);
+					}
+				}
+			}
+
 			ARCH::finalize(code);
 		}
 

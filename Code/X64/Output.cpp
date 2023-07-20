@@ -53,7 +53,7 @@ namespace code {
 			FDE *unwind = dwarfTable().alloc(code, &initCIE);
 			fnInfo.set(unwind, codeAlignment, dataAlignment, true, &dwarfRegister);
 			refs->refs[2].offset = 0;
-			refs->refs[2].kind = GcCodeRef::unwindInfo;
+			refs->refs[2].kind = GcCodeRef::dwarfInfo;
 			refs->refs[2].pointer = unwind;
 		}
 
