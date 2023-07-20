@@ -7,7 +7,7 @@ PUBLIC doSwitchReturnLoc
 .code
 
 	;; Parameters:
-	;; rcx, rdx, r8, r9
+	;; rcx, rdx, r8, r9, xmm0-xmm3
 
 	;; Needs preservation:
 	;; rbx, rbp, rdi, rsi, rsp, r12, r13, r14, r15
@@ -126,8 +126,8 @@ doEndDetour proc frame
 
 	;; Allocate space on the stack. Note: we also need shadow space for the function call!
 	;; Note: alignment.
-	sub rsp, 0A8h
-	.allocstack 0A8h
+	sub rsp, 088h
+	.allocstack 088h
 	.endprolog
 
 	;; Save all registers needed to call a function (just after shadow space)
@@ -140,12 +140,10 @@ doEndDetour proc frame
 	movaps [rsp+50h], xmm1
 	movaps [rsp+60h], xmm2
 	movaps [rsp+70h], xmm3
-	movaps [rsp+80h], xmm4
-	movaps [rsp+90h], xmm5
 
 	;; Call the end detour function. We give it a pointer to [rsp+A0h] since we use that
 	;; location to store the jump target.
-	lea rcx, [rsp+0A0h]
+	lea rcx, [rsp+080h]
 	call doEndDetour2
 
 	;; Now we can simply restore the state.
@@ -158,14 +156,12 @@ doEndDetour proc frame
 	movaps xmm1, [rsp+50h]
 	movaps xmm2, [rsp+60h]
 	movaps xmm3, [rsp+70h]
-	movaps xmm4, [rsp+80h]
-	movaps xmm5, [rsp+90h]
 
 	;; Load jump target before the epilog.
-	mov rax, [rsp+0A0h]
+	mov rax, [rsp+080h]
 
 	;; Epilog.
-	add rsp, 0A8h
+	add rsp, 088h
 	jmp rax
 
 doEndDetour endp
