@@ -971,11 +971,9 @@ namespace os {
 		push(stack.desc->dummy);
 		push(stack.desc->low);
 
-		// Shadow space for any calls done by 'doSwitch'. We technically don't need it for 'doSwitch'
-		// itself, but rather for when we push a sub-context, so that the function called in the sub
-		// context gets its shadow space.
-		for (size_t i = 0; i < 4; i++)
-			push((void *)0);
+		// Note: The asm function does have shadow space for registers allocated, but we compensate
+		// for that when allocating a sub context. Otherwise the pointer to our created desc will be
+		// wrong.
 
 		// Set the 'desc' of 'stack' to the actual stack pointer, so that we can run code on this stack.
 		atomicWrite(stack.desc, (StackDesc *)(stack.desc->low));
@@ -987,11 +985,12 @@ namespace os {
 
 	StackDesc *UThreadData::pushSubContext(const void *fn, void *param) {
 		StackDesc *old = stack.desc;
-		const size_t regCount = 38;
+		const size_t regCount = 34; // 8 general regs, return ptr, 10*2 xmm regs, 3 desc, 2 alignment
 
 		// Copy the old context to the top of the stack again.
+		// Note: the ASM code does not account for shadow space, so we need to compensate here.
 		size_t *oldStack = (size_t *)old;
-		size_t *newStack = oldStack - regCount;
+		size_t *newStack = oldStack - regCount - 4; // 4 is for shadow space
 		memcpy(newStack, oldStack, sizeof(void *) * regCount);
 
 		// Update the copy:

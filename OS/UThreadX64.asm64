@@ -64,11 +64,14 @@ doSwitch proc frame
 	mov [rsp+28h], rax
 	mov [rsp+20h], rsp
 
-	;; Report the state for the old thread.
-	mov [rdx], rsp
+	;; Report the state for the old thread. Note: We need to set 'esp' to the stack limits
+	;; structure we just created.
+	lea rax, [rsp+20h]
+	mov [rdx], rax
 
-	;; Switch to the new stack.
-	mov rsp, [rcx]
+	;; Switch to the new stack. Again, compensate for the shadow space.
+	mov rax, [rcx]
+	lea rsp, [rax-20h]
 
 	;; Clear the new stack's desc, so that it will be scanned using our stack pointer instead.
 	mov QWORD PTR [rcx], 0
