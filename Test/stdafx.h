@@ -33,7 +33,8 @@ SUITE(GcScan, 1); // TODO: Disable
 SUITE(GcObjects, 2); // TODO: Disable
 // GC along with threads.
 SUITE(GcThreads, 3); // TODO: Disable
-// Basic operation of the runtime. No code generation yet.
+// Basic operation of the runtime. No code generation apart from what is required to boot the
+// compiler, and some glue code for making templates work.
 SUITE(Core, 4);
 // Basic tests of the code generation backend. Further tests rely on these to work.
 SUITE(CodeBasic, 5);

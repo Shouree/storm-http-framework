@@ -112,10 +112,6 @@ namespace code {
 		// Find an unused fp register given a set of used registers.
 		Reg unusedFpReg(RegSet *in);
 
-		// Registers clobbered by function calls.
-		extern const Reg *fnDirtyRegs;
-		extern const size_t fnDirtyCount;
-
 		// Description of an op-code.
 		struct OpCode {
 			// Any prefix for this op-code? Prefixes are always emitted before any REX

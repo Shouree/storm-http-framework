@@ -310,13 +310,6 @@ namespace code {
 			return noReg;
 		}
 
-		static const Reg dirtyRegs[] = {
-			rax, rdi, rsi, rdx, rcx, r8, r9, r10, r11,
-			xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7,
-		};
-		const Reg *fnDirtyRegs = dirtyRegs;
-		const size_t fnDirtyCount = ARRAY_COUNT(dirtyRegs);
-
 		void put(Output *to, OpCode op) {
 			if (op.prefix)
 				to->putByte(op.prefix);

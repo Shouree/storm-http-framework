@@ -12,6 +12,8 @@ namespace code {
 	static const nat invalid = -1;
 
 	wostream &operator <<(wostream &to, FreeOpt o) {
+		bool addByPtr = true;
+
 		if ((o & freeOnBoth) == freeOnBoth) {
 			to << L"always";
 		} else if (o & freeOnBlockExit) {
@@ -20,16 +22,18 @@ namespace code {
 			to << L"on exception";
 		} else {
 			to << L"never";
-
-			if (o & freeInactive)
-				to << L", needs activation";
-			return to;
+			addByPtr = false;
 		}
 
-		if (o & freePtr)
-			to << L", by ptr";
-		else
-			to << L", by value";
+		if (o & freeNoInit)
+			to << L", no init";
+
+		if (addByPtr) {
+			if (o & freePtr)
+				to << L", by ptr";
+			else
+				to << L", by value";
+		}
 
 		if (o & freeInactive)
 			to << L", needs activation";
@@ -38,6 +42,8 @@ namespace code {
 	}
 
 	StrBuf &operator <<(StrBuf &to, FreeOpt o) {
+		bool addByPtr = true;
+
 		if ((o & freeOnBoth) == freeOnBoth) {
 			to << S("always");
 		} else if (o & freeOnBlockExit) {
@@ -46,11 +52,11 @@ namespace code {
 			to << S("on exception");
 		} else {
 			to << S("never");
-
-			if (o & freeInactive)
-				to << S(", needs activation");
-			return to;
+			addByPtr = false;
 		}
+
+		if (o & freeNoInit)
+			to << S(", no init");
 
 		if (o & freePtr)
 			to << S(", by ptr");
@@ -468,18 +474,18 @@ namespace code {
 	}
 
 	static bool checkFree(Engine &e, const Operand &free, FreeOpt &when) {
-		if (when & freePtr)
+		if ((when & freePtr) == 0)
 			if (max(free.size(), Size::sLong) != Size::sLong)
-				throw new (e) InvalidValue(S("Can not destroy values larger than 8 bytes by value."));
+				throw new (e) InvalidValue(S("Can not destroy values larger than 8 bytes by value. Use freePtr!"));
 
-		if (!free.empty())
+		if (free.any()) {
 			if (when & freeOnException)
 				return true;
+		} else /* free.empty */ {
+			// Set 'free on none':
+			when &= ~freeOnBoth;
+		}
 
-		if (when & freeInactive)
-			when = freeInactive;
-		else
-			when = freeOnNone;
 		return false;
 	}
 

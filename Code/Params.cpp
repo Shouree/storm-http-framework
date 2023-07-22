@@ -91,6 +91,7 @@ namespace code {
 		this->stackSize = 0;
 		this->stackAlign = stackAlign;
 		this->stackParamAlign = stackParamAlign;
+		this->stackExtra = 0;
 	}
 
 	void Params::result(TypeDesc *type) {

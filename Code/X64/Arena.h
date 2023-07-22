@@ -54,6 +54,9 @@ namespace code {
 
 			// Layout parameters.
 			code::Params *layoutParams(TypeDesc *result, Array<TypeDesc *> *params);
+
+			// Registers that are not preserved across function calls. Initialized by subclasses.
+			RegSet *dirtyRegs;
 		};
 
 
@@ -81,11 +84,6 @@ namespace code {
 			STORM_CTOR PosixArena();
 
 			/**
-			 * Transform.
-			 */
-
-
-			/**
 			 * Parameters.
 			 */
 			virtual Nat STORM_FN firstParamId(MAYBE(TypeDesc *) desc);
@@ -93,6 +91,7 @@ namespace code {
 			virtual code::Params *createParams() const {
 				return new (this) PosixParams();
 			}
+
 		};
 
 	}

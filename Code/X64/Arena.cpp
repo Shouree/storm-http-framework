@@ -11,7 +11,9 @@
 namespace code {
 	namespace x64 {
 
-		Arena::Arena() {}
+		Arena::Arena() {
+			dirtyRegs = new (this) RegSet();
+		}
 
 		Listing *Arena::transform(Listing *l) const {
 #if (defined(WINDOWS) || defined(POSIX)) && defined(X64)
@@ -41,8 +43,8 @@ namespace code {
 		}
 
 		void Arena::removeFnRegs(RegSet *from) const {
-			for (size_t i = 0; i < fnDirtyCount; i++)
-				from->remove(fnDirtyRegs[i]);
+			for (RegSet::Iter i = dirtyRegs->begin(), end = dirtyRegs->end(); i != end; ++i)
+				from->remove(*i);
 		}
 
 		Listing *Arena::redirect(Bool member, TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand param) {
@@ -150,7 +152,14 @@ namespace code {
 		 * Windows version.
 		 */
 
-		WindowsArena::WindowsArena() {}
+		WindowsArena::WindowsArena() {
+			static const Reg dirty[] = {
+				rax, rdx, rcx, r8, r9, r10, r11,
+				xmm0, xmm1, xmm2, xmm3, xmm4, xmm5,
+			};
+			for (size_t i = 0; i < ARRAY_COUNT(dirty); i++)
+				this->dirtyRegs->put(dirty[i]);
+		}
 
 		Nat WindowsArena::firstParamId(MAYBE(TypeDesc *) desc) {
 			if (!desc)
@@ -182,7 +191,14 @@ namespace code {
 		 * Posix version.
 		 */
 
-		PosixArena::PosixArena() {}
+		PosixArena::PosixArena() {
+			static const Reg dirty[] = {
+				rax, rdi, rsi, rdx, rcx, r8, r9, r10, r11,
+				xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7,
+			};
+			for (size_t i = 0; i < ARRAY_COUNT(dirty); i++)
+				this->dirtyRegs->put(dirty[i]);
+		}
 
 		Nat PosixArena::firstParamId(MAYBE(TypeDesc *) desc) {
 			if (!desc)
@@ -208,7 +224,6 @@ namespace code {
 				return Operand();
 			}
 		}
-
 
 
 	}

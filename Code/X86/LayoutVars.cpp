@@ -227,7 +227,8 @@ namespace code {
 			for (nat i = vars->count(); i > 0; i--) {
 				Var v = vars->at(i - 1);
 
-				if (!dest->isParam(v))
+				// Don't initialize parameters or variables that are marked to not need initialization.
+				if (!dest->isParam(v) && (dest->freeOpt(v) & freeNoInit) == 0)
 					zeroVar(dest, layout->at(v.key()), v.size(), freeReg, initReg, saved);
 			}
 

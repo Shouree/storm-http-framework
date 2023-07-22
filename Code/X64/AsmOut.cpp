@@ -120,6 +120,7 @@ namespace code {
 				return false;
 
 			// We can use a few bytes just above the top of the stack freely, at least on UNIX.
+			TODO(L"This is not ideal on Windows!");
 			op = xRel(op.size(), ptrStack, -Offset(op.size()));
 			return true;
 		}

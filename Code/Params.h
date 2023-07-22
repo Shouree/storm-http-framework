@@ -237,17 +237,17 @@ namespace code {
 
 		// Get stack element's offset relative to SP.
 		Nat STORM_FN stackOffset(Nat n) const {
-			return stackPar->v[n].offset;
+			return stackPar->v[n].offset + stackExtra;
 		}
 
 		// Get total size of the stack.
 		Nat STORM_FN stackTotalSize() const {
-			return roundUp(stackSize, stackAlign);
+			return roundUp(stackTotalSizeUnaligned(), stackAlign);
 		}
 
 		// Get unaligned size of the stack.
 		Nat STORM_FN stackTotalSizeUnaligned() const {
-			return stackSize;
+			return stackSize + stackExtra;
 		}
 
 		/**
@@ -308,6 +308,9 @@ namespace code {
 		// Representation of the result. Returned from the 'result' call.
 		Result resultData;
 
+		// Set extra stack size. Used for shadow space on Win64.
+		void setStackExtra(Nat size) { stackExtra = size; }
+
 	private:
 		// Available integer registers (pre-allocated):
 		GcArray<Param> *integer;
@@ -331,6 +334,9 @@ namespace code {
 
 		// Alignment of each parameter on the stack.
 		Nat stackParamAlign;
+
+		// Additional size allocated at the end of the stack (for shadow space, for example)
+		Nat stackExtra;
 
 		// GC types:
 		static const GcType paramType;

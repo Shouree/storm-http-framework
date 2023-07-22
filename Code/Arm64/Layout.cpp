@@ -203,7 +203,9 @@ namespace code {
 			Array<Var> *vars = dest->allVars(init);
 			for (Nat i = 0; i < vars->count(); i++) {
 				Var v = vars->at(i);
-				if (!dest->isParam(v))
+
+				// Don't initialize parameters or variables that are marked to not need initialization.
+				if (!dest->isParam(v) && (dest->freeOpt(v) & freeNoInit) == 0)
 					zeroVar(dest, layout->at(v.key()), v.size());
 			}
 

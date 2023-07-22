@@ -19,8 +19,8 @@ namespace code {
 		 * also generates function prolog and epilog as well as any construction/destruction
 		 * required for the blocks in the listing.
 		 *
-		 * Note: Make sure not to add any extra used registers here, as this may cause the prolog
-		 * and/or epilog to fail preserving some registers.
+		 * Note: Make sure not to add any extra used registers during this transform, as this may
+		 * cause the prolog and/or epilog to fail preserving some registers.
 		 *
 		 * Note: This should be the last transform run on a listing because of the above.
 		 */

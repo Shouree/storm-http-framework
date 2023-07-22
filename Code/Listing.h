@@ -27,11 +27,14 @@ namespace code {
 		// Used by the backends: What is stored in the variable is actually a pointer to the value.
 		STORM_NAME(freeIndirection, indirection) = 0x20,
 
+		// Used by the backends: Do not initialize this variable.
+		STORM_NAME(freeNoInit, noInit) = 0x40,
+
 		// Default options.
 		STORM_NAME(freeDef, default) = freeOnBoth,
 
 		// This variable needs to be activated before it will be freed.
-		STORM_NAME(freeInactive, inactive) = 0x40,
+		STORM_NAME(freeInactive, inactive) = 0x80,
 	};
 
 	BITMASK_OPERATORS(FreeOpt);

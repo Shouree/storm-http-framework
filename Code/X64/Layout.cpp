@@ -45,8 +45,8 @@ namespace code {
 
 			// Figure out which registers we need to spill.
 			toPreserve = allUsedRegs(src);
-			for (size_t i = 0; i < fnDirtyCount; i++)
-				toPreserve->remove(fnDirtyRegs[i]);
+			for (RegSet::Iter i = arena->dirtyRegs->begin(), end = arena->dirtyRegs->end(); i != end; ++i)
+				toPreserve->remove(*i);
 
 			// Compute the layout.
 			Nat spilled = toPreserve->count();
@@ -331,7 +331,8 @@ namespace code {
 			for (Nat i = vars->count(); i > 0; i--) {
 				Var v = vars->at(i - 1);
 
-				if (!dest->isParam(v))
+				// Don't initialize parameters or variables that we don't need to initialize.
+				if (!dest->isParam(v) && (dest->freeOpt(v) & freeNoInit) == 0)
 					zeroVar(dest, layout->at(v.key()), v.size(), reg, initReg);
 			}
 

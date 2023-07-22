@@ -18,119 +18,325 @@ namespace code {
 
 
 		/**
-		 * Parameters passed on the stack:
+		 * Common context for the function call mechanisms.
 		 */
-
-		// Push a value on the stack.
-		static Nat pushValue(Listing *dest, const ParamInfo &p) {
-			Nat size = p.type->size().size64();
-			if (size <= 8) {
-				*dest << push(p.src);
-				return 8;
+		class FnCallState {
+		public:
+			// Create.
+			FnCallState(const Arena *arena, Listing *dest, Array<ParamInfo> *params, RegSet *used, Block parent)
+				: arena(arena), dest(dest), params(params), parent(parent), created() {
+				this->used = new (used) RegSet(*used);
 			}
 
-			// We need to perform a memcpy-like operation (only for variables).
+			// Arena.
+			const Arena *arena;
+
+			// Destination listing.
+			Listing *dest;
+
+			// Parameters (note: we don't copy it, so that we get an accurate version when initializing)
+			Array<ParamInfo> *params;
+
+			// Parent block.
+			Block parent;
+
+			// Used registers.
+			RegSet *used;
+
+
+			// Get the block created for this call. Initializes it if necessary.
+			Block block() {
+				if (created != Block())
+					return created;
+
+				created = dest->createBlock(parent);
+
+				// We need to tell the next stage which register is free to use.
+				*dest << begin(dest->engine(), created)->alterDest(asSize(findFreeReg(), Size::sLong));
+
+				return created;
+			}
+
+			// Find a temporary register to use:
+			Reg findFreeReg() {
+				RegSet *tmp = new (dest) RegSet(*used);
+				for (Nat i = 0; i < params->count(); i++) {
+					ParamInfo &param = params->at(i);
+					if (param.src.hasRegister())
+						tmp->put(param.src.reg());
+				}
+
+				return unusedReg(tmp);
+			}
+
+			// Check if we have created a block.
+			Bool blockCreated() const {
+				return created != Block();
+			}
+
+		private:
+			// Created block, if any.
+			Block created;
+
+			FnCallState(const FnCallState &);
+			FnCallState &operator =(const FnCallState &);
+		};
+
+
+		/**
+		 * Parameters passed on the stack. Old implementation relying on manipulating rsp.
+		 */
+
+		// // Push a value on the stack.
+		// static Nat pushValue(Listing *dest, const ParamInfo &p) {
+		// 	Nat size = p.type->size().size64();
+		// 	if (size <= 8) {
+		// 		*dest << push(p.src);
+		// 		return 8;
+		// 	}
+
+		// 	// We need to perform a memcpy-like operation (only for variables).
+		// 	if (p.src.type() != opVariable)
+		// 		throw new (dest) InvalidValue(S("Can not pass non-variables larger than 8 bytes to functions."));
+
+		// 	Var src = p.src.var();
+		// 	Nat pushed = 0;
+
+		// 	// Last part:
+		// 	Nat last = size & 0x07;
+		// 	size -= last; // Now 'size' is a multiple of 8.
+		// 	if (last == 0) {
+		// 		// Will be handled by the loop below.
+		// 	} else if (last == 1) {
+		// 		*dest << push(byteRel(src, Offset(size)));
+		// 		pushed += 8;
+		// 	} else if (last <= 4) {
+		// 		*dest << push(intRel(src, Offset(size)));
+		// 		pushed += 8;
+		// 	} else /* last < 8 */ {
+		// 		*dest << push(longRel(src, Offset(size)));
+		// 		pushed += 8;
+		// 	}
+
+		// 	while (size >= 8) {
+		// 		size -= 8;
+		// 		*dest << push(longRel(src, Offset(size)));
+		// 		pushed += 8;
+		// 	}
+
+		// 	return pushed;
+		// }
+
+		// // Push a pointer to a value onto the stack.
+		// static Nat pushLea(Listing *dest, const ParamInfo &p) {
+		// 	*dest << push(ptrA);
+		// 	*dest << lea(ptrA, p.src);
+		// 	*dest << swap(ptrA, ptrRel(ptrStack, Offset()));
+		// 	return 8;
+		// }
+
+		// // Push a value to the stack, the address is given in 'p.src'.
+		// static Nat pushRef(Listing *dest, const ParamInfo &p) {
+		// 	Nat size = p.type->size().size64();
+		// 	Nat bytesPushed = roundUp(size, Nat(8));
+
+		// 	// Save 'ptrA' a bit below the stack (safe as long as 'push + 8 <= 128', which should be OK).
+		// 	*dest << mov(longRel(ptrStack, -Offset(bytesPushed + 8)), rax);
+
+		// 	// Load the old 'ptrA'.
+		// 	*dest << mov(ptrA, p.src);
+
+		// 	// Last part:
+		// 	Nat last = size & 0x07;
+		// 	size -= last; // Now 'size' is a multiple of 8.
+		// 	if (last == 0) {
+		// 		// Will be handled by the loop below.
+		// 	} else if (last == 1) {
+		// 		*dest << push(byteRel(ptrA, Offset(size)));
+		// 	} else if (last <= 4) {
+		// 		*dest << push(intRel(ptrA, Offset(size)));
+		// 	} else /* last < 8 */ {
+		// 		*dest << push(longRel(ptrA, Offset(size)));
+		// 	}
+
+		// 	while (size >= 8) {
+		// 		size -= 8;
+		// 		*dest << push(longRel(ptrA, Offset(size)));
+		// 	}
+
+		// 	// Restore the old value of 'rax'.
+		// 	*dest << mov(rax, longRel(ptrStack, -Offset(8)));
+		// 	return bytesPushed;
+		// }
+
+		// // Push parameters to the stack. Returns the total number of bytes pushed to the stack.
+		// static Nat pushParams(Listing *dest, Array<ParamInfo> *src, Params *layout) {
+		// 	// Note: It might be easier to pre-allocate the size of the stack, and then simply memcpy data.
+
+		// 	Nat pushed = 0;
+		// 	Nat size = layout->stackTotalSizeUnaligned();
+		// 	if (size & 0x0F) {
+		// 		// We need to push an additional word to the stack to keep alignment.
+		// 		*dest << push(natConst(0));
+		// 		pushed += 8;
+		// 		size += 8;
+		// 	}
+
+		// 	// Push the parameters.
+		// 	for (Nat i = layout->stackCount(); i > 0; i--) {
+		// 		const ParamInfo &p = src->at(layout->stackParam(i - 1).id());
+		// 		if (p.ref == p.lea) {
+		// 			pushed += pushValue(dest, p);
+		// 		} else if (p.ref) {
+		// 			pushed += pushRef(dest, p);
+		// 		} else if (p.lea) {
+		// 			pushed += pushLea(dest, p);
+		// 		}
+		// 	}
+
+		// 	assert(pushed == size, L"Failed to push some parameters to the stack.");
+		// 	return pushed;
+		// }
+
+
+		/**
+		 * Parameters passed on the stack. New implementation allocating stack space upfront.
+		 */
+
+		// Store a value on the stack.
+		static void storeStackValue(Listing *dest, Reg tmpReg, Nat offset, const ParamInfo &p) {
+			Size size = p.type->size();
+			Nat nSize = size.size64();
+			if (nSize <= 8) {
+				Reg r = asSize(tmpReg, size);
+				if (p.src.type() == opRegister)
+					r = p.src.reg();
+				else
+					*dest << mov(r, p.src);
+
+				*dest << mov(xRel(size, ptrStack, Offset(offset)), r);
+				return;
+			}
+
 			if (p.src.type() != opVariable)
 				throw new (dest) InvalidValue(S("Can not pass non-variables larger than 8 bytes to functions."));
 
 			Var src = p.src.var();
-			Nat pushed = 0;
 
-			// Last part:
-			Nat last = size & 0x07;
-			size -= last; // Now 'size' is a multiple of 8.
-			if (last == 0) {
-				// Will be handled by the loop below.
-			} else if (last == 1) {
-				*dest << push(byteRel(src, Offset(size)));
-				pushed += 8;
-			} else if (last <= 4) {
-				*dest << push(intRel(src, Offset(size)));
-				pushed += 8;
-			} else /* last < 8 */ {
-				*dest << push(longRel(src, Offset(size)));
-				pushed += 8;
+			Reg large = asSize(tmpReg, Size::sLong);
+			Nat pos = 0;
+			while (pos + 8 <= nSize) {
+				*dest << mov(large, longRel(src, Offset(pos)));
+				*dest << mov(longRel(ptrStack, Offset(offset + pos)), large);
+				pos += 8;
 			}
 
-			while (size >= 8) {
-				size -= 8;
-				*dest << push(longRel(src, Offset(size)));
-				pushed += 8;
+			if (pos + 1 >= nSize) {
+				Reg r = asSize(tmpReg, Size::sByte);
+				*dest << mov(r, byteRel(src, Offset(pos)));
+				*dest << mov(byteRel(ptrStack, Offset(offset + pos)), r);
+				pos += 1;
+			} else if (pos + 4 >= nSize) {
+				Reg r = asSize(tmpReg, Size::sInt);
+				*dest << mov(r, intRel(src, Offset(pos)));
+				*dest << mov(intRel(ptrStack, Offset(offset + pos)), r);
+				pos += 4;
 			}
-
-			return pushed;
 		}
 
-		// Push a pointer to a value onto the stack.
-		static Nat pushLea(Listing *dest, const ParamInfo &p) {
-			*dest << push(ptrA);
-			*dest << lea(ptrA, p.src);
-			*dest << swap(ptrA, ptrRel(ptrStack, Offset()));
-			return 8;
+		static Reg loadAddr(Listing *dest, Reg tmpReg, const Operand &src) {
+			if (src.type() == opRegister)
+				return src.reg();
+
+			tmpReg = asSize(tmpReg, Size::sPtr);
+			*dest << mov(tmpReg, src);
+			return tmpReg;
 		}
 
-		// Push a value to the stack, the address is given in 'p.src'.
-		static Nat pushRef(Listing *dest, const ParamInfo &p) {
-			Nat size = p.type->size().size64();
-			Nat bytesPushed = roundUp(size, Nat(8));
-
-			// Save 'ptrA' a bit below the stack (safe as long as 'push + 8 <= 128', which should be OK).
-			*dest << mov(longRel(ptrStack, -Offset(bytesPushed + 8)), rax);
-
-			// Load the old 'ptrA'.
-			*dest << mov(ptrA, p.src);
-
-			// Last part:
-			Nat last = size & 0x07;
-			size -= last; // Now 'size' is a multiple of 8.
-			if (last == 0) {
-				// Will be handled by the loop below.
-			} else if (last == 1) {
-				*dest << push(byteRel(ptrA, Offset(size)));
-			} else if (last <= 4) {
-				*dest << push(intRel(ptrA, Offset(size)));
-			} else /* last < 8 */ {
-				*dest << push(longRel(ptrA, Offset(size)));
+		// Store a value on the stack, from a reference to the value.
+		static void storeStackRef(Listing *dest, Reg tmpReg, Nat offset, const ParamInfo &p) {
+			Size size = p.type->size();
+			Nat nSize = size.size64();
+			if (nSize <= 8) {
+				Reg src = loadAddr(dest, tmpReg, p.src);
+				*dest << mov(asSize(tmpReg, size), xRel(size, ptrStack, Offset()));
+				*dest << mov(xRel(size, ptrStack, Offset(offset)), asSize(tmpReg, size));
+				return;
 			}
 
-			while (size >= 8) {
-				size -= 8;
-				*dest << push(longRel(ptrA, Offset(size)));
+			// TODO: In cases where we have additional temorary registers, we can eliminate extra
+			// load operations.
+
+			Reg large = asSize(tmpReg, Size::sLong);
+			Nat pos = 0;
+			while (pos + 8 <= nSize) {
+				Reg addr = loadAddr(dest, tmpReg, p.src);
+				*dest << mov(large, longRel(addr, Offset(pos)));
+				*dest << mov(longRel(ptrStack, Offset(offset + pos)), large);
+				pos += 8;
 			}
 
-			// Restore the old value of 'rax'.
-			*dest << mov(rax, longRel(ptrStack, -Offset(8)));
-			return bytesPushed;
+			if (pos + 1 >= nSize) {
+				Reg addr = loadAddr(dest, tmpReg, p.src);
+				Reg r = asSize(tmpReg, Size::sByte);
+				*dest << mov(r, byteRel(addr, Offset(pos)));
+				*dest << mov(byteRel(ptrStack, Offset(offset + pos)), r);
+				pos += 1;
+			} else if (pos + 4 >= nSize) {
+				Reg addr = loadAddr(dest, tmpReg, p.src);
+				Reg r = asSize(tmpReg, Size::sInt);
+				*dest << mov(r, intRel(addr, Offset(pos)));
+				*dest << mov(intRel(ptrStack, Offset(offset + pos)), r);
+				pos += 1;
+			}
 		}
 
-		// Push parameters to the stack. Returns the total number of bytes pushed to the stack.
-		static Nat pushParams(Listing *dest, Array<ParamInfo> *src, Params *layout) {
-			// Note: It might be easier to pre-allocate the size of the stack, and then simply memcpy data.
+		// Store a reference to a parameter on the stack.
+		static void storeStackLea(Listing *dest, Reg tmpReg, Nat offset, const ParamInfo &p) {
+			tmpReg = asSize(tmpReg, Size::sPtr);
+			*dest << lea(tmpReg, p.src);
+			*dest << mov(ptrRel(ptrStack, Offset(offset)), tmpReg);
+		}
 
-			Nat pushed = 0;
-			Nat size = layout->stackTotalSizeUnaligned();
-			if (size & 0x0F) {
-				// We need to push an additional word to the stack to keep alignment.
-				*dest << push(natConst(0));
-				pushed += 8;
-				size += 8;
-			}
+		// Store stack parameters. As we are not allowed to modify the stack pointer on Windows, we
+		// instead allocate a variable at the end of the current block. This means we can be sure
+		// that we have enough space reserved on the stack to simply write the parameters in memory
+		// where they need to be without worrying.
+		// This function must be careful not to trash registers which contain parameters.
+		static void storeStackParams(FnCallState &state, Params *layout) {
+			Nat totalSize = layout->stackTotalSize();
+			if (totalSize == 0)
+				return;
 
-			// Push the parameters.
+			Block block = state.block();
+
+			// Create a variable with the appropriate size (no need to initialize it, we will never
+			// use it per se, it is only there to ensure that we have enough free space at the end
+			// of the stack).
+			state.dest->createVar(block, Size(totalSize), Operand(), freeNoInit);
+
+			Reg tmpReg = state.findFreeReg();
+			// TODO: Currently, the 'findFreeReg' above throws if no register is available.
+			// We could instead either:
+			// - store a parameter that should be on the stack in memory, and use that register
+			//   (possible since we can store parameters in any order)
+			// - use the shadow space if we are on Windows to spill (or allocate more memory
+			//   above to allow spilling).
+
+			// Fill the stack right to left for consistency with 'push'-based approaches.
 			for (Nat i = layout->stackCount(); i > 0; i--) {
-				const ParamInfo &p = src->at(layout->stackParam(i - 1).id());
+				Nat offset = layout->stackOffset(i - 1);
+				const ParamInfo &p = state.params->at(layout->stackParam(i - 1).id());
 				if (p.ref == p.lea) {
-					pushed += pushValue(dest, p);
+					storeStackValue(state.dest, tmpReg, offset, p);
 				} else if (p.ref) {
-					pushed += pushRef(dest, p);
+					storeStackRef(state.dest, tmpReg, offset, p);
 				} else if (p.lea) {
-					pushed += pushLea(dest, p);
+					storeStackLea(state.dest, tmpReg, offset, p);
 				}
 			}
-
-			assert(pushed == size, L"Failed to push some parameters to the stack.");
-			return pushed;
 		}
+
 
 		/**
 		 * Parameters passed in registers.
@@ -306,11 +512,13 @@ namespace code {
 		 */
 
 		// Find registers we need to preserve while calling constructors. We assume that 'used' contains
-		// all registers in the parameters. Modifies 'used'.
-		static void preserveComplex(Listing *dest, RegSet *used, Block block, Array<ParamInfo> *params) {
+		// all registers in the parameters.
+		static void preserveComplex(FnCallState &state, Block block) {
+			RegSet *used = new (state.used) RegSet(*state.used);
+
 			// Remove 'used' for the first parameter.
-			for (Nat i = 0; i < params->count(); i++) {
-				ParamInfo &param = params->at(i);
+			for (Nat i = 0; i < state.params->count(); i++) {
+				ParamInfo &param = state.params->at(i);
 
 				if (as<ComplexDesc>(param.type) != null) {
 					// We do not need to preserve anything required by the first complex
@@ -322,16 +530,13 @@ namespace code {
 			}
 
 			// Add the dirty registers to the mix.
-			RegSet *dirty = new (dest) RegSet();
-			for (size_t i = 0; i < fnDirtyCount; i++) {
-				dirty->put(fnDirtyRegs[i]);
-				used->put(fnDirtyRegs[i]);
-			}
+			const RegSet *dirty = state.arena->dirtyRegs;
+			used->put(dirty);
 
 			// Move things around!
 			Bool firstComplex = true;
-			for (Nat i = 0; i < params->count(); i++) {
-				ParamInfo &param = params->at(i);
+			for (Nat i = 0; i < state.params->count(); i++) {
+				ParamInfo &param = state.params->at(i);
 
 				if (as<ComplexDesc>(param.type) != null && firstComplex) {
 					// We do not need to preserve anything required by the first complex
@@ -351,53 +556,43 @@ namespace code {
 				Reg into = unusedRegUnsafe(used);
 				if (into == noReg) {
 					// No more registers. Create a variable!
-					Var v = dest->createVar(block, param.src.size());
-					*dest << mov(v, param.src);
+					Var v = state.dest->createVar(block, param.src.size());
+					*state.dest << mov(v, param.src);
 					param.src = v;
 				} else {
 					// Put it in 'into' instead!
 					into = asSize(into, param.src.size());
-					*dest << mov(into, param.src);
+					*state.dest << mov(into, param.src);
 					param.src = into;
 					used->put(into);
 				}
 			}
 		}
 
-		static Block copyComplex(Listing *dest, RegSet *used, Array<ParamInfo> *params, Block currentBlock) {
-			Block block = dest->createBlock(currentBlock);
-
-			// Add registers from parameters to 'used'.
-			used = new (used) RegSet(*used);
-			for (Nat i = 0; i < params->count(); i++) {
-				ParamInfo &param = params->at(i);
-				if (param.src.hasRegister())
-					used->put(param.src.reg());
-			}
-
-			// We need to tell the next stage what register is free to use!
-			*dest << begin(dest->engine(), block)->alterDest(asSize(unusedReg(used), Size::sLong));
+		static void copyComplex(FnCallState &state) {
+			Block currentBlock = state.block();
 
 			// Find registers we need to preserve while calling constructors.
-			preserveComplex(dest, used, block, params);
+			preserveComplex(state, currentBlock);
 
-			for (Nat i = 0; i < params->count(); i++) {
-				ParamInfo &param = params->at(i);
+			for (Nat i = 0; i < state.params->count(); i++) {
+				ParamInfo &param = state.params->at(i);
 
 				if (ComplexDesc *c = as<ComplexDesc>(param.type)) {
-					Var v = dest->createVar(block, c, freeDef | freeInactive);
+					Var v = state.dest->createVar(currentBlock, c, freeDef | freeInactive);
+					TODO(L"On 64-bit Windows, these parameters might need to be 16-byte aligned.");
 
 					// Call the copy constructor.
-					*dest << lea(ptrDi, v);
+					*state.dest << lea(ptrDi, v);
 					if (param.ref == param.lea) {
-						*dest << lea(ptrSi, param.src);
+						*state.dest << lea(ptrSi, param.src);
 					} else if (param.ref) {
-						*dest << mov(ptrSi, param.src);
+						*state.dest << mov(ptrSi, param.src);
 					} else {
 						assert(false, L"Can not use the 'lea'-mode for complex parameters.");
 					}
-					*dest << call(c->ctor, Size());
-					*dest << activate(v);
+					*state.dest << call(c->ctor, Size());
+					*state.dest << activate(v);
 
 					// Modify the parameter so that we use the newly created parameter.
 					param.src = v;
@@ -405,8 +600,6 @@ namespace code {
 					param.lea = true;
 				}
 			}
-
-			return block;
 		}
 
 		/**
@@ -428,7 +621,9 @@ namespace code {
 		void emitFnCall(const Arena *arena, Listing *dest, Operand toCall, Operand resultPos, TypeDesc *resultType,
 						Bool resultRef, Block currentBlock, RegSet *used, Array<ParamInfo> *params) {
 
-			Block block;
+			// Shared state for other functions:
+			FnCallState state(arena, dest, params, used, currentBlock);
+
 			bool complex = hasComplex(params);
 			Params *layout = arena->createParams();
 			layout->result(resultType);
@@ -437,18 +632,9 @@ namespace code {
 
 			Result result = layout->result();
 
-			// Copy 'used' so we do not alter our callers version.
-			used = new (used) RegSet(*used);
-
 			// Is the result parameter in a register that needs to be preserved?
 			if (resultRef && resultPos.type() == opRegister) {
-				Bool resultDirty = false;
-				for (size_t i = 0; i < fnDirtyCount; i++) {
-					if (same(fnDirtyRegs[i], resultPos.reg())) {
-						resultDirty = true;
-						break;
-					}
-				}
+				Bool resultDirty = arena->dirtyRegs->has(resultPos.reg());
 
 				if (resultDirty) {
 					// We need to preserve it somewhere. Pick any of the registers that need to be
@@ -478,10 +664,10 @@ namespace code {
 
 			// Create copies of complex parameters (inside a block) if needed.
 			if (complex)
-				block = copyComplex(dest, used, params, currentBlock);
+				copyComplex(state);
 
-			// Push parameters on the stack. This is a 'safe' operation since it does not destroy any registers.
-			Nat pushed = pushParams(dest, params, layout);
+			// Push parameters on the stack. Needs to preserve registers.
+			storeStackParams(state, layout);
 
 			// Assign parameters to registers.
 			setRegisters(dest, params, layout);
@@ -512,19 +698,15 @@ namespace code {
 				}
 			}
 
-			// Pop the stack.
-			if (pushed > 0)
-				*dest << add(ptrStack, ptrConst(pushed));
-
-			if (complex) {
+			if (state.blockCreated()) {
 				const Operand &target = resultPos;
 				if (target.type() == opRegister) {
 					// 'r15' should be free now. It is not exposed outside of the backend.
 					*dest << mov(asSize(r15, target.size()), target);
-					*dest << end(block);
+					*dest << end(state.block());
 					*dest << mov(target, asSize(r15, target.size()));
 				} else {
-					*dest << end(block);
+					*dest << end(state.block());
 				}
 			}
 		}
