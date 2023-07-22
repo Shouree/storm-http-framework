@@ -92,6 +92,13 @@ namespace code {
 		}
 
 		void WindowsParams::resultSimple(SimpleDesc *desc) {
+			// Note: Seems like these are always passed in memory?
+			resultData = Result::inMemory(ptrC);
+			addInt(Param(Param::returnId(), desc->size(), true, 0, true));
+			return;
+
+			// Old attempt here. Might still be relevant!
+
 			Nat size = desc->size().size64();
 
 			if (size == 0) {
@@ -103,6 +110,7 @@ namespace code {
 				// Return on stack.
 				resultData = Result::inMemory(ptrC);
 				addInt(Param(Param::returnId(), desc->size(), true, 0, true));
+				return;
 			}
 
 			// Put it in a register.
@@ -134,8 +142,18 @@ namespace code {
 		}
 
 		void WindowsParams::addSimple(Nat id, SimpleDesc *desc) {
-			// Seems to always be passed in memory.
-			addInt(Param(id, desc->size(), true, 0, true));
+			// If they fit in a single 64-bit register, they are passed in that register.
+			Nat size = desc->size().size64();
+
+			if (size > 8) {
+				addInt(Param(id, desc->size(), true, 0, true));
+			} else if (size > 4) {
+				addInt(Param(id, Size::sLong, true, 0, false));
+			} else if (size > 1) {
+				addInt(Param(id, Size::sInt, true, 0, false));
+			} else {
+				addInt(Param(id, Size::sByte, true, 0, false));
+			}
 		}
 
 

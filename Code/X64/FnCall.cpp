@@ -516,17 +516,15 @@ namespace code {
 		static void preserveComplex(FnCallState &state, Block block) {
 			RegSet *used = new (state.used) RegSet(*state.used);
 
-			// Remove 'used' for the first parameter.
+			// Compute "used" for all but the first complex parameter.
 			for (Nat i = 0; i < state.params->count(); i++) {
 				ParamInfo &param = state.params->at(i);
 
-				if (as<ComplexDesc>(param.type) != null) {
-					// We do not need to preserve anything required by the first complex
-					// parameter. It will manage anyway!
-					if (param.src.hasRegister())
-						used->remove(param.src.reg());
-					break;
-				}
+				if (as<ComplexDesc>(param.type) != null)
+					continue;
+
+				if (param.src.hasRegister())
+					used->put(param.src.reg());
 			}
 
 			// Add the dirty registers to the mix.
@@ -569,7 +567,17 @@ namespace code {
 			}
 		}
 
+		static bool hasComplex(Array<ParamInfo> *params) {
+			for (Nat i = 0; i < params->count(); i++)
+				if (as<ComplexDesc>(params->at(i).type))
+					return true;
+			return false;
+		}
+
 		static void copyComplex(FnCallState &state) {
+			if (!hasComplex(state.params))
+				return;
+
 			Block currentBlock = state.block();
 
 			// Find registers we need to preserve while calling constructors.
@@ -602,16 +610,91 @@ namespace code {
 			}
 		}
 
-		/**
-		 * Misc. helpers.
-		 */
+		static void loadOffset(Listing *dest, Reg tmpReg, Nat offset, const ParamInfo &param, Size size) {
+			Reg out = asSize(tmpReg, size);
 
-		// Do 'param' contain any complex parameters?
-		static bool hasComplex(Array<ParamInfo> *params) {
-			for (Nat i = 0; i < params->count(); i++)
-				if (as<ComplexDesc>(params->at(i).type))
-					return true;
-			return false;
+			if (param.ref == param.lea) {
+				switch (param.src.type()) {
+				case opRegister:
+					assert(offset == 0);
+					*dest << mov(out, asSize(param.src.reg(), size));
+					break;
+				case opRelative:
+					*dest << mov(out, xRel(size, param.src.reg(), param.src.offset() + Offset(offset)));
+					break;
+				case opVariable:
+					*dest << mov(out, xRel(size, param.src.var(), param.src.offset() + Offset(offset)));
+					break;
+				default:
+					assert(false);
+				}
+			} else if (param.ref) {
+				Reg addr;
+				if (param.src.type() == opRegister) {
+					addr = param.src.reg();
+				} else {
+					addr = asSize(tmpReg, Size::sPtr);
+					*dest << mov(addr, param.src);
+				}
+
+				*dest << mov(out, xRel(size, addr, Offset(offset)));
+			} else {
+				assert(false, L"Can not use the 'lea'-mode for parameters passed in memory.");
+			}
+		}
+
+		static void copySimple(FnCallState &state, Param p) {
+			if (p.empty())
+				return;
+
+			if (!p.inMemory())
+				return;
+
+			if (p.id() == Param::returnId())
+				return;
+
+			ParamInfo &info = state.params->at(p.id());
+
+			// Complex parameters are already handled!
+			if (as<ComplexDesc>(info.type))
+				return;
+
+			// OK, we found a parameter to copy! Create a variable and copy it! It is simple, so we
+			// don't need to worry about copy-ctors and dtors!
+			Var v = state.dest->createVar(state.block(), info.type, freeOnNone);
+			TODO(L"On 64-bit windows, these parameters might need to be 16-byte aligned!");
+
+			Reg tmpReg = asSize(state.findFreeReg(), Size::sLong);
+			Nat size = info.type->size().size64();
+
+			Nat offset = 0;
+			while (offset + 8 <= size) {
+				loadOffset(state.dest, tmpReg, offset, info, Size::sLong);
+				*state.dest << mov(longRel(v, Offset(offset)), tmpReg);
+				offset += 8;
+			}
+
+			if (size - offset <= 1) {
+				loadOffset(state.dest, tmpReg, offset, info, Size::sByte);
+				*state.dest << mov(byteRel(v, Offset(offset)), asSize(tmpReg, Size::sByte));
+				offset += 1;
+			} else if (size - offset <= 4) {
+				loadOffset(state.dest, tmpReg, offset, info, Size::sInt);
+				*state.dest << mov(intRel(v, Offset(offset)), asSize(tmpReg, Size::sInt));
+				offset += 4;
+			}
+
+			info.src = v;
+			info.ref = false;
+			info.lea = true;
+		}
+
+		static void copySimple(FnCallState &state, Params *layout) {
+			for (Nat i = 0; i < layout->registerCount(); i++)
+				copySimple(state, layout->registerParam(i));
+
+			for (Nat i = 0; i < layout->stackCount(); i++)
+				copySimple(state, layout->stackParam(i));
 		}
 
 		/**
@@ -663,8 +746,10 @@ namespace code {
 			}
 
 			// Create copies of complex parameters (inside a block) if needed.
-			if (complex)
-				copyComplex(state);
+			copyComplex(state);
+
+			// Create copies for simple parameters that are to be passed by pointer.
+			copySimple(state, layout);
 
 			// Push parameters on the stack. Needs to preserve registers.
 			storeStackParams(state, layout);

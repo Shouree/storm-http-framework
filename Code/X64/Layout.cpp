@@ -53,6 +53,7 @@ namespace code {
 			if (params->result().memoryRegister() != noReg)
 				spilled++; // The hidden parameter needs to be spilled!
 
+			TODO(L"For Windows, utilize the shadow space allocated by the caller!");
 			layout = code::x64::layout(src, params, spilled);
 
 			// Initialize the 'activated' array.
@@ -168,9 +169,6 @@ namespace code {
 			// Generate the prolog. Generates push and mov to set up a basic stack frame. Also emits
 			// proper unwind data.
 			*dest << prolog();
-
-			// *dest << push(ptrFrame);
-			// *dest << mov(ptrFrame, ptrStack);
 
 			// Allocate stack space.
 			if (layout->last() != Offset())
@@ -497,6 +495,8 @@ namespace code {
 				throw new (this) InvalidValue(msg->toS());
 			}
 
+			TODO(L"Can't use ptrSi and ptrDi here on Windows!");
+
 			// Handle the return value.
 			if (PrimitiveDesc *p = as<PrimitiveDesc>(src->result)) {
 				returnPrimitive(dest, p, value);
@@ -508,8 +508,15 @@ namespace code {
 				// Set 'rax' to the address of the return value.
 				*dest << mov(ptrA, ptrRel(ptrFrame, resultParam()));
 			} else if (SimpleDesc *s = as<SimpleDesc>(src->result)) {
-				*dest << lea(ptrSi, value);
-				returnSimple(dest, params->result(), s, resultParam());
+				if (params->result().memoryRegister() != noReg) {
+					// Just copy using memcpy. We also need to set 'ptrA' accordingly.
+					*dest << lea(ptrC, value);
+					*dest << mov(ptrA, ptrRel(ptrFrame, resultParam()));
+					movMemcpy(dest, ptrA, ptrC, s->size());
+				} else {
+					*dest << lea(ptrSi, value);
+					returnSimple(dest, params->result(), s, resultParam());
+				}
 			} else {
 				assert(false);
 			}
@@ -539,6 +546,8 @@ namespace code {
 		void Layout::fnRetRefTfm(Listing *dest, Listing *src, Nat line) {
 			Operand value = resolve(src, src->at(line)->src());
 
+			TODO(L"Can't use ptrSi and ptrDi here on Windows!");
+
 			// Handle the return value.
 			if (PrimitiveDesc *p = as<PrimitiveDesc>(src->result)) {
 				returnPrimitiveRef(dest, p, value);
@@ -550,8 +559,15 @@ namespace code {
 				// Set 'rax' to the address of the return value.
 				*dest << mov(ptrA, ptrRel(ptrFrame, resultParam()));
 			} else if (SimpleDesc *s = as<SimpleDesc>(src->result)) {
-				*dest << mov(ptrSi, value);
-				returnSimple(dest, params->result(), s, resultParam());
+				if (params->result().memoryRegister() != noReg) {
+					// Just copy using memcpy. We also need to set 'ptrA' accordingly.
+					*dest << mov(ptrC, value);
+					*dest << mov(ptrA, ptrRel(ptrFrame, resultParam()));
+					movMemcpy(dest, ptrA, ptrC, s->size());
+				} else {
+					*dest << mov(ptrSi, value);
+					returnSimple(dest, params->result(), s, resultParam());
+				}
 			} else {
 				assert(false);
 			}
@@ -582,9 +598,16 @@ namespace code {
 			}
 
 			Size used;
-			// Then, compute where to spill the remaining registers.
-			for (Nat i = 0; i < all->count(); i++) {
-				Var var = all->at(i);
+			// Then, compute where to spill the remaining registers. Keep track if they are passed
+			// in memory or not, since that affects their size!
+			for (Nat i = 0; i < params->registerCount(); i++) {
+				Param p = params->registerParam(i);
+				if (p.empty())
+					continue;
+				if (p.id() == Param::returnId())
+					continue;
+
+				Var var = all->at(p.id());
 				Offset &to = out->at(var.key());
 
 				// Already computed -> no need to spill.
@@ -595,7 +618,7 @@ namespace code {
 				// This is more concentrated than when pushing registers to the stack. On the stack, all
 				// parameters are aligned to 8 bytes, while we do not need that here. We only need to keep
 				// the natural alignment of the parameters to keep the CPU happy.
-				Size sz = var.size();
+				Size sz = p.size();
 				if (src->freeOpt(var) & freeIndirection)
 					sz = Size::sPtr;
 
