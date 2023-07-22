@@ -9,6 +9,10 @@ namespace storm {
 	const void *makeRefParams(Function *wrap) {
 		assert(wrap->result.returnInReg(), L"Currently, returning values is not supported.");
 
+		if (InlineCode *code = as<InlineCode>(wrap->getCode())) {
+			TODO(L"Inline the code!");
+		}
+
 		CodeGen *s = new (wrap) CodeGen(wrap->runOn(), wrap->isMember(), wrap->result);
 		Engine &e = wrap->engine();
 
