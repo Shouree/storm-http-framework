@@ -26,6 +26,9 @@ checkCall proc frame
 	push r15
 	.pushreg r15
 	;; Note: stack is now 16-byte aligned!
+	;; We need shadow space also:
+	sub rsp, 20h
+	.allocstack 20h
 	.endprolog
 	
 
@@ -44,7 +47,7 @@ checkCall proc frame
 	call r8
 
 	;; Save values after call.
-	mov r8, [rsp+40h]
+	mov r8, [rsp+60h]
 	mov [r8+00h], rbx
 	mov [r8+08h], rdi
 	mov [r8+10h], rsi
@@ -54,6 +57,7 @@ checkCall proc frame
 	mov [r8+30h], r15
 
 	;; Restore in epilog. Note: don't do anything fancy here.
+	add rsp, 20h
 	pop r15
 	pop r14
 	pop r13
