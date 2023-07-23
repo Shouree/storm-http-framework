@@ -12,6 +12,31 @@ namespace code {
 			return -(Offset::sPtr * count);
 		}
 
+		void PosixLayout::saveResult(Listing *dest) {
+			const Result &result = params->result();
+
+			if (result.registerCount() > 0) {
+				Size sz = Size::sPtr * roundUp(result.registerCount(), Nat(2));
+				*dest << sub(ptrStack, ptrConst(sz));
+				for (Nat i = 0; i < result.registerCount(); i++) {
+					*dest << mov(ptrRel(ptrStack, Offset::sPtr * i), asSize(result.registerAt(i), Size::sPtr));
+				}
+			}
+			// Note: Original implementation saved 'result.memoryRegister' also, but it should no longer be needed.
+		}
+
+		void PosixLayout::restoreResult(Listing *dest) {
+			const Result &result = params->result();
+
+			if (result.registerCount() > 0) {
+				Size sz = Size::sPtr * roundUp(result.registerCount(), Nat(2));
+				for (Nat i = 0; i < result.registerCount(); i++) {
+					*dest << mov(asSize(result.registerAt(i), Size::sPtr), ptrRel(ptrStack, Offset::sPtr * i));
+				}
+				*dest << add(ptrStack, ptrConst(sz));
+			}
+		}
+
 		static Size spillParams(Array<Offset> *out, Listing *l, Params *params, Offset varOffset) {
 			// NOTE: We could avoid spilling primitives to memory, as we do not generally use those
 			// registers from code generated for the generic platform. However, we would need to
@@ -102,7 +127,8 @@ namespace code {
 			if (result->last().v64() & 0xF) {
 				// Need to be aligned to 64 bits. Otherwise, the SIMD operations used widely on
 				// X86-64 will not work properly.
-				result->last() += Offset::sPtr;
+				result->last() = Offset(roundUp(result->last().v64(), 0x10));
+				// result->last() += Offset::sPtr;
 			}
 
 			return result;

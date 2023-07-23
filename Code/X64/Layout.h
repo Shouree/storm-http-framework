@@ -51,6 +51,10 @@ namespace code {
 			// Offset of the result parameter (if any).
 			virtual Offset STORM_FN resultParam() ABSTRACT;
 
+			// Save/restore result while emitting 'endblock' statements.
+			virtual void STORM_FN saveResult(Listing *dest) ABSTRACT;
+			virtual void STORM_FN restoreResult(Listing *dest) ABSTRACT;
+
 		protected:
 			/**
 			 * Internal functionality, but accessible to derived classes.
@@ -106,7 +110,7 @@ namespace code {
 			Operand resolve(Listing *src, const Operand &op, const Size &size);
 
 			// Create and destroy blocks.
-			void initBlock(Listing *dest, Block init, Reg reg);
+			void initBlock(Listing *dest, Block init, Operand space);
 			void destroyBlock(Listing *dest, Block destroy, Bool preserveRax, Bool notifyTable);
 			void epilog(Listing *dest, Listing *src, Nat line, Bool preserveRax);
 

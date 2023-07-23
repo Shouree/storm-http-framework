@@ -119,6 +119,9 @@ namespace code {
 		inline Instr *STORM_FN operator [](Nat id) const { return at(id); }
 		inline Instr *at(Nat id) const { return code->at(id).instr; }
 
+		// Modify instruction (internal use).
+		inline void setInstr(Nat id, Instr *to) { code->at(id).instr = to; }
+
 		// Give 'id = count()' to access any labels after the last instruction.
 		MAYBE(Array<Label> *) STORM_FN labels(Nat id) const;
 

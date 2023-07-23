@@ -26,6 +26,7 @@ namespace code {
 			FnCallState(const Arena *arena, Listing *dest, Array<ParamInfo> *params, RegSet *used, Block parent)
 				: arena(arena), dest(dest), params(params), parent(parent), created() {
 				this->used = new (used) RegSet(*used);
+				this->layout = arena->createParams();
 			}
 
 			// Arena.
@@ -42,6 +43,9 @@ namespace code {
 
 			// Used registers.
 			RegSet *used;
+
+			// Layout.
+			Params *layout;
 
 
 			// Get the block created for this call. Initializes it if necessary.
@@ -303,8 +307,8 @@ namespace code {
 		// that we have enough space reserved on the stack to simply write the parameters in memory
 		// where they need to be without worrying.
 		// This function must be careful not to trash registers which contain parameters.
-		static void storeStackParams(FnCallState &state, Params *layout) {
-			Nat totalSize = layout->stackTotalSize();
+		static void storeStackParams(FnCallState &state) {
+			Nat totalSize = state.layout->stackTotalSize();
 			if (totalSize == 0)
 				return;
 
@@ -324,9 +328,9 @@ namespace code {
 			//   above to allow spilling).
 
 			// Fill the stack right to left for consistency with 'push'-based approaches.
-			for (Nat i = layout->stackCount(); i > 0; i--) {
-				Nat offset = layout->stackOffset(i - 1);
-				const ParamInfo &p = state.params->at(layout->stackParam(i - 1).id());
+			for (Nat i = state.layout->stackCount(); i > 0; i--) {
+				Nat offset = state.layout->stackOffset(i - 1);
+				const ParamInfo &p = state.params->at(state.layout->stackParam(i - 1).id());
 				if (p.ref == p.lea) {
 					storeStackValue(state.dest, tmpReg, offset, p);
 				} else if (p.ref) {
@@ -591,11 +595,11 @@ namespace code {
 					TODO(L"On 64-bit Windows, these parameters might need to be 16-byte aligned.");
 
 					// Call the copy constructor.
-					*state.dest << lea(ptrDi, v);
+					*state.dest << lea(state.layout->registerSrc(0), v);
 					if (param.ref == param.lea) {
-						*state.dest << lea(ptrSi, param.src);
+						*state.dest << lea(state.layout->registerSrc(1), param.src);
 					} else if (param.ref) {
-						*state.dest << mov(ptrSi, param.src);
+						*state.dest << mov(state.layout->registerSrc(1), param.src);
 					} else {
 						assert(false, L"Can not use the 'lea'-mode for complex parameters.");
 					}
@@ -689,12 +693,12 @@ namespace code {
 			info.lea = true;
 		}
 
-		static void copySimple(FnCallState &state, Params *layout) {
-			for (Nat i = 0; i < layout->registerCount(); i++)
-				copySimple(state, layout->registerParam(i));
+		static void copySimple(FnCallState &state) {
+			for (Nat i = 0; i < state.layout->registerCount(); i++)
+				copySimple(state, state.layout->registerParam(i));
 
-			for (Nat i = 0; i < layout->stackCount(); i++)
-				copySimple(state, layout->stackParam(i));
+			for (Nat i = 0; i < state.layout->stackCount(); i++)
+				copySimple(state, state.layout->stackParam(i));
 		}
 
 		/**
@@ -708,12 +712,11 @@ namespace code {
 			FnCallState state(arena, dest, params, used, currentBlock);
 
 			bool complex = hasComplex(params);
-			Params *layout = arena->createParams();
-			layout->result(resultType);
+			state.layout->result(resultType);
 			for (Nat i = 0; i < params->count(); i++)
-				layout->add(i, params->at(i).type);
+				state.layout->add(i, params->at(i).type);
 
-			Result result = layout->result();
+			Result result = state.layout->result();
 
 			// Is the result parameter in a register that needs to be preserved?
 			if (resultRef && resultPos.type() == opRegister) {
@@ -749,16 +752,22 @@ namespace code {
 			copyComplex(state);
 
 			// Create copies for simple parameters that are to be passed by pointer.
-			copySimple(state, layout);
+			copySimple(state);
 
 			// Push parameters on the stack. Needs to preserve registers.
-			storeStackParams(state, layout);
+			storeStackParams(state);
 
 			// Assign parameters to registers.
-			setRegisters(dest, params, layout);
+			setRegisters(dest, params, state.layout);
 
 			// Call the function (we do not need accurate knowledge of dirty registers from here).
 			*dest << call(toCall, Size());
+
+			TODO(L"On Windows, we don't have to destroy the variables passed to the function as soon as we get to the call instruction.");
+			// Idea: We could handle the situation by simply ending the block just before the call
+			// instruction and mark all variables to only require destruction on exception. That
+			// way, the 'endBlock' instruction will not do anything, and is safe to have in the
+			// middle of the fn call code.
 
 			// Handle the return value if required.
 			if (result.memoryRegister() != noReg) {
@@ -767,8 +776,9 @@ namespace code {
 				// read the register from memory.
 			} else if (result.registerCount() > 0) {
 				if (resultRef) {
-					*dest << mov(ptrSi, resultPos);
-					resultPos = xRel(resultType->size(), ptrSi, Offset());
+					Reg reg = state.layout->registerSrc(1);
+					*dest << mov(reg, resultPos);
+					resultPos = xRel(resultType->size(), reg, Offset());
 				}
 
 				if (result.registerCount() == 1 && resultPos.type() == opRegister) {

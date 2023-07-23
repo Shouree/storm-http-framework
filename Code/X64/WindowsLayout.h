@@ -19,6 +19,10 @@ namespace code {
 
 			// Offset of result parameter.
 			virtual Offset STORM_FN resultParam();
+
+			// Save/restore result.
+			virtual void STORM_FN saveResult(Listing *dest);
+			virtual void STORM_FN restoreResult(Listing *dest);
 		};
 
 	}

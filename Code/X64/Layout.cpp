@@ -163,7 +163,7 @@ namespace code {
 		void Layout::prologTfm(Listing *dest, Listing *src, Nat line) {
 			// Generate the prolog. Generates push and mov to set up a basic stack frame. Also emits
 			// proper unwind data.
-			TODO(L"Move stack space allocation into the prolog to emit Win32 EH data?");
+			TODO(L"Needs to be revised for windows");
 			*dest << prolog();
 
 			// Allocate stack space.
@@ -299,7 +299,7 @@ namespace code {
 			}
 		}
 
-		void Layout::initBlock(Listing *dest, Block init, Reg reg) {
+		void Layout::initBlock(Listing *dest, Block init, Operand tempSpace) {
 			if (block != dest->parent(init)) {
 				Str *msg = TO_S(engine(), S("Can not begin ") << init << S(" unless the current is ")
 								<< dest->parent(init) << S(". Current is ") << block);
@@ -308,26 +308,49 @@ namespace code {
 
 			block = init;
 
-			Bool initReg = true;
-			Bool restoreReg = reg == noReg;
-			if (restoreReg) {
-				reg = eax;
-				*dest << push(eax);
-				TODO(L"This is not technically legal on Windows, but as long as no exception occurs it is probably fine.");
+			Array<Var> *vars = dest->allVars(init);
+
+			// Figure out which register to use for zero:
+			Reg zeroReg;
+			Bool initZeroReg = true;
+			Bool pushed = false;
+
+			if (tempSpace.type() == opRegister) {
+				zeroReg = tempSpace.reg();
+			} else if (tempSpace != Operand()) {
+				// Spill register to memory:
+				if (vars->any()) {
+					*dest << mov(tempSpace, ptrA);
+					zeroReg = ptrA;
+				}
+			} else {
+				// Note: Not viable on Windows, but preprocessing step ensures we never get here.
+				if (vars->any()) {
+					zeroReg = ptrA;
+					*dest << push(ptrA);
+					pushed = true;
+				}
 			}
 
-			Array<Var> *vars = dest->allVars(init);
 			// Go in reverse to make linear accesses in memory when we're using big variables.
 			for (Nat i = vars->count(); i > 0; i--) {
 				Var v = vars->at(i - 1);
 
 				// Don't initialize parameters or variables that we don't need to initialize.
 				if (!dest->isParam(v) && (dest->freeOpt(v) & freeNoInit) == 0)
-					zeroVar(dest, layout->at(v.key()), v.size(), reg, initReg);
+					zeroVar(dest, layout->at(v.key()), v.size(), zeroReg, initZeroReg);
 			}
 
-			if (restoreReg)
-				*dest << pop(eax);
+			// Restore any register if necessary:
+			if (pushed || !initZeroReg) {
+				if (tempSpace.type() == opRegister) {
+					// Nothing to do.
+				} else if (tempSpace != Operand()) {
+					*dest << mov(ptrA, tempSpace);
+				} else {
+					*dest << pop(ptrA);
+				}
+			}
 
 			if (usingEH) {
 				// Remember where the block started.
@@ -337,40 +360,11 @@ namespace code {
 			}
 		}
 
-		static void saveResult(Listing *dest, const Result &result) {
-			PLN(L"TODO: Not legal on Windows");
-			if (result.memoryRegister() != noReg) {
-				// We need to keep the stack aligned to 16 bits.
-				*dest << push(result.memoryRegister());
-				*dest << push(result.memoryRegister());
-			} else if (result.registerCount() > 0) {
-				Size sz = Size::sPtr * roundUp(result.registerCount(), Nat(2));
-				*dest << sub(ptrStack, ptrConst(sz));
-				for (Nat i = 0; i < result.registerCount(); i++) {
-					*dest << mov(ptrRel(ptrStack, Offset::sPtr * i), asSize(result.registerAt(i), Size::sPtr));
-				}
-			}
-		}
-
-		static void restoreResult(Listing *dest, const Result &result) {
-			PLN(L"TODO: Not legal on Windows");
-			if (result.memoryRegister() != noReg) {
-				*dest << pop(result.memoryRegister());
-				*dest << pop(result.memoryRegister());
-			} else if (result.registerCount() > 0) {
-				Size sz = Size::sPtr * roundUp(result.registerCount(), Nat(2));
-				for (Nat i = 0; i < result.registerCount(); i++) {
-					*dest << mov(asSize(result.registerAt(i), Size::sPtr), ptrRel(ptrStack, Offset::sPtr * i));
-				}
-				*dest << add(ptrStack, ptrConst(sz));
-			}
-		}
-
 		void Layout::destroyBlock(Listing *dest, Block destroy, Bool preserveRax, Bool table) {
 			if (destroy != block)
 				throw new (this) BlockEndError();
 
-			Bool pushedResult = false;
+			Bool savedResult = false;
 			Array<Var> *vars = dest->allVars(destroy);
 			// Destroy in reverse order.
 			for (Nat i = vars->count(); i > 0; i--) {
@@ -384,9 +378,9 @@ namespace code {
 					if (activated->at(v.key()) > activationId)
 						continue;
 
-					if (preserveRax && !pushedResult) {
-						saveResult(dest, params->result());
-						pushedResult = true;
+					if (preserveRax && !savedResult) {
+						saveResult(dest);
+						savedResult = true;
 					}
 
 					Reg firstParam = params->registerSrc(0);
@@ -414,8 +408,8 @@ namespace code {
 				}
 			}
 
-			if (pushedResult) {
-				restoreResult(dest, params->result());
+			if (savedResult) {
+				restoreResult(dest);
 			}
 
 			block = dest->parent(block);
@@ -503,7 +497,7 @@ namespace code {
 				if (params->result().registerCount() > 0)
 					returnPrimitive(dest, p, value, params->result().registerAt(0));
 			} else if (ComplexDesc *c = as<ComplexDesc>(src->result)) {
-				TODO(L"Ensure that we have enough shadow space!");
+				// Note: Windows-specific pre-processing ensures we have shadow space here.
 				// Call the copy-ctor.
 				*dest << lea(params->registerSrc(0), value);
 				*dest << mov(params->registerSrc(1), ptrRel(ptrFrame, resultParam()));

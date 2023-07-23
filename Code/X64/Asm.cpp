@@ -288,7 +288,9 @@ namespace code {
 		Reg unusedRegUnsafe(RegSet *in) {
 			static const Reg candidates[] = {
 				// Scratch registers:
-				ptr11, ptr10, ptr9, ptr8, ptrC, ptrD, ptrSi, ptrDi, ptrA,
+				ptr11, ptr10, ptr9, ptr8, ptrC, ptrD, ptrA,
+				// Registers that need preservation on Windows:
+				ptrSi, ptrDi,
 				// Registers that need preservation:
 				ptrB, ptr12, ptr13, ptr14, ptr15
 			};

@@ -642,6 +642,7 @@ namespace code {
 						*dest << push(ptrA);
 					}
 
+					// TODO: Cleanup on exception?
 					*dest << lea(ptrA, ptrRel(ptrStack, paramOffset + Offset::sPtr));
 					*dest << push(ptrA);
 					*dest << call(c->ctor, Size());
