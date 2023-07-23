@@ -391,7 +391,7 @@ namespace code {
 
 					Reg firstParam = params->registerSrc(0);
 
-					TODO(L"Make sure that we have enough shadow space here!");
+					// Note: code in WindowsLayout.cpp ensures that we have enough shadow space here.
 					if (when & freeIndirection) {
 						if (when & freePtr) {
 							*dest << mov(firstParam, resolve(dest, v, Size::sPtr));

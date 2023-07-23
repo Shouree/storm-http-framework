@@ -83,6 +83,31 @@ namespace code {
 			return used.aligned();
 		}
 
+		// Check so that enough shadow space is available in the following situations:
+		//
+		// 1. When destroying a block, we must be able to call destructors for the
+		//    object with the lowest address.
+		// 2. When copying the result (fnRet or fnRetRef), we might need to call a
+		//    copy-ctor. Furthermore, we might also need to temporarily store a word
+		//    somewhere (also during 'epilog').
+		static void ensureShadowSpace(Listing *l, Array<Offset> *offset, Array<Var> *allVars) {
+			const Int shadowSz = 0x20;
+
+			// For #1 above, we can just iterate through all variables and make sure that the total
+			// stack size is 0x20 larger than the object.
+			for (Nat i = 0; i < allVars->count(); i++) {
+				Var v = allVars->at(i);
+				if (l->freeOpt(v) & freeOnBlockExit) {
+					// TODO: This could be a function used in step #2 also.
+					Int off = offset->at(v.key()).v64();
+					if (-off + shadowSz > offset->last().v64())
+						offset->last() = Offset(-off + shadowSz);
+				}
+			}
+
+			// For #2, we need to investigate the listing...
+		}
+
 		Array<Offset> *WindowsLayout::computeLayout(Listing *l, Params *params, Nat spilled) {
 			Array<Offset> *result = code::layout(l);
 
@@ -107,8 +132,10 @@ namespace code {
 					result->at(id) = -(result->at(id) + s.aligned() + varOffset);
 				}
 			}
-
 			result->last() += varOffset;
+
+			ensureShadowSpace(l, result, all);
+
 			if (result->last().v64() & 0xF) {
 				// Need to be aligned to 64 bits. Otherwise, the SIMD operations used widely on
 				// X86-64 will not work properly.
