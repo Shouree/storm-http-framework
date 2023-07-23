@@ -49,12 +49,7 @@ namespace code {
 				toPreserve->remove(*i);
 
 			// Compute the layout.
-			Nat spilled = toPreserve->count();
-			if (params->result().memoryRegister() != noReg)
-				spilled++; // The hidden parameter needs to be spilled!
-
-			TODO(L"For Windows, utilize the shadow space allocated by the caller!");
-			layout = code::x64::layout(src, params, spilled);
+			layout = computeLayout(src, params, toPreserve->count());
 
 			// Initialize the 'activated' array.
 			Array<Var> *vars = src->allVars();
@@ -168,6 +163,7 @@ namespace code {
 		void Layout::prologTfm(Listing *dest, Listing *src, Nat line) {
 			// Generate the prolog. Generates push and mov to set up a basic stack frame. Also emits
 			// proper unwind data.
+			TODO(L"Move stack space allocation into the prolog to emit Win32 EH data?");
 			*dest << prolog();
 
 			// Allocate stack space.
@@ -270,11 +266,6 @@ namespace code {
 			}
 		}
 
-		Offset Layout::resultParam() {
-			Nat count = 1 + toPreserve->count();
-			return -(Offset::sPtr * count);
-		}
-
 		// Zero the memory of a variable. 'initReg' should be true if we need to set <reg> to 0
 		// before using it as our zero. 'initReg' will be set to false, so that it is easy to use
 		// zeroVar in a loop, causing only the first invocation to emit '<reg> := 0'.
@@ -322,6 +313,7 @@ namespace code {
 			if (restoreReg) {
 				reg = eax;
 				*dest << push(eax);
+				TODO(L"This is not technically legal on Windows, but as long as no exception occurs it is probably fine.");
 			}
 
 			Array<Var> *vars = dest->allVars(init);
@@ -346,6 +338,7 @@ namespace code {
 		}
 
 		static void saveResult(Listing *dest, const Result &result) {
+			PLN(L"TODO: Not legal on Windows");
 			if (result.memoryRegister() != noReg) {
 				// We need to keep the stack aligned to 16 bits.
 				*dest << push(result.memoryRegister());
@@ -360,6 +353,7 @@ namespace code {
 		}
 
 		static void restoreResult(Listing *dest, const Result &result) {
+			PLN(L"TODO: Not legal on Windows");
 			if (result.memoryRegister() != noReg) {
 				*dest << pop(result.memoryRegister());
 				*dest << pop(result.memoryRegister());
@@ -395,21 +389,24 @@ namespace code {
 						pushedResult = true;
 					}
 
+					Reg firstParam = params->registerSrc(0);
+
+					TODO(L"Make sure that we have enough shadow space here!");
 					if (when & freeIndirection) {
 						if (when & freePtr) {
-							*dest << mov(ptrDi, resolve(dest, v, Size::sPtr));
+							*dest << mov(firstParam, resolve(dest, v, Size::sPtr));
 							*dest << call(dtor, Size());
 						} else {
-							*dest << mov(ptrDi, resolve(dest, v, Size::sPtr));
-							*dest << mov(asSize(ptrDi, v.size()), xRel(v.size(), ptrDi, Offset()));
+							*dest << mov(firstParam, resolve(dest, v, Size::sPtr));
+							*dest << mov(asSize(firstParam, v.size()), xRel(v.size(), firstParam, Offset()));
 							*dest << call(dtor, Size());
 						}
 					} else {
 						if (when & freePtr) {
-							*dest << lea(ptrDi, resolve(dest, v));
+							*dest << lea(firstParam, resolve(dest, v));
 							*dest << call(dtor, Size());
 						} else {
-							*dest << mov(asSize(ptrDi, v.size()), resolve(dest, v));
+							*dest << mov(asSize(firstParam, v.size()), resolve(dest, v));
 							*dest << call(dtor, Size());
 						}
 					}
@@ -429,7 +426,8 @@ namespace code {
 			}
 		}
 
-		// Memcpy using mov instructions.
+		// Memcpy using mov instructions. Note: rdx does not need to be preserved,
+		// and does never contain a part of the result on any of the supported ABIs.
 		static void movMemcpy(Listing *to, Reg dest, Reg src, Size size) {
 			Nat total = size.size64();
 			Nat offset = 0;
@@ -450,36 +448,41 @@ namespace code {
 			}
 		}
 
-		// Put the return value into registers. Assumes ptrSi contains a pointer to the struct to be returned.
-		static void returnSimple(Listing *dest, const Result &result, SimpleDesc *type, Offset resultParam) {
+		// Put the return value into registers. Assumes 'srcPtr' contains a pointer to the struct to
+		// be returned. 'srcPtr' can not be 'rdx'.
+		static void returnSimple(Listing *dest, const Result &result, SimpleDesc *type,
+								Reg srcPtr, Offset resultParam) {
+
+			assert(!same(srcPtr, rdx));
+
 			if (result.memoryRegister() != noReg) {
 				*dest << mov(result.memoryRegister(), ptrRel(ptrFrame, resultParam));
 				// Inline a memcpy using mov instructions.
-				movMemcpy(dest, result.memoryRegister(), ptrSi, type->size());
+				movMemcpy(dest, result.memoryRegister(), srcPtr, type->size());
 			} else {
 				for (Nat i = 0; i < result.registerCount(); i++) {
 					Reg r = result.registerAt(i);
-					*dest << mov(r, xRel(size(r), ptrSi, Offset(result.registerOffset(i))));
+					*dest << mov(r, xRel(size(r), srcPtr, Offset(result.registerOffset(i))));
 				}
 			}
 		}
 
-		static void returnPrimitive(Listing *dest, PrimitiveDesc *p, const Operand &value) {
+		static void returnPrimitive(Listing *dest, PrimitiveDesc *p, const Operand &value, Reg target) {
 			switch (p->v.kind()) {
 			case primitive::none:
 				break;
 			case primitive::integer:
 			case primitive::pointer:
-				if (value.type() == opRegister && same(value.reg(), ptrA)) {
+				if (value.type() == opRegister && same(value.reg(), target)) {
 					// Already at the correct place!
 				} else {
 					// A simple 'mov' is enough!
-					*dest << mov(asSize(ptrA, value.size()), value);
+					*dest << mov(asSize(target, value.size()), value);
 				}
 				break;
 			case primitive::real:
 				// A simple 'mov' will do!
-				*dest << mov(asSize(xmm0, value.size()), value);
+				*dest << mov(asSize(target, value.size()), value);
 				break;
 			}
 		}
@@ -495,27 +498,29 @@ namespace code {
 				throw new (this) InvalidValue(msg->toS());
 			}
 
-			TODO(L"Can't use ptrSi and ptrDi here on Windows!");
-
 			// Handle the return value.
 			if (PrimitiveDesc *p = as<PrimitiveDesc>(src->result)) {
-				returnPrimitive(dest, p, value);
+				if (params->result().registerCount() > 0)
+					returnPrimitive(dest, p, value, params->result().registerAt(0));
 			} else if (ComplexDesc *c = as<ComplexDesc>(src->result)) {
+				TODO(L"Ensure that we have enough shadow space!");
 				// Call the copy-ctor.
-				*dest << lea(ptrSi, value);
-				*dest << mov(ptrDi, ptrRel(ptrFrame, resultParam()));
+				*dest << lea(params->registerSrc(0), value);
+				*dest << mov(params->registerSrc(1), ptrRel(ptrFrame, resultParam()));
 				*dest << call(c->ctor, Size());
 				// Set 'rax' to the address of the return value.
 				*dest << mov(ptrA, ptrRel(ptrFrame, resultParam()));
 			} else if (SimpleDesc *s = as<SimpleDesc>(src->result)) {
 				if (params->result().memoryRegister() != noReg) {
 					// Just copy using memcpy. We also need to set 'ptrA' accordingly.
+					// Note: ptrC is always safe to use in this context, both on Windows and Posix.
 					*dest << lea(ptrC, value);
 					*dest << mov(ptrA, ptrRel(ptrFrame, resultParam()));
 					movMemcpy(dest, ptrA, ptrC, s->size());
 				} else {
-					*dest << lea(ptrSi, value);
-					returnSimple(dest, params->result(), s, resultParam());
+					Reg r = params->registerSrc(0);
+					*dest << lea(r, value);
+					returnSimple(dest, params->result(), s, r, resultParam());
 				}
 			} else {
 				assert(false);
@@ -525,7 +530,7 @@ namespace code {
 			*dest << ret(Size()); // We will not analyze registers anymore, Size() is fine.
 		}
 
-		static void returnPrimitiveRef(Listing *dest, PrimitiveDesc *p, const Operand &value) {
+		static void returnPrimitiveRef(Listing *dest, PrimitiveDesc *p, const Operand &value, Reg target) {
 			Size s(p->v.size());
 			switch (p->v.kind()) {
 			case primitive::none:
@@ -533,12 +538,13 @@ namespace code {
 			case primitive::integer:
 			case primitive::pointer:
 				// Always two 'mov'.
-				*dest << mov(ptrA, value);
-				*dest << mov(asSize(ptrA, s), xRel(s, ptrA, Offset()));
+				*dest << mov(target, value);
+				*dest << mov(asSize(target, s), xRel(s, target, Offset()));
 				break;
 			case primitive::real:
+				// Note: ptrA is safe as temporary here.
 				*dest << mov(ptrA, value);
-				*dest << mov(asSize(xmm0, s), xRel(s, ptrA, Offset()));
+				*dest << mov(asSize(target, s), xRel(s, ptrA, Offset()));
 				break;
 			}
 		}
@@ -546,27 +552,28 @@ namespace code {
 		void Layout::fnRetRefTfm(Listing *dest, Listing *src, Nat line) {
 			Operand value = resolve(src, src->at(line)->src());
 
-			TODO(L"Can't use ptrSi and ptrDi here on Windows!");
-
 			// Handle the return value.
 			if (PrimitiveDesc *p = as<PrimitiveDesc>(src->result)) {
-				returnPrimitiveRef(dest, p, value);
+				if (params->result().registerCount() > 0)
+					returnPrimitiveRef(dest, p, value, params->result().registerAt(0));
 			} else if (ComplexDesc *c = as<ComplexDesc>(src->result)) {
 				// Call the copy-ctor.
-				*dest << mov(ptrSi, value);
-				*dest << mov(ptrDi, ptrRel(ptrFrame, resultParam()));
+				*dest << mov(params->registerSrc(0), value);
+				*dest << mov(params->registerSrc(1), ptrRel(ptrFrame, resultParam()));
 				*dest << call(c->ctor, Size());
 				// Set 'rax' to the address of the return value.
 				*dest << mov(ptrA, ptrRel(ptrFrame, resultParam()));
 			} else if (SimpleDesc *s = as<SimpleDesc>(src->result)) {
 				if (params->result().memoryRegister() != noReg) {
 					// Just copy using memcpy. We also need to set 'ptrA' accordingly.
+					// Note: ptrC is always safe to use here!
 					*dest << mov(ptrC, value);
 					*dest << mov(ptrA, ptrRel(ptrFrame, resultParam()));
 					movMemcpy(dest, ptrA, ptrC, s->size());
 				} else {
-					*dest << mov(ptrSi, value);
-					returnSimple(dest, params->result(), s, resultParam());
+					Reg r = params->registerSrc(0);
+					*dest << mov(r, value);
+					returnSimple(dest, params->result(), s, r, resultParam());
 				}
 			} else {
 				assert(false);
@@ -574,99 +581,6 @@ namespace code {
 
 			epilogTfm(dest, src, line);
 			*dest << ret(Size()); // We will not analyze registers anymore, Size() is fine.
-		}
-
-
-		static Size spillParams(Array<Offset> *out, Listing *src, Params *params, Offset varOffset) {
-			// NOTE: We could avoid spilling primitives to memory, as we do not generally use those
-			// registers from code generated for the generic platform. However, we would need to
-			// save as soon as we perform a function call anyway, which is probably more expensive
-			// than just spilling them unconditionally in the function prolog.
-
-			Array<Var> *all = src->allParams();
-
-			{
-				// Start by computing the locations of parameters passed on the stack.
-				Offset stackOffset = Offset::sPtr * 2;
-				for (Nat i = 0; i < params->stackCount(); i++) {
-					Nat paramId = params->stackParam(i).id(); // Should never be 'Param::returnId'
-					Var var = all->at(paramId);
-
-					out->at(var.key()) = stackOffset;
-					stackOffset = (stackOffset + var.size().aligned()).alignAs(Size::sPtr);
-				}
-			}
-
-			Size used;
-			// Then, compute where to spill the remaining registers. Keep track if they are passed
-			// in memory or not, since that affects their size!
-			for (Nat i = 0; i < params->registerCount(); i++) {
-				Param p = params->registerParam(i);
-				if (p.empty())
-					continue;
-				if (p.id() == Param::returnId())
-					continue;
-
-				Var var = all->at(p.id());
-				Offset &to = out->at(var.key());
-
-				// Already computed -> no need to spill.
-				if (to != Offset())
-					continue;
-
-				// Try to squeeze the preserved registers as tightly as possible while keeping alignment.
-				// This is more concentrated than when pushing registers to the stack. On the stack, all
-				// parameters are aligned to 8 bytes, while we do not need that here. We only need to keep
-				// the natural alignment of the parameters to keep the CPU happy.
-				Size sz = p.size();
-				if (src->freeOpt(var) & freeIndirection)
-					sz = Size::sPtr;
-
-				// However, since we don't want to use multiple instructions to spill a single
-				// parameter, we increase the size of some parameters a bit.
-				if (asSize(ptrA, sz) == noReg)
-					sz = sz + Size::sInt.alignment();
-
-				used = (used + sz).alignedAs(sz);
-				to = -(varOffset + used);
-			}
-
-			return used.aligned();
-		}
-
-		Array<Offset> *layout(Listing *src, Params *params, Nat spilled) {
-			Array<Offset> *result = code::layout(src);
-
-			// Saved registers and other things:
-			Offset varOffset = Offset::sPtr * spilled;
-
-			// Figure out which variables we need to spill into memory.
-			varOffset += spillParams(result, src, params, varOffset);
-			varOffset = varOffset.alignAs(Size::sPtr);
-
-			// Update the layout of the other variables according to the size we needed for
-			// parameters and spilled registers.
-			Array<Var> *all = src->allVars();
-			for (Nat i = 0; i < all->count(); i++) {
-				Var var = all->at(i);
-				Nat id = var.key();
-
-				if (!src->isParam(var)) {
-					Size s = var.size();
-					if (src->freeOpt(var) & freeIndirection)
-						s = Size::sPtr;
-					result->at(id) = -(result->at(id) + s.aligned() + varOffset);
-				}
-			}
-
-			result->last() += varOffset;
-			if (result->last().v64() & 0xF) {
-				// We need to be aligned to 64 bits. Otherwise the SIMD-operations used widely on
-				// X86-64 will not work properly.
-				result->last() += Offset::sPtr;
-			}
-
-			return result;
 		}
 
 	}

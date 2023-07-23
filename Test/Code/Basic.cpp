@@ -2,8 +2,9 @@
 #include "Code/Listing.h"
 #include "Code/Binary.h"
 #include "Code/Exception.h"
-#include "Code/X64/Layout.h"
-#include "Code/Arm64/Layout.h"
+#include "Code/X64/PosixParams.h"
+#include "Code/X64/WindowsParams.h"
+#include "Code/Arm64/Params.h"
 
 using namespace code;
 
@@ -209,6 +210,44 @@ BEGIN_TEST(CodeHereTest, CodeBasic) {
 	typedef void *(*Fn)();
 	Fn fn = (Fn)b->address();
 	CHECK_EQ((*fn)(), address(&triggerCollect));
+} END_TEST
+
+BEGIN_TEST(CodeX64WindowsLayout, CodeBasic) {
+	Engine &e = gEngine();
+
+	code::x64::WindowsParams *p = new (e) code::x64::WindowsParams();
+	p->add(0, new (e) PrimitiveDesc(intPrimitive()));
+	p->add(1, new (e) PrimitiveDesc(floatPrimitive()));
+
+	SimpleDesc *s = new (e) SimpleDesc(Size::sInt*4, 4);
+	s->at(0) = Primitive(primitive::integer, Size::sInt, Offset());
+	s->at(1) = Primitive(primitive::real, Size::sFloat, Offset::sInt);
+	s->at(2) = Primitive(primitive::real, Size::sFloat, Offset::sInt*2);
+	s->at(3) = Primitive(primitive::integer, Size::sInt, Offset::sInt*3);
+	p->add(2, s);
+
+	SimpleDesc *t = new (e) SimpleDesc(Size::sInt*4, 4);
+	t->at(0) = Primitive(primitive::integer, Size::sInt, Offset());
+	t->at(1) = Primitive(primitive::integer, Size::sInt, Offset::sInt);
+	t->at(2) = Primitive(primitive::real, Size::sFloat, Offset::sInt*2);
+	t->at(3) = Primitive(primitive::real, Size::sFloat, Offset::sInt*3);
+	p->add(3, t);
+
+	SimpleDesc *u = new (e) SimpleDesc(Size::sLong*3, 4);
+	t->at(0) = Primitive(primitive::integer, Size::sLong, Offset());
+	t->at(1) = Primitive(primitive::integer, Size::sLong, Offset::sLong);
+	t->at(2) = Primitive(primitive::integer, Size::sLong, Offset::sLong*2);
+	p->add(4, u);
+
+	CHECK_EQ(p->stackCount(), 1);
+	if (p->stackCount() > 0)
+		CHECK_EQ(p->stackParam(0).id(), 4);
+	CHECK_EQ(p->registerParam(0), Param(0, Size::sInt, true, 0, false));
+	CHECK_EQ(p->registerParam(6), Param(1, Size::sInt, true, 0, false));
+	CHECK_EQ(p->registerParam(1), Param(2, Size::sLong, true, 0, false));
+	CHECK_EQ(p->registerParam(2), Param(2, Size::sLong, true, 8, false));
+	CHECK_EQ(p->registerParam(3), Param(3, Size::sLong, true, 0, false));
+	CHECK_EQ(p->registerParam(7), Param(3, Size::sLong, true, 8, false));
 } END_TEST
 
 BEGIN_TEST(CodeX64PosixLayout, CodeBasic) {

@@ -1,10 +1,10 @@
 #pragma once
-#include "Params.h"
 #include "Asm.h"
-#include "../Transform.h"
-#include "../OpTable.h"
-#include "../UsedRegs.h"
-#include "../ActiveBlock.h"
+#include "Code/Params.h"
+#include "Code/Transform.h"
+#include "Code/OpTable.h"
+#include "Code/UsedRegs.h"
+#include "Code/ActiveBlock.h"
 
 namespace code {
 	class Binary;
@@ -25,7 +25,7 @@ namespace code {
 		 * Note: This should be the last transform run on a listing because of the above.
 		 */
 		class Layout : public Transform {
-			STORM_CLASS;
+			STORM_ABSTRACT_CLASS;
 		public:
 			STORM_CTOR Layout(const Arena *arena);
 
@@ -38,7 +38,24 @@ namespace code {
 			// When done. Adds metadata.
 			virtual void STORM_FN after(Listing *dest, Listing *src);
 
-		private:
+		protected:
+			/**
+			 * Interface that derived classes extend.
+			 */
+
+			// Layout variables, parameters, and spilled registers. The exact layout depends on the
+			// calling convention, so this is implemented in WindowsLayout and PosixLayout
+			// respectively.
+			virtual Array<Offset> *STORM_FN computeLayout(Listing *l, Params *params, Nat spilled) ABSTRACT;
+
+			// Offset of the result parameter (if any).
+			virtual Offset STORM_FN resultParam() ABSTRACT;
+
+		protected:
+			/**
+			 * Internal functionality, but accessible to derived classes.
+			 */
+
 			// Arena, for platform-specific concerns.
 			const Arena *arena;
 
@@ -65,9 +82,6 @@ namespace code {
 
 			// Using exception handling here?
 			Bool usingEH;
-
-			// Offset of the result parameter (if any).
-			Offset resultParam();
 
 			// Signature of the transform functions.
 			typedef void (Layout::*TransformFn)(Listing *dest, Listing *src, Nat line);
@@ -100,10 +114,6 @@ namespace code {
 			void spillParams(Listing *dest);
 		};
 
-
-		// Compute the layout of variables, given a listing, parameters and the number of registers
-		// that need to be spilled into memory in the function prolog and epilog.
-		Array<Offset> *STORM_FN layout(Listing *l, Params *params, Nat spilled);
 
 	}
 }

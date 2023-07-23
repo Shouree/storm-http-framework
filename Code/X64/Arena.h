@@ -1,10 +1,13 @@
 #pragma once
 #include "../Arena.h"
-#include "Params.h"
+#include "WindowsParams.h"
+#include "PosixParams.h"
 
 namespace code {
 	namespace x64 {
 		STORM_PKG(core.asm.x64);
+
+		class Layout;
 
 		/**
 		 * Arena for X86-64. Use WindowsArena or PosixArena for different flavours of the 64-bit
@@ -50,10 +53,13 @@ namespace code {
 			 */
 
 			// Create parameter layout.
-			virtual code::Params *createParams() const ABSTRACT;
+			virtual code::Params *STORM_FN createParams() const ABSTRACT;
 
 			// Layout parameters.
 			code::Params *layoutParams(TypeDesc *result, Array<TypeDesc *> *params);
+
+			// Create the layout transform.
+			virtual Layout *STORM_FN layoutTfm() const ABSTRACT;
 
 			// Registers that are not preserved across function calls. Initialized by subclasses.
 			RegSet *dirtyRegs;
@@ -71,9 +77,9 @@ namespace code {
 			 */
 			virtual Nat STORM_FN firstParamId(MAYBE(TypeDesc *) desc);
 			virtual Operand STORM_FN firstParamLoc(Nat id);
-			virtual code::Params *createParams() const {
-				return new (this) WindowsParams();
-			}
+			virtual code::Params *STORM_FN createParams() const;
+			virtual Layout *STORM_FN layoutTfm() const;
+
 		};
 
 
@@ -88,9 +94,8 @@ namespace code {
 			 */
 			virtual Nat STORM_FN firstParamId(MAYBE(TypeDesc *) desc);
 			virtual Operand STORM_FN firstParamLoc(Nat id);
-			virtual code::Params *createParams() const {
-				return new (this) PosixParams();
-			}
+			virtual code::Params *STORM_FN createParams() const;
+			virtual Layout *STORM_FN layoutTfm() const;
 
 		};
 

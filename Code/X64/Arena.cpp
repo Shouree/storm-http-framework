@@ -4,7 +4,8 @@
 #include "Asm.h"
 #include "AsmOut.h"
 #include "RemoveInvalid.h"
-#include "Layout.h"
+#include "WindowsLayout.h"
+#include "PosixLayout.h"
 #include "Code/PosixEh/StackInfo.h"
 #include "../Exception.h"
 
@@ -24,7 +25,7 @@ namespace code {
 			l = code::transform(l, this, new (this) RemoveInvalid(this));
 
 			// Expand variables and function calls as well as function prolog and epilog.
-			l = code::transform(l, this, new (this) Layout(this));
+			l = code::transform(l, this, layoutTfm());
 
 			return l;
 		}
@@ -186,6 +187,14 @@ namespace code {
 			}
 		}
 
+		code::Params *WindowsArena::createParams() const {
+			return new (this) WindowsParams();
+		}
+
+		Layout *WindowsArena::layoutTfm() const {
+			return new (this) WindowsLayout(this);
+		}
+
 
 		/**
 		 * Posix version.
@@ -225,6 +234,13 @@ namespace code {
 			}
 		}
 
+		code::Params *PosixArena::createParams() const {
+			return new (this) PosixParams();
+		}
+
+		Layout *PosixArena::layoutTfm() const {
+			return new (this) PosixLayout(this);
+		}
 
 	}
 }
