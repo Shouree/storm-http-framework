@@ -89,9 +89,7 @@ namespace code {
 		clear(this->real);
 		this->stackPar = null;
 		this->stackSize = 0;
-		this->stackAlign = stackAlign;
-		this->stackParamAlign = stackParamAlign;
-		this->stackExtra = 0;
+		this->stackData = (stackAlign & 0xFF) | (stackParamAlign & 0xFF) << 8;
 	}
 
 	void Params::result(TypeDesc *type) {
@@ -161,7 +159,7 @@ namespace code {
 		stackPar->filled++;
 
 		// Update size. Minimum alignment is 8.
-		stackSize += roundUp(param.size().aligned().size64(), stackParamAlign);
+		stackSize += roundUp(param.size().aligned().size64(), stackParamAlign());
 	}
 
 	Bool Params::hasInt(Nat space) {

@@ -43,14 +43,18 @@ namespace code {
 			// Remember all 'large' constants that need to be stored at the end of the code section.
 			Array<Operand> *large;
 
+			// Remember all parameters that are stored indirectly.
+			// Note: used as a set, but since we expect it to contain few elements, this is likely faster.
+			Array<Nat> *indirectParams;
+
 			// Label to the start of the large constants section.
 			Label lblLarge;
 
 			// Extract any large numbers from an instruction.
 			Instr *extractNumbers(Instr *i);
 
-			// Remove any references to complex parameters.
-			Instr *extractComplex(Listing *dest, Instr *i, Nat line);
+			// Remove any references to indirect parameters.
+			Instr *extractIndirectParams(Listing *dest, Instr *i, Nat line);
 
 			// Load floating-point register.
 			Reg loadFpRegister(Listing *dest, const Operand &op, Nat line);
@@ -67,6 +71,10 @@ namespace code {
 
 			// Transform table.
 			static const OpEntry<TransformFn> transformMap[];
+
+			// Check if a variable refers to an indirect parameter.
+			bool isIndirectParam(Listing *l, Var var);
+			bool isIndirectParam(Listing *l, Operand op);
 
 			// Generic transform function for instructions using a generic two-op immReg form.
 			void immRegTfm(Listing *dest, Instr *instr, Nat line);

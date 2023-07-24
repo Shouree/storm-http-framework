@@ -17,7 +17,7 @@ namespace code {
 
 			// We have reserved space to store these right above the shadow space!
 			for (Nat i = 0; i < result.registerCount(); i++) {
-				*dest << mov(ptrRel(ptrStack, Offset::sPtr * -Int(i + 4)), asSize(result.registerAt(i), Size::sPtr));
+				*dest << mov(ptrRel(ptrStack, Offset::sPtr * Int(i + 4)), asSize(result.registerAt(i), Size::sPtr));
 			}
 		}
 
@@ -26,7 +26,7 @@ namespace code {
 
 			// We have reserved space to store these right above the shadow space!
 			for (Nat i = 0; i < result.registerCount(); i++) {
-				*dest << mov(asSize(result.registerAt(i), Size::sPtr), ptrRel(ptrStack, Offset::sPtr * -Int(i + 4)));
+				*dest << mov(asSize(result.registerAt(i), Size::sPtr), ptrRel(ptrStack, Offset::sPtr * Int(i + 4)));
 			}
 		}
 
@@ -184,9 +184,6 @@ namespace code {
 					break;
 				}
 			}
-
-			if (before != offset->last())
-				PLN(L"Before " << before << L", after " << offset->last());
 		}
 
 		Array<Offset> *WindowsLayout::computeLayout(Listing *l, Params *params, Nat spilled) {
@@ -223,8 +220,8 @@ namespace code {
 				result->last() = Offset(roundUp(result->last().v64(), 0x10));
 			}
 
-			for (Nat i = 0; i < result->count(); i++)
-				PLN(i << L": " << result->at(i));
+			// for (Nat i = 0; i < result->count(); i++)
+			// 	PLN(i << L": " << result->at(i));
 
 			return result;
 		}

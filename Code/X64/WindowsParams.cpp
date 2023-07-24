@@ -11,6 +11,7 @@ namespace code {
 
 		WindowsParams::WindowsParams() : code::Params(4, 4, 8, 16) {
 			setStackExtra(32); // 4 words for shadow space.
+			setCalleeDestroyParams(); // Callee's responsibility to destroy parameters.
 		}
 
 		Reg WindowsParams::registerSrc(Nat id) const {

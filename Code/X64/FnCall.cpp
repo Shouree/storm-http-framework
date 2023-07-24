@@ -280,13 +280,13 @@ namespace code {
 				pos += 8;
 			}
 
-			if (pos + 1 >= nSize) {
+			if (pos < nSize && nSize - pos <= 1) {
 				Reg addr = loadAddr(dest, tmpReg, p.src);
 				Reg r = asSize(tmpReg, Size::sByte);
 				*dest << mov(r, byteRel(addr, Offset(pos)));
 				*dest << mov(byteRel(ptrStack, Offset(offset + pos)), r);
 				pos += 1;
-			} else if (pos + 4 >= nSize) {
+			} else if (pos < nSize && nSize - pos <= 4) {
 				Reg addr = loadAddr(dest, tmpReg, p.src);
 				Reg r = asSize(tmpReg, Size::sInt);
 				*dest << mov(r, intRel(addr, Offset(pos)));
@@ -591,7 +591,12 @@ namespace code {
 				ParamInfo &param = state.params->at(i);
 
 				if (ComplexDesc *c = as<ComplexDesc>(param.type)) {
-					Var v = state.dest->createVar(currentBlock, c, freeDef | freeInactive);
+					FreeOpt freeOpt = freeInactive | freeOnException;
+					// Consider if we need to destroy parameters:
+					if (!state.layout->calleeDestroyParams())
+						freeOpt |= freeOnBlockExit;
+
+					Var v = state.dest->createVar(currentBlock, c, freeOpt);
 					TODO(L"On 64-bit Windows, these parameters might need to be 16-byte aligned.");
 
 					// Call the copy constructor.
@@ -678,11 +683,11 @@ namespace code {
 				offset += 8;
 			}
 
-			if (size - offset <= 1) {
+			if (offset < size && size - offset <= 1) {
 				loadOffset(state.dest, tmpReg, offset, info, Size::sByte);
 				*state.dest << mov(byteRel(v, Offset(offset)), asSize(tmpReg, Size::sByte));
 				offset += 1;
-			} else if (size - offset <= 4) {
+			} else if (offset < size && size - offset <= 4) {
 				loadOffset(state.dest, tmpReg, offset, info, Size::sInt);
 				*state.dest << mov(intRel(v, Offset(offset)), asSize(tmpReg, Size::sInt));
 				offset += 4;
@@ -694,11 +699,8 @@ namespace code {
 		}
 
 		static void copySimple(FnCallState &state) {
-			for (Nat i = 0; i < state.layout->registerCount(); i++)
-				copySimple(state, state.layout->registerParam(i));
-
-			for (Nat i = 0; i < state.layout->stackCount(); i++)
-				copySimple(state, state.layout->stackParam(i));
+			for (Nat i = 0; i < state.layout->totalCount(); i++)
+				copySimple(state, state.layout->totalParam(i));
 		}
 
 		/**
@@ -763,11 +765,13 @@ namespace code {
 			// Call the function (we do not need accurate knowledge of dirty registers from here).
 			*dest << call(toCall, Size());
 
-			TODO(L"On Windows, we don't have to destroy the variables passed to the function as soon as we get to the call instruction.");
-			// Idea: We could handle the situation by simply ending the block just before the call
-			// instruction and mark all variables to only require destruction on exception. That
-			// way, the 'endBlock' instruction will not do anything, and is safe to have in the
-			// middle of the fn call code.
+			// If it is the callee's responsibility to destroy parameters, then we know that no
+			// destructors will be executed by the 'end(block)' operation. As the X64 backend uses
+			// table-based exceptions, it will not even destroy any registers (it just emits a
+			// label). As such, it is fine to just emit it and be happy.
+			if (state.blockCreated() && state.layout->calleeDestroyParams()) {
+				*dest << end(state.block());
+			}
 
 			// Handle the return value if required.
 			if (result.memoryRegister() != noReg) {
@@ -793,9 +797,26 @@ namespace code {
 				}
 			}
 
-			if (state.blockCreated()) {
+			// If it is our responsibility to destroy parameters, then we need to be a bit more
+			// careful. If the result is in a register, we need to preserve it since destructors
+			// might be executed.
+			if (state.blockCreated() && !state.layout->calleeDestroyParams()) {
 				const Operand &target = resultPos;
-				if (target.type() == opRegister) {
+
+				bool needProtection = target.type() == opRegister;
+				if (needProtection) {
+					// See if any destructors will be executed. If not, then we are safe anyway.
+					needProtection = false;
+					Array<Var> *vars = dest->allVars(state.block());
+					for (Nat i = 0; i < vars->count(); i++) {
+						if (dest->freeOpt(vars->at(i)) & freeOnBlockExit) {
+							needProtection = true;
+							break;
+						}
+					}
+				}
+
+				if (needProtection) {
 					// 'r15' should be free now. It is not exposed outside of the backend.
 					*dest << mov(asSize(r15, target.size()), target);
 					*dest << end(state.block());

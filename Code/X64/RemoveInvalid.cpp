@@ -2,6 +2,7 @@
 #include "RemoveInvalid.h"
 #include "Asm.h"
 #include "Params.h"
+#include "Arena.h"
 #include "../Listing.h"
 #include "../UsedRegs.h"
 #include "../Exception.h"
@@ -63,22 +64,26 @@ namespace code {
 			TRANSFORM(ucastf),
 		};
 
-		static bool isComplexParam(Listing *l, Var v) {
-			TypeDesc *t = l->paramDesc(v);
-			if (!t)
+
+		RemoveInvalid::RemoveInvalid(const Arena *arena) : arena(arena) {}
+
+		bool RemoveInvalid::isIndirectParam(Listing *l, Var v) {
+			if (!l->paramDesc(v))
 				return false;
 
-			return as<ComplexDesc>(t) != null;
+			for (Nat i = 0; i < indirectParams->count(); i++)
+				if (v.key() == indirectParams->at(i))
+					return true;
+
+			return false;
 		}
 
-		static bool isComplexParam(Listing *l, Operand op) {
+		bool RemoveInvalid::isIndirectParam(Listing *l, Operand op) {
 			if (op.type() != opVariable)
 				return false;
 
-			return isComplexParam(l, op.var());
+			return isIndirectParam(l, op.var());
 		}
-
-		RemoveInvalid::RemoveInvalid(const Arena *arena) : arena(arena) {}
 
 		void RemoveInvalid::before(Listing *dest, Listing *src) {
 			used = usedRegs(dest->arena, src).used;
@@ -86,16 +91,38 @@ namespace code {
 			lblLarge = dest->label();
 			params = new (this) Array<ParamInfo>();
 
-			// Set the 'freeIndirect' flag on all complex parameters.
-			Array<Var> *vars = dest->allParams();
-			for (Nat i = 0; i < vars->count(); i++) {
-				Var v = vars->at(i);
-				if (isComplexParam(dest, v)) {
+			// Figure out which parameters are indirect, and set 'freeIndirect' on them all:
+			{
+				indirectParams = new (this) Array<Nat>();
+				Params *layout = arena->createParams();
+				Array<Var> *vars = dest->allParams();
+
+				for (Nat i = 0; i < vars->count(); i++)
+					layout->add(i, src->paramDesc(vars->at(i)));
+
+				// Now: figure out which parameters need to be modified:
+				for (Nat i = 0; i < layout->totalCount(); i++) {
+					Param p = layout->totalParam(i);
+					if (p.empty())
+						continue;
+					if (p.id() == Param::returnId())
+						continue;
+					if (!p.inMemory())
+						continue;
+
+					// It is indirect!
+					Var v = vars->at(p.id());
+					indirectParams->push(v.key());
+
+					// Also: modify the parameter so that it is freed correctly:
 					FreeOpt flags = dest->freeOpt(v);
-					// Complex parameters are freed by the caller.
-					flags &= ~freeOnException;
-					flags &= ~freeOnBlockExit;
 					flags |= freeIndirection;
+
+					if (!layout->calleeDestroyParams()) {
+						// Parameters are freed by the caller.
+						flags &= ~freeOnException;
+						flags &= ~freeOnBlockExit;
+					}
 					dest->freeOpt(v, flags);
 				}
 			}
@@ -114,7 +141,7 @@ namespace code {
 				break;
 			default:
 				i = extractNumbers(i);
-				i = extractComplex(dest, i, line);
+				i = extractIndirectParams(dest, i, line);
 				break;
 			}
 
@@ -153,10 +180,10 @@ namespace code {
 			return i;
 		}
 
-		Instr *RemoveInvalid::extractComplex(Listing *to, Instr *i, Nat line) {
-			// Complex parameters are passed as a pointer. Dereference these by inserting a 'mov' instruction.
+		Instr *RemoveInvalid::extractIndirectParams(Listing *to, Instr *i, Nat line) {
+			// Some parameters are passed as pointers. Dereference them by inserting a 'mov' instruction.
 			RegSet *regs = used->at(line);
-			if (isComplexParam(to, i->src())) {
+			if (isIndirectParam(to, i->src())) {
 				const Operand &src = i->src();
 				Reg reg = asSize(unusedReg(regs), Size::sPtr);
 				regs = new (this) RegSet(*regs);
@@ -166,7 +193,7 @@ namespace code {
 				i = i->alterSrc(xRel(src.size(), reg, src.offset()));
 			}
 
-			if (isComplexParam(to, i->dest())) {
+			if (isIndirectParam(to, i->dest())) {
 				const Operand &dest = i->dest();
 				Reg reg = asSize(unusedReg(regs), Size::sPtr);
 				*to << mov(reg, ptrRel(dest.var(), Offset()));

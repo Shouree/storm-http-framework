@@ -237,17 +237,27 @@ namespace code {
 
 		// Get stack element's offset relative to SP.
 		Nat STORM_FN stackOffset(Nat n) const {
-			return stackPar->v[n].offset + stackExtra;
+			return stackPar->v[n].offset + stackExtra();
 		}
 
 		// Get total size of the stack.
 		Nat STORM_FN stackTotalSize() const {
-			return roundUp(stackTotalSizeUnaligned(), stackAlign);
+			return roundUp(stackTotalSizeUnaligned(), stackAlign());
 		}
 
 		// Get unaligned size of the stack.
 		Nat STORM_FN stackTotalSizeUnaligned() const {
-			return stackSize + stackExtra;
+			return stackSize + stackExtra();
+		}
+
+		// Get extra space on the stack. For shadow space, for example.
+		Nat STORM_FN stackExtra() const {
+			return (stackData >> 16) & 0xFF;
+		}
+
+		// Check if it is the callee's responsibility to destroy parameters.
+		Bool STORM_FN calleeDestroyParams() const {
+			return ((stackData >> 24) & 0x1) != 0;
 		}
 
 		/**
@@ -309,7 +319,15 @@ namespace code {
 		Result resultData;
 
 		// Set extra stack size. Used for shadow space on Win64.
-		void setStackExtra(Nat size) { stackExtra = size; }
+		inline void setStackExtra(Nat size) {
+			stackData &= ~Nat(0xFF << 16);
+			stackData |= (size & 0xFF) << 16;
+		}
+
+		// Signal that it is the callee's responsibility to call destructors.
+		inline void setCalleeDestroyParams() {
+			stackData |= Nat(1) << 24;
+		}
 
 	private:
 		// Available integer registers (pre-allocated):
@@ -329,14 +347,22 @@ namespace code {
 		// Total stack size.
 		Nat stackSize;
 
+		// Other information about the stack:
+		// -  0.. 7: alignment of the stack
+		// -  8..15: alignment of each parameter on the stack
+		// - 16..24: additional size allocated at the end of the stack (for shadow space, for example)
+		// - 25..25: callee's responsibility to call destructors?
+		Nat stackData;
+
 		// Alignment of the stack.
-		Nat stackAlign;
+		inline Nat stackAlign() const {
+			return stackData & 0xFF;
+		}
 
 		// Alignment of each parameter on the stack.
-		Nat stackParamAlign;
-
-		// Additional size allocated at the end of the stack (for shadow space, for example)
-		Nat stackExtra;
+		inline Nat stackParamAlign() {
+			return (stackData >> 8) & 0xFF;
+		}
 
 		// GC types:
 		static const GcType paramType;

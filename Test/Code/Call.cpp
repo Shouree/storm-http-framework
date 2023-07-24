@@ -493,14 +493,11 @@ BEGIN_TEST(CallComplex, Code) {
 
 	*l << fnRet(eax);
 
-	PLN(L"___________________");
-
-	Binary *b = new (e) Binary(arena, l, true);
+	Binary *b = new (e) Binary(arena, l);
 	typedef Int (*Fn)();
 	Fn fn = (Fn)b->address();
 
 	DbgVal::clear();
-	(*fn)();
 	CHECK_EQ((*fn)(), 18);
 	CHECK(DbgVal::clear());
 } END_TEST

@@ -137,6 +137,8 @@ namespace code {
 		void Layout::spillParams(Listing *dest) {
 			Array<Var> *all = dest->allParams();
 
+			TODO(L"On windows, we are responsible for calling destructors on the parameters!");
+
 			for (Nat i = 0; i < params->registerCount(); i++) {
 				Param info = params->registerParam(i);
 				if (info.size() == Size())
@@ -164,6 +166,13 @@ namespace code {
 			// Generate the prolog. Generates push and mov to set up a basic stack frame. Also emits
 			// proper unwind data.
 			TODO(L"Needs to be revised for windows");
+			// On Windows, it needs to look approximately as follows (due to EH):
+			// - establish frame ptr
+			// - spill register parameters (int registers)
+			// - push preserved registers
+			// - allocate stack frame
+			// - spill remaining registers
+
 			*dest << prolog();
 
 			// Allocate stack space.
