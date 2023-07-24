@@ -25,6 +25,7 @@
 #include "Format.h" // for fmt::wordAlign
 #include "SampleImpl.h"
 #include "Root.h"
+#include "ExceptionHandler.h"
 
 #ifdef STORM_GC
 
@@ -317,6 +318,22 @@ namespace storm {
 
 
 		/**
+		 * Exception handling.
+		 *
+		 * On some platforms, the Gc needs to set up callbacks based on allocated memory. This is
+		 * where to hook into these callbacks.
+		 */
+
+#ifdef STORM_GC_EH_CALLBACK
+		inline void setEhCallback(STORM_GC_EH_CALLBACK callback) {
+			ehCallback = callback;
+		}
+
+		static STORM_GC_EH_CALLBACK getEhCallback(GcImpl *impl);
+#endif
+
+
+		/**
 		 * Debugging/testing.
 		 */
 
@@ -365,6 +382,10 @@ namespace storm {
 
 		// Lock for the root set.
 		util::Lock rootLock;
+
+#ifdef STORM_GC_EH_CALLBACK
+		STORM_GC_EH_CALLBACK ehCallback;
+#endif
 
 		// Destroyed already?
 		Bool destroyed;

@@ -27,7 +27,7 @@ namespace storm {
 	};
 
 	Gc::Gc(size_t initialArena, nat finalizationInterval)
-		: impl(new ImplWrap(*this, initialArena, finalizationInterval)), destroyed(false) {}
+		: impl(new ImplWrap(*this, initialArena, finalizationInterval)), destroyed(false), ehCallback(null) {}
 
 	Gc::~Gc() {
 		destroy();
@@ -135,6 +135,14 @@ namespace storm {
 			return i->second.data;
 	}
 
+#ifdef STORM_GC_EH_CALLBACK
+
+	STORM_GC_EH_CALLBACK Gc::getEhCallback(GcImpl *from) {
+		Gc &me = ((ImplWrap *)from)->owner;
+		return me.ehCallback;
+	}
+
+#endif
 
 	GcType *Gc::allocType(GcType::Kind kind, Type *type, size_t stride, size_t entries) {
 		// Disallow too large type allocations by limiting the number of entries way below what

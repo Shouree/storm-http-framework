@@ -4,6 +4,7 @@
 #include "Type.h"
 #include "Package.h"
 #include "Code.h"
+#include "Code/WindowsEh/Seh.h"
 #include "Function.h"
 #include "Core/Hash.h"
 #include "Core/Thread.h"
@@ -154,6 +155,11 @@ namespace storm {
 		objRoot(null),
 		ioThread(null),
 		stackInfo(gc) {
+
+#ifdef STORM_GC_EH_CALLBACK
+		// Setup exceptions on systems that require it.
+		gc.setEhCallback(&code::eh::exceptionCallback);
+#endif
 
 		// Handle system errors.
 		setupSystemExceptions();

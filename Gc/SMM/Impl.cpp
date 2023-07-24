@@ -25,7 +25,11 @@ namespace storm {
 	};
 
 	GcImpl::GcImpl(size_t initialArenaSize, Nat finalizationInterval)
-		: arena(initialArenaSize, generations, ARRAY_COUNT(generations)) {}
+		: arena(initialArenaSize, generations, ARRAY_COUNT(generations)) {
+#ifdef STORM_GC_EH_CALLBACK
+#error "SMM does not support EH callbacks as needed by this platform!"
+#endif
+	}
 
 	void GcImpl::destroy() {
 		arena.destroy();

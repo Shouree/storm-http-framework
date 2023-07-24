@@ -4,6 +4,7 @@
 #define STORM_HAS_GC
 
 #include "Lib.h"
+#include "Gc/ExceptionHandler.h"
 #include "Gc/MemorySummary.h"
 #include "Gc/License.h"
 #include "Gc/Root.h"
@@ -240,6 +241,29 @@ namespace storm {
 
 		// Check memory, assuming the object is in a GC pool.
 		void checkPoolMemory(const void *object, bool recursive);
+
+#ifdef STORM_GC_EH_CALLBACK
+
+		// Description of where to find the callback:
+		struct EhData {
+			GcImpl *owner;
+			void *base;
+		};
+
+		// Store all allocated EhData structures keyed on base address.
+		std::map<size_t, EhData *> ehData;
+
+		// Called when the arena is extended or contracted.
+		static void arenaExtended(mps_arena_t arena, void *base, size_t count);
+		static void arenaContracted(mps_arena_t arena, void *base, size_t count);
+
+		// Find the GcImpl for an arena.
+		static GcImpl *findFromArena(mps_arena_t arena);
+
+		// Callback from the OS.
+		static RUNTIME_FUNCTION *ehCallback(DWORD64 pc, void *context);
+
+#endif
 	};
 
 }

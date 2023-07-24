@@ -279,6 +279,80 @@ namespace storm {
 		}
 	}
 
+#ifdef STORM_GC_EH_CALLBACK
+
+	static THREAD GcImpl *currentAllocArena;
+	static util::Lock arenaMapLock;
+	static std::map<mps_arena_t, GcImpl *> arenaMap;
+
+	RUNTIME_FUNCTION *GcImpl::ehCallback(DWORD64 pc, void *context) {
+		EhData *data = (EhData *)context;
+
+		STORM_GC_EH_CALLBACK cb = Gc::getEhCallback(data->owner);
+		if (!cb)
+			return null;
+
+		return (*cb)((void *)pc, data->base);
+	}
+
+	GcImpl *GcImpl::findFromArena(mps_arena_t arena) {
+		util::Lock::L z(arenaMapLock);
+
+		std::map<mps_arena_t, GcImpl *>::iterator found = arenaMap.find(arena);
+		if (found == arenaMap.end())
+			return currentAllocArena;
+		else
+			return found->second;
+	}
+
+	void GcImpl::arenaExtended(mps_arena_t arena, void *base, size_t count) {
+		const size_t maxSize = size_t(1) << 32;
+
+		GcImpl *impl = findFromArena(arena);
+		assert(impl, L"Need an GC object!");
+
+		for (size_t offset = 0; offset < count; offset += maxSize) {
+			size_t cBase = size_t(base) + offset;
+			size_t cCount = min(count - offset, maxSize);
+
+			EhData *data = new EhData;
+			data->owner = impl;
+			data->base = (void *)cBase;
+
+			if (!RtlInstallFunctionTableCallback(cBase | 0x3, cBase, DWORD(cCount), &ehCallback, data, NULL)) {
+				WARNING(L"Failed to install EH callback at: " << (void *)cBase);
+				delete data;
+			}
+
+			impl->ehData.insert(make_pair(cBase, data));
+		}
+	}
+
+	void GcImpl::arenaContracted(mps_arena_t arena, void *base, size_t count) {
+		const size_t maxSize = size_t(1) << 32;
+
+		GcImpl *impl = findFromArena(arena);
+		assert(impl, L"Need an GC object!");
+
+		for (size_t offset = 0; offset < count; offset += maxSize) {
+			size_t cBase = size_t(base) + offset;
+
+			if (!RtlDeleteFunctionTable(PRUNTIME_FUNCTION(cBase | 0x3))) {
+				WARNING(L"Failed to remove EH callback at: " << (void *)cBase);
+			}
+
+			std::map<size_t, EhData *>::iterator found = impl->ehData.find(cBase);
+			if (found != impl->ehData.end()) {
+				delete found->second;
+				impl->ehData.erase(found);
+			} else {
+				WARNING(L"Failed to find map entry for region: " << (void *)cBase);
+			}
+		}
+	}
+
+#endif
+
 	GcImpl::GcImpl(size_t initialArena, Nat finalizationInterval) : finalizationInterval(finalizationInterval) {
 		// We work under these assumptions.
 		fmt::init();
@@ -292,8 +366,21 @@ namespace storm {
 
 		MPS_ARGS_BEGIN(args) {
 			MPS_ARGS_ADD(args, MPS_KEY_ARENA_SIZE, initialArena);
+#ifdef STORM_GC_EH_CALLBACK
+			MPS_ARGS_ADD(args, MPS_KEY_ARENA_EXTENDED, (mps_fun_t)&arenaExtended);
+			MPS_ARGS_ADD(args, MPS_KEY_ARENA_CONTRACTED, (mps_fun_t)&arenaContracted);
+			currentAllocArena = this;
+#endif
 			check(mps_arena_create_k(&arena, mps_arena_class_vm(), args), S("Failed to create GC arena."));
 		} MPS_ARGS_END(args);
+
+#ifdef STORM_GC_EH_CALLBACK
+		{
+			util::Lock::L z(arenaMapLock);
+			currentAllocArena = null;
+			arenaMap.insert(make_pair(arena, this));
+		}
+#endif
 
 		// Note: we can use mps_arena_pause_time_set(arena, 0.0) to enforce minimal pause
 		// times. Default is 0.100 s, this should be configurable from Storm somehow.
