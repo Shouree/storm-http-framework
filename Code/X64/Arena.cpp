@@ -164,8 +164,8 @@ namespace code {
 				this->dirtyRegs->put(dirty[i]);
 		}
 
-		CodeOutput *WindowsArena::codeOutput(Binary *owner, Array<Nat> *offsets, Nat size, Nat refs) const {
-			return new (this) WindowsCodeOut(owner, offsets, size, refs);
+		CodeOutput *WindowsArena::codeOutput(Binary *owner, LabelOutput *size) const {
+			return new (this) WindowsCodeOut(owner, size->offsets, size->size, size->refs);
 		}
 
 		Nat WindowsArena::firstParamId(MAYBE(TypeDesc *) desc) {
@@ -215,8 +215,8 @@ namespace code {
 				this->dirtyRegs->put(dirty[i]);
 		}
 
-		CodeOutput *PosixArena::codeOutput(Binary *owner, Array<Nat> *offsets, Nat size, Nat refs) const {
-			return new (this) PosixCodeOut(owner, offsets, size, refs);
+		CodeOutput *PosixArena::codeOutput(Binary *owner, LabelOutput *size) const {
+			return new (this) PosixCodeOut(owner, size->offsets, size->size, size->refs);
 		}
 
 		Nat PosixArena::firstParamId(MAYBE(TypeDesc *) desc) {

@@ -26,7 +26,7 @@ namespace code {
 			 */
 
 			virtual LabelOutput *STORM_FN labelOutput() const;
-			virtual CodeOutput *STORM_FN codeOutput(Binary *owner, Array<Nat> *offsets, Nat size, Nat refs) const;
+			virtual CodeOutput *STORM_FN codeOutput(Binary *owner, LabelOutput *size) const;
 
 			/**
 			 * Registers.

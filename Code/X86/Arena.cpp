@@ -53,8 +53,8 @@ namespace code {
 			return new (this) LabelOutput(4);
 		}
 
-		CodeOutput *Arena::codeOutput(Binary *owner, Array<Nat> *offsets, Nat size, Nat refs) const {
-			return new (this) CodeOut(owner, offsets, size, refs);
+		CodeOutput *Arena::codeOutput(Binary *owner, LabelOutput *size) const {
+			return new (this) CodeOut(owner, size->offsets, size->size, size->refs);
 		}
 
 		void Arena::removeFnRegs(RegSet *from) const {

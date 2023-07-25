@@ -45,9 +45,8 @@ namespace code {
 		// Create an offset-computing output.
 		virtual LabelOutput *STORM_FN labelOutput() const ABSTRACT;
 
-		// Create a code-generating output. 'lblOffsets' and 'size' are obtained through 'labelOutput'.
-		virtual CodeOutput *STORM_FN codeOutput(Binary *owner, Array<Nat> *offsets, Nat size, Nat refs) const ABSTRACT;
-		CodeOutput *STORM_FN codeOutput(Binary *owner, LabelOutput *src) const;
+		// Create a code-generating output based on sizes computed by a LabelOutput.
+		virtual CodeOutput *STORM_FN codeOutput(Binary *owner, LabelOutput *size) const ABSTRACT;
 
 		// Remove all registers not preserved during a function call on this platform. This
 		// implementation removes ptrA, ptrB and ptrC, but other Arena implementations may want to

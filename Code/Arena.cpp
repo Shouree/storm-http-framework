@@ -20,10 +20,6 @@ namespace code {
 		return src;
 	}
 
-	CodeOutput *Arena::codeOutput(Binary *owner, LabelOutput *src) const {
-		return codeOutput(owner, src->offsets, src->size, src->refs);
-	}
-
 	void Arena::removeFnRegs(RegSet *from) const {
 		from->remove(ptrA);
 		from->remove(ptrB);
