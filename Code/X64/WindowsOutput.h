@@ -1,17 +1,16 @@
 #pragma once
-#include "../Output.h"
+#include "Code/Output.h"
 #include "Core/GcCode.h"
-#include "Code/Dwarf/CodeOutput.h"
 
 namespace code {
 	class Binary;
 	namespace x64 {
 		STORM_PKG(core.asm.x64);
 
-		class CodeOut : public code::dwarf::CodeOutput {
+		class WindowsCodeOut : public CodeOutput {
 			STORM_CLASS;
 		public:
-			STORM_CTOR CodeOut(Binary *owner, Array<Nat> *lbls, Nat size, Nat refs);
+			STORM_CTOR WindowsCodeOut(Binary *owner, Array<Nat> *lbls, Nat size, Nat refs);
 
 			virtual void STORM_FN putByte(Byte b);
 			virtual void STORM_FN putInt(Nat w);
@@ -27,6 +26,7 @@ namespace code {
 			virtual Nat STORM_FN tell() const;
 
 			virtual void *codePtr() const;
+
 		protected:
 			virtual void STORM_FN markLabel(Nat id);
 			virtual void STORM_FN markGcRef(Ref ref);
@@ -42,6 +42,9 @@ namespace code {
 
 			// Code we're writing to.
 			UNKNOWN(PTR_GC) byte *code;
+
+			// Position in the code.
+			Nat pos;
 
 			// Size of the code.
 			Nat size;

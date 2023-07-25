@@ -251,5 +251,10 @@ namespace storm {
 			e.gc.checkMemory(obj, false);
 		}
 
+		// Only used from Code/, not a part of the public API.
+		Gc &engineGc(Engine &e) {
+			return e.gc;
+		}
+
 	}
 }

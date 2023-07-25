@@ -1,31 +1,13 @@
 #include "stdafx.h"
-#include "Output.h"
-#include "Gc/DwarfTable.h"
+#include "WindowsOutput.h"
+#include "Gc/CodeTable.h"
 #include "Code/Binary.h"
-#include "Code/Dwarf/Stream.h"
-#include "DwarfRegisters.h"
 #include "Utils/Bitwise.h"
 
 namespace code {
 	namespace x64 {
 
-		static const Int codeAlignment = 1;
-		static const Nat dataAlignment = -8;
-
-		void initCIE(CIE *cie) {
-			Nat pos = code::dwarf::initStormCIE(cie, codeAlignment, dataAlignment, DW_REG_RA);
-
-			code::dwarf::DStream out(cie->data, CIE_DATA, pos);
-
-			// All functions in x86 start with the return pointer pushed on the stack. We emit that
-			// once and for all in the CIE record:
-			out.putUOp(DW_CFA_def_cfa, DW_REG_RSP, 8); // def_cfa rsp, 8
-			out.putUOp(DW_CFA_offset + DW_REG_RA, 1); // offset ra, saved at cfa-8
-
-			assert(!out.overflow(), L"Increase CIE_DATA!");
-		}
-
-		CodeOut::CodeOut(Binary *owner, Array<Nat> *lbls, Nat size, Nat numRefs) {
+		WindowsCodeOut::WindowsCodeOut(Binary *owner, Array<Nat> *lbls, Nat size, Nat numRefs) {
 			// Properly align 'size'.
 			this->size = size = roundUp(size, Nat(sizeof(void *)));
 
@@ -49,45 +31,44 @@ namespace code {
 			refs->refs[1].kind = GcCodeRef::ptrStorage;
 			refs->refs[1].pointer = codeRefs;
 
-			// An entry for the DWARF unwinding information.
-			FDE *unwind = dwarfTable().alloc(code, &initCIE);
-			fnInfo.set(unwind, codeAlignment, dataAlignment, true, &dwarfRegister);
+			// An entry for the code table.
+			CodeTable::Handle table = codeTable().add(code);
 			refs->refs[2].offset = 0;
-			refs->refs[2].kind = GcCodeRef::dwarfInfo;
-			refs->refs[2].pointer = unwind;
+			refs->refs[2].kind = GcCodeRef::codeInfo;
+			refs->refs[2].pointer = table;
 		}
 
-		void CodeOut::putByte(Byte b) {
+		void WindowsCodeOut::putByte(Byte b) {
 			assert(pos < size);
 			code[pos++] = b;
 		}
 
-		void CodeOut::putInt(Nat w) {
+		void WindowsCodeOut::putInt(Nat w) {
 			assert(pos + 3 < size);
 			Nat *to = (Nat *)&code[pos];
 			*to = w;
 			pos += 4;
 		}
 
-		void CodeOut::putLong(Word w) {
+		void WindowsCodeOut::putLong(Word w) {
 			assert(pos + 7 < size);
 			Word *to = (Word *)&code[pos];
 			*to = w;
 			pos += 8;
 		}
 
-		void CodeOut::putPtr(Word w) {
+		void WindowsCodeOut::putPtr(Word w) {
 			assert(pos + 7 < size);
 			Word *to = (Word *)&code[pos];
 			*to = w;
 			pos += 8;
 		}
 
-		void CodeOut::align(Nat to) {
+		void WindowsCodeOut::align(Nat to) {
 			pos = roundUp(pos, to);
 		}
 
-		void CodeOut::putGc(GcCodeRef::Kind kind, Nat size, Word w) {
+		void WindowsCodeOut::putGc(GcCodeRef::Kind kind, Nat size, Word w) {
 			GcCode *refs = runtime::codeRefs(code);
 			assert(ref < refs->refCount);
 			refs->refs[ref].offset = pos;
@@ -99,7 +80,7 @@ namespace code {
 			pos += size;
 		}
 
-		void CodeOut::markGc(GcCodeRef::Kind kind, Nat size, Word w) {
+		void WindowsCodeOut::markGc(GcCodeRef::Kind kind, Nat size, Word w) {
 			GcCode *refs = runtime::codeRefs(code);
 			assert(ref < refs->refCount);
 			assert(pos >= size);
@@ -109,7 +90,7 @@ namespace code {
 			ref++;
 		}
 
-		void CodeOut::putGcPtr(Word w) {
+		void WindowsCodeOut::putGcPtr(Word w) {
 			GcCode *refs = runtime::codeRefs(code);
 			assert(ref < refs->refCount);
 			refs->refs[ref].offset = pos;
@@ -120,7 +101,7 @@ namespace code {
 			putPtr(w);
 		}
 
-		void CodeOut::putGcRelative(Word w) {
+		void WindowsCodeOut::putGcRelative(Word w) {
 			GcCode *refs = runtime::codeRefs(code);
 			assert(ref < refs->refCount);
 			refs->refs[ref].offset = pos;
@@ -131,7 +112,7 @@ namespace code {
 			putPtr(0); // Will be updated later...
 		}
 
-		void CodeOut::putRelativeStatic(Word w) {
+		void WindowsCodeOut::putRelativeStatic(Word w) {
 			GcCode *refs = runtime::codeRefs(code);
 			assert(ref < refs->refCount);
 			refs->refs[ref].offset = pos;
@@ -142,7 +123,7 @@ namespace code {
 			putPtr(0); // Will be updated later.
 		}
 
-		void CodeOut::putPtrSelf(Word w) {
+		void WindowsCodeOut::putPtrSelf(Word w) {
 			GcCode *refs = runtime::codeRefs(code);
 			assert(ref < refs->refCount);
 			refs->refs[ref].offset = pos;
@@ -153,26 +134,26 @@ namespace code {
 			putPtr(w);
 		}
 
-		Nat CodeOut::tell() const {
+		Nat WindowsCodeOut::tell() const {
 			return pos;
 		}
 
-		void *CodeOut::codePtr() const {
+		void *WindowsCodeOut::codePtr() const {
 			return code;
 		}
 
-		void CodeOut::markLabel(Nat id) {
+		void WindowsCodeOut::markLabel(Nat id) {
 			// No need. This should already be done for us.
 		}
 
-		void CodeOut::markGcRef(Ref r) {
+		void WindowsCodeOut::markGcRef(Ref r) {
 			if (ref == 0)
 				return;
 
 			codeRefs->push(new (this) CodeUpdater(r, owner, code, ref - 1));
 		}
 
-		Nat CodeOut::labelOffset(Nat id) {
+		Nat WindowsCodeOut::labelOffset(Nat id) {
 			if (id < labels->count()) {
 				return labels->at(id);
 			} else {
@@ -181,7 +162,7 @@ namespace code {
 			}
 		}
 
-		Nat CodeOut::toRelative(Nat offset) {
+		Nat WindowsCodeOut::toRelative(Nat offset) {
 			return offset - (pos + 4); // NOTE: All relative things on the X86-64 are 4 bytes long, not 8!
 		}
 

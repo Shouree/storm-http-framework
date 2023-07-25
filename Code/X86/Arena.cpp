@@ -7,7 +7,7 @@
 #include "LayoutVars.h"
 #include "Asm.h"
 #include "AsmOut.h"
-#include "Seh.h"
+#include "Code/WindowsEh/Seh.h"
 
 namespace code {
 	namespace x86 {
@@ -24,7 +24,7 @@ namespace code {
 
 		Listing *Arena::transform(Listing *l) const {
 #if defined(WINDOWS) && defined(X86)
-			activateInfo();
+			code::eh::activateInfo(engine());
 #endif
 
 			if (has64(l)) {

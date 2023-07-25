@@ -18,7 +18,7 @@ namespace code {
 
 		Listing *Arena::transform(Listing *l) const {
 #if defined(POSIX) && defined(ARM64)
-			code::eh::activateInfo();
+			code::eh::activatePosixInfo();
 #endif
 
 			// Remove unsupported OP-codes, replacing them with their equivalents.

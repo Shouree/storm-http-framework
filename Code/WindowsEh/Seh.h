@@ -1,16 +1,17 @@
 #pragma once
+#include "Utils/Platform.h"
 
 #ifdef WINDOWS
 
 namespace code {
 	namespace eh {
 
-#ifdef X64
+		/**
+		 * Windows-specific exception handling.
+		 */
 
-		// Callback function from the GC.
-		RUNTIME_FUNCTION *exceptionCallback(void *pc, void *base);
-
-#endif
+		// Activate stack information. Needed for stack traces, etc.
+		void activateWindowsInfo(Engine &e);
 
 	}
 }

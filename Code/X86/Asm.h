@@ -174,9 +174,5 @@ namespace code {
 		// parameter for the result?
 		bool resultParam(TypeDesc *desc);
 
-		// Encode/decode block-id and activation-id into a format we store in a single word on the stack.
-		Nat encodeFnState(Nat block, Nat activation);
-		void decodeFnState(Nat original, Nat &block, Nat &activation);
-
 	}
 }

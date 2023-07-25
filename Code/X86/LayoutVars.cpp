@@ -4,9 +4,9 @@
 #include "Asm.h"
 #include "Binary.h"
 #include "Exception.h"
-#include "SafeSeh.h"
-#include "Seh.h"
-#include "../Layout.h"
+#include "Code/Layout.h"
+#include "Code/FnState.h"
+#include "Code/WindowsEh/SafeSeh.h"
 
 namespace code {
 	namespace x86 {

@@ -31,7 +31,6 @@ namespace code {
 			 */
 
 			virtual LabelOutput *STORM_FN labelOutput() const;
-			virtual CodeOutput *STORM_FN codeOutput(Binary *owner, Array<Nat> *offsets, Nat size, Nat refs) const;
 
 			/**
 			 * Registers.
@@ -73,6 +72,11 @@ namespace code {
 			STORM_CTOR WindowsArena();
 
 			/**
+			 * Output.
+			 */
+			virtual CodeOutput *STORM_FN codeOutput(Binary *owner, Array<Nat> *offsets, Nat size, Nat refs) const;
+
+			/**
 			 * Parameters.
 			 */
 			virtual Nat STORM_FN firstParamId(MAYBE(TypeDesc *) desc);
@@ -88,6 +92,11 @@ namespace code {
 		public:
 			// Create.
 			STORM_CTOR PosixArena();
+
+			/**
+			 * Output.
+			 */
+			virtual CodeOutput *STORM_FN codeOutput(Binary *owner, Array<Nat> *offsets, Nat size, Nat refs) const;
 
 			/**
 			 * Parameters.

@@ -1,12 +1,14 @@
 #include "stdafx.h"
 #include "Arena.h"
-#include "Output.h"
+#include "WindowsOutput.h"
+#include "PosixOutput.h"
 #include "Asm.h"
 #include "AsmOut.h"
 #include "RemoveInvalid.h"
 #include "WindowsLayout.h"
 #include "PosixLayout.h"
 #include "Code/PosixEh/StackInfo.h"
+#include "Code/WindowsEh/Seh.h"
 #include "../Exception.h"
 
 namespace code {
@@ -17,8 +19,12 @@ namespace code {
 		}
 
 		Listing *Arena::transform(Listing *l) const {
-#if (defined(WINDOWS) || defined(POSIX)) && defined(X64)
-			code::eh::activateInfo();
+#ifdef X64
+#if defined(WINDOWS)
+			code::eh::activateWindowsInfo(engine());
+#elif defined(POSIX)
+			code::eh::activatePosixInfo();
+#endif
 #endif
 
 			// Remove unsupported OP-codes, replacing them with their equivalents.
@@ -37,10 +43,6 @@ namespace code {
 
 		LabelOutput *Arena::labelOutput() const {
 			return new (this) LabelOutput(8);
-		}
-
-		CodeOutput *Arena::codeOutput(Binary *owner, Array<Nat> *offsets, Nat size, Nat refs) const {
-			return new (this) CodeOut(owner, offsets, size, refs);
 		}
 
 		void Arena::removeFnRegs(RegSet *from) const {
@@ -162,6 +164,10 @@ namespace code {
 				this->dirtyRegs->put(dirty[i]);
 		}
 
+		CodeOutput *WindowsArena::codeOutput(Binary *owner, Array<Nat> *offsets, Nat size, Nat refs) const {
+			return new (this) WindowsCodeOut(owner, offsets, size, refs);
+		}
+
 		Nat WindowsArena::firstParamId(MAYBE(TypeDesc *) desc) {
 			if (!desc)
 				return 2;
@@ -207,6 +213,10 @@ namespace code {
 			};
 			for (size_t i = 0; i < ARRAY_COUNT(dirty); i++)
 				this->dirtyRegs->put(dirty[i]);
+		}
+
+		CodeOutput *PosixArena::codeOutput(Binary *owner, Array<Nat> *offsets, Nat size, Nat refs) const {
+			return new (this) PosixCodeOut(owner, offsets, size, refs);
 		}
 
 		Nat PosixArena::firstParamId(MAYBE(TypeDesc *) desc) {

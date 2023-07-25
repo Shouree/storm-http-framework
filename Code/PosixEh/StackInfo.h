@@ -4,7 +4,7 @@ namespace code {
 	namespace eh {
 
 		// Activate stack info in stack traces.
-		void activateInfo();
+		void activatePosixInfo();
 
 	}
 }

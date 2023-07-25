@@ -42,7 +42,7 @@ namespace code {
 			}
 		};
 
-		void activateInfo() {
+		void activatePosixInfo() {
 #ifdef POSIX
 			initHook();
 #endif

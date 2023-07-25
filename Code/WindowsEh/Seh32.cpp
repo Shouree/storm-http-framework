@@ -1,18 +1,15 @@
 #include "stdafx.h"
 #include "Seh.h"
-#include "SafeSeh.h"
-#include "Binary.h"
-#include "StackFrame.h"
-#include "Asm.h"
-#include "Core/Str.h"
-#include "Gc/CodeTable.h"
-#include "Utils/Memory.h"
-#include "Utils/StackInfoSet.h"
 
-#if defined(WINDOWS) && defined(X86)
+#ifdef WINDOWS
+
+#include "SafeSeh.h"
+#include "Code/Binary.h"
+#include "Code/FnState.h"
+#include "Utils/Memory.h"
 
 namespace code {
-	namespace x86 {
+	namespace eh {
 
 		struct SEHFrame;
 
@@ -38,7 +35,7 @@ namespace code {
 			void *self;
 
 			// The topmost active block and active variables.
-			size_t activePartVars;
+			Nat activePartVars;
 
 			// Current EBP points to this.
 			void *lastEbp;
@@ -114,36 +111,9 @@ namespace code {
 		}
 
 
-		class SehInfo : public StackInfo {
-		public:
-			virtual bool translate(void *ip, void *&fnBase, int &offset) const {
-				CodeTable &table = codeTable();
-				void *code = table.find(ip);
-				if (!code)
-					return false;
-
-				fnBase = code;
-				offset = (byte *)ip - (byte *)code;
-				return true;
-			}
-
-			virtual void format(GenericOutput &to, void *fnBase, int offset) const {
-				Binary *owner = codeBinary(fnBase);
-				Str *name = owner->ownerName();
-				if (name) {
-					to.put(name->c_str());
-				} else {
-					to.put(S("<unnamed Storm function>"));
-				}
-			}
-		};
-
-		void activateInfo() {
-			static RegisterInfo<SehInfo> info;
-		}
-
 	}
 }
+
 
 #ifndef EXCEPTION_UNWINDING
 // No proper definition found...
@@ -153,7 +123,7 @@ namespace code {
 #define EXCEPTION_NONCONTINUABLE 1
 #endif
 
-using namespace code::x86;
+using namespace code::eh;
 
 
 // The low-level stuff here is inspired from the code in OS/Future.cpp, which is in turn inspired by
@@ -217,7 +187,7 @@ static bool isObjPtr(const CppTypeInfoTable *table) {
 
 // Called when we catch an exception. Called from a shim in assembler located in SafeSeh.asm
 extern "C"
-void *x86SEHCleanup(SEHFrame *frame, size_t cleanUntil, void *exception) {
+void *x86SEHCleanup(SEHFrame *frame, storm::Nat cleanUntil, void *exception) {
 	frame->cleanup(cleanUntil);
 	return exception;
 }
@@ -275,6 +245,10 @@ EXCEPTION_DISPOSITION __cdecl x86SEH(_EXCEPTION_RECORD *er, void *frame, _CONTEX
 	if (!object)
 		return ExceptionContinueSearch;
 
+#ifdef X64
+	PLN(L"TODO!");
+	abort();
+#else
 	code::Binary::Resume resume;
 	if (f->hasCatch(*object, resume)) {
 		// It seems we need to initiate stack unwinding for cleanup ourselves.
@@ -308,8 +282,10 @@ EXCEPTION_DISPOSITION __cdecl x86SEH(_EXCEPTION_RECORD *er, void *frame, _CONTEX
 
 		return ExceptionContinueExecution;
 	}
+#endif
 
 	return ExceptionContinueSearch;
 }
+
 
 #endif

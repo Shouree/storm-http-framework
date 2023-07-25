@@ -6,7 +6,7 @@
 #include "../Layout.h"
 #include "../Exception.h"
 #include "../UsedRegs.h"
-#include "../PosixEh/FnState.h"
+#include "../FnState.h"
 
 namespace code {
 	namespace arm64 {
@@ -152,7 +152,7 @@ namespace code {
 			for (Nat i = 0; i < activeBlocks->count(); i++) {
 				const ActiveBlock &a = activeBlocks->at(i);
 				*dest << lblOffset(a.pos);
-				*dest << dat(natConst(code::eh::encodeFnState(a.block.key(), a.activated)));
+				*dest << dat(natConst(code::encodeFnState(a.block.key(), a.activated)));
 			}
 
 			// Table size.
