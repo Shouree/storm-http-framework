@@ -164,8 +164,16 @@ namespace code {
 				this->dirtyRegs->put(dirty[i]);
 		}
 
+		LabelOutput *WindowsArena::labelOutput() const {
+			return new (this) WindowsLabelOut();
+		}
+
 		CodeOutput *WindowsArena::codeOutput(Binary *owner, LabelOutput *size) const {
-			return new (this) WindowsCodeOut(owner, size->offsets, size->size, size->refs);
+			if (WindowsLabelOut *out = as<WindowsLabelOut>(size)) {
+				return new (this) WindowsCodeOut(owner, out);
+			} else {
+				throw new (this) InternalError(S("A WindowsLabelOut instance is needed on 64-bit Windows."));
+			}
 		}
 
 		Nat WindowsArena::firstParamId(MAYBE(TypeDesc *) desc) {

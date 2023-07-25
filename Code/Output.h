@@ -95,6 +95,10 @@ namespace code {
 		virtual void STORM_FN setFrame(Reg reg, Offset offset);
 		// Define that a register has been preserved at 'offset' relative the CFA.
 		virtual void STORM_FN markSaved(Reg reg, Offset offset);
+		// Define size of a stack frame allocation.
+		virtual void STORM_FN markFrameAlloc(Offset size);
+		// Mark the end of the prolog.
+		virtual void STORM_FN markPrologEnd();
 
 	protected:
 		// Mark a label here.
@@ -152,6 +156,7 @@ namespace code {
 
 	private:
 		Nat ptrSize;
+		Nat dummy; // For alignment...
 	};
 
 	/**

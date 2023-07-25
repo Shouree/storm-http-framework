@@ -169,6 +169,10 @@ namespace code {
 
 	void Output::markSaved(Reg reg, Offset offset) {}
 
+	void Output::markFrameAlloc(Offset size) {}
+
+	void Output::markPrologEnd() {}
+
 	/**
 	 * Label output.
 	 */

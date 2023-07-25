@@ -4,6 +4,7 @@
 #ifdef WINDOWS
 
 #include "SafeSeh.h"
+#include "Seh64.h"
 #include "Code/Binary.h"
 #include "Core/Str.h"
 #include "Gc/Gc.h"
@@ -19,22 +20,6 @@ namespace storm {
 
 namespace code {
 	namespace eh {
-
-#ifdef X64
-
-		RUNTIME_FUNCTION *exceptionCallback(void *pc, void *base) {
-			storm::CodeTable &table = storm::codeTable();
-
-			void *found = table.find(pc);
-			if (!found)
-				return null;
-
-			PLN(L"Found base pointer for function: " << pc << L" at " << found);
-
-			return null;
-		}
-
-#endif
 
 		class SehInfo : public StackInfo {
 		public:
@@ -68,6 +53,12 @@ namespace code {
 			(void)e;
 #endif
 		}
+
+		EXCEPTION_DISPOSITION windowsHandler(_EXCEPTION_RECORD *er, void *frame, _CONTEXT *ctx, void *dispatch) {
+			PLN(L"In handler!");
+			return ExceptionContinueSearch;
+		}
+
 
 	}
 }

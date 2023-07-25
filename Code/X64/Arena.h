@@ -74,6 +74,7 @@ namespace code {
 			/**
 			 * Output.
 			 */
+			virtual LabelOutput *STORM_FN labelOutput() const;
 			virtual CodeOutput *STORM_FN codeOutput(Binary *owner, LabelOutput *size) const;
 
 			/**

@@ -2,20 +2,97 @@
 #include "WindowsOutput.h"
 #include "Gc/CodeTable.h"
 #include "Code/Binary.h"
+#include "Code/WindowsEh/Seh.h"
 #include "Utils/Bitwise.h"
 
 namespace code {
 	namespace x64 {
 
-		WindowsCodeOut::WindowsCodeOut(Binary *owner, Array<Nat> *lbls, Nat size, Nat numRefs) {
-			// Properly align 'size'.
-			this->size = size = roundUp(size, Nat(sizeof(void *)));
+		/**
+		 * Data structures used to generate unwind data.
+		 *
+		 * Based on documentation from here:
+		 * https://learn.microsoft.com/en-us/cpp/build/exception-handling-x64
+		 */
+
+#ifndef UNW_FLAG_EHANDLER
+#define UNW_FLAG_EHANDLER 0x1
+#endif
+
+
+		/**
+		 * Same as RUNTIME_FUNCTION in Win32 headers.
+		 */
+		struct RuntimeFunction {
+			Nat functionStart;
+			Nat functionEnd;
+			Nat unwindInfo;
+		};
+
+		/**
+		 * Same as UNWIND_INFO in Win32 headers. Static part.
+		 */
+		struct UnwindInfo {
+			byte version : 3;
+			byte flags : 5;
+			byte prologSize;
+			byte unwindCount;
+			byte frameRegister : 4;
+			byte frameOffset : 4;
+			// short unwindCodes[1]
+			// ulong handlerAddress
+		};
+
+
+		/**
+		 * Size computation.
+		 */
+
+		WindowsLabelOut::WindowsLabelOut() : LabelOutput(8), unwindCount(0) {}
+
+		void WindowsLabelOut::markSaved(Reg reg, Offset offset) {
+			unwindCount += 1;
+		}
+
+		void WindowsLabelOut::markFrameAlloc(Offset size) {
+			Nat sz = size.v64();
+			if (sz < 128)
+				unwindCount += 1;
+			else if (sz < 512 * 1024)
+				unwindCount += 2;
+			else
+				unwindCount += 3;
+		}
+
+		void WindowsLabelOut::markPrologEnd() {
+			unwindCount += 1;
+		}
+
+
+
+		/**
+		 * Code output.
+		 */
+
+		WindowsCodeOut::WindowsCodeOut(Binary *owner, WindowsLabelOut *out) {
+			// Compute size, round up to proper alignment:
+			size = roundUp(out->size, Nat(4));
+
+			// Then add size of unwind metadata:
+			metaStart = size;
+			size += Nat(sizeof(RuntimeFunction));
+			size += Nat(sizeof(UnwindInfo));
+			size += 2 * roundUp(out->unwindCount, Nat(2)); // Aligned unwind words.
+			size += Nat(sizeof(Nat)); // Exception handler address.
+			size += 6; // JMP instruction to the real exception handler.
+			size += Nat(sizeof(Nat)); // Size of the metadata, so that we can find the previous chunk.
+			size = roundUp(size, Nat(sizeof(void *)));
 
 			// Initialize our members.
 			this->owner = owner;
 			codeRefs = new (this) Array<Reference *>();
-			code = (byte *)runtime::allocCode(engine(), size, numRefs + 3);
-			labels = lbls;
+			code = (byte *)runtime::allocCode(engine(), size, out->refs + 4);
+			labels = out->offsets;
 			pos = 0;
 			ref = 3;
 
@@ -36,6 +113,29 @@ namespace code {
 			refs->refs[2].offset = 0;
 			refs->refs[2].kind = GcCodeRef::codeInfo;
 			refs->refs[2].pointer = table;
+
+			/**
+			 * Initialize metadata table:
+			 */
+
+			// Store offset to the start, so that we can find it later:
+			*(Nat *)&code[size - 4] = metaStart;
+
+			// Store the jump instruction just before:
+			code[size - 10] = 0xFF;
+			code[size - 9] = 0x25;
+			refs->refs[3].offset = size - 8;
+			refs->refs[3].kind = GcCodeRef::jump;
+			refs->refs[3].pointer = (void *)address(code::eh::windowsHandler);
+
+			// Initialize the unwind information:
+			UnwindInfo *uwInfo = (UnwindInfo *)&code[metaStart + sizeof(RuntimeFunction)];
+			uwInfo->version = 1;
+			uwInfo->flags = UNW_FLAG_EHANDLER;
+			uwInfo->prologSize = 0;
+			uwInfo->unwindCount = out->unwindCount;
+			uwInfo->frameRegister = 0;
+			uwInfo->frameOffset = 0;
 		}
 
 		void WindowsCodeOut::putByte(Byte b) {

@@ -7,10 +7,31 @@ namespace code {
 	namespace x64 {
 		STORM_PKG(core.asm.x64);
 
+		/**
+		 * Version of the LabelOutput class that keeps track of the size of the exception metadata.
+		 */
+		class WindowsLabelOut : public LabelOutput {
+			STORM_CLASS;
+		public:
+			STORM_CTOR WindowsLabelOut();
+
+			// Number of slots required for unwind codes.
+			Nat unwindCount;
+
+			// Additional members for the metadata we care about:
+			virtual void STORM_FN markSaved(Reg reg, Offset offset);
+			virtual void STORM_FN markFrameAlloc(Offset size);
+			virtual void STORM_FN markPrologEnd();
+		};
+
+
+		/**
+		 * Output class specific to Windows. Stores Windows-specific exception handling data.
+		 */
 		class WindowsCodeOut : public CodeOutput {
 			STORM_CLASS;
 		public:
-			STORM_CTOR WindowsCodeOut(Binary *owner, Array<Nat> *lbls, Nat size, Nat refs);
+			STORM_CTOR WindowsCodeOut(Binary *owner, WindowsLabelOut *size);
 
 			virtual void STORM_FN putByte(Byte b);
 			virtual void STORM_FN putInt(Nat w);
@@ -51,6 +72,9 @@ namespace code {
 
 			// First free ref.
 			Nat ref;
+
+			// Start of unwind metadata.
+			Nat metaStart;
 
 			// Label offsets, computed from before.
 			Array<Nat> *labels;
