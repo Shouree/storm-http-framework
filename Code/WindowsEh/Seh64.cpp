@@ -35,8 +35,19 @@ namespace code {
 
 			// Find and update the address of the handler function as well:
 			Nat exCodeCount = code[dataStart + 2];
-			*(DWORD *)(code + dataStart + 4 + roundUp(exCodeCount, Nat(2)))
+			*(DWORD *)(code + dataStart + 4 + roundUp(exCodeCount, Nat(2)) * 2)
 				= startOffset + Nat(size) - 10;
+
+			PVAR(base);
+			PVAR(found);
+			PVAR(fn);
+			for (Nat i = 0; i < size - ehOffset; i++) {
+				if (i % 8 == 0)
+					PNN(L"\n" << i << L":");
+				PNN(L" " << toHex(((byte *)fn)[i]));
+			}
+			PLN(L"");
+			PLN(L"");
 
 			return fn;
 		}

@@ -18,6 +18,9 @@ namespace code {
 #ifndef UNW_FLAG_EHANDLER
 #define UNW_FLAG_EHANDLER 0x1
 #endif
+#ifndef UNW_FLAG_UHANDLER
+#define UNW_FLAG_UHANDLER 0x2
+#endif
 
 
 		/**
@@ -65,7 +68,7 @@ namespace code {
 		}
 
 		void WindowsLabelOut::markPrologEnd() {
-			unwindCount += 1;
+			prologSize = size;
 		}
 
 
@@ -94,7 +97,7 @@ namespace code {
 			code = (byte *)runtime::allocCode(engine(), size, out->refs + 4);
 			labels = out->offsets;
 			pos = 0;
-			ref = 3;
+			ref = 4;
 
 			GcCode *refs = runtime::codeRefs(code);
 
@@ -128,11 +131,13 @@ namespace code {
 			refs->refs[3].kind = GcCodeRef::jump;
 			refs->refs[3].pointer = (void *)address(code::eh::windowsHandler);
 
+			assert(out->prologSize < 256, L"Too long prolog. This is a bug in the backend.");
+
 			// Initialize the unwind information:
 			UnwindInfo *uwInfo = (UnwindInfo *)&code[metaStart + sizeof(RuntimeFunction)];
 			uwInfo->version = 1;
-			uwInfo->flags = UNW_FLAG_EHANDLER;
-			uwInfo->prologSize = 0;
+			uwInfo->flags = UNW_FLAG_EHANDLER | UNW_FLAG_UHANDLER;
+			uwInfo->prologSize = out->prologSize;
 			uwInfo->unwindCount = out->unwindCount;
 			uwInfo->frameRegister = 0;
 			uwInfo->frameOffset = 0;

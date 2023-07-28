@@ -55,7 +55,8 @@ namespace code {
 		}
 
 		EXCEPTION_DISPOSITION windowsHandler(_EXCEPTION_RECORD *er, void *frame, _CONTEXT *ctx, void *dispatch) {
-			PLN(L"In handler!");
+			PLN(L"In handler: " << toHex(Nat(er->ExceptionFlags)));
+			PVAR(er->ExceptionFlags & 2);
 			return ExceptionContinueSearch;
 		}
 

@@ -18,6 +18,9 @@ namespace code {
 			// Number of slots required for unwind codes.
 			Nat unwindCount;
 
+			// Length of prolog in bytes.
+			Nat prologSize;
+
 			// Additional members for the metadata we care about:
 			virtual void STORM_FN markSaved(Reg reg, Offset offset);
 			virtual void STORM_FN markFrameAlloc(Offset size);
