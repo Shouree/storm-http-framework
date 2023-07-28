@@ -51,6 +51,9 @@ namespace code {
 
 			virtual void *codePtr() const;
 
+			virtual void STORM_FN markSaved(Reg reg, Offset offset);
+			virtual void STORM_FN markFrameAlloc(Offset size);
+
 		protected:
 			virtual void STORM_FN markLabel(Nat id);
 			virtual void STORM_FN markGcRef(Ref ref);
@@ -76,8 +79,8 @@ namespace code {
 			// First free ref.
 			Nat ref;
 
-			// Start of unwind metadata.
-			Nat metaStart;
+			// Position inside the metadata (byte offsets).
+			Nat metaPos;
 
 			// Label offsets, computed from before.
 			Array<Nat> *labels;

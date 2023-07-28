@@ -23,6 +23,10 @@ namespace code {
 			// Save/restore result.
 			virtual void STORM_FN saveResult(Listing *dest);
 			virtual void STORM_FN restoreResult(Listing *dest);
+
+			// Prolog/epilog.
+			virtual void emitProlog(Listing *dest);
+			virtual void emitEpilog(Listing *dest);
 		};
 
 	}

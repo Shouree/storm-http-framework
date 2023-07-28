@@ -994,6 +994,9 @@ namespace storm {
 	}
 
 	void Type::buildHandle() {
+		// Note: It seems that for pure C++ types, we replace the handle that was generated from
+		// C++. We could skip doing that in many situations? For example, this happens during boot
+		// for NameSet lookups, when Str::hash is loaded, for example.
 		bool val = value();
 
 		if (!val) {

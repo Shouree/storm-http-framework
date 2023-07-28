@@ -104,5 +104,6 @@ namespace code {
 	// Extract the Binary associated with a function. This is only valid for code generated with the current backend.
 	// 'fn' is expected to be a pointer to the start of a code allocation.
 	Binary *codeBinary(const void *fn);
+	Binary *codeBinaryImpl(GcCode *refs);
 
 }

@@ -30,6 +30,68 @@ namespace code {
 			}
 		}
 
+		static bool spillShadow(const Param &p, const Offset &o) {
+			(void)p;
+			// Shadow space is at positive offsets from the frame pointer:
+			return o.v64() > 0;
+		}
+
+		static bool spillRemaining(const Param &p, const Offset &o) {
+			return !spillShadow(p, o);
+		}
+
+		void WindowsLayout::emitProlog(Listing *dest) {
+			// Set up stack frame:
+			*dest << push(ptrFrame);
+			*dest << preserve(ptrFrame);
+			*dest << mov(ptrFrame, ptrStack);
+
+			// Spill parameters to shadow space as needed. We want to do this early so that we can
+			// start handling cleanup during exceptions early.
+			spillParams(dest, &spillShadow);
+
+			// Push all registers we need to preserve. We do it in reverse here to make the epilog
+			// cheaper (only one prolog in functions, but many epilogs).
+			const Nat maxToStore = 32; // Overkill for X64.
+			Nat toStoreCount = 0;
+			Reg toStore[maxToStore];
+			for (RegSet::Iter i = toPreserve->begin(); i != toPreserve->end(); ++i) {
+				assert(toStoreCount + 1 < maxToStore);
+				toStore[toStoreCount++] = i.v();
+			}
+
+			for (Nat i = toStoreCount; i > 0; i--) {
+				Reg r = asSize(toStore[i - 1], Size::sPtr);
+				*dest << push(r);
+				*dest << preserve(r);
+			}
+
+			// Allocate the stack frame. We use a second form of 'prolog' for that to emit the
+			// proper metadata. We also mark this as the end of the prolog, and from here exceptions
+			// will start being handled.
+			Offset stackSize = layout->last() - Size::sPtr*toPreserve->count();
+			*dest << prolog(engine())->alterSrc(ptrConst(stackSize));
+
+			// Spill remaining parameters.
+			spillParams(dest, &spillRemaining);
+		}
+
+		void WindowsLayout::emitEpilog(Listing *dest) {
+			// Note: The instructions in the epilog are quite harshly specified in the ABI. As such,
+			// we can not use the LEAVE instruction, or load rsp from rbp to avoid accidental
+			// mis-alignment of the stack.
+
+			// Restore stack pointer:
+			Offset stackSize = layout->last() - Size::sPtr*toPreserve->count();
+			*dest << add(ptrStack, ptrConst(stackSize));
+
+			// Restore registers:
+			for (RegSet::Iter i = toPreserve->begin(); i != toPreserve->end(); ++i)
+				*dest << pop(asSize(i.v(), Size::sPtr));
+
+			*dest << pop(ptrFrame);
+		}
+
 		static Nat useShadowSpace(Reg reg) {
 			Reg shadowMap[] = { rcx, rdx, r8, r9 };
 			for (Nat i = 0; i < ARRAY_COUNT(shadowMap); i++)

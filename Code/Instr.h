@@ -214,8 +214,11 @@ namespace code {
 	Instr *STORM_FN prolog(EnginePtr e);
 	Instr *STORM_FN epilog(EnginePtr e);
 
-	// Note that a register has been preserved on the stack.
+	// Note that a register has been preserved on the stack. Intended to be used internally by backends.
 	Instr *STORM_FN preserve(EnginePtr e, Operand dest, Reg reg);
+
+	// Note that a register has been preserved by pushing it. Intended to be used internally by backends.
+	Instr *STORM_FN preserve(EnginePtr e, Reg reg);
 
 	// Node a source position.
 	Instr *STORM_FN location(EnginePtr e, SrcPos pos);

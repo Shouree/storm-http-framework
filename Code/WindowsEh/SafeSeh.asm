@@ -1,22 +1,22 @@
 .386
 .model flat, stdcall
 
-extern x86SEH:near
+extern windowsHandler:near
 extern x86SEHCleanup:near
 extern RtlUnwind@16:near
 
 x86SafeSEH proto
 .SAFESEH x86SafeSEH
 
-x86EhEntry proto	
-x86Unwind proto C
+x86HandleException proto
+windowsUnwind proto C
 
 .code
 x86SafeSEH proc
-	jmp x86SEH
+	jmp windowsHandler
 x86SafeSEH endp
 
-x86EhEntry proc
+x86HandleException proc
 	;; Restore the EH chain.
 	ASSUME FS:NOTHING
 	mov DWORD PTR fs:[0], ecx
@@ -34,9 +34,9 @@ x86EhEntry proc
 	add esp, 12
 	;; Consume the last push.
 	ret
-x86EhEntry endp
+x86HandleException endp
 
-x86Unwind proc C
+windowsUnwind proc C
 	push ebp
 	mov ebp, esp
 
@@ -48,10 +48,10 @@ x86Unwind proc C
 
 	push 0
 	push DWORD PTR [ebp+8]
-	push x86UnwindResume
+	push windowsUnwindResume
 	push DWORD PTR [ebp+12]
 	call RtlUnwind@16
-x86UnwindResume:
+windowsUnwindResume:
 
 	pop esi
 	pop edi
@@ -60,6 +60,6 @@ x86UnwindResume:
 	mov ebp, esp
 	pop ebp
 	ret
-x86Unwind endp
+windowsUnwind endp
 
 end

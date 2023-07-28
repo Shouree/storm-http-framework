@@ -169,6 +169,7 @@ namespace code {
 	PROXY0(prolog);
 	PROXY0(epilog);
 	PROXY2(preserve, Operand, Reg);
+	PROXY1(preserve, Reg);
 	PROXY1(location, SrcPos);
 	PROXY1(begin, Block);
 	PROXY1(end, Block);

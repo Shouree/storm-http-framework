@@ -3,49 +3,13 @@
 #include "Gc/CodeTable.h"
 #include "Code/Binary.h"
 #include "Code/WindowsEh/Seh.h"
+#include "Code/WindowsEh/Seh64.h"
 #include "Utils/Bitwise.h"
 
 namespace code {
 	namespace x64 {
 
-		/**
-		 * Data structures used to generate unwind data.
-		 *
-		 * Based on documentation from here:
-		 * https://learn.microsoft.com/en-us/cpp/build/exception-handling-x64
-		 */
-
-#ifndef UNW_FLAG_EHANDLER
-#define UNW_FLAG_EHANDLER 0x1
-#endif
-#ifndef UNW_FLAG_UHANDLER
-#define UNW_FLAG_UHANDLER 0x2
-#endif
-
-
-		/**
-		 * Same as RUNTIME_FUNCTION in Win32 headers.
-		 */
-		struct RuntimeFunction {
-			Nat functionStart;
-			Nat functionEnd;
-			Nat unwindInfo;
-		};
-
-		/**
-		 * Same as UNWIND_INFO in Win32 headers. Static part.
-		 */
-		struct UnwindInfo {
-			byte version : 3;
-			byte flags : 5;
-			byte prologSize;
-			byte unwindCount;
-			byte frameRegister : 4;
-			byte frameOffset : 4;
-			// short unwindCodes[1]
-			// ulong handlerAddress
-		};
-
+		using namespace code::eh;
 
 		/**
 		 * Size computation.
@@ -54,12 +18,17 @@ namespace code {
 		WindowsLabelOut::WindowsLabelOut() : LabelOutput(8), unwindCount(0) {}
 
 		void WindowsLabelOut::markSaved(Reg reg, Offset offset) {
+			assert(offset == Offset(), L"Only push-type saves are supported on Windows.");
+			// Note: There is an op-code for save, so we could do something similar to the Posix
+			// version if we want to. However, it would require careful construction of epilogs.
 			unwindCount += 1;
 		}
 
 		void WindowsLabelOut::markFrameAlloc(Offset size) {
 			Nat sz = size.v64();
-			if (sz < 128)
+			if (sz == 0)
+				;
+			else if (sz < 128)
 				unwindCount += 1;
 			else if (sz < 512 * 1024)
 				unwindCount += 2;
@@ -82,7 +51,7 @@ namespace code {
 			size = roundUp(out->size, Nat(4));
 
 			// Then add size of unwind metadata:
-			metaStart = size;
+			Nat metaStart = size;
 			size += Nat(sizeof(RuntimeFunction));
 			size += Nat(sizeof(UnwindInfo));
 			size += 2 * roundUp(out->unwindCount, Nat(2)); // Aligned unwind words.
@@ -136,11 +105,13 @@ namespace code {
 			// Initialize the unwind information:
 			UnwindInfo *uwInfo = (UnwindInfo *)&code[metaStart + sizeof(RuntimeFunction)];
 			uwInfo->version = 1;
-			uwInfo->flags = UNW_FLAG_EHANDLER | UNW_FLAG_UHANDLER;
+			uwInfo->flags = UnwindFlagExamine | UnwindFlagUnwind; // TODO: specify which we actually need?
 			uwInfo->prologSize = out->prologSize;
 			uwInfo->unwindCount = out->unwindCount;
 			uwInfo->frameRegister = 0;
 			uwInfo->frameOffset = 0;
+
+			metaPos = metaStart + Nat(sizeof(RuntimeFunction) + sizeof(UnwindInfo));
 		}
 
 		void WindowsCodeOut::putByte(Byte b) {
@@ -271,6 +242,40 @@ namespace code {
 			return offset - (pos + 4); // NOTE: All relative things on the X86-64 are 4 bytes long, not 8!
 		}
 
+		void WindowsCodeOut::markSaved(Reg reg, Offset offset) {
+			// TODO: Handle XMM registers? I don't think we ever spill them...
+			code[metaPos++] = pos;
+			code[metaPos++] = UnwindPushNonvol | (win64Register(reg) << 4);
+		}
+
+		void WindowsCodeOut::markFrameAlloc(Offset size) {
+			Nat sz = size.v64();
+			assert(sz % 8 == 0, L"Invalid stack allocation size. This is a bug in the backend.");
+			if (sz == 0) {
+				// Nothing to do.
+			} else if (sz < 128) {
+				sz = (sz - 8) / 8; // Scale according to docs.
+				code[metaPos++] = pos;
+				code[metaPos++] = UnwindAllocSmall | (sz << 4);
+			} else if (sz < 512 * 1024) {
+				sz = sz / 8; // Scale according to docs.
+				code[metaPos++] = pos;
+				code[metaPos++] = UnwindAllocLarge | (0 << 4);
+				// Second short: store in little endian
+				code[metaPos++] = sz & 0xFF;
+				code[metaPos++] = (sz >> 8) & 0xFF;
+			} else {
+				code[metaPos++] = pos;
+				code[metaPos++] = UnwindAllocLarge | (1 << 4);
+				// Store a 32-bit integer containing the total size. Note: might not be aligned
+				// properly, so we encode it manually.
+				// Note: We *don't* have to divide size by 8 here!
+				code[metaPos++] = sz & 0xFF;
+				code[metaPos++] = (sz >> 8) & 0xFF;
+				code[metaPos++] = (sz >> 16) & 0xFF;
+				code[metaPos++] = (sz >> 24) & 0xFF;
+			}
+		}
 
 	}
 }

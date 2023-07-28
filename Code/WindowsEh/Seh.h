@@ -1,5 +1,6 @@
 #pragma once
 #include "Utils/Platform.h"
+#include "Code/Binary.h"
 
 #ifdef WINDOWS
 
@@ -13,8 +14,30 @@ namespace code {
 		// Activate stack information. Needed for stack traces, etc.
 		void activateWindowsInfo(Engine &e);
 
-		// Exception handler function.
+		// Exception handler function. Common to both 32- and 64-bit systems.
+		extern "C"
 		EXCEPTION_DISPOSITION windowsHandler(_EXCEPTION_RECORD *er, void *frame, _CONTEXT *ctx, void *dispatch);
+
+
+		// Interface used by 'windowsHandler'. Implemented by either Seh32.cpp or Seh64.cpp.
+		struct SehFrame {
+			// Pointer to the stack:
+			void *framePtr;
+
+			// Pointer to the Binary containing metadata:
+			Binary *binary;
+
+			// Current active block and activation.
+			Nat part;
+			Nat activation;
+		};
+
+		// Get a SEH frame from unwind state.
+		SehFrame extractFrame(_EXCEPTION_RECORD *er, void *frame, _CONTEXT *ctx, void *dispatch);
+
+		// Modify state to resume from an exception.
+		void resumeFrame(SehFrame &frame, Binary::Resume &resume, storm::RootObject *object, _CONTEXT *ctx);
+
 	}
 }
 

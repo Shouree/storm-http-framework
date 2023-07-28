@@ -47,10 +47,13 @@ namespace code {
 #error "Please note which is the default arena for your platform."
 #endif
 
+	Binary *codeBinaryImpl(GcCode *refs) {
+		return (Binary *)refs->refs[0].pointer;
+	}
+
 	Binary *codeBinary(const void *fn) {
 		// All backends do this.
-		GcCode *refs = runtime::codeRefs((void *)fn);
-		return (Binary *)refs->refs[0].pointer;
+		return codeBinaryImpl(runtime::codeRefs((void *)fn));
 	}
 
 }

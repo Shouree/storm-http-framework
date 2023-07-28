@@ -10,11 +10,7 @@ void __stdcall x86SafeSEH();
 // Shim called from the exception handler. Reads parameters to the 'x86SEHCleanup' in Seh.cpp from
 // registers. Once again, the declaration is a lie. Do not call directly.
 extern "C"
-void __stdcall x86EhEntry();
-
-// Call "RtlUnwind" safely. Not possible from C without the ability to take references to labels.
-extern "C"
-void __cdecl x86Unwind(_EXCEPTION_RECORD *er, void *targetFrame);
+void __stdcall x86HandleException();
 
 #else
 

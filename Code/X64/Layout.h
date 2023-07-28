@@ -55,6 +55,10 @@ namespace code {
 			virtual void STORM_FN saveResult(Listing *dest) ABSTRACT;
 			virtual void STORM_FN restoreResult(Listing *dest) ABSTRACT;
 
+			// Custom prolog/epilog code.
+			virtual void STORM_FN emitProlog(Listing *dest) ABSTRACT;
+			virtual void STORM_FN emitEpilog(Listing *dest) ABSTRACT;
+
 		protected:
 			/**
 			 * Internal functionality, but accessible to derived classes.
@@ -115,7 +119,9 @@ namespace code {
 			void epilog(Listing *dest, Listing *src, Nat line, Bool preserveRax);
 
 			// Spill parameters to the stack.
+			typedef bool (*SpillPredicate)(const Param &param, const Offset &offset);
 			void spillParams(Listing *dest);
+			void spillParams(Listing *dest, SpillPredicate p);
 		};
 
 

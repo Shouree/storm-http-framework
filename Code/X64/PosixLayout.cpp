@@ -37,6 +37,42 @@ namespace code {
 			}
 		}
 
+		void PosixLayout::emitProlog(Listing *dest) {
+			*dest << prolog();
+
+			// Allocate stack space.
+			if (layout->last() != Offset())
+				*dest << sub(ptrStack, ptrConst(layout->last()));
+
+			// Keep track of offsets.
+			Offset offset = -Offset::sPtr;
+
+			// Save registers we need to preserve.
+			for (RegSet::Iter i = toPreserve->begin(); i != toPreserve->end(); ++i) {
+				*dest << mov(ptrRel(ptrFrame, offset), asSize(i.v(), Size::sPtr));
+				*dest << preserve(ptrRel(ptrFrame, offset), asSize(i.v(), Size::sPtr));
+				offset -= Offset::sPtr;
+			}
+
+			// Spill parameters to the stack.
+			spillParams(dest);
+		}
+
+		void PosixLayout::emitEpilog(Listing *dest) {
+			// Restore preserved registers.
+			Offset offset = -Offset::sPtr;
+			for (RegSet::Iter i = toPreserve->begin(); i != toPreserve->end(); ++i) {
+				*dest << mov(asSize(i.v(), Size::sPtr), ptrRel(ptrFrame, offset));
+				offset -= Offset::sPtr;
+			}
+
+			// The "epilog" pseudo-op generates a LEAVE instruction, which corresponds to these instructions:
+			// *dest << mov(ptrStack, ptrFrame);
+			// *dest << pop(ptrFrame);
+
+			*dest << code::epilog();
+		}
+
 		static Size spillParams(Array<Offset> *out, Listing *l, Params *params, Offset varOffset) {
 			// NOTE: We could avoid spilling primitives to memory, as we do not generally use those
 			// registers from code generated for the generic platform. However, we would need to

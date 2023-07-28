@@ -7,23 +7,43 @@ namespace code {
 	namespace x64 {
 
 		void prologOut(Output *to, Instr *instr) {
-			// We generate:
-			// - push rbp
-			// - mov rbp, rsp
+			// There are two forms we need to consider:
+			Operand src = instr->src();
 
-			// push rbp
-			to->putByte(0x50 + 5);
-			// now the CFA offset is different
-			to->setFrameOffset(Offset::sPtr*2);
-			// We also saved RBP on the stack
-			to->markSaved(ptrFrame, -Offset::sPtr*2);
+			if (src.type() == opNone) {
+				// 1: if we have no parameter. This is used on Posix platforms. There, we generate a
+				// prolog with DWARF metadata as follows:
+				// - push rbp
+				// - mov rbp, rsp
 
-			// mov rbp, rsp
-			to->putByte(0x48);
-			to->putByte(0x89);
-			to->putByte(0xE5);
-			// now we use ebp as the CFA register, offset is the same
-			to->setFrameRegister(ptrFrame);
+				// push rbp
+				to->putByte(0x50 + 5);
+				// now the CFA offset is different
+				to->setFrameOffset(Offset::sPtr*2);
+				// We also saved RBP on the stack
+				to->markSaved(ptrFrame, -Offset::sPtr*2);
+
+				// mov rbp, rsp
+				to->putByte(0x48);
+				to->putByte(0x89);
+				to->putByte(0xE5);
+				// now we use ebp as the CFA register, offset is the same
+				to->setFrameRegister(ptrFrame);
+			} else if (src.type() == opConstant) {
+				// 2: if we have a constant as a parameter, we are on Windows. Then, generate code
+				// for allocating memory on the stack, and emit appropriate metadata:
+
+				// This is from 'sub' below:
+				ImmRegInstr op = {
+					opCode(0x83), 5,
+					opCode(0x81), 5,
+					opCode(0x29),
+					opCode(0x2B)
+				};
+				immRegInstr(to, op, ptrStack, src);
+				to->markFrameAlloc(src.offset());
+				to->markPrologEnd();
+			}
 		}
 
 		void epilogOut(Output *to, Instr *instr) {
@@ -38,10 +58,14 @@ namespace code {
 		}
 
 		void preserveOut(Output *to, Instr *instr) {
-			// Offset between the stack pointer and the CFA. This difference is due to us spilling
-			// RBP from the previous function, and the return address on the stack.
-			Size offset = Size::sPtr * 2;
-			to->markSaved(instr->src().reg(), instr->dest().offset() - offset);
+			if (instr->dest().type() == opNone) {
+				to->markSaved(instr->src().reg(), Offset());
+			} else {
+				// Offset between the stack pointer and the CFA. This difference is due to us
+				// spilling RBP from the previous function, and the return address on the stack.
+				Size offset = Size::sPtr * 2;
+				to->markSaved(instr->src().reg(), instr->dest().offset() - offset);
+			}
 		}
 
 		void locationOut(Output *, Instr *) {

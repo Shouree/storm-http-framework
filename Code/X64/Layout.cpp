@@ -134,10 +134,16 @@ namespace code {
 			return xRel(size, ptrFrame, layout->at(v.key()) + op.offset());
 		}
 
-		void Layout::spillParams(Listing *dest) {
-			Array<Var> *all = dest->allParams();
+		static bool spillAlways(const Param &, const Offset &) {
+			return true;
+		}
 
-			TODO(L"On windows, we are responsible for calling destructors on the parameters!");
+		void Layout::spillParams(Listing *dest) {
+			spillParams(dest, &spillAlways);
+		}
+
+		void Layout::spillParams(Listing *dest, SpillPredicate p) {
+			Array<Var> *all = dest->allParams();
 
 			for (Nat i = 0; i < params->registerCount(); i++) {
 				Param info = params->registerParam(i);
@@ -150,6 +156,10 @@ namespace code {
 
 				Offset to = layout->at(all->at(info.id()).key());
 				to += Offset(info.offset());
+
+				// Skip if predicate says so.
+				if (!(*p)(info, to))
+					continue;
 
 				Size size(info.size());
 				Reg r = asSize(params->registerSrc(i), size);
@@ -165,6 +175,8 @@ namespace code {
 		void Layout::prologTfm(Listing *dest, Listing *src, Nat line) {
 			// Generate the prolog. Generates push and mov to set up a basic stack frame. Also emits
 			// proper unwind data.
+			emitProlog(dest);
+
 			TODO(L"Needs to be revised for windows");
 			// On Windows, it needs to look approximately as follows (due to EH):
 			// - establish frame ptr
@@ -172,25 +184,6 @@ namespace code {
 			// - push preserved registers
 			// - allocate stack frame
 			// - spill remaining registers
-
-			*dest << prolog();
-
-			// Allocate stack space.
-			if (layout->last() != Offset())
-				*dest << sub(ptrStack, ptrConst(layout->last()));
-
-			// Keep track of offsets.
-			Offset offset = -Offset::sPtr;
-
-			// Save registers we need to preserve.
-			for (RegSet::Iter i = toPreserve->begin(); i != toPreserve->end(); ++i) {
-				*dest << mov(ptrRel(ptrFrame, offset), asSize(i.v(), Size::sPtr));
-				*dest << preserve(ptrRel(ptrFrame, offset), asSize(i.v(), Size::sPtr));
-				offset -= Offset::sPtr;
-			}
-
-			// Spill parameters to the stack.
-			spillParams(dest);
 
 			// Initialize the root block.
 			initBlock(dest, dest->root(), rax);
@@ -209,18 +202,7 @@ namespace code {
 			}
 			block = oldBlock;
 
-			// Restore preserved registers.
-			Offset offset = -Offset::sPtr;
-			for (RegSet::Iter i = toPreserve->begin(); i != toPreserve->end(); ++i) {
-				*dest << mov(asSize(i.v(), Size::sPtr), ptrRel(ptrFrame, offset));
-				offset -= Offset::sPtr;
-			}
-
-			// The "epilog" pseudo-op generates a LEAVE instruction, which corresponds to these instructions:
-			// *dest << mov(ptrStack, ptrFrame);
-			// *dest << pop(ptrFrame);
-
-			*dest << code::epilog();
+			emitEpilog(dest);
 		}
 
 		void Layout::beginBlockTfm(Listing *dest, Listing *src, Nat line) {
