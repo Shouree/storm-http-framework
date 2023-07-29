@@ -9,7 +9,7 @@ x86SafeSEH proto
 .SAFESEH x86SafeSEH
 
 x86HandleException proto
-windowsUnwind proto C
+x86Unwind proto C
 
 .code
 x86SafeSEH proc
@@ -36,7 +36,7 @@ x86HandleException proc
 	ret
 x86HandleException endp
 
-windowsUnwind proc C
+x86Unwind proc C
 	push ebp
 	mov ebp, esp
 
@@ -48,10 +48,10 @@ windowsUnwind proc C
 
 	push 0
 	push DWORD PTR [ebp+8]
-	push windowsUnwindResume
+	push x86UnwindResume
 	push DWORD PTR [ebp+12]
 	call RtlUnwind@16
-windowsUnwindResume:
+x86UnwindResume:
 
 	pop esi
 	pop edi
@@ -60,6 +60,6 @@ windowsUnwindResume:
 	mov ebp, esp
 	pop ebp
 	ret
-windowsUnwind endp
+x86Unwind endp
 
 end

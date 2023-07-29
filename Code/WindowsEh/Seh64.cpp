@@ -53,16 +53,17 @@ namespace code {
 				= startOffset + Nat(size) - 10;
 
 			// For debugging:
-			PVAR(base);
+			// PVAR(base);
 			PVAR(found);
-			PVAR(fn);
-			// for (Nat i = 0; i < size - ehOffset; i++) {
-			// 	if (i % 8 == 0)
-			// 		PNN(L"\n" << i << L":");
-			// 	PNN(L" " << toHex(((byte *)fn)[i]));
-			// }
-			// PLN(L"");
-			// PLN(L"");
+			PVAR((void *)(size_t(pc) - size_t(found)));
+			// PVAR(fn);
+			for (Nat i = 0; i < size - ehOffset; i++) {
+				if (i % 8 == 0)
+					PNN(L"\n" << i << L":");
+				PNN(L" " << toHex(((byte *)fn)[i]));
+			}
+			PLN(L"");
+			PLN(L"");
 
 			return fn;
 		}
@@ -120,7 +121,7 @@ namespace code {
 			GcCode *refs = (GcCode *)endOfCode;
 
 			SehFrame result;
-			result.framePtr = (void *)ctx->Rbp;
+			result.framePtr = frame;
 			result.binary = code::codeBinaryImpl(refs);
 
 			// We can also find the metadata table at the end of the binary:
@@ -129,6 +130,7 @@ namespace code {
 
 			// The binary also contains the start of the code:
 			size_t codeStart = size_t(result.binary->address());
+			PVAR((void *)codeStart);
 
 			// Now, we can compute the start of the EH data and extract the block table:
 			size_t startOfEhData = codeStart + *ehOffset;
@@ -139,29 +141,45 @@ namespace code {
 
 			// Finally, we can look up the proper entry in the table:
 			Nat offset = Nat(dispatchContext->pc - codeStart);
-			PVAR((void *)codeStart);
-			PVAR((void *)offset);
 			Nat active = Block().key();
-			const FnBlock *found = std::lower_bound(blocks, blocks + *blockCount, offset, BlockCompare());
+
+			// Note: In case we have multiple equal elements, we pick the last one. Hence upper bound.
+			// Note: if there is an entry where 'offset == blocks[i].offset', we shall not select
+			// that one since 'pc' points to the first instruction that was not executed.
+			// Note: if there are multiple elements that are equal, we need to pick the last one.
+			TODO(L"Fix last note above");
+			const FnBlock *found = std::upper_bound(blocks, blocks + *blockCount, offset, BlockCompare());
 			if (found != blocks) {
 				found--;
 				active = found->block;
 			}
 
 			code::decodeFnState(active, result.part, result.activation);
-			PVAR(result.part); PVAR(result.activation);
 
 			return result;
 		}
 
-		static void fn() {
-			PLN(L"HELLO!");
-			exit(0);
-		}
+		// Note: This is not always present in the Windows headers.
+		extern "C"
+		NTSYSAPI VOID RtlUnwindEx(PVOID targetFrame, PVOID targetIp, PEXCEPTION_RECORD er,
+								PVOID returnValue, PCONTEXT context, void *history);
 
-		void resumeFrame(SehFrame &frame, Binary::Resume &resume, storm::RootObject *object, _CONTEXT *ctx) {
-			TODO(L"FIXME!");
-			ctx->Rip = (DWORD64)address(&fn);
+
+		void resumeFrame(SehFrame &frame, Binary::Resume &resume, storm::RootObject *object,
+						_CONTEXT *ctx, _EXCEPTION_RECORD *er) {
+
+			PLN(L"About to unwind!");
+
+			TODO(L"Handle partial destruction of current frame!");
+
+			er->ExceptionFlags |= EXCEPTION_UNWINDING;
+			er->ExceptionFlags &= ~DWORD(EXCEPTION_NONCONTINUABLE);
+			// TODO: It would be nice to find a history table for RtlUnwind, so that it can avoid to
+			// find the handlers again.
+			RtlUnwindEx(frame.framePtr, resume.ip, er, object, ctx, NULL);
+
+			// Expected to not return...
+			dbg_assert(false, L"Failed to unwind the stack!");
 		}
 
 	}

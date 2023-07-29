@@ -34,16 +34,21 @@ namespace code {
 				return &lastEbp;
 			}
 
-			// Create from SEH pointer:
-			static OnStack *fromSEH(void *seh) {
-				byte *p = (byte *)seh;
-				return (OnStack *)(p - OFFSET_OF(OnStack, prev));
-			}
-
 			// Create from base pointer:
 			static OnStack *fromEBP(void *ebp) {
 				byte *p = (byte *)ebp;
 				return (OnStack *)(p - OFFSET_OF(OnStack, lastEbp));
+			}
+
+			// Get SEH address.
+			inline void *seh() {
+				return &prev;
+			}
+
+			// Create from SEH pointer:
+			static OnStack *fromSEH(void *seh) {
+				byte *p = (byte *)seh;
+				return (OnStack *)(p - OFFSET_OF(OnStack, prev));
 			}
 		};
 
@@ -66,7 +71,18 @@ namespace code {
 			return exception;
 		}
 
-		void resumeFrame(SehFrame &frame, Binary::Resume &resume, storm::RootObject *object, _CONTEXT *ctx) {
+		void resumeFrame(SehFrame &frame, Binary::Resume &resume, storm::RootObject *object,
+						_CONTEXT *ctx, _EXCEPTION_RECORD *er) {
+			OnStack *onStack = OnStack::fromEBP(frame->framePtr);
+
+			// First, we need to unwind the stack:
+			er->ExceptionFlags |= EXCEPTION_UNWINDING;
+			x86Unwind(er, onStack->seh());
+			er->ExceptionFlags &= EXCEPTION_UNWINDING;
+
+			// Clear the noncontinuable flag. Otherwise, we can't continue from the exception.
+			er->ExceptionFlags &= ~DWORD(EXCEPTION_NONCONTINUABLE);
+
 			// Build a stack "frame" that executes 'x86EhEntry' and returns to the resume point with Eax
 			// set as intended. This approach places all data in registers, so that data on the stack is
 			// not clobbered if we need it. It is also nice, as we don't have to think too carefully about
@@ -83,7 +99,7 @@ namespace code {
 			// Current part.
 			ctx->Ebx = (UINT_PTR)resume.cleanUntil;
 			// Current frame.
-			ctx->Ecx = (UINT_PTR)OnStack::fromEBP(frame->framePtr);
+			ctx->Ecx = (UINT_PTR)onStack;
 
 			// Note: We also need to restore the EH chain (fs:[0]). The ASM shim does this for us.
 		}

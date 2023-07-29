@@ -343,7 +343,7 @@ namespace code {
 				}
 			}
 
-			if (usingEH) {
+			if (usingEH || true) {
 				// Remember where the block started.
 				Label lbl = dest->label();
 				*dest << lbl;
@@ -404,7 +404,7 @@ namespace code {
 			}
 
 			block = dest->parent(block);
-			if (usingEH && table) {
+			if ((true || usingEH) && table) {
 				Label lbl = dest->label();
 				*dest << lbl;
 				activeBlocks->push(ActiveBlock(block, activationId, lbl));

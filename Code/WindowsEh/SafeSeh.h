@@ -12,6 +12,10 @@ void __stdcall x86SafeSEH();
 extern "C"
 void __stdcall x86HandleException();
 
+// Shim to call RtlUnwind as needed.
+extern "C"
+void __cdecl x86Unwind(_EXCEPTION_RECORD *er, void *targetFrame);
+
 #else
 
 // Fallback to make the code compile on other platforms.

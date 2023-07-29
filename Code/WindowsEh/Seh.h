@@ -36,9 +36,24 @@ namespace code {
 		SehFrame extractFrame(_EXCEPTION_RECORD *er, void *frame, _CONTEXT *ctx, void *dispatch);
 
 		// Modify state to resume from an exception.
-		void resumeFrame(SehFrame &frame, Binary::Resume &resume, storm::RootObject *object, _CONTEXT *ctx);
+		void resumeFrame(SehFrame &frame, Binary::Resume &resume, storm::RootObject *object,
+						_CONTEXT *ctx, _EXCEPTION_RECORD *er);
 
 	}
 }
+
+/**
+ * Things missing from the Win32 headers:
+ */
+
+#ifndef EXCEPTION_UNWINDING
+#define EXCEPTION_UNWINDING 0x2
+#endif
+#ifndef EXCEPTION_NONCONTINUABLE
+#define EXCEPTION_NONCONTINUABLE 0x1
+#endif
+#ifndef EXCEPTION_TARGET_UNWIND
+#define EXCEPTION_TARGET_UNWIND 0x20
+#endif
 
 #endif

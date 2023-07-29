@@ -360,6 +360,9 @@ static void CODECALL throwPtr(Nat i) {
 	// To make sure destructors in this frame are executed properly!
 	debug::DbgVal dtorCheck;
 
+	TODO(L"Stack traces inside Storm functions don't seem to work properly on 64-bit Windows...");
+	// PVAR(collectStackTrace(gEngine()).format());
+
 	if (i == 1) {
 		Str *obj = new (gEngine()) Str(S("Throw me!"));
 		// PLN(L"Throwing " << (void *)obj << L", " << obj);
@@ -381,13 +384,24 @@ static StrBuf *CODECALL addBuf(StrBuf *to) {
 	return to;
 }
 
-BEGIN_TEST(ExceptionCatch, Code) {
+BEGIN_TEST_(ExceptionCatch, Code) {
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
 	Ref errorFn = arena->external(S("errorFn"), address(&::throwPtr));
 	Ref appendFn = arena->external(S("appendFn"), address(&::addBuf));
 	Ref freeInt = arena->external(S("freeInt"), address(&::intCleanupGc));
+
+	Listing *z = new (e) Listing(false);
+	Var p = z->createParam(intDesc(e));
+	Var w = z->createVar(z->root(), Size::sInt);
+	*z << prolog();
+	*z << fnParam(intDesc(e), p);
+	*z << fnCall(errorFn, false);
+	*z << fnRet();
+
+	Binary *q = new (e) Binary(arena, z, true);
+
 
 	Listing *l = new (e) Listing(false, ptrDesc(e));
 
@@ -409,7 +423,9 @@ BEGIN_TEST(ExceptionCatch, Code) {
 	*l << begin(block);
 	*l << mov(innerInt, intConst(4));
 	*l << fnParam(intDesc(e), param);
-	*l << fnCall(errorFn, false);
+	// *l << fnCall(errorFn, false);
+	RefSource *rs = new (e) StrRefSource(new (e) Str(S("Z")), q);
+	*l << fnCall(Ref(rs), false);
 	*l << end(block);
 	*l << fnRet(ptrConst(0));
 
@@ -431,16 +447,20 @@ BEGIN_TEST(ExceptionCatch, Code) {
 	*l << sub(outerInt, intConst(1));
 	*l << fnRet(tmp);
 
-
-	Binary *b = new (e) Binary(arena, l);
+	Binary *b = new (e) Binary(arena, l, true);
 	typedef Object *(*Fn)(Int i);
 	Fn fn = (Fn)b->address();
 
 	using debug::DbgVal;
 
+	PVAR(q->address());
+	PVAR(b->address());
+
 	// Make sure registers are preserved correctly when exceptions are thrown. This asserts if they
 	// are not preserved properly, which might cause the remainder of this test to fail.
 	callFn(b->address(), 1);
+
+	PLN(L"Sanity check OK");
 
 	DbgVal::clear();
 	destroyed = 0;
@@ -461,11 +481,13 @@ BEGIN_TEST(ExceptionCatch, Code) {
 	CHECK(DbgVal::clear());
 	CHECK_EQ(destroyed, 4 + 17);
 
-	// Throws a StrBuf, catches it, and throws another exception.
-	destroyed = 0;
-	CHECK_ERROR(::toS((*fn)(2)), Str *);
-	CHECK(DbgVal::clear());
-	CHECK_EQ(destroyed, 4 + 18);
+	TODO(L"Disabled test here!");
+	CHECK(false);
+	// // Throws a StrBuf, catches it, and throws another exception.
+	// destroyed = 0;
+	// CHECK_ERROR(::toS((*fn)(2)), Str *);
+	// CHECK(DbgVal::clear());
+	// CHECK_EQ(destroyed, 4 + 18);
 
 	// Throws a const Str and tries to catch it.
 	destroyed = 0;

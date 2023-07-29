@@ -85,14 +85,6 @@ namespace code {
 		 */
 
 
-#ifndef EXCEPTION_UNWINDING
-// No proper definition found...
-#define EXCEPTION_UNWINDING 2
-#endif
-#ifndef EXCEPTION_NONCONTINUABLE
-#define EXCEPTION_NONCONTINUABLE 1
-#endif
-
 		// The low-level things here are inspired from the code in OS/Future.cpp, which is in turn
 		// inspired by boost::exception_ptr.
 
@@ -179,14 +171,16 @@ namespace code {
 				&& record->ExceptionInformation[0] == cppExceptionMagic;
 		}
 
-		// Call "RtlUnwind" safely. Not possible from C without the ability to take references to labels.
-		extern "C"
-		void __cdecl windowsUnwind(_EXCEPTION_RECORD *er, void *targetFrame);
-
-
 		extern "C"
 		EXCEPTION_DISPOSITION windowsHandler(_EXCEPTION_RECORD *er, void *frame, _CONTEXT *ctx, void *dispatch) {
+			PLN(L"FRAME " << frame);
 			SehFrame f = extractFrame(er, frame, ctx, dispatch);
+			PLN(L"Checking " << frame);
+			PVAR(toHex(Nat(er->ExceptionFlags)));
+			if ((er->ExceptionFlags & EXCEPTION_UNWINDING) && (er->ExceptionFlags & EXCEPTION_TARGET_UNWIND)) {
+				PLN(L"Target frame!");
+			}
+
 			if (er->ExceptionFlags & EXCEPTION_UNWINDING) {
 				PLN(L"Cleanup!");
 				// Only need to do cleanup!
@@ -244,20 +238,10 @@ namespace code {
 
 			Binary::Resume resume;
 			if (f.binary->hasCatch(f.part, *object, resume)) {
-				// We found a matching catch block! Initiate stack unwinding!
+				// We found a matching catch block! Unwind the stack and resume!
+				resumeFrame(f, resume, *object, ctx, er);
 
-				TODO(L"On 64-bit Windows, we need to finish by calling RtlUnwindEx!");
-
-				er->ExceptionFlags |= EXCEPTION_UNWINDING;
-				windowsUnwind(er, frame);
-				er->ExceptionFlags &= ~DWORD(EXCEPTION_UNWINDING);
-
-				// Clear the noncontinuable flag. Otherwise, we can't continue from the exception.
-				er->ExceptionFlags &= ~DWORD(EXCEPTION_NONCONTINUABLE);
-
-				// Hand off to platform specific code to resume from an appropriate location.
-				resumeFrame(f, resume, *object, ctx);
-
+				// Note: Might not return to here, but if we do we should continue execution.
 				return ExceptionContinueExecution;
 			}
 
