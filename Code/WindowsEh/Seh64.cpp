@@ -127,8 +127,8 @@ namespace code {
 			// The last Nat is the size of the EH data:
 			Nat *ehOffset = ((Nat *)endOfCode) - 1;
 
-			// Start of code is in refs->reserved:
-			size_t codeStart = size_t(refs->reserved);
+			// The binary also contains the start of the code:
+			size_t codeStart = size_t(result.binary->address());
 
 			// Now, we can compute the start of the EH data and extract the block table:
 			size_t startOfEhData = codeStart + *ehOffset;
