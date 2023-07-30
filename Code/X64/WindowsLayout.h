@@ -25,8 +25,8 @@ namespace code {
 			virtual void STORM_FN restoreResult(Listing *dest);
 
 			// Prolog/epilog.
-			virtual void emitProlog(Listing *dest);
-			virtual void emitEpilog(Listing *dest);
+			virtual void STORM_FN emitProlog(Listing *dest);
+			virtual void STORM_FN emitEpilog(Listing *dest);
 		};
 
 	}

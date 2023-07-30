@@ -50,7 +50,7 @@ namespace code {
 #ifdef X64
 			storm::runtime::engineGc(e).setEhCallback(&exceptionCallback);
 #else
-			(void)e;
+			(void)&e;
 #endif
 		}
 

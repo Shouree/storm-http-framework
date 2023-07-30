@@ -2,9 +2,10 @@
 #include "Seh64.h"
 #include "Seh.h"
 
+#include "Code/X64/Asm.h"
+
 #if defined(WINDOWS) && defined(X64)
 
-#include "Code/X64/Asm.h"
 #include "Code/FnState.h"
 #include "Gc/Gc.h"
 #include "Gc/CodeTable.h"
@@ -100,8 +101,8 @@ namespace code {
 
 		// Compare object.
 		struct BlockCompare {
-			bool operator()(const FnBlock &a, Nat offset) const {
-				return a.offset < offset;
+			bool operator()(Nat offset, const FnBlock &block) const {
+				return offset < block.offset;
 			}
 		};
 
@@ -144,10 +145,7 @@ namespace code {
 			Nat active = Block().key();
 
 			// Note: In case we have multiple equal elements, we pick the last one. Hence upper bound.
-			// Note: if there is an entry where 'offset == blocks[i].offset', we shall not select
-			// that one since 'pc' points to the first instruction that was not executed.
 			// Note: if there are multiple elements that are equal, we need to pick the last one.
-			TODO(L"Fix last note above");
 			const FnBlock *found = std::upper_bound(blocks, blocks + *blockCount, offset, BlockCompare());
 			if (found != blocks) {
 				found--;

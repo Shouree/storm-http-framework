@@ -394,7 +394,7 @@ BEGIN_TEST_(ExceptionCatch, Code) {
 
 	Listing *z = new (e) Listing(false);
 	Var p = z->createParam(intDesc(e));
-	Var w = z->createVar(z->root(), Size::sInt);
+	Var w = z->createVar(z->root(), Size::sInt /*, freeInt */);
 	*z << prolog();
 	*z << fnParam(intDesc(e), p);
 	*z << fnCall(errorFn, false);

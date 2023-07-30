@@ -57,8 +57,8 @@ namespace code {
 
 		// Compare object.
 		struct BlockCompare {
-			bool operator()(const FnBlock &a, Nat offset) const {
-				return a.offset < offset;
+			bool operator()(Nat offset, const FnBlock &block) const {
+				return offset < block.offset;
 			}
 		};
 
@@ -83,11 +83,8 @@ namespace code {
 			Nat invalid = Block().key();
 
 			// The entries are sorted by their 'offset' member. We can perform a binary search!
-			// Note: if there is an entry where 'offset == blocks[i].offset', we shall not select
-			// that one since 'pc' points to the first instruction that was not executed.
 			// Note: if there are multiple elements that are equal, we need to pick the last one.
-			TODO(L"Fix last note above");
-			const FnBlock *found = std::lower_bound(blocks, blocks + data->blockCount, offset, BlockCompare());
+			const FnBlock *found = std::upper_bound(blocks, blocks + data->blockCount, offset, BlockCompare());
 			if (found == blocks) {
 				// Before any block, nothing to do!
 				return invalid;

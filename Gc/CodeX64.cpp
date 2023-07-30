@@ -91,11 +91,11 @@ namespace storm {
 			const GcCodeRef &ref = refs->refs[id];
 
 			switch (ref.kind) {
-#ifdef X64
 			case GcCodeRef::jump:
+#ifdef X64
 				writeJump(code, ref);
-				break;
 #endif
+				break;
 			default:
 				dbg_assert(false, L"Only 'jump' is supported by this backend.");
 				break;

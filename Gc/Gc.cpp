@@ -27,7 +27,11 @@ namespace storm {
 	};
 
 	Gc::Gc(size_t initialArena, nat finalizationInterval)
-		: impl(new ImplWrap(*this, initialArena, finalizationInterval)), destroyed(false), ehCallback(null) {}
+		: impl(new ImplWrap(*this, initialArena, finalizationInterval)), destroyed(false) {
+#ifdef STORM_GC_EH_CALLBACK
+		ehCallback = null;
+#endif
+	}
 
 	Gc::~Gc() {
 		destroy();

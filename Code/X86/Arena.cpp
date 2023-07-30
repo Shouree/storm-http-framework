@@ -24,7 +24,7 @@ namespace code {
 
 		Listing *Arena::transform(Listing *l) const {
 #if defined(WINDOWS) && defined(X86)
-			code::eh::activateInfo(engine());
+			code::eh::activateWindowsInfo(engine());
 #endif
 
 			if (has64(l)) {

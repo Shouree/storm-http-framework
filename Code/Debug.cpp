@@ -2,24 +2,12 @@
 #include "Debug.h"
 
 // For debugging!
-#include "Code/X86/Seh.h"
-#include "Code/X86/SafeSeh.h"
+#include "Utils/TIB.h"
+#include "Code/WindowsEh/SafeSeh.h"
 
 namespace code {
 
 #if defined(X86) && defined(WINDOWS)
-
-	NT_TIB *getTIB() {
-		NT_TIB *tib;
-		__asm {
-			// read the "self" member from "fs:0x18"
-			mov eax, fs:0x18;
-			mov tib, eax;
-		}
-		assert(tib == tib->Self);
-		return tib;
-	}
-
 
 	struct SehFrame {
 		SehFrame *prev;
