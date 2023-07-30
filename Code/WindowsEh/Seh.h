@@ -37,7 +37,7 @@ namespace code {
 
 		// Modify state to resume from an exception.
 		void resumeFrame(SehFrame &frame, Binary::Resume &resume, storm::RootObject *object,
-						_CONTEXT *ctx, _EXCEPTION_RECORD *er);
+						_CONTEXT *ctx, _EXCEPTION_RECORD *er, void *dispatch);
 
 	}
 }

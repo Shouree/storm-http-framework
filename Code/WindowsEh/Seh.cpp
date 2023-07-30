@@ -239,7 +239,7 @@ namespace code {
 			Binary::Resume resume;
 			if (f.binary->hasCatch(f.part, *object, resume)) {
 				// We found a matching catch block! Unwind the stack and resume!
-				resumeFrame(f, resume, *object, ctx, er);
+				resumeFrame(f, resume, *object, ctx, er, dispatch);
 
 				// Note: Might not return to here, but if we do we should continue execution.
 				return ExceptionContinueExecution;

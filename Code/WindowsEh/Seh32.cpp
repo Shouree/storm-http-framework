@@ -72,7 +72,7 @@ namespace code {
 		}
 
 		void resumeFrame(SehFrame &frame, Binary::Resume &resume, storm::RootObject *object,
-						_CONTEXT *ctx, _EXCEPTION_RECORD *er) {
+						_CONTEXT *ctx, _EXCEPTION_RECORD *er, void *dispatch) {
 			OnStack *onStack = OnStack::fromEBP(frame.framePtr);
 
 			// Note: we could just let RtlUnwind return from the exception handler for us.

@@ -80,6 +80,8 @@ namespace code {
 			CONTEXT *contextRecord;
 			void *languageHandler;
 			void *handlerData;
+			// In later SDKs
+			void *historyTable;
 		};
 
 		/**
@@ -164,17 +166,16 @@ namespace code {
 
 
 		void resumeFrame(SehFrame &frame, Binary::Resume &resume, storm::RootObject *object,
-						_CONTEXT *ctx, _EXCEPTION_RECORD *er) {
+						_CONTEXT *ctx, _EXCEPTION_RECORD *er, void *dispatch) {
+			DispatchContext *dispatchContext = (DispatchContext *)dispatch;
 
 			PLN(L"About to unwind!");
 
 			TODO(L"Handle partial destruction of current frame!");
 
 			er->ExceptionFlags |= EXCEPTION_UNWINDING;
-			er->ExceptionFlags &= ~DWORD(EXCEPTION_NONCONTINUABLE);
-			// TODO: It would be nice to find a history table for RtlUnwind, so that it can avoid to
-			// find the handlers again.
-			RtlUnwindEx(frame.framePtr, resume.ip, er, object, ctx, NULL);
+			PVAR(dispatchContext->historyTable);
+			RtlUnwindEx(frame.framePtr, resume.ip, er, object, ctx, dispatchContext->historyTable);
 
 			// Expected to not return...
 			dbg_assert(false, L"Failed to unwind the stack!");
