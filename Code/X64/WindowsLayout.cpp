@@ -77,13 +77,27 @@ namespace code {
 		}
 
 		void WindowsLayout::emitEpilog(Listing *dest) {
+			// If the last instruction was a call instruction, we need to insert a nop here.
+			// Otherwise, the exception handling code thinks that we would return to the function
+			// epilog and will not call our unwind handler. This is fairly rare, since in most cases
+			// we would have emitted code to destroy variables right before here, but if we have
+			// variables that are only destroyed when exceptions are thrown, we would miss them if
+			// we don't have a nop here.
+			if (dest->count() > 0) {
+				// Note: all high-level calls have been lowered at this point.
+				if (dest->at(dest->count() - 1)->op() == op::call) {
+					*dest << nop();
+				}
+			}
+
 			// Note: The instructions in the epilog are quite harshly specified in the ABI. As such,
 			// we can not use the LEAVE instruction, or load rsp from rbp to avoid accidental
 			// mis-alignment of the stack.
 
 			// Restore stack pointer:
 			Offset stackSize = layout->last() - Size::sPtr*toPreserve->count();
-			*dest << add(ptrStack, ptrConst(stackSize));
+			if (stackSize.v64() != 0)
+				*dest << add(ptrStack, ptrConst(stackSize));
 
 			// Restore registers:
 			for (RegSet::Iter i = toPreserve->begin(); i != toPreserve->end(); ++i)

@@ -389,8 +389,9 @@ BEGIN_TEST_(ExceptionCatch, Code) {
 	Ref appendFn = arena->external(S("appendFn"), address(&::addBuf));
 	Ref freeInt = arena->external(S("freeInt"), address(&::intCleanupGc));
 
-	// Separate function called. Previously, there was a bug in the X64 backend on Windows
-	// where the destructor would not be called in this situation.
+	// Separate function called.
+	// This function ensures that we call destructors even when the return address points to the
+	// start of the function epilog. This was an issue in the 64-bit Windows backend earlier.
 	Listing *shim = new (e) Listing(false);
 	Var p = shim->createParam(intDesc(e));
 	Var w = shim->createVar(shim->root(), Size::sInt, freeInt, freeOnException);
