@@ -112,6 +112,7 @@ namespace code {
 			uwInfo->frameOffset = 0;
 
 			metaPos = metaStart + Nat(sizeof(RuntimeFunction) + sizeof(UnwindInfo));
+			metaPos += out->unwindCount * 2; // We need to fill the unwind data backwards.
 		}
 
 		void WindowsCodeOut::putByte(Byte b) {
@@ -244,8 +245,9 @@ namespace code {
 
 		void WindowsCodeOut::markSaved(Reg reg, Offset offset) {
 			// TODO: Handle XMM registers? I don't think we ever spill them...
-			code[metaPos++] = pos;
-			code[metaPos++] = UnwindPushNonvol | (win64Register(reg) << 4);
+			metaPos -= 2;
+			code[metaPos + 0] = pos;
+			code[metaPos + 1] = UnwindPushNonvol | (win64Register(reg) << 4);
 		}
 
 		void WindowsCodeOut::markFrameAlloc(Offset size) {
@@ -255,25 +257,28 @@ namespace code {
 				// Nothing to do.
 			} else if (sz < 128) {
 				sz = (sz - 8) / 8; // Scale according to docs.
-				code[metaPos++] = pos;
-				code[metaPos++] = UnwindAllocSmall | (sz << 4);
+				metaPos -= 2;
+				code[metaPos + 0] = pos;
+				code[metaPos + 1] = UnwindAllocSmall | (sz << 4);
 			} else if (sz < 512 * 1024) {
 				sz = sz / 8; // Scale according to docs.
-				code[metaPos++] = pos;
-				code[metaPos++] = UnwindAllocLarge | (0 << 4);
+				metaPos -= 4;
+				code[metaPos + 0] = pos;
+				code[metaPos + 1] = UnwindAllocLarge | (0 << 4);
 				// Second short: store in little endian
-				code[metaPos++] = sz & 0xFF;
-				code[metaPos++] = (sz >> 8) & 0xFF;
+				code[metaPos + 2] = sz & 0xFF;
+				code[metaPos + 3] = (sz >> 8) & 0xFF;
 			} else {
-				code[metaPos++] = pos;
-				code[metaPos++] = UnwindAllocLarge | (1 << 4);
+				metaPos -= 6;
+				code[metaPos + 0] = pos;
+				code[metaPos + 1] = UnwindAllocLarge | (1 << 4);
 				// Store a 32-bit integer containing the total size. Note: might not be aligned
 				// properly, so we encode it manually.
 				// Note: We *don't* have to divide size by 8 here!
-				code[metaPos++] = sz & 0xFF;
-				code[metaPos++] = (sz >> 8) & 0xFF;
-				code[metaPos++] = (sz >> 16) & 0xFF;
-				code[metaPos++] = (sz >> 24) & 0xFF;
+				code[metaPos + 2] = sz & 0xFF;
+				code[metaPos + 3] = (sz >> 8) & 0xFF;
+				code[metaPos + 4] = (sz >> 16) & 0xFF;
+				code[metaPos + 5] = (sz >> 24) & 0xFF;
 			}
 		}
 

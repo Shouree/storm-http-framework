@@ -124,8 +124,10 @@ namespace code {
 			GcCode *refs = (GcCode *)endOfCode;
 
 			SehFrame result;
-			result.framePtr = frame;
+			result.stackPtr = frame;
 			result.binary = code::codeBinaryImpl(refs);
+			result.frameOffset = -result.binary->stackOffset();
+			PVAR(result.frameOffset);
 
 			// We can also find the metadata table at the end of the binary:
 			// The last Nat is the size of the EH data:
@@ -171,14 +173,22 @@ namespace code {
 
 			PLN(L"About to unwind!");
 
-			TODO(L"Handle partial destruction of current frame!");
-
 			er->ExceptionFlags |= EXCEPTION_UNWINDING;
-			PVAR(dispatchContext->historyTable);
-			RtlUnwindEx(frame.framePtr, resume.ip, er, object, ctx, dispatchContext->historyTable);
+			// Store the target block in the exception parameters!
+			// Most likely, we can entirely trash the exception parameters at this stage, since
+			// other code should not care during the unwind step. However, to be a bit on the safe
+			// side, we just add it as the last parameter to the exception record.
+			er->ExceptionInformation[er->NumberParameters++] = resume.cleanUntil;
+			RtlUnwindEx(frame.stackPtr, resume.ip, er, object, ctx, dispatchContext->historyTable);
 
 			// Expected to not return...
 			dbg_assert(false, L"Failed to unwind the stack!");
+		}
+
+		void cleanupPartialFrame(SehFrame &frame, _EXCEPTION_RECORD *er) {
+			size_t cleanupTo = er->ExceptionInformation[er->NumberParameters - 1];
+			PVAR(cleanupTo);
+			cleanupPartialFrame(frame, Nat(cleanupTo));
 		}
 
 	}

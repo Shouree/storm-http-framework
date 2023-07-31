@@ -53,6 +53,10 @@ namespace code {
 		// Check if we have a catch-clause for the active part or any of its parents.
 		bool hasCatch(Nat part, RootObject *exception, Resume &resume);
 
+		// Get the stack offset for this binary, i.e. the difference between the stack pointer and
+		// the frame pointer for this function (mainly used for cleanup during exceptions).
+		ptrdiff_t stackOffset() const;
+
 		// Output to string.
 		virtual void STORM_FN toS(StrBuf *to) const;
 

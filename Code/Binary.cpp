@@ -294,4 +294,11 @@ namespace code {
 		return false;
 	}
 
+	ptrdiff_t Binary::stackOffset() const {
+		byte *data = (byte *)address();
+		// First entry in the metadata table is the stack offset.
+		ptrdiff_t *table = (ptrdiff_t *)(data + metaOffset);
+		return table[0];
+	}
+
 }

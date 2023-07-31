@@ -22,7 +22,10 @@ namespace code {
 		// Interface used by 'windowsHandler'. Implemented by either Seh32.cpp or Seh64.cpp.
 		struct SehFrame {
 			// Pointer to the stack:
-			void *framePtr;
+			void *stackPtr;
+
+			// Distance between the stack ptr and the base pointer on the stack.
+			ptrdiff_t frameOffset;
 
 			// Pointer to the Binary containing metadata:
 			Binary *binary;
@@ -38,6 +41,16 @@ namespace code {
 		// Modify state to resume from an exception.
 		void resumeFrame(SehFrame &frame, Binary::Resume &resume, storm::RootObject *object,
 						_CONTEXT *ctx, _EXCEPTION_RECORD *er, void *dispatch);
+
+
+		// Cleanup a stack frame.
+		void cleanupFrame(SehFrame &frame);
+
+		// Clean up a stack frame until the specified point. Returns the new active part.
+		Nat cleanupPartialFrame(SehFrame &frame, Nat cleanUntil);
+
+		// Implemented by the backends as needed. Called by the exception handler.
+		void cleanupPartialFrame(SehFrame &frame, _EXCEPTION_RECORD *er);
 
 	}
 }

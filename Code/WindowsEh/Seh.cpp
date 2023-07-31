@@ -60,7 +60,7 @@ namespace code {
 		public:
 			Frame(const SehFrame &frame)
 				: StackFrame(frame.part, frame.activation),
-				  framePtr((byte *)frame.framePtr) {}
+				  framePtr((byte *)frame.stackPtr + frame.frameOffset) {}
 
 			virtual void *toPtr(int offset) {
 				return framePtr + offset;
@@ -70,12 +70,22 @@ namespace code {
 			byte *framePtr;
 		};
 
-		void cleanupFrame(SehFrame frame) {
+		void cleanupFrame(SehFrame &frame) {
 			if (frame.binary) {
 				Frame f(frame);
 				frame.binary->cleanup(f);
 			} else {
 				WARNING(L"Using SEH, but no link to the metadata provided!");
+			}
+		}
+
+		Nat cleanupPartialFrame(SehFrame &frame, Nat cleanUntil) {
+			if (frame.binary) {
+				Frame f(frame);
+				return frame.binary->cleanup(f, cleanUntil);
+			} else {
+				WARNING(L"Using SEH, but no link to the metadata provided!");
+				return cleanUntil;
 			}
 		}
 
@@ -177,14 +187,14 @@ namespace code {
 			SehFrame f = extractFrame(er, frame, ctx, dispatch);
 			PLN(L"Checking " << frame);
 			PVAR(toHex(Nat(er->ExceptionFlags)));
-			if ((er->ExceptionFlags & EXCEPTION_UNWINDING) && (er->ExceptionFlags & EXCEPTION_TARGET_UNWIND)) {
-				PLN(L"Target frame!");
-			}
 
 			if (er->ExceptionFlags & EXCEPTION_UNWINDING) {
-				PLN(L"Cleanup!");
 				// Only need to do cleanup!
-				cleanupFrame(f);
+				if (er->ExceptionFlags & EXCEPTION_TARGET_UNWIND) {
+					cleanupPartialFrame(f, er);
+				} else {
+					cleanupFrame(f);
+				}
 				return ExceptionContinueSearch;
 			}
 

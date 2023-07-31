@@ -19,6 +19,6 @@ void __cdecl x86Unwind(_EXCEPTION_RECORD *er, void *targetFrame);
 #else
 
 // Fallback to make the code compile on other platforms.
-inline void x86SafeSEH() {}
+void x86SafeSEH();
 
 #endif

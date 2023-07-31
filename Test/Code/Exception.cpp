@@ -394,8 +394,9 @@ BEGIN_TEST_(ExceptionCatch, Code) {
 
 	Listing *z = new (e) Listing(false);
 	Var p = z->createParam(intDesc(e));
-	Var w = z->createVar(z->root(), Size::sInt /*, freeInt */);
+	Var w = z->createVar(z->root(), Size::sInt, freeInt);
 	*z << prolog();
+	// *z << mov(w, intConst(3));
 	*z << fnParam(intDesc(e), p);
 	*z << fnCall(errorFn, false);
 	*z << fnRet();
@@ -460,7 +461,7 @@ BEGIN_TEST_(ExceptionCatch, Code) {
 	// are not preserved properly, which might cause the remainder of this test to fail.
 	callFn(b->address(), 1);
 
-	PLN(L"Sanity check OK");
+	PLN(L"--- Sanity check OK ---");
 
 	DbgVal::clear();
 	destroyed = 0;
@@ -469,11 +470,15 @@ BEGIN_TEST_(ExceptionCatch, Code) {
 	CHECK(DbgVal::clear());
 	CHECK_EQ(destroyed, 4 + 8);
 
+	PLN(L"--- FIRST OK ---");
+
 	// Throws an exception at first, then catches it as an object.
 	destroyed = 0;
 	CHECK_EQ(::toS((*fn)(1)), L"Throw me!");
 	CHECK(DbgVal::clear());
 	CHECK_EQ(destroyed, 4 + 7);
+
+	PLN(L"--- SECOND OK ---");
 
 	// Throws a StrBuf at first, then catches it as a StrBuf and adds an!
 	destroyed = 0;
@@ -481,13 +486,15 @@ BEGIN_TEST_(ExceptionCatch, Code) {
 	CHECK(DbgVal::clear());
 	CHECK_EQ(destroyed, 4 + 17);
 
-	TODO(L"Disabled test here!");
-	CHECK(false);
-	// // Throws a StrBuf, catches it, and throws another exception.
-	// destroyed = 0;
-	// CHECK_ERROR(::toS((*fn)(2)), Str *);
-	// CHECK(DbgVal::clear());
-	// CHECK_EQ(destroyed, 4 + 18);
+	PLN(L"--- FOURTH OK ---");
+
+	// Throws a StrBuf, catches it, and throws another exception.
+	destroyed = 0;
+	CHECK_ERROR(::toS((*fn)(2)), Str *);
+	CHECK(DbgVal::clear());
+	CHECK_EQ(destroyed, 4 + 18);
+
+	PLN(L"--- FOURTH OK ---");
 
 	// Throws a const Str and tries to catch it.
 	destroyed = 0;

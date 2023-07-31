@@ -56,7 +56,8 @@ namespace code {
 			OnStack *onStack = OnStack::fromSEH(frame);
 
 			SehFrame result;
-			result.framePtr = onStack->ebp();
+			result.stackPtr = onStack->ebp();
+			result.frameOffset = 0;
 			result.binary = codeBinary(onStack->self);
 			decodeFnState(onStack->activePartVars, result.part, result.activation);
 			return result;
@@ -64,16 +65,25 @@ namespace code {
 
 		// Called when we catch an exception. Called from a shim in assembler located in SafeSeh.asm
 		extern "C"
-		void *x86SEHCleanup(OnStack *frame, storm::Nat cleanUntil, void *exception) {
+		void *x86SEHCleanup(OnStack *onStack, storm::Nat cleanUntil, void *exception) {
 			// Perform a partial cleanup of the frame:
-			Binary *binary = codeBinary(frame->self);
-			TODO(L"Partial cleanup needed!");
+			SehFrame frame;
+			frame.stackPtr = onStack->ebp();
+			frame.frameOffset = 0;
+			frame.binary = codeBinary(onStack->self);
+			decodeFnState(onStack->activePartVars, frame.part, frame.activation);
+
+			Nat part = cleanupPartialFrame(frame, cleanUntil);
+
+			// Update the state.
+			onStack->activePartVars = encodeFnState(part, frame.activation);
+
 			return exception;
 		}
 
 		void resumeFrame(SehFrame &frame, Binary::Resume &resume, storm::RootObject *object,
 						_CONTEXT *ctx, _EXCEPTION_RECORD *er, void *dispatch) {
-			OnStack *onStack = OnStack::fromEBP(frame.framePtr);
+			OnStack *onStack = OnStack::fromEBP(frame.stackPtr);
 
 			// Note: we could just let RtlUnwind return from the exception handler for us.
 
@@ -92,7 +102,7 @@ namespace code {
 			// set as intended. This approach places all data in registers, so that data on the stack is
 			// not clobbered if we need it. It is also nice, as we don't have to think too carefully about
 			// calling conventions and stack manipulations.
-			ctx->Ebp = (UINT_PTR)frame.framePtr;
+			ctx->Ebp = (UINT_PTR)frame.stackPtr;
 			ctx->Esp = ctx->Ebp + resume.stackOffset;
 
 			// Run.
@@ -109,7 +119,15 @@ namespace code {
 			// Note: We also need to restore the EH chain (fs:[0]). The ASM shim does this for us.
 		}
 
+		void cleanupPartialFrame(SehFrame &, _EXCEPTION_RECORD *) {
+			// Not used on x86.
+		}
+
 	}
 }
 
 #endif
+
+// Symbol to avoid warning when building on 64-bit systems.
+// Defined in SafeSeh.h
+void x86SafeSEH() {}
