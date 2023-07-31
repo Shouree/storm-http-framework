@@ -14,6 +14,8 @@ namespace code {
 
 	RefSource::RefSource(Content *content) : cont(content) {
 		refs = new (this) WeakSet<Reference>();
+		if (cont)
+			atomicWrite(cont->owner, this);
 	}
 
 	void RefSource::set(Content *to) {
@@ -21,9 +23,9 @@ namespace code {
 			assert(to->owner == null, L"Multiple owners of a single Content object.");
 
 			if (cont)
-				cont->owner = null;
+				atomicWrite(cont->owner, (RefSource *)null);
 			if (to)
-				to->owner = this;
+				atomicWrite(to->owner, this);
 			cont = to;
 		}
 
