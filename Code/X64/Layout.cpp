@@ -150,7 +150,9 @@ namespace code {
 				if (info.size() == Size())
 					continue; // Not used.
 				if (info.id() == Param::returnId()) {
-					*dest << mov(ptrRel(ptrFrame, resultParam()), params->registerSrc(i));
+					Offset to = resultParam();
+					if ((*p)(info, to))
+						*dest << mov(ptrRel(ptrFrame, resultParam()), params->registerSrc(i));
 					continue;
 				}
 
