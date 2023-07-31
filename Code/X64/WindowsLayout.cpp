@@ -204,6 +204,11 @@ namespace code {
 						offset->last() = Offset(-off + size);
 				}
 			}
+
+			// Since some parameters are spilled above the stack, we also need to check against the
+			// zero to avoid clobbering return addr and previous base pointer.
+			if (size > offset->last().v64())
+				offset->last() = Offset(size);
 		}
 
 		// Check so that enough shadow space is available in the following situations:
@@ -216,7 +221,7 @@ namespace code {
 		static void ensureShadowSpace(Listing *l, Params *params, Array<Offset> *offset, Array<Var> *allVars) {
 			const Int shadowSz = 0x20;
 
-			Offset before = offset->last();
+			// Offset before = offset->last();
 
 			// For #1 above, we can just iterate through all variables and make sure that the total
 			// stack size is 0x20 larger than the object.
@@ -265,7 +270,7 @@ namespace code {
 				case op::fnRetRef:
 					// This is similar to the code for 'epilog'. The difference is that we consider
 					// *all* variables here if we need to call a copy constructor.
-					if (as<ComplexDesc>(l->result))
+					if (params->result().memoryRegister() != noReg)
 						ensureShadowSpace(l, offset, l->allVars(current), shadowSz, true);
 
 					// Fall through

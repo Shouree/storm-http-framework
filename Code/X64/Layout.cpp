@@ -264,6 +264,8 @@ namespace code {
 
 			reg = asSize(reg, Size::sLong);
 
+			// Note: We could use: and <dest>, 0 - that can be encoded compactly and does not
+			// require additional registers! This is what some versions of MSVC does.
 			if (initReg) {
 				*dest << bxor(reg, reg);
 				initReg = false;
