@@ -9,7 +9,7 @@ namespace code {
 		 * Windows version:
 		 */
 
-		WindowsParams::WindowsParams() : code::Params(4, 4, 8, 16) {
+		WindowsParams::WindowsParams(Bool member) : code::Params(4, 4, 8, 16), member(member) {
 			setStackExtra(32); // 4 words for shadow space.
 			setCalleeDestroyParams(); // Callee's responsibility to destroy parameters.
 		}
@@ -32,14 +32,16 @@ namespace code {
 		}
 
 		void WindowsParams::resultComplex(ComplexDesc *desc) {
-			resultData = Result::inMemory(ptrC);
-			addInt(Param(Param::returnId(), desc->size(), true, 0, true));
+			Nat index = member ? 1 : 0;
+			addInt(index, Param(Param::returnId(), desc->size(), true, 0, true));
+			resultData = Result::inMemory(registerSrc(index));
 		}
 
 		void WindowsParams::resultSimple(SimpleDesc *desc) {
 			// Note: Seems like these are always passed in memory?
-			resultData = Result::inMemory(ptrC);
-			addInt(Param(Param::returnId(), desc->size(), true, 0, true));
+			Nat index = member ? 1 : 0;
+			addInt(index, Param(Param::returnId(), desc->size(), true, 0, true));
+			resultData = Result::inMemory(registerSrc(index));
 			return;
 
 			// Old attempt here. Might still be relevant!
@@ -53,8 +55,9 @@ namespace code {
 
 			if (size > 8) {
 				// Return on stack.
-				resultData = Result::inMemory(ptrC);
-				addInt(Param(Param::returnId(), desc->size(), true, 0, true));
+				Nat index = member ? 1 : 0;
+				addInt(index, Param(Param::returnId(), desc->size(), true, 0, true));
+				resultData = Result::inMemory(registerSrc(index));
 				return;
 			}
 

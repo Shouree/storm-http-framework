@@ -35,7 +35,7 @@ namespace code {
 		 * Emit code required to perform a function call. Used from 'RemoveInvalid'.
 		 */
 		void emitFnCall(const Arena *arena, Listing *dest, Operand call, Operand resultPos, TypeDesc *resultType,
-						Bool resultRef, Block currentBlock, RegSet *used, Array<ParamInfo> *params);
+						Bool member, Bool resultRef, Block currentBlock, RegSet *used, Array<ParamInfo> *params);
 
 	}
 }

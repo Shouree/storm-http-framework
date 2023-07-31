@@ -52,10 +52,10 @@ namespace code {
 			 */
 
 			// Create parameter layout.
-			virtual code::Params *STORM_FN createParams() const ABSTRACT;
+			virtual code::Params *STORM_FN createParams(Bool member) const ABSTRACT;
 
 			// Layout parameters.
-			code::Params *layoutParams(TypeDesc *result, Array<TypeDesc *> *params);
+			code::Params *layoutParams(Bool member, TypeDesc *result, Array<TypeDesc *> *params);
 
 			// Create the layout transform.
 			virtual Layout *STORM_FN layoutTfm() const ABSTRACT;
@@ -82,7 +82,7 @@ namespace code {
 			 */
 			virtual Nat STORM_FN firstParamId(MAYBE(TypeDesc *) desc);
 			virtual Operand STORM_FN firstParamLoc(Nat id);
-			virtual code::Params *STORM_FN createParams() const;
+			virtual code::Params *STORM_FN createParams(Bool member) const;
 			virtual Layout *STORM_FN layoutTfm() const;
 
 		};
@@ -104,7 +104,7 @@ namespace code {
 			 */
 			virtual Nat STORM_FN firstParamId(MAYBE(TypeDesc *) desc);
 			virtual Operand STORM_FN firstParamLoc(Nat id);
-			virtual code::Params *STORM_FN createParams() const;
+			virtual code::Params *STORM_FN createParams(Bool member) const;
 			virtual Layout *STORM_FN layoutTfm() const;
 
 		};

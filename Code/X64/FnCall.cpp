@@ -23,10 +23,10 @@ namespace code {
 		class FnCallState {
 		public:
 			// Create.
-			FnCallState(const Arena *arena, Listing *dest, Array<ParamInfo> *params, RegSet *used, Block parent)
+			FnCallState(const Arena *arena, Listing *dest, Array<ParamInfo> *params, RegSet *used, Block parent, Bool member)
 				: arena(arena), dest(dest), params(params), parent(parent), created() {
 				this->used = new (used) RegSet(*used);
-				this->layout = arena->createParams();
+				this->layout = arena->createParams(member);
 			}
 
 			// Arena.
@@ -708,12 +708,12 @@ namespace code {
 		 */
 
 		void emitFnCall(const Arena *arena, Listing *dest, Operand toCall, Operand resultPos, TypeDesc *resultType,
-						Bool resultRef, Block currentBlock, RegSet *used, Array<ParamInfo> *params) {
+						Bool member, Bool resultRef, Block currentBlock, RegSet *used, Array<ParamInfo> *params) {
 
 			// Shared state for other functions:
-			FnCallState state(arena, dest, params, used, currentBlock);
-
+			FnCallState state(arena, dest, params, used, currentBlock, member);
 			bool complex = hasComplex(params);
+
 			state.layout->result(resultType);
 			for (Nat i = 0; i < params->count(); i++)
 				state.layout->add(i, params->at(i).type);

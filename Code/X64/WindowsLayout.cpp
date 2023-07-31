@@ -8,8 +8,17 @@ namespace code {
 		WindowsLayout::WindowsLayout(const Arena *arena) : Layout(arena) {}
 
 		Offset WindowsLayout::resultParam() {
-			// Shadow space for rcx.
-			return Offset::sPtr * 2;
+			Result r = params->result();
+			if (same(r.memoryRegister(), ptrC)) {
+				// Shadow space for rcx.
+				return Offset::sPtr * 2;
+			} else if (same(r.memoryRegister(), ptrD)) {
+				// Shadow space for rcx.
+				return Offset::sPtr * 3;
+			} else {
+				dbg_assert(false, L"Should not need resultparam now.");
+				return Offset();
+			}
 		}
 
 		void WindowsLayout::saveResult(Listing *dest) {

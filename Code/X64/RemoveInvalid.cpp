@@ -94,7 +94,7 @@ namespace code {
 			// Figure out which parameters are indirect, and set 'freeIndirect' on them all:
 			{
 				indirectParams = new (this) Array<Nat>();
-				Params *layout = arena->createParams();
+				Params *layout = arena->createParams(src->member);
 				Array<Var> *vars = dest->allParams();
 
 				for (Nat i = 0; i < vars->count(); i++)
@@ -301,7 +301,7 @@ namespace code {
 				throw new (this) InvalidValue(S("Using a fnCall that was not created properly."));
 			}
 
-			emitFnCall(arena, dest, t->src(), t->dest(), t->type, false, currentBlock, used->at(line), params);
+			emitFnCall(arena, dest, t->src(), t->dest(), t->type, t->member, false, currentBlock, used->at(line), params);
 			params->clear();
 		}
 
@@ -311,7 +311,7 @@ namespace code {
 				throw new (this) InvalidValue(S("Using a fnCall that was not created properly."));
 			}
 
-			emitFnCall(arena, dest, t->src(), t->dest(), t->type, true, currentBlock, used->at(line), params);
+			emitFnCall(arena, dest, t->src(), t->dest(), t->type, t->member, true, currentBlock, used->at(line), params);
 			params->clear();
 		}
 

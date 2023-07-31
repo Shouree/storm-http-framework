@@ -54,7 +54,7 @@ namespace code {
 			Listing *l = new (this) Listing(this);
 
 			// Generate a layout of all parameters so we can properly restore them later.
-			Params *layout = layoutParams(result, params);
+			Params *layout = layoutParams(member, result, params);
 
 			// Note: We want to use the 'prolog' and 'epilog' functionality so that exceptions from
 			// 'fn' are able to propagate through this stub properly.
@@ -98,7 +98,7 @@ namespace code {
 			// rarely. The functions that require an EnginePtr are generally small free-standing toS
 			// functions that do not require many parameters. Functions that would require spilling
 			// to the stack should probably be moved into some object anyway.
-			Params *layout = layoutParams(result, params);
+			Params *layout = layoutParams(false, result, params);
 
 			// Shift all registers.
 			Reg last = noReg;
@@ -142,8 +142,8 @@ namespace code {
 			return ptrA;
 		}
 
-		Params *Arena::layoutParams(TypeDesc *result, Array<TypeDesc *> *params) {
-			Params *layout = createParams();
+		Params *Arena::layoutParams(Bool member, TypeDesc *result, Array<TypeDesc *> *params) {
+			Params *layout = createParams(member);
 			layout->result(result);
 			for (Nat i = 0; i < params->count(); i++)
 				layout->add(i, params->at(i));
@@ -177,32 +177,22 @@ namespace code {
 		}
 
 		Nat WindowsArena::firstParamId(MAYBE(TypeDesc *) desc) {
+			// The this pointer is always in the first parameter register.
 			if (!desc)
-				return 2;
-
-			Params *p = new (this) WindowsParams();
-			p->result(desc);
-			if (p->result().memoryRegister() == noReg)
-				return 0;
-			else
 				return 1;
+
+			return 0;
 		}
 
 		Operand WindowsArena::firstParamLoc(Nat id) {
-			switch (id) {
-			case 0:
-				// In a register, first parameter.
-				return ptrC;
-			case 1:
-				// In memory, second parameter.
-				return ptrD;
-			default:
+			if (id != 0)
 				return Operand();
-			}
+
+			return ptrC;
 		}
 
-		code::Params *WindowsArena::createParams() const {
-			return new (this) WindowsParams();
+		code::Params *WindowsArena::createParams(Bool member) const {
+			return new (this) WindowsParams(member);
 		}
 
 		Layout *WindowsArena::layoutTfm() const {
@@ -252,7 +242,8 @@ namespace code {
 			}
 		}
 
-		code::Params *PosixArena::createParams() const {
+		code::Params *PosixArena::createParams(Bool member) const {
+			(void)member; // Not important on Posix.
 			return new (this) PosixParams();
 		}
 

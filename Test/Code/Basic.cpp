@@ -215,7 +215,7 @@ BEGIN_TEST(CodeHereTest, CodeBasic) {
 BEGIN_TEST(CodeX64WindowsLayout, CodeBasic) {
 	Engine &e = gEngine();
 
-	code::x64::WindowsParams *p = new (e) code::x64::WindowsParams();
+	code::x64::WindowsParams *p = new (e) code::x64::WindowsParams(false);
 	p->add(0, new (e) PrimitiveDesc(intPrimitive()));
 	p->add(1, new (e) PrimitiveDesc(floatPrimitive()));
 

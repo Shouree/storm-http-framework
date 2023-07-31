@@ -311,6 +311,10 @@ namespace code {
 		void STORM_FN addReal(Param param);
 		void STORM_FN addStack(Param param);
 
+		// Add an integer parameter at a specific position. Used to insert the result parameter in
+		// the appropriate place before the 'this' pointer has been added (e.g. on Windows).
+		void STORM_FN addInt(Nat pos, Param param);
+
 		// Check available space:
 		Bool STORM_FN hasInt(Nat count);
 		Bool STORM_FN hasReal(Nat count);

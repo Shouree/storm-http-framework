@@ -36,7 +36,7 @@ namespace code {
 			usingEH = src->exceptionAware();
 
 			// Compute the layout of all parameters.
-			params = arena->createParams();
+			params = arena->createParams(src->member);
 			params->result(src->result);
 			Array<Var> *p = src->allParams();
 			for (Nat i = 0; i < p->count(); i++) {

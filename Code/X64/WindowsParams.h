@@ -22,7 +22,7 @@ namespace code {
 			STORM_CLASS;
 		public:
 			// Create an empty layout.
-			STORM_CTOR WindowsParams();
+			STORM_CTOR WindowsParams(Bool member);
 
 			// Get the register containing the parameter.
 			Reg STORM_FN registerSrc(Nat n) const;
@@ -35,6 +35,10 @@ namespace code {
 			void STORM_FN addPrimitive(Nat id, Primitive p);
 			void STORM_FN addComplex(Nat id, ComplexDesc *desc);
 			void STORM_FN addSimple(Nat id, SimpleDesc *desc);
+
+		private:
+			// Is this a member function?
+			Bool member;
 		};
 
 	}

@@ -120,15 +120,26 @@ namespace code {
 		}
 	}
 
+	static void bumpFilled(GcArray<Param> *in) {
+		while (in->filled < in->count) {
+			if (in->v[in->filled].any())
+				in->filled++;
+			else
+				break;
+		}
+	}
+
 	void Params::add(Nat id, Primitive p) {
 		addPrimitive(id, p);
 	}
 
 	void Params::addInt(Param param) {
-		if (integer->filled < integer->count)
+		if (integer->filled < integer->count) {
 			integer->v[integer->filled++] = param;
-		else
+			bumpFilled(integer); // If another parameter was added.
+		} else {
 			addStack(param);
+		}
 	}
 
 	void Params::addReal(Param param) {
@@ -160,6 +171,13 @@ namespace code {
 
 		// Update size. Minimum alignment is 8.
 		stackSize += roundUp(param.size().aligned().size64(), stackParamAlign());
+	}
+
+	void Params::addInt(Nat at, Param param) {
+		if (at < integer->count) {
+			integer->v[at] = param;
+			bumpFilled(integer);
+		}
 	}
 
 	Bool Params::hasInt(Nat space) {
