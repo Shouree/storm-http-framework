@@ -212,7 +212,6 @@ namespace code {
 			void *freeFn = now.function;
 			int offset = now.offset;
 			nat activeAfter = now.activeAfter;
-			PLN(L"Cleanup variable " << v.id << L", " << now.offset);
 
 			// If not active, we don't destroy it.
 			if (frame.activation < activeAfter)

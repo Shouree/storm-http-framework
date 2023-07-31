@@ -183,10 +183,7 @@ namespace code {
 
 		extern "C"
 		EXCEPTION_DISPOSITION windowsHandler(_EXCEPTION_RECORD *er, void *frame, _CONTEXT *ctx, void *dispatch) {
-			PLN(L"FRAME " << frame);
 			SehFrame f = extractFrame(er, frame, ctx, dispatch);
-			PLN(L"Checking " << frame);
-			PVAR(toHex(Nat(er->ExceptionFlags)));
 
 			if (er->ExceptionFlags & EXCEPTION_UNWINDING) {
 				// Only need to do cleanup!
@@ -243,8 +240,6 @@ namespace code {
 			storm::RootObject **object = (storm::RootObject **)er->ExceptionInformation[1];
 			if (!object)
 				return ExceptionContinueSearch;
-
-			PVAR(*object);
 
 			Binary::Resume resume;
 			if (f.binary->hasCatch(f.part, *object, resume)) {

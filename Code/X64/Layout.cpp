@@ -177,14 +177,6 @@ namespace code {
 			// proper unwind data.
 			emitProlog(dest);
 
-			TODO(L"Needs to be revised for windows");
-			// On Windows, it needs to look approximately as follows (due to EH):
-			// - establish frame ptr
-			// - spill register parameters (int registers)
-			// - push preserved registers
-			// - allocate stack frame
-			// - spill remaining registers
-
 			// Initialize the root block.
 			initBlock(dest, dest->root(), rax);
 		}

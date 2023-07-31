@@ -55,16 +55,18 @@ namespace code {
 
 			// For debugging:
 			// PVAR(base);
-			PVAR(found);
-			PVAR((void *)(size_t(pc) - size_t(found)));
+			// PVAR(found);
+			// PVAR((void *)(size_t(pc) - size_t(found)));
 			// PVAR(fn);
-			for (Nat i = 0; i < size - ehOffset; i++) {
-				if (i % 8 == 0)
-					PNN(L"\n" << i << L":");
-				PNN(L" " << toHex(((byte *)fn)[i]));
-			}
-			PLN(L"");
-			PLN(L"");
+			// for (Nat i = 0; i < size - ehOffset; i++) {
+			// 	if (i % 8 == 0)
+			// 		PNN(L"\n" << i << L":");
+			// 	PNN(L" " << toHex(((byte *)fn)[i]));
+			// }
+			// PLN(L"");
+			// PLN(L"");
+
+			// PVAR((void *)(code + size - 10));
 
 			return fn;
 		}
@@ -127,7 +129,6 @@ namespace code {
 			result.stackPtr = frame;
 			result.binary = code::codeBinaryImpl(refs);
 			result.frameOffset = -result.binary->stackOffset();
-			PVAR(result.frameOffset);
 
 			// We can also find the metadata table at the end of the binary:
 			// The last Nat is the size of the EH data:
@@ -135,7 +136,6 @@ namespace code {
 
 			// The binary also contains the start of the code:
 			size_t codeStart = size_t(result.binary->address());
-			PVAR((void *)codeStart);
 
 			// Now, we can compute the start of the EH data and extract the block table:
 			size_t startOfEhData = codeStart + *ehOffset;
@@ -171,8 +171,6 @@ namespace code {
 						_CONTEXT *ctx, _EXCEPTION_RECORD *er, void *dispatch) {
 			DispatchContext *dispatchContext = (DispatchContext *)dispatch;
 
-			PLN(L"About to unwind!");
-
 			er->ExceptionFlags |= EXCEPTION_UNWINDING;
 			// Store the target block in the exception parameters!
 			// Most likely, we can entirely trash the exception parameters at this stage, since
@@ -187,7 +185,6 @@ namespace code {
 
 		void cleanupPartialFrame(SehFrame &frame, _EXCEPTION_RECORD *er) {
 			size_t cleanupTo = er->ExceptionInformation[er->NumberParameters - 1];
-			PVAR(cleanupTo);
 			cleanupPartialFrame(frame, Nat(cleanupTo));
 		}
 

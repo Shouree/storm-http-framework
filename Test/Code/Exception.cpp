@@ -384,7 +384,7 @@ static StrBuf *CODECALL addBuf(StrBuf *to) {
 	return to;
 }
 
-BEGIN_TEST_(ExceptionCatch, Code) {
+BEGIN_TEST(ExceptionCatch, Code) {
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -392,16 +392,18 @@ BEGIN_TEST_(ExceptionCatch, Code) {
 	Ref appendFn = arena->external(S("appendFn"), address(&::addBuf));
 	Ref freeInt = arena->external(S("freeInt"), address(&::intCleanupGc));
 
-	Listing *z = new (e) Listing(false);
-	Var p = z->createParam(intDesc(e));
-	Var w = z->createVar(z->root(), Size::sInt, freeInt);
-	*z << prolog();
-	// *z << mov(w, intConst(3));
-	*z << fnParam(intDesc(e), p);
-	*z << fnCall(errorFn, false);
-	*z << fnRet();
+	// Separate function called. Previously, there was a bug in the X64 backend on Windows
+	// where the destructor would not be called in this situation.
+	Listing *shim = new (e) Listing(false);
+	Var p = shim->createParam(intDesc(e));
+	Var w = shim->createVar(shim->root(), Size::sInt, freeInt, freeOnException);
+	*shim << prolog();
+	*shim << mov(w, intConst(10));
+	*shim << fnParam(intDesc(e), p);
+	*shim << fnCall(errorFn, false);
+	*shim << fnRet();
 
-	Binary *q = new (e) Binary(arena, z, true);
+	Binary *bShim = new (e) Binary(arena, shim, true);
 
 
 	Listing *l = new (e) Listing(false, ptrDesc(e));
@@ -425,7 +427,7 @@ BEGIN_TEST_(ExceptionCatch, Code) {
 	*l << mov(innerInt, intConst(4));
 	*l << fnParam(intDesc(e), param);
 	// *l << fnCall(errorFn, false);
-	RefSource *rs = new (e) StrRefSource(new (e) Str(S("Z")), q);
+	RefSource *rs = new (e) StrRefSource(new (e) Str(S("errorShim")), bShim);
 	*l << fnCall(Ref(rs), false);
 	*l << end(block);
 	*l << fnRet(ptrConst(0));
@@ -454,14 +456,12 @@ BEGIN_TEST_(ExceptionCatch, Code) {
 
 	using debug::DbgVal;
 
-	PVAR(q->address());
+	PVAR(bShim->address());
 	PVAR(b->address());
 
 	// Make sure registers are preserved correctly when exceptions are thrown. This asserts if they
 	// are not preserved properly, which might cause the remainder of this test to fail.
 	callFn(b->address(), 1);
-
-	PLN(L"--- Sanity check OK ---");
 
 	DbgVal::clear();
 	destroyed = 0;
@@ -470,37 +470,29 @@ BEGIN_TEST_(ExceptionCatch, Code) {
 	CHECK(DbgVal::clear());
 	CHECK_EQ(destroyed, 4 + 8);
 
-	PLN(L"--- FIRST OK ---");
-
 	// Throws an exception at first, then catches it as an object.
 	destroyed = 0;
 	CHECK_EQ(::toS((*fn)(1)), L"Throw me!");
 	CHECK(DbgVal::clear());
-	CHECK_EQ(destroyed, 4 + 7);
-
-	PLN(L"--- SECOND OK ---");
+	CHECK_EQ(destroyed, 4 + 7 + 10);
 
 	// Throws a StrBuf at first, then catches it as a StrBuf and adds an!
 	destroyed = 0;
 	CHECK_EQ(::toS((*fn)(10)), L"Buffer!");
 	CHECK(DbgVal::clear());
-	CHECK_EQ(destroyed, 4 + 17);
-
-	PLN(L"--- FOURTH OK ---");
+	CHECK_EQ(destroyed, 4 + 17 + 10);
 
 	// Throws a StrBuf, catches it, and throws another exception.
 	destroyed = 0;
 	CHECK_ERROR(::toS((*fn)(2)), Str *);
 	CHECK(DbgVal::clear());
-	CHECK_EQ(destroyed, 4 + 18);
-
-	PLN(L"--- FOURTH OK ---");
+	CHECK_EQ(destroyed, 4 + 18 + 10);
 
 	// Throws a const Str and tries to catch it.
 	destroyed = 0;
 	CHECK_EQ(::toS((*fn)(20)), L"Throw const!");
 	CHECK(DbgVal::clear());
-	CHECK_EQ(destroyed, 4 + 7);
+	CHECK_EQ(destroyed, 4 + 7 + 10);
 
 	// // DebugBreak();
 	// try {

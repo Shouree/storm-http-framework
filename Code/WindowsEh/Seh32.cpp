@@ -126,8 +126,10 @@ namespace code {
 	}
 }
 
-#endif
+#else
 
 // Symbol to avoid warning when building on 64-bit systems.
 // Defined in SafeSeh.h
 void x86SafeSEH() {}
+
+#endif
