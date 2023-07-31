@@ -360,9 +360,6 @@ static void CODECALL throwPtr(Nat i) {
 	// To make sure destructors in this frame are executed properly!
 	debug::DbgVal dtorCheck;
 
-	TODO(L"Stack traces inside Storm functions don't seem to work properly on 64-bit Windows...");
-	// PVAR(collectStackTrace(gEngine()).format());
-
 	if (i == 1) {
 		Str *obj = new (gEngine()) Str(S("Throw me!"));
 		// PLN(L"Throwing " << (void *)obj << L", " << obj);
@@ -384,7 +381,7 @@ static StrBuf *CODECALL addBuf(StrBuf *to) {
 	return to;
 }
 
-BEGIN_TEST(ExceptionCatch, Code) {
+BEGIN_TEST_(ExceptionCatch, Code) {
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 

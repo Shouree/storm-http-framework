@@ -90,7 +90,7 @@ String format(const StackTrace &t) {
  */
 
 // Windows stack traces using DbgHelp. Relies on debug information.
-#if !defined(STANDALONE_STACKWALK) && defined(WINDOWS)
+#if !defined(STANDALONE_STACKWALK) && defined(X86)
 
 #if defined(X86)
 static const DWORD machineType = IMAGE_FILE_MACHINE_I386;
@@ -238,6 +238,60 @@ void createStackTrace(TraceGen &gen, nat skip, void *state) {
 		now = prevFrame(now);
 
 		gen.put(f);
+	}
+}
+
+#endif
+
+#if defined(WINDOWS) && defined(X64)
+
+struct UNWIND_HISTORY_TABLE;
+struct KNONVOLATILE_CONTEXT_POINTERS;
+
+extern "C"
+NTSYSAPI PRUNTIME_FUNCTION RtlLookupFunctionEntry(DWORD64 pc, PDWORD64 base, UNWIND_HISTORY_TABLE **history);
+
+extern "C"
+NTSYSAPI void *RtlVirtualUnwind(DWORD handlerType, DWORD64 base, DWORD64 pc,
+								PRUNTIME_FUNCTION entry, PCONTEXT context,
+								PVOID *handlerData, PDWORD64 establisher,
+								KNONVOLATILE_CONTEXT_POINTERS *nv);
+
+void createStackTrace(TraceGen &gen, nat skip, void *state) {
+	StackInfoSet &s = stackInfo();
+	gen.init(0);
+
+	CONTEXT context;
+	RtlCaptureContext(&context);
+
+	// Note: It is fine if we don't support leaf functions. We know that this is not a leaf function
+	// (we call other functions), so we will have metadata, and all preceeding functions need
+	// metadata.
+	DWORD64 base;
+	UNWIND_HISTORY_TABLE *history;
+	RUNTIME_FUNCTION *entry;
+	while (entry = RtlLookupFunctionEntry(context.Rip, &base, &history)) {
+		if (skip > 0) {
+			skip--;
+		} else {
+			StackFrame frame;
+			frame.id = s.translate((void *)context.Rip, frame.fnBase, frame.offset);
+			gen.put(frame);
+		}
+
+		DWORD64 infoAddress = base + entry->UnwindData;
+		DWORD type = (*(byte *)infoAddress) >> 3; // According to specification of the info struct.
+
+		DWORD64 oldIp = context.Rip;
+
+		void *handler;
+		DWORD64 establisher;
+		RtlVirtualUnwind(type, base, oldIp, entry, &context, &handler, &establisher, NULL);
+
+		// No progress? We can't really see if the call succeeded otherwise, as it is possible for
+		// functions to have a NULL handler function (e.g., nothing to do during exceptions).
+		if (oldIp == context.Rip)
+			break;
 	}
 }
 
