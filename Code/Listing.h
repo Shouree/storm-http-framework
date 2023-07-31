@@ -431,6 +431,10 @@ namespace code {
 
 	StrBuf &STORM_FN operator <<(StrBuf &to, Listing::Entry e);
 
+	// Insert a nop instruction if the last instruction was a call instruction.
+	// This is needed on some backends because the function return addresses are
+	// otherwise treated as if the next instruction faulted and is to be re-tried.
+	void STORM_FN padCallWithNop(Listing *dest);
 }
 
 #include "InstrFwd.h"

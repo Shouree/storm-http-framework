@@ -83,12 +83,7 @@ namespace code {
 			// we would have emitted code to destroy variables right before here, but if we have
 			// variables that are only destroyed when exceptions are thrown, we would miss them if
 			// we don't have a nop here.
-			if (dest->count() > 0) {
-				// Note: all high-level calls have been lowered at this point.
-				if (dest->at(dest->count() - 1)->op() == op::call) {
-					*dest << nop();
-				}
-			}
+			padCallWithNop(dest);
 
 			// Note: The instructions in the epilog are quite harshly specified in the ABI. As such,
 			// we can not use the LEAVE instruction, or load rsp from rbp to avoid accidental

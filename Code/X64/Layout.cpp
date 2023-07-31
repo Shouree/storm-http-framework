@@ -243,6 +243,9 @@ namespace code {
 
 			// We only need to update the block id if this impacts exception handling.
 			if (src->freeOpt(var) & freeOnException) {
+				// We might need a nop here if the last was a call.
+				padCallWithNop(dest);
+
 				Label lbl = dest->label();
 				*dest << lbl;
 				activeBlocks->push(ActiveBlock(block, activationId, lbl));
@@ -335,7 +338,9 @@ namespace code {
 				}
 			}
 
-			if (usingEH || true) {
+			if (usingEH) {
+				padCallWithNop(dest);
+
 				// Remember where the block started.
 				Label lbl = dest->label();
 				*dest << lbl;
@@ -396,7 +401,9 @@ namespace code {
 			}
 
 			block = dest->parent(block);
-			if ((true || usingEH) && table) {
+			if (usingEH && table) {
+				padCallWithNop(dest);
+
 				Label lbl = dest->label();
 				*dest << lbl;
 				activeBlocks->push(ActiveBlock(block, activationId, lbl));

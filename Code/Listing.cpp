@@ -694,4 +694,17 @@ namespace code {
 		to << S("\n");
 	}
 
+	void padCallWithNop(Listing *l) {
+		if (l->count() == 0)
+			return;
+
+		switch (l->at(l->count() - 1)->op()) {
+		case op::call:
+		case op::fnCall:
+		case op::fnCallRef:
+			*l << nop();
+			break;
+		}
+	}
+
 }
