@@ -245,19 +245,44 @@ void createStackTrace(TraceGen &gen, nat skip, void *state) {
 
 #if defined(WINDOWS) && defined(X64)
 
-struct UNWIND_HISTORY_TABLE;
-struct KNONVOLATILE_CONTEXT_POINTERS;
+namespace internal {
 
-extern "C"
-NTSYSAPI PRUNTIME_FUNCTION RtlLookupFunctionEntry(DWORD64 pc, PDWORD64 base, UNWIND_HISTORY_TABLE **history);
+	// Copied from winternl.h to make it possible to reserve enough stack space for the history table.
+	// Note: We have some leeway in the history size just in case.
+#define UNWIND_HISTORY_SIZE (12 + 4)
 
-extern "C"
-NTSYSAPI void *RtlVirtualUnwind(DWORD handlerType, DWORD64 base, DWORD64 pc,
-								PRUNTIME_FUNCTION entry, PCONTEXT context,
-								PVOID *handlerData, PDWORD64 establisher,
-								KNONVOLATILE_CONTEXT_POINTERS *nv);
+	struct UNWIND_HISTORY_ENTRY {
+		ULONG64 base;
+		RUNTIME_FUNCTION *entry;
+	};
+
+	struct UNWIND_HISTORY_TABLE {
+		ULONG count;
+		BYTE localHint;
+		BYTE globalHint;
+		BYTE search;
+		BYTE once;
+		ULONG64 lowAddr;
+		ULONG64 highAddr;
+		UNWIND_HISTORY_ENTRY entries[UNWIND_HISTORY_SIZE];
+	};
+
+	struct KNONVOLATILE_CONTEXT_POINTERS;
+
+	extern "C"
+	NTSYSAPI PRUNTIME_FUNCTION RtlLookupFunctionEntry(DWORD64 pc, PDWORD64 base, UNWIND_HISTORY_TABLE *history);
+
+	extern "C"
+	NTSYSAPI void *RtlVirtualUnwind(DWORD handlerType, DWORD64 base, DWORD64 pc,
+									PRUNTIME_FUNCTION entry, PCONTEXT context,
+									PVOID *handlerData, PDWORD64 establisher,
+									KNONVOLATILE_CONTEXT_POINTERS *nv);
+
+}
 
 void createStackTrace(TraceGen &gen, nat skip, void *state) {
+	using namespace internal;
+
 	StackInfoSet &s = stackInfo();
 	gen.init(0);
 
@@ -267,8 +292,9 @@ void createStackTrace(TraceGen &gen, nat skip, void *state) {
 	// Note: It is fine if we don't support leaf functions. We know that this is not a leaf function
 	// (we call other functions), so we will have metadata, and all preceeding functions need
 	// metadata.
-	DWORD64 base;
-	UNWIND_HISTORY_TABLE *history;
+	DWORD64 base = null;
+	UNWIND_HISTORY_TABLE history;
+	zeroMem(history);
 	RUNTIME_FUNCTION *entry;
 	while (entry = RtlLookupFunctionEntry(context.Rip, &base, &history)) {
 		if (skip > 0) {
@@ -282,15 +308,17 @@ void createStackTrace(TraceGen &gen, nat skip, void *state) {
 		DWORD64 infoAddress = base + entry->UnwindData;
 		DWORD type = (*(byte *)infoAddress) >> 3; // According to specification of the info struct.
 
+		// If bit 3 is set, then this is a nested information, and we might want to "fold" the call
+		// into the previous entry?
+
 		DWORD64 oldIp = context.Rip;
 
-		void *handler;
-		DWORD64 establisher;
+		void *handler = 0;
+		DWORD64 establisher = 0;
 		RtlVirtualUnwind(type, base, oldIp, entry, &context, &handler, &establisher, NULL);
+		// Note: There is not really a good way to see if RtlVirtualUnwind succeeded or not.
 
-		// No progress? We can't really see if the call succeeded otherwise, as it is possible for
-		// functions to have a NULL handler function (e.g., nothing to do during exceptions).
-		if (oldIp == context.Rip)
+		if (context.Rip == 0)
 			break;
 	}
 }

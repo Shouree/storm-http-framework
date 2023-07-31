@@ -381,7 +381,7 @@ static StrBuf *CODECALL addBuf(StrBuf *to) {
 	return to;
 }
 
-BEGIN_TEST_(ExceptionCatch, Code) {
+BEGIN_TEST(ExceptionCatch, Code) {
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -401,7 +401,7 @@ BEGIN_TEST_(ExceptionCatch, Code) {
 	*shim << fnCall(errorFn, false);
 	*shim << fnRet();
 
-	Binary *bShim = new (e) Binary(arena, shim, true);
+	Binary *bShim = new (e) Binary(arena, shim);
 
 
 	Listing *l = new (e) Listing(false, ptrDesc(e));
@@ -448,14 +448,11 @@ BEGIN_TEST_(ExceptionCatch, Code) {
 	*l << sub(outerInt, intConst(1));
 	*l << fnRet(tmp);
 
-	Binary *b = new (e) Binary(arena, l, true);
+	Binary *b = new (e) Binary(arena, l);
 	typedef Object *(*Fn)(Int i);
 	Fn fn = (Fn)b->address();
 
 	using debug::DbgVal;
-
-	PVAR(bShim->address());
-	PVAR(b->address());
 
 	// Make sure registers are preserved correctly when exceptions are thrown. This asserts if they
 	// are not preserved properly, which might cause the remainder of this test to fail.
