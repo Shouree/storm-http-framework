@@ -526,7 +526,7 @@ namespace code {
 			case primitive::integer:
 			case primitive::pointer:
 				// Always two 'mov'.
-				*dest << mov(target, value);
+				*dest << mov(asSize(target, Size::sPtr), value);
 				*dest << mov(asSize(target, s), xRel(s, target, Offset()));
 				break;
 			case primitive::real:
