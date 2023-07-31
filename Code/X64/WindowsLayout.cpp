@@ -25,8 +25,13 @@ namespace code {
 			const Result &result = params->result();
 
 			// We have reserved space to store these right above the shadow space!
-			for (Nat i = 0; i < result.registerCount(); i++) {
-				*dest << mov(ptrRel(ptrStack, Offset::sPtr * Int(i + 4)), asSize(result.registerAt(i), Size::sPtr));
+			if (result.memoryRegister() != noReg) {
+				*dest << mov(ptrRel(ptrStack, Offset::sPtr * 4), ptrA);
+			} else {
+				for (Nat i = 0; i < result.registerCount(); i++) {
+					*dest << mov(ptrRel(ptrStack, Offset::sPtr * Int(i + 4)),
+								asSize(result.registerAt(i), Size::sPtr));
+				}
 			}
 		}
 
@@ -34,8 +39,13 @@ namespace code {
 			const Result &result = params->result();
 
 			// We have reserved space to store these right above the shadow space!
-			for (Nat i = 0; i < result.registerCount(); i++) {
-				*dest << mov(asSize(result.registerAt(i), Size::sPtr), ptrRel(ptrStack, Offset::sPtr * Int(i + 4)));
+			if (result.memoryRegister() != noReg) {
+				*dest << mov(ptrA, ptrRel(ptrStack, Offset::sPtr * 4));
+			} else {
+				for (Nat i = 0; i < result.registerCount(); i++) {
+					*dest << mov(asSize(result.registerAt(i), Size::sPtr),
+								ptrRel(ptrStack, Offset::sPtr * Int(i + 4)));
+				}
 			}
 		}
 
@@ -219,7 +229,11 @@ namespace code {
 			// is executed later on anyway.
 
 			// Extra space for storing the result through destructors:
-			Int extraSpace = shadowSz + params->result().registerCount() * sizeof(void *);
+			Int extraSpace = shadowSz;
+			if (params->result().memoryRegister())
+				extraSpace += sizeof(void *); // We need to store rax during destructors
+			else
+				extraSpace += params->result().registerCount() * sizeof(void *);
 
 			Block current;
 			for (Nat i = 0; i < l->count(); i++) {
@@ -254,7 +268,7 @@ namespace code {
 					if (as<ComplexDesc>(l->result))
 						ensureShadowSpace(l, offset, l->allVars(current), shadowSz, true);
 
-					// Fall thru
+					// Fall through
 				case op::epilog:
 					// Ensure that all variables with dtors have shadow space, as well as one extra
 					// word to store the result.

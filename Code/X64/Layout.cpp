@@ -491,8 +491,8 @@ namespace code {
 			} else if (ComplexDesc *c = as<ComplexDesc>(src->result)) {
 				// Note: Windows-specific pre-processing ensures we have shadow space here.
 				// Call the copy-ctor.
-				*dest << lea(params->registerSrc(0), value);
-				*dest << mov(params->registerSrc(1), ptrRel(ptrFrame, resultParam()));
+				*dest << lea(params->registerSrc(1), value);
+				*dest << mov(params->registerSrc(0), ptrRel(ptrFrame, resultParam()));
 				*dest << call(c->ctor, Size());
 				// Set 'rax' to the address of the return value.
 				*dest << mov(ptrA, ptrRel(ptrFrame, resultParam()));
@@ -512,6 +512,8 @@ namespace code {
 				assert(false);
 			}
 
+			// Note: We could avoid some pain while calling dtors by placing code "inside" the
+			// epilog codegen. For example, we could load 'resultParam' just before the epilog.
 			epilogTfm(dest, src, line);
 			*dest << ret(Size()); // We will not analyze registers anymore, Size() is fine.
 		}
@@ -538,15 +540,18 @@ namespace code {
 		void Layout::fnRetRefTfm(Listing *dest, Listing *src, Nat line) {
 			Operand value = resolve(src, src->at(line)->src());
 
+			Bool loadRax = false;
+
 			// Handle the return value.
 			if (PrimitiveDesc *p = as<PrimitiveDesc>(src->result)) {
 				if (params->result().registerCount() > 0)
 					returnPrimitiveRef(dest, p, value, params->result().registerAt(0));
 			} else if (ComplexDesc *c = as<ComplexDesc>(src->result)) {
 				// Call the copy-ctor.
-				*dest << mov(params->registerSrc(0), value);
-				*dest << mov(params->registerSrc(1), ptrRel(ptrFrame, resultParam()));
+				*dest << mov(params->registerSrc(1), value);
+				*dest << mov(params->registerSrc(0), ptrRel(ptrFrame, resultParam()));
 				*dest << call(c->ctor, Size());
+				loadRax = true;
 				// Set 'rax' to the address of the return value.
 				*dest << mov(ptrA, ptrRel(ptrFrame, resultParam()));
 			} else if (SimpleDesc *s = as<SimpleDesc>(src->result)) {
@@ -565,6 +570,8 @@ namespace code {
 				assert(false);
 			}
 
+			// Note: We could avoid some pain while calling dtors by placing code "inside" the
+			// epilog codegen. For example, we could load 'resultParam' just before the epilog.
 			epilogTfm(dest, src, line);
 			*dest << ret(Size()); // We will not analyze registers anymore, Size() is fine.
 		}

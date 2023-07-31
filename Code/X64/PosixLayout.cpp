@@ -15,20 +15,26 @@ namespace code {
 		void PosixLayout::saveResult(Listing *dest) {
 			const Result &result = params->result();
 
-			if (result.registerCount() > 0) {
+			if (result.memoryRegister() != noReg) {
+				// We need to save ptrA that contains the return address. Twice to keep the stack aligned.
+				*dest << push(ptrA);
+				*dest << push(ptrA);
+			} else if (result.registerCount() > 0) {
 				Size sz = Size::sPtr * roundUp(result.registerCount(), Nat(2));
 				*dest << sub(ptrStack, ptrConst(sz));
 				for (Nat i = 0; i < result.registerCount(); i++) {
 					*dest << mov(ptrRel(ptrStack, Offset::sPtr * i), asSize(result.registerAt(i), Size::sPtr));
 				}
 			}
-			// Note: Original implementation saved 'result.memoryRegister' also, but it should no longer be needed.
 		}
 
 		void PosixLayout::restoreResult(Listing *dest) {
 			const Result &result = params->result();
 
-			if (result.registerCount() > 0) {
+			if (result.memoryRegister() != noReg) {
+				*dest << pop(ptrA);
+				*dest << pop(ptrA);
+			} else if (result.registerCount() > 0) {
 				Size sz = Size::sPtr * roundUp(result.registerCount(), Nat(2));
 				for (Nat i = 0; i < result.registerCount(); i++) {
 					*dest << mov(asSize(result.registerAt(i), Size::sPtr), ptrRel(ptrStack, Offset::sPtr * i));
