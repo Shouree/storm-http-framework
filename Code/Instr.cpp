@@ -152,6 +152,10 @@ namespace code {
 		}
 	}
 
+	Instr *nop(EnginePtr e) {
+		return instr(e, op::nop);
+	}
+
 	Instr *mov(EnginePtr e, Operand to, Operand from) {
 		return instrDestSrc(e, op::mov, to, from);
 	}

@@ -109,6 +109,7 @@ namespace code {
 	}
 
 	// Repetition of all OP-codes.
+	PROXY0(nop);
 	PROXY2(mov, Operand, Operand);
 	PROXY2(swap, Reg, Operand);
 	PROXY1(push, Operand);

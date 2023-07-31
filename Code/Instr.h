@@ -107,6 +107,7 @@ namespace code {
 	 * Create instructions:
 	 */
 
+	Instr *STORM_FN nop(EnginePtr e);
 	Instr *STORM_FN mov(EnginePtr e, Operand to, Operand from);
 	Instr *STORM_FN swap(EnginePtr e, Reg a, Operand b);
 	Instr *STORM_FN jmp(EnginePtr e, Operand to);

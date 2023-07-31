@@ -6,6 +6,11 @@
 namespace code {
 	namespace x64 {
 
+		void nopOut(Output *to, Instr *instr) {
+			// Alias for xchg eax, eax
+			to->putByte(0x90);
+		}
+
 		void prologOut(Output *to, Instr *instr) {
 			// There are two forms we need to consider:
 			Operand src = instr->src();
@@ -765,6 +770,7 @@ namespace code {
 		typedef void (*OutputFn)(Output *to, Instr *instr);
 
 		const OpEntry<OutputFn> outputMap[] = {
+			OUTPUT(nop),
 			OUTPUT(push),
 			OUTPUT(pop),
 			OUTPUT(mov),

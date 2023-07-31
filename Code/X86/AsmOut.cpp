@@ -6,6 +6,11 @@
 namespace code {
 	namespace x86 {
 
+		void nopOut(Output *to, Instr *instr) {
+			// Alias for xchg eax, eax
+			to->putByte(0x90);
+		}
+
 		void epilogOut(Output *to, Instr *instr) {
 			(void)instr;
 			// This is LEAVE.
@@ -975,6 +980,7 @@ namespace code {
 		typedef void (*OutputFn)(Output *to, Instr *instr);
 
 		const OpEntry<OutputFn> outputMap[] = {
+			OUTPUT(nop),
 			OUTPUT(epilog),
 			OUTPUT(mov),
 			OUTPUT(swap),

@@ -231,6 +231,11 @@ namespace code {
 			to->markGc(GcCodeRef::relativeHereImm19, 4, (Word)obj);
 		}
 
+		void nopOut(Output *to, Instr *instr) {
+			// According to ARM manual.
+			to->putInt(0xD403201F);
+		}
+
 		void prologOut(Output *to, Instr *instr) {
 			Offset stackSize = instr->src().offset();
 			Int scaled = stackSize.v64() / 8;
@@ -1168,6 +1173,7 @@ namespace code {
 
 		// Note: "mov" is special: we try to merge mov operations.
 		const OpEntry<OutputFn> outputMap[] = {
+			OUTPUT(nop),
 			OUTPUT(prolog),
 			OUTPUT(epilog),
 			OUTPUT(mov),
