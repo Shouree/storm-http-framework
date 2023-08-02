@@ -762,9 +762,6 @@ namespace code {
 			// Assign parameters to registers.
 			setRegisters(dest, params, state.layout);
 
-			// Call the function (we do not need accurate knowledge of dirty registers from here).
-			*dest << call(toCall, Size());
-
 			// If it is the callee's responsibility to destroy parameters, then we know that no
 			// destructors will be executed by the 'end(block)' operation. As the X64 backend uses
 			// table-based exceptions, it will not even destroy any registers (it just emits a
@@ -772,6 +769,9 @@ namespace code {
 			if (state.blockCreated() && state.layout->calleeDestroyParams()) {
 				*dest << end(state.block());
 			}
+
+			// Call the function (we do not need accurate knowledge of dirty registers from here).
+			*dest << call(toCall, Size());
 
 			// Handle the return value if required.
 			if (result.memoryRegister() != noReg) {
