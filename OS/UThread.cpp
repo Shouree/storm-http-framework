@@ -1009,7 +1009,7 @@ namespace os {
 		atomicWrite(stack.desc, (StackDesc *)desc);
 	}
 
-	// Called from UThreadX64.S
+	// Called from UThreadX64.asm64
 	extern "C" void doEndDetour2(void **result) {
 		UThreadState::current()->endDetour(result);
 	}

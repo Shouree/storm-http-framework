@@ -32,7 +32,7 @@ namespace storm {
 
 		switch (r->stream) {
 		case stdIn: {
-			// See if we can read now, other post to the thread.
+			// See if we can read now, otherwise post to the thread.
 			bool ok = false;
 			if (tryLockInput()) {
 				ok = tryRead(r);

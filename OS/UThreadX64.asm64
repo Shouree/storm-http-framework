@@ -82,7 +82,7 @@ doSwitchReturnLoc::
 	mov rax, [rsp+30h]
 	mov gs:[8h], rax
 	mov rax, [rsp+28h]
-	mov gs:[20h], rax
+	mov gs:[10h], rax
 
 	;; xmm registers.
 	movaps xmm6, [rsp+0D0h]
