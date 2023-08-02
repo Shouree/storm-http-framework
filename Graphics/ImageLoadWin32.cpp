@@ -22,7 +22,7 @@ namespace graphics {
 			}
 
 			if (SUCCEEDED(r)) {
-				r = converter->QueryInterface(IID_IWICBitmapSource, (void **)dest);
+				r = converter->QueryInterface(IID_PPV_ARGS(dest));
 				err = S("Failed to get the converted picture");
 			}
 
@@ -95,7 +95,7 @@ namespace graphics {
 
 			IWICBitmapSource *bitmapSource = null;
 			if (SUCCEEDED(r)) {
-				r = frame->QueryInterface(IID_IWICBitmapSource, (void **)&bitmapSource);
+				r = frame->QueryInterface(IID_PPV_ARGS(&bitmapSource));
 				err = S("The object was not a BitmapSource object");
 			}
 
