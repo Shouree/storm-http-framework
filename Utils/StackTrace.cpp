@@ -287,7 +287,11 @@ void createStackTrace(TraceGen &gen, nat skip, void *state) {
 	gen.init(0);
 
 	CONTEXT context;
-	RtlCaptureContext(&context);
+	if (state) {
+		context = *(CONTEXT *)state;
+	} else {
+		RtlCaptureContext(&context);
+	}
 
 	// Note: It is fine if we don't support leaf functions. We know that this is not a leaf function
 	// (we call other functions), so we will have metadata, and all preceeding functions need
