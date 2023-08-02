@@ -89,24 +89,17 @@ namespace code {
 			return l;
 		}
 
-		Listing *Arena::engineRedirect(TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand engine) {
-			Listing *l = new (this) Listing(this);
+		static Listing *engineRedirectSimple(Arena *arena, Params *layout, Ref fn, Operand engine) {
+			// Simple case, where we have enough integer registers. We simply shift all registers
+			// one step and we are done.
+			Listing *l = new (arena) Listing(arena);
 
-			// Examine the parameters to see if we have room for an additional parameter without
-			// spilling to the stack. We assume that no stack spilling is required since it vastly
-			// simplifies the implementation of the redirect, and we expect it to be needed very
-			// rarely. The functions that require an EnginePtr are generally small free-standing toS
-			// functions that do not require many parameters. Functions that would require spilling
-			// to the stack should probably be moved into some object anyway.
-			Params *layout = layoutParams(false, result, params);
-
-			// Shift all registers.
 			Reg last = noReg;
 			for (Nat i = layout->registerCount(); i > 0; i--) {
 				Nat id = i - 1;
 
 				Reg r = layout->registerSrc(id);
-				// Interesting?
+				// Don't bother with fp registers.
 				if (fpRegister(r))
 					continue;
 
@@ -116,26 +109,87 @@ namespace code {
 					last = r;
 					continue;
 				}
-				// Result parameter? Don't touch that!
-				if (par.id() == Param::returnId()) {
-					continue;
-				}
-				// All integer registers full?
-				if (last == noReg)
-					throw new (this) InvalidValue(S("Can not create an engine redirect for this function. ")
-												S("It has too many (integer) parameters."));
 
-				// Move the registers one step 'up'.
+				// Don't touch the result parameter.
+				if (par.id() == Param::returnId())
+					continue;
+
+				// We should have an integer register to move into.
+				assert(last != noReg, L"No available integer registers. Should have used complex redirect.");
+
+				// Move it to the next register.
 				*l << mov(last, r);
 				last = r;
 			}
 
-			// Now, we can simply put the engine ptr inside the first register and jump on to the
-			// function we actually wanted to call.
+			// Now, we can simply put the enginge ptr inside the first register and jump to the
+			// function we actually wanted to call!
 			*l << mov(last, engine);
 			*l << jmp(fn);
 
 			return l;
+		}
+
+		static Listing *engineRedirectComplex(Arena *arena,
+											TypeDesc *result, Array<TypeDesc *> *params,
+											Ref fn, Operand engine) {
+			// Complex case. Use a "real" function since we need to allocate our own stack frame.
+			Listing *l = new (arena) Listing(arena, false, result);
+			TypeDesc *ptr = ptrDesc(arena->engine());
+
+			*l << prolog();
+
+			// Add engine parameter:
+			*l << fnParam(ptr, engine);
+
+			// Add parameters:
+			for (Nat i = 0; i < params->count(); i++) {
+				TypeDesc *paramDesc = params->at(i);
+				if (as<ComplexDesc>(paramDesc)) {
+					// Complex parameters are passed by pointer on these platforms. To avoid calling
+					// copy ctors, we can thus pretend that the parameter is a pointer!
+					paramDesc = ptr;
+				}
+				Var param = l->createParam(paramDesc);
+				*l << fnParam(paramDesc, param);
+			}
+
+			// Call the function:
+			Var resultVar = l->createVar(l->root(), result);
+			*l << fnCall(fn, false, result, resultVar);
+
+			// Note: We could avoid a copy of the result when the result is passed as a pointer.
+			*l << fnRet(resultVar);
+
+			return l;
+		}
+
+		Listing *Arena::engineRedirect(TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand engine) {
+			// There are two variants of this function: One where all integer parameters are in
+			// registers, and another where some of them need to go on the stack. The first version
+			// generates simple machine code, while the second version requires a full wrapper
+			// function.
+			Params *layout = layoutParams(false, result, params);
+			Bool useSimple = false;
+
+			for (Nat i = 0; i < layout->registerCount(); i++) {
+				// Don't bother with fp registers.
+				if (fpRegister(layout->registerSrc(i)))
+					continue;
+
+				// If we find an empyt integer register, we can use the simple version.
+				if (layout->registerParam(i) == Param()) {
+					useSimple = true;
+					break;
+				}
+			}
+
+			// Now we know which one we have to use:
+			if (useSimple) {
+				return engineRedirectSimple(this, layout, fn, engine);
+			} else {
+				return engineRedirectComplex(this, result, params, fn, engine);
+			}
 		}
 
 		Reg Arena::functionDispatchReg() {
