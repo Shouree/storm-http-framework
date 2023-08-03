@@ -9,7 +9,8 @@
 #include "PosixLayout.h"
 #include "Code/PosixEh/StackInfo.h"
 #include "Code/WindowsEh/Seh.h"
-#include "../Exception.h"
+#include "Code/Exception.h"
+#include "Core/GcBitset.h"
 
 namespace code {
 	namespace x64 {
@@ -130,12 +131,17 @@ namespace code {
 			return l;
 		}
 
-		static Listing *engineRedirectComplex(Arena *arena,
+		static Listing *engineRedirectComplex(Arena *arena, Params *layout,
 											TypeDesc *result, Array<TypeDesc *> *params,
 											Ref fn, Operand engine) {
 			// Complex case. Use a "real" function since we need to allocate our own stack frame.
 			Listing *l = new (arena) Listing(arena, false, result);
 			TypeDesc *ptr = ptrDesc(arena->engine());
+
+			// Store which parameters are passed by pointer.
+			GcBitset *byPointer = allocBitset(arena->engine(), params->count());
+			for (Nat i = 0; i < layout->totalCount(); i++)
+				byPointer->set(i, layout->totalParam(i).inMemory());
 
 			*l << prolog();
 
@@ -145,12 +151,9 @@ namespace code {
 			// Add parameters:
 			for (Nat i = 0; i < params->count(); i++) {
 				TypeDesc *paramDesc = params->at(i);
-				if (as<ComplexDesc>(paramDesc)) {
-					// Complex parameters are passed by pointer on these platforms. To avoid calling
-					// copy ctors, we can thus pretend that the parameter is a pointer!
-
-					// TODO: We can be even more eager by doing this to all parameters that have
-					// their "pass in memory" flag set (on Windows, that is quite common).
+				if (byPointer->has(i)) {
+					// This parameter is passed by a pointer in memory. This means that we can treat
+					// it as if it were a pointer to avoid copying it once more!
 					paramDesc = ptr;
 				}
 				Var param = l->createParam(paramDesc);
@@ -191,7 +194,7 @@ namespace code {
 			if (useSimple) {
 				return engineRedirectSimple(this, layout, fn, engine);
 			} else {
-				return engineRedirectComplex(this, result, params, fn, engine);
+				return engineRedirectComplex(this, layout, result, params, fn, engine);
 			}
 		}
 
