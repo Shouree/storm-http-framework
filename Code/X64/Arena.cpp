@@ -148,6 +148,9 @@ namespace code {
 				if (as<ComplexDesc>(paramDesc)) {
 					// Complex parameters are passed by pointer on these platforms. To avoid calling
 					// copy ctors, we can thus pretend that the parameter is a pointer!
+
+					// TODO: We can be even more eager by doing this to all parameters that have
+					// their "pass in memory" flag set (on Windows, that is quite common).
 					paramDesc = ptr;
 				}
 				Var param = l->createParam(paramDesc);

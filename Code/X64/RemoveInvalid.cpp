@@ -139,6 +139,12 @@ namespace code {
 			case op::jmp:
 				// Nothing needed. We deal with these later on in the chain.
 				break;
+			case op::fnParam:
+			case op::fnParamRef:
+				i = extractNumbers(i);
+				// We deal with indirect parameters in the fnParam code. The generic code breaks if
+				// there is more than one parameter that needs to be dealt with.
+				break;
 			default:
 				i = extractNumbers(i);
 				i = extractIndirectParams(dest, i, line);
@@ -277,13 +283,38 @@ namespace code {
 			*dest << instr;
 		}
 
+		static Reg fnParamUnusedReg(RegSet *regs, Array<ParamInfo> *params) {
+			// We need to be more conservative when working with fnParam and fnParamRef.
+			for (Nat i = 0; i < params->count(); i++) {
+				const Operand &src = params->at(i).src;
+				if (src.hasRegister())
+					regs->put(src.reg());
+			}
+
+			return asSize(unusedReg(regs), Size::sPtr);
+		}
+
 		void RemoveInvalid::fnParamTfm(Listing *dest, Instr *instr, Nat line) {
 			TypeInstr *i = as<TypeInstr>(instr);
 			if (!i) {
 				throw new (this) InvalidValue(S("Expected a TypeInstr for 'fnParam'."));
 			}
 
-			params->push(ParamInfo(i->type, i->src(), false));
+			const Operand &src = i->src();
+			if (isIndirectParam(dest, src)) {
+				// As long as the offset is zero, we can just set the reference parameter and be
+				// happy.
+				if (src.offset() == Offset()) {
+					params->push(ParamInfo(i->type, ptrRel(src.var(), Offset()), true));
+				} else {
+					// Otherwise, we need a temporary...
+					Reg tmp = fnParamUnusedReg(used->at(line), params);
+					*dest << mov(tmp, ptrRel(src.var(), Offset()));
+					params->push(ParamInfo(i->type, xRel(src.size(), tmp, src.offset()), true));
+				}
+			} else {
+				params->push(ParamInfo(i->type, src, false));
+			}
 		}
 
 		void RemoveInvalid::fnParamRefTfm(Listing *dest, Instr *instr, Nat line) {
@@ -292,7 +323,14 @@ namespace code {
 				throw new (this) InvalidValue(S("Expected a TypeInstr for 'fnParamRef'."));
 			}
 
-			params->push(ParamInfo(i->type, i->src(), true));
+			Operand src = i->src();
+			if (isIndirectParam(dest, src)) {
+				// We need a temporary...
+				Reg tmp = fnParamUnusedReg(used->at(line), params);
+				*dest << mov(tmp, ptrRel(src.var(), Offset()));
+				src = tmp;
+			}
+			params->push(ParamInfo(i->type, src, true));
 		}
 
 		void RemoveInvalid::fnCallTfm(Listing *dest, Instr *instr, Nat line) {
