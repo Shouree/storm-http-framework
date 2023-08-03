@@ -191,24 +191,45 @@ namespace code {
 			return used.aligned();
 		}
 
+		enum EnsureFlags {
+			// Assume we are only calling destructors. I.e., if no destructors need to be executed,
+			// then we won't modify the shadow space at all.
+			ensureOnlyDtors = 0x0,
+
+			// Assume that we will need the extra space always, but it is fine to clobber any
+			// variables that don't need their destructors to be called.
+			ensureAllowClobber = 0x1,
+
+			// Assume that we will need the extra space, but disallow clobbering any active
+			// variables.
+			ensureNoClobber = 0x2,
+		};
+
+		bool shouldPrint = false;
+
 		// Check so that enough shadow space is available to call destructors for all variables that
 		// need destruction. If 'force' is true, then all variables are checked instead.
-		static void ensureShadowSpace(Listing *l, Array<Offset> *offset, Array<Var> *vars, Int size, Bool force) {
+		static void ensureShadowSpace(Listing *l, Array<Offset> *offset, Array<Var> *vars, Int size, EnsureFlags flags) {
 			for (Nat i = 0; i < vars->count(); i++) {
 				Var v = vars->at(i);
 
-				if (force || (l->freeOpt(v) & freeOnBlockExit)) {
+				if ((flags >= ensureNoClobber) || (l->freeOpt(v) & freeOnBlockExit)) {
 					Int off = offset->at(v.key()).v64();
+					// Clamp to zero: we need to call something. Even if the variable is located
+					// above return addr, make sure to not clobber return addr and stored ebp!
+					if (off > 0)
+						off = 0;
 					// Note: offset->last() is the total size of the stack.
 					if (-off + size > offset->last().v64())
 						offset->last() = Offset(-off + size);
 				}
 			}
 
-			// Since some parameters are spilled above the stack, we also need to check against the
-			// zero to avoid clobbering return addr and previous base pointer.
-			if (size > offset->last().v64())
-				offset->last() = Offset(size);
+			// If we always execute something, make sure we don't accidentally clobber rbp and
+			// return address.
+			if (flags >= ensureAllowClobber)
+				if (size > offset->last().v64())
+					offset->last() = Offset(size);
 		}
 
 		// Check so that enough shadow space is available in the following situations:
@@ -224,8 +245,8 @@ namespace code {
 			// Offset before = offset->last();
 
 			// For #1 above, we can just iterate through all variables and make sure that the total
-			// stack size is 0x20 larger than the object.
-			ensureShadowSpace(l, offset, allVars, shadowSz, false);
+			// stack size is 0x20 larger than the object, for all objects that have destructors.
+			ensureShadowSpace(l, offset, allVars, shadowSz, ensureOnlyDtors);
 
 			// For #2, we need to investigate the listing, to see which blocks are active when we
 			// need additional stack space. If we would do it for all blocks, we would waste 32
@@ -252,7 +273,7 @@ namespace code {
 					if (instr->dest() == Operand()) {
 						// No temporary register specified! Make sure we have space, and tell it to
 						// spill to the stack.
-						ensureShadowSpace(l, offset, l->allVars(current), 0x8, true);
+						ensureShadowSpace(l, offset, l->allVars(current), 0x8, ensureNoClobber);
 						l->setInstr(i, instr->alterDest(ptrRel(ptrStack, Offset())));
 					}
 					break;
@@ -270,15 +291,23 @@ namespace code {
 				case op::fnRetRef:
 					// This is similar to the code for 'epilog'. The difference is that we consider
 					// *all* variables here if we need to call a copy constructor.
-					if (params->result().memoryRegister() != noReg)
-						ensureShadowSpace(l, offset, l->allVars(current), shadowSz, true);
+					// Note: This is only necessary when we call a copy ctor, we are fine
+					// in cases where we return in memory but can use memcpy. Thus, the following
+					// is too conservative:
+					// if (params->result().memoryRegister() != noReg)
+					if (as<ComplexDesc>(l->result)) {
+						// TODO: Most likely, we can give this function 'ensureAllowClobber'
+						// instead. It is generally fine if we clobber variables without destructors
+						// (the complex type we have here most likely has a destructor).
+						ensureShadowSpace(l, offset, l->allVars(current), shadowSz, ensureNoClobber);
+					}
 
 					// Fall through
 				case op::epilog:
 					// Ensure that all variables with dtors have shadow space, as well as one extra
 					// word to store the result.
 					for (Block b = current; b != Block(); b = l->parent(b)) {
-						ensureShadowSpace(l, offset, l->allVars(b), extraSpace, false);
+						ensureShadowSpace(l, offset, l->allVars(b), extraSpace, ensureOnlyDtors);
 					}
 					break;
 				}
