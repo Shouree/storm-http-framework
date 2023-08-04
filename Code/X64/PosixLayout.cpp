@@ -89,13 +89,12 @@ namespace code {
 
 			{
 				// Start by computing the locations of parameters passed on the stack.
-				Offset stackOffset = Offset::sPtr * 2;
+				Offset stackOffset = Offset::sPtr * 2; // return addr, rbp
 				for (Nat i = 0; i < params->stackCount(); i++) {
 					Nat paramId = params->stackParam(i).id(); // Should never be 'Param::returnId'
 					Var var = all->at(paramId);
 
-					out->at(var.key()) = stackOffset;
-					stackOffset = (stackOffset + var.size().aligned()).alignAs(Size::sPtr);
+					out->at(var.key()) = stackOffset + Offset(params->stackOffset(i));
 				}
 			}
 
