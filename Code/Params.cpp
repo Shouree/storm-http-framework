@@ -143,10 +143,21 @@ namespace code {
 	}
 
 	void Params::addReal(Param param) {
-		if (real->filled < real->count)
-			real->v[real->filled++] = param;
-		else
-			addStack(param);
+		if (!unifiedIntFpRegs()) {
+			// Normal case:
+			if (real->filled < real->count)
+				real->v[real->filled++] = param;
+			else
+				addStack(param);
+		} else {
+			// Unified case, use 'filled' from 'integer'.
+			if (integer->filled < real->count) {
+				real->v[integer->filled++] = param;
+				bumpFilled(integer);
+			} else {
+				addStack(param);
+			}
+		}
 	}
 
 	void Params::addStack(Param param) {

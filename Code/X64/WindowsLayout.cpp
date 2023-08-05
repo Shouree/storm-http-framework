@@ -121,10 +121,16 @@ namespace code {
 		}
 
 		static Nat useShadowSpace(Reg reg) {
-			Reg shadowMap[] = { rcx, rdx, r8, r9 };
-			for (Nat i = 0; i < ARRAY_COUNT(shadowMap); i++)
-				if (same(reg, shadowMap[i]))
+			// Note: Both rcx and xmm0 can not be used simultaneously on Windows, so we can always
+			// spill like this.
+			Reg shadowMap1[] = { rcx, rdx, r8, r9 };
+			Reg shadowMap2[] = { xmm0, xmm1, xmm2, xmm3 };
+			for (Nat i = 0; i < ARRAY_COUNT(shadowMap1); i++) {
+				if (same(reg, shadowMap1[i]))
 					return 2 + i;
+				if (same(reg, shadowMap2[i]))
+					return 2 + i;
+			}
 			return 0;
 		}
 

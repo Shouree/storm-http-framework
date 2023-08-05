@@ -333,6 +333,18 @@ namespace code {
 			stackData |= Nat(1) << 24;
 		}
 
+		// Signal that integer and floating point registers should be allocated from the same pool.
+		// That is, if integer register 0 is used for a parameter, then fp register 0 will not be
+		// used for a parameter.
+		inline void unifyIntAndFpRegs() {
+			stackData |= Nat(1) << 25;
+		}
+
+		// Check unified int/fp registers.
+		inline Bool unifiedIntFpRegs() const {
+			return ((stackData >> 25) & 0x1) != 0;
+		}
+
 	private:
 		// Available integer registers (pre-allocated):
 		GcArray<Param> *integer;
@@ -354,8 +366,9 @@ namespace code {
 		// Other information about the stack:
 		// -  0.. 7: alignment of the stack
 		// -  8..15: alignment of each parameter on the stack
-		// - 16..24: additional size allocated at the end of the stack (for shadow space, for example)
-		// - 25..25: callee's responsibility to call destructors?
+		// - 16..23: additional size allocated at the end of the stack (for shadow space, for example)
+		// - 24..24: callee's responsibility to call destructors?
+		// - 25..25: allocate int and fp registers from the same pool?
 		Nat stackData;
 
 		// Alignment of the stack.

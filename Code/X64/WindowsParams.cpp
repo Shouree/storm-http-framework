@@ -12,6 +12,7 @@ namespace code {
 		WindowsParams::WindowsParams(Bool member) : code::Params(4, 4, 8, 16), member(member) {
 			setStackExtra(32); // 4 words for shadow space.
 			setCalleeDestroyParams(); // Callee's responsibility to destroy parameters.
+			unifyIntAndFpRegs(); // integers and fp registers are allocated from the same pool.
 		}
 
 		Reg WindowsParams::registerSrc(Nat id) const {
