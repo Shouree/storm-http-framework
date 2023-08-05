@@ -263,7 +263,7 @@ namespace code {
 			Nat nSize = size.size64();
 			if (nSize <= 8) {
 				Reg src = loadAddr(dest, tmpReg, p.src);
-				*dest << mov(asSize(tmpReg, size), xRel(size, ptrStack, Offset()));
+				*dest << mov(asSize(tmpReg, size), xRel(size, src, Offset()));
 				*dest << mov(xRel(size, ptrStack, Offset(offset)), asSize(tmpReg, size));
 				return;
 			}
