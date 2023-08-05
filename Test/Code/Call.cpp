@@ -658,6 +658,94 @@ BEGIN_TEST(CallBytes, Code) {
 	CHECK_EQ(r.b, 16);
 } END_TEST
 
+
+// On 64-bit Windows, floating point parameters are "pushed" by the integer parameters, meaning we
+// always have at most four parameters in total.
+Float CODECALL mixedIntFloat(Float a, Int b, Float c, Int d) {
+	return a + Float(b) + c + Float(d);
+}
+
+BEGIN_TEST_(CallIntFloat, Code) {
+	Engine &e = gEngine();
+	Arena *arena = code::arena(e);
+
+	Ref mixedFn = arena->external(S("mixedIntFloat"), address(&mixedIntFloat));
+
+	Listing *l = new (e) Listing(false, floatDesc(e));
+
+	*l << prolog();
+	*l << fnParam(floatDesc(e), floatConst(1.5f));
+	*l << fnParam(intDesc(e), intConst(2));
+	*l << fnParam(floatDesc(e), floatConst(3.5f));
+	*l << fnParam(intDesc(e), intConst(3));
+	*l << fnCall(mixedFn, false, floatDesc(e), eax);
+	*l << fnRet(eax);
+
+	Binary *bin = new (e) Binary(arena, l, true);
+	typedef Float (*Fn)();
+	Fn fn = (Fn)bin->address();
+
+	CHECK_EQ((*fn)(), 10.0f);
+} END_TEST
+
+
+Float CODECALL callPoint(geometry::Point p) {
+	return p.x + p.y;
+}
+
+geometry::Point returnPoint() {
+	return geometry::Point(4, 5);
+}
+
+BEGIN_TEST(CallPoint, Code) {
+	Engine &e = gEngine();
+	Arena *arena = code::arena(e);
+
+	Ref pointFn = arena->external(S("pointFn"), address(&callPoint));
+	SimpleDesc *point = pointDesc(e);
+
+	Listing *l = new (e) Listing(false, floatDesc(e));
+	Var p = l->createVar(l->root(), point->size());
+
+	*l << prolog();
+	*l << mov(floatRel(p, Offset()), floatConst(20.0f));
+	*l << mov(floatRel(p, Offset::sFloat), floatConst(30.0f));
+	*l << fnParam(point, p);
+	*l << fnCall(pointFn, false, floatDesc(e), eax);
+	*l << fnRet(eax);
+
+	Binary *bin = new (e) Binary(arena, l);
+	typedef Float (*Fn)();
+	Fn fn = (Fn)bin->address();
+
+	CHECK_EQ((*fn)(), 50.0f);
+} END_TEST
+
+BEGIN_TEST(CallPointRet, Code) {
+	Engine &e = gEngine();
+	Arena *arena = code::arena(e);
+
+	Ref pointRetFn = arena->external(S("pointRetFn"), address(&returnPoint));
+	SimpleDesc *point = pointDesc(e);
+
+	Listing *l = new (e) Listing(false, floatDesc(e));
+	Var p = l->createVar(l->root(), point->size());
+
+	*l << prolog();
+	*l << fnCall(pointRetFn, false, point, p);
+	*l << mov(eax, floatRel(p, Offset()));
+	*l << fadd(eax, floatRel(p, Offset::sFloat));
+	*l << fnRet(eax);
+
+	Binary *bin = new (e) Binary(arena, l);
+	typedef Float (*Fn)();
+	Fn fn = (Fn)bin->address();
+
+	Float f = (*fn)();
+	CHECK_EQ(f, 9.0f);
+} END_TEST
+
+
 Float CODECALL callRect(geometry::Rect r) {
 	// On ARM64 it seems like each fp value is passed in its own vector register.
 	return r.size().w + r.size().h;
@@ -719,6 +807,7 @@ BEGIN_TEST(CallRectRet, Code) {
 	Float f = (*fn)();
 	CHECK_EQ(f, 10.0f);
 } END_TEST
+
 
 BEGIN_TEST(CallMore, Code) {
 	TODO(L"Implement more tests!");

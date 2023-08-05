@@ -220,6 +220,79 @@ BEGIN_TEST(CalleeComplex, Code) {
 
 // Note: CallBytes in call.cpp tests receiving a struct as well.
 
+BEGIN_TEST_(CalleeIntFloat, Code) {
+	Engine &e = gEngine();
+	Arena *arena = code::arena(e);
+
+	Listing *l = new (e) Listing(false, floatDesc(e));
+	Var p1 = l->createParam(floatDesc(e));
+	Var p2 = l->createParam(intDesc(e));
+	Var p3 = l->createParam(floatDesc(e));
+	Var p4 = l->createParam(intDesc(e));
+
+	*l << prolog();
+	*l << mov(eax, p1);
+	*l << icastf(ecx, p2);
+	*l << fadd(eax, ecx);
+	*l << fadd(eax, p3);
+	*l << icastf(ecx, p4);
+	*l << fadd(ecx, ecx);
+	*l << fnRet(eax);
+
+	Binary *b = new (e) Binary(arena, l);
+	typedef Float(*Fn)(Float, Int, Float, Int);
+	Fn fn = (Fn)b->address();
+
+	CHECK_EQ((*fn)(1.5f, 2, 2.5f, 3), 9.0f);
+} END_TEST
+
+BEGIN_TEST(CalleePoint, Code) {
+	using geometry::Point;
+
+	Engine &e = gEngine();
+	Arena *arena = code::arena(e);
+
+	SimpleDesc *point = pointDesc(e);
+	Listing *l = new (e) Listing(false, floatDesc(e));
+	Var p = l->createParam(point);
+
+	*l << prolog();
+	*l << mov(eax, floatRel(p, Offset::sFloat));
+	*l << fsub(eax, floatRel(p, Offset()));
+	*l << fnRet(eax);
+
+	Binary *b = new (e) Binary(arena, l);
+	typedef Float (*Fn)(Point);
+	Fn fn = (Fn)b->address();
+
+	Float r = (*fn)(Point(10, 20));
+	CHECK_EQ(r, 10.0f);
+} END_TEST
+
+
+BEGIN_TEST(CalleePointRet, Code) {
+	using geometry::Point;
+
+	Engine &e = gEngine();
+	Arena *arena = code::arena(e);
+
+	SimpleDesc *point = pointDesc(e);
+	Listing *l = new (e) Listing(false, point);
+	Var p = l->createVar(l->root(), point->size());
+
+	*l << prolog();
+	*l << mov(floatRel(p, Offset()), floatConst(3.0f));
+	*l << mov(floatRel(p, Offset::sFloat), floatConst(4.0f));
+	*l << fnRet(p);
+
+	Binary *b = new (e) Binary(arena, l);
+	typedef geometry::Point (*Fn)();
+	Fn fn = (Fn)b->address();
+
+	geometry::Point r = (*fn)();
+	CHECK_EQ(r, Point(3, 4));
+} END_TEST
+
 
 BEGIN_TEST(CalleeRect, Code) {
 	using geometry::Rect;

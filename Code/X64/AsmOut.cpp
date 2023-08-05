@@ -175,6 +175,8 @@ namespace code {
 				// Two registers. This is the easy part!
 				modRm(to, fpOp(instr->src(), 0x10), rmNone, instr->dest(), instr->src());
 			} else if (fpSrc) {
+				TODO(L"There seems to be an instruction available where we don't have to spill to memory!");
+				// https://stackoverflow.com/questions/24789339/move-quadword-between-xmm-and-general-purpose-register-in-ml64
 				// 'dest' is either in memory or a regular register.
 				Operand dest = instr->dest();
 				bool spill = stackPos(dest);

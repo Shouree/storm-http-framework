@@ -2,7 +2,7 @@
 #include "Fn.h"
 #include "Compiler/Exception.h"
 
-BEGIN_TEST(StrConcatTest, BS) {
+BEGIN_TEST_(StrConcatTest, BS) {
 	CHECK_EQ(::toS(runFn<Str *>(S("tests.bs.strConcatTest"))), L"ab1cvoid");
 	CHECK_ERROR(runFn<Str *>(S("tests.bs.strConcatError")), SyntaxError);
 
