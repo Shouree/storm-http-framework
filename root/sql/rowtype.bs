@@ -100,7 +100,7 @@ private Expr getColumn(Block block, Expr row, Value type, Nat id) on Compiler {
 }
 
 // Call a constructor.
-private Expr callCtor(Block block, Value type, Actuals actuals) {
+private Expr callCtor(Block block, Value type, Actuals actuals) on Compiler {
 	unless (t = type.type)
 		throw InternalError("Could not find a proper type.");
 
