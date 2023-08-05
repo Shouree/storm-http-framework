@@ -240,14 +240,11 @@ BEGIN_TEST(CodeX64WindowsLayout, CodeBasic) {
 	p->add(4, u);
 
 	CHECK_EQ(p->stackCount(), 1);
-	if (p->stackCount() > 0)
-		CHECK_EQ(p->stackParam(0).id(), 4);
+	CHECK_EQ(p->stackParam(0).id(), 4);
 	CHECK_EQ(p->registerParam(0), Param(0, Size::sInt, true, 0, false));
-	CHECK_EQ(p->registerParam(6), Param(1, Size::sInt, true, 0, false));
-	CHECK_EQ(p->registerParam(1), Param(2, Size::sLong, true, 0, false));
-	CHECK_EQ(p->registerParam(2), Param(2, Size::sLong, true, 8, false));
-	CHECK_EQ(p->registerParam(3), Param(3, Size::sLong, true, 0, false));
-	CHECK_EQ(p->registerParam(7), Param(3, Size::sLong, true, 8, false));
+	CHECK_EQ(p->registerParam(5), Param(1, Size::sInt, true, 0, false));
+	CHECK_EQ(p->registerParam(2), Param(2, Size::sLong, true, 0, true));
+	CHECK_EQ(p->registerParam(3), Param(3, Size::sLong, true, 0, true));
 } END_TEST
 
 BEGIN_TEST(CodeX64PosixLayout, CodeBasic) {

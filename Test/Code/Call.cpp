@@ -665,7 +665,7 @@ Float CODECALL mixedIntFloat(Float a, Int b, Float c, Int d) {
 	return a + Float(b) + c + Float(d);
 }
 
-BEGIN_TEST_(CallIntFloat, Code) {
+BEGIN_TEST(CallIntFloat, Code) {
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -681,7 +681,7 @@ BEGIN_TEST_(CallIntFloat, Code) {
 	*l << fnCall(mixedFn, false, floatDesc(e), eax);
 	*l << fnRet(eax);
 
-	Binary *bin = new (e) Binary(arena, l, true);
+	Binary *bin = new (e) Binary(arena, l);
 	typedef Float (*Fn)();
 	Fn fn = (Fn)bin->address();
 

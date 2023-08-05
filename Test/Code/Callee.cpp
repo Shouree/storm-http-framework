@@ -220,7 +220,7 @@ BEGIN_TEST(CalleeComplex, Code) {
 
 // Note: CallBytes in call.cpp tests receiving a struct as well.
 
-BEGIN_TEST_(CalleeIntFloat, Code) {
+BEGIN_TEST(CalleeIntFloat, Code) {
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
 
@@ -236,7 +236,7 @@ BEGIN_TEST_(CalleeIntFloat, Code) {
 	*l << fadd(eax, ecx);
 	*l << fadd(eax, p3);
 	*l << icastf(ecx, p4);
-	*l << fadd(ecx, ecx);
+	*l << fadd(eax, ecx);
 	*l << fnRet(eax);
 
 	Binary *b = new (e) Binary(arena, l);

@@ -201,15 +201,25 @@ namespace code {
 
 	void Params::toS(StrBuf *to) const {
 		*to << S("Parameters:");
-		for (Nat i = 0; i < integer->filled; i++)
-			*to << S("\n") << name(registerSrc(i)) << S(":") << integer->v[i];
-		for (Nat i = 0; i < real->filled; i++)
-			*to << S("\n") << name(registerSrc(i + Nat(integer->count))) << S(":") << real->v[i];
+		if (!unifiedIntFpRegs()) {
+			for (Nat i = 0; i < integer->filled; i++)
+				*to << S("\n") << name(registerSrc(i)) << S(":") << integer->v[i];
+			for (Nat i = 0; i < real->filled; i++)
+				*to << S("\n") << name(registerSrc(i + Nat(integer->count))) << S(":") << real->v[i];
+		} else {
+			for (Nat i = 0; i < integer->filled; i++) {
+				*to << S("\n");
+				if (integer->v[i].any())
+					*to << name(registerSrc(i)) << S(":") << integer->v[i];
+				else
+					*to << name(registerSrc(i + Nat(integer->count))) << S(":") << real->v[i];
+			}
+		}
 
 		if (stackCount() > 0) {
 			*to << S("\nOn stack:");
 			for (Nat i = 0; i < stackCount(); i++) {
-				*to << S(" ") << stackParam(i) << S("@") << stackOffset(i) << S("\n");
+				*to << S("\n ") << stackParam(i) << S("@") << stackOffset(i);
 			}
 		}
 	}
