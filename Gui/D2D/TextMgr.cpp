@@ -42,7 +42,7 @@ namespace gui {
 											L"", // locale, we use defaults. Was "en-us".
 											&out);
 
-		check(r, S("Failed to create a Direct Write font."));
+		check(r, S("Failed to create a Direct Write font: "));
 
 		if (font->tabWidth() > 0)
 			out->SetIncrementalTabStop(font->tabWidth());
