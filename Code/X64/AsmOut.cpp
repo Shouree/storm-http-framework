@@ -144,16 +144,6 @@ namespace code {
 				return prefixOpCode(0xF3, 0x0F, op);
 		}
 
-		static bool stackPos(Operand &op) {
-			if (op.type() != opRegister)
-				return false;
-
-			// We can use a few bytes just above the top of the stack freely, at least on UNIX.
-			TODO(L"This is not ideal on Windows!");
-			op = xRel(op.size(), ptrStack, -Offset(op.size()));
-			return true;
-		}
-
 		void movOut(Output *to, Instr *instr) {
 			// NOTE: There is a version of MOV that supports 64-bit immediate values. We could use
 			// that to avoid additional instructions in quite some cases!
@@ -175,24 +165,15 @@ namespace code {
 				// Two registers. This is the easy part!
 				modRm(to, fpOp(instr->src(), 0x10), rmNone, instr->dest(), instr->src());
 			} else if (fpSrc) {
-				TODO(L"There seems to be an instruction available where we don't have to spill to memory!");
-				// https://stackoverflow.com/questions/24789339/move-quadword-between-xmm-and-general-purpose-register-in-ml64
-				// 'dest' is either in memory or a regular register.
+				// 'dest' is either in memory or in a regular register.
 				Operand dest = instr->dest();
-				bool spill = stackPos(dest);
-				modRm(to, fpOp(dest, 0x11), rmNone, instr->src(), dest);
-				if (spill) {
-					// Spilled to memory. Emit a regular 'mov' to load into the desired register.
-					immRegInstr(to, op8, op, instr->dest(), dest);
-				}
+				RmFlags flags = dest.size() == Size::sWord ? rmWide : rmNone;
+				modRm(to, prefixOpCode(0x66, 0x0F, 0x7E), flags, instr->src(), dest);
 			} else if (fpDest) {
 				// 'src' is either in memory or a regular register.
 				Operand src = instr->src();
-				if (stackPos(src)) {
-					// We need to spill to memory. Emit a regular 'mov'.
-					immRegInstr(to, op8, op, src, instr->src());
-				}
-				modRm(to, fpOp(src, 0x10), rmNone, instr->dest(), src);
+				RmFlags flags = src.size() == Size::sWord ? rmWide : rmNone;
+				modRm(to, prefixOpCode(0x66, 0x0F, 0x6E), flags, instr->dest(), src);
 			} else {
 				// Integer mov instruction.
 				immRegInstr(to, op8, op, instr->dest(), instr->src());

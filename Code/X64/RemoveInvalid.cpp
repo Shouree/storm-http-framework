@@ -169,11 +169,33 @@ namespace code {
 			}
 		}
 
+		static TypeInstr *isFnParam(Instr *i) {
+			if (i->op() == op::fnParam)
+				return as<TypeInstr>(i);
+			return null;
+		}
+
 		Instr *RemoveInvalid::extractNumbers(Instr *i) {
 			Operand src = i->src();
-			if (src.type() == opConstant && src.size() == Size::sWord && !singleInt(src.constant())) {
-				i = i->alterSrc(longRel(lblLarge, Offset::sWord*large->count()));
-				large->push(src);
+			if (src.type() == opConstant) {
+				if (src.size() == Size::sWord && !singleInt(src.constant())) {
+					// Modify if 64-bits, and the value is not small enough to be truncated...
+					i = i->alterSrc(longRel(lblLarge, Offset::sWord*large->count()));
+					large->push(src);
+				} else if (TypeInstr *t = isFnParam(i)) {
+					// ...or if we are in the context of a function parameter for a float. This is
+					// since the function call code would otherwise sometimes generate 'move xmmX,
+					// <imm>', which is not supported. Note: this particular case only happens for
+					// 32-bit floats, so we need some shoehorning into the existing code here, as it
+					// is intended for 64-bit literals.
+					if (PrimitiveDesc *p = as<PrimitiveDesc>(t->type)) {
+						if (p->v.kind() == primitive::real) {
+							i = i->alterSrc(intRel(lblLarge, Offset::sWord*large->count()));
+							// Extend to word to not mess up alignment of literals.
+							large->push(wordConst(src.constant()));
+						}
+					}
+				}
 			}
 
 			// Labels are also constants.
