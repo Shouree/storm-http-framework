@@ -90,44 +90,51 @@ namespace code {
 			return l;
 		}
 
-		static Listing *engineRedirectSimple(Arena *arena, Params *layout, Ref fn, Operand engine) {
-			// Simple case, where we have enough integer registers. We simply shift all registers
-			// one step and we are done.
+		static Listing *engineRedirectSimple(Arena *arena, Params *before, Params *after, Ref fn, Operand engine) {
+			// Simple case, where we don't have to modify the stack contents.
+			// We simply shuffle the registers around to match the new layout.
 			Listing *l = new (arena) Listing(arena);
 
-			Reg last = noReg;
-			for (Nat i = layout->registerCount(); i > 0; i--) {
+			// Note: Iterate backwards so that we can move registers in a chain without worrying
+			// about overwriting them.
+			for (Nat i = after->registerCount(); i > 0; i--) {
 				Nat id = i - 1;
+				Param par = after->registerParam(id);
+				Reg to = after->registerSrc(id);
 
-				Reg r = layout->registerSrc(id);
-				// Don't bother with fp registers.
-				if (fpRegister(r))
+				if (par.empty())
 					continue;
 
-				Param par = layout->registerParam(id);
-				// Unused?
-				if (par == Param()) {
-					last = r;
+				// Is it the parameter where we shall put the engine?
+				if (par.id() == 0) {
+					*l << mov(to, engine);
 					continue;
 				}
 
-				// Don't touch the result parameter.
-				if (par.id() == Param::returnId())
-					continue;
+				// Find the register in 'before' to figure out its source. A simple linear search is
+				// fine here, since we have well below 10 registers to look through.
+				Nat srcId = before->registerCount();
+				Nat lookFor = par.id();
+				if (lookFor != Param::returnId())
+					lookFor--;
 
-				// We should have an integer register to move into.
-				assert(last != noReg, L"No available integer registers. Should have used complex redirect.");
+				for (Nat j = 0; j < before->registerCount(); j++) {
+					Param p = before->registerParam(j);
+					if (p.id() == lookFor) {
+						srcId = j;
+						break;
+					}
+				}
 
-				// Move it to the next register.
-				*l << mov(last, r);
-				last = r;
+				assert(srcId < before->registerCount(), L"Should have used the complex redirect!");
+
+				// Move the register!
+				Reg from = before->registerSrc(srcId);
+				if (!same(to, from))
+					*l << mov(to, from);
 			}
 
-			// Now, we can simply put the enginge ptr inside the first register and jump to the
-			// function we actually wanted to call!
-			*l << mov(last, engine);
 			*l << jmp(fn);
-
 			return l;
 		}
 
@@ -171,30 +178,37 @@ namespace code {
 		}
 
 		Listing *Arena::engineRedirect(TypeDesc *result, Array<TypeDesc *> *params, Ref fn, Operand engine) {
-			// There are two variants of this function: One where all integer parameters are in
-			// registers, and another where some of them need to go on the stack. The first version
-			// generates simple machine code, while the second version requires a full wrapper
-			// function.
-			Params *layout = layoutParams(false, result, params);
-			Bool useSimple = false;
+			// There are two variants of this function: One where the stack is identical before and
+			// after adding the Engine parameter, and one where it is different. The first version
+			// generates simple machine code (it only needs to re-organize registers), while the
+			// second version requires a proper wrapper function.
+			Params *before = layoutParams(false, result, params);
 
-			for (Nat i = 0; i < layout->registerCount(); i++) {
-				// Don't bother with fp registers.
-				if (fpRegister(layout->registerSrc(i)))
-					continue;
+			Params *after = createParams(false);
+			after->result(result);
+			after->add(0, ptrDesc(this->engine()));
+			for (Nat i = 0; i < params->count(); i++)
+				after->add(i + 1, params->at(i));
 
-				// If we find an empyt integer register, we can use the simple version.
-				if (layout->registerParam(i) == Param()) {
-					useSimple = true;
-					break;
+			// Check if we can use the simple one (if the stack layout is the same), or if we need
+			// the complex one.
+			Bool useSimple = before->stackCount() == after->stackCount();
+			if (useSimple) {
+				for (Nat i = 0; i < before->stackCount(); i++) {
+					Param beforeParam = before->stackParam(i);
+					Param afterParam = after->stackParam(i).withId(beforeParam.id());
+
+					if (beforeParam != afterParam) {
+						useSimple = false;
+						break;
+					}
 				}
 			}
 
-			// Now we know which one we have to use:
 			if (useSimple) {
-				return engineRedirectSimple(this, layout, fn, engine);
+				return engineRedirectSimple(this, before, after, fn, engine);
 			} else {
-				return engineRedirectComplex(this, layout, result, params, fn, engine);
+				return engineRedirectComplex(this, before, result, params, fn, engine);
 			}
 		}
 

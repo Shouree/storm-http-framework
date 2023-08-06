@@ -50,6 +50,9 @@ namespace code {
 		// Set to particular values.
 		void STORM_FN set(Nat id, Size size, Bool use64, Nat offset, Bool inMemory);
 
+		// Get a copy of the parameter, but with a different ID.
+		Param STORM_FN withId(Nat id);
+
 		// ID usable for the return value.
 		static Nat STORM_FN returnId() { return 0xFF; }
 

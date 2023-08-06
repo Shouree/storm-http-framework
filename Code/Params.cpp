@@ -16,6 +16,13 @@ namespace code {
 		set(id, size, use64, offset, inMemory);
 	}
 
+	Param Param::withId(Nat id) {
+		Param copy = *this;
+		copy.data &= ~Nat(0xFF << 1);
+		copy.data |= Nat(id) & 0xFF;
+		return copy;
+	}
+
 	Bool Param::empty() {
 		return data == 0xFFFFFFFE;
 	}
