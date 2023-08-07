@@ -42,7 +42,7 @@ SimpleDesc *bytesDesc(Engine &e) {
 }
 
 SimpleDesc *pointDesc(Engine &e) {
-	SimpleDesc *desc = new (e) SimpleDesc(Size::sFloat * 2, 4);
+	SimpleDesc *desc = new (e) SimpleDesc(Size::sFloat * 2, 2);
 	desc->at(0) = Primitive(primitive::real, Size::sFloat, Offset());
 	desc->at(1) = Primitive(primitive::real, Size::sFloat, Offset::sFloat);
 	return desc;
