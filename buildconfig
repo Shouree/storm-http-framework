@@ -1,4 +1,4 @@
-Test 64
+Test
 
 #CppTypes -a ../Compiler/ ../Core/ ../Code/ --compiler --template ../Core/Gen/CppTypes.cpp --out ../Compiler/Gen/CppTypes.cpp --asm ../Core/Gen/CppVTables.VS_X86 ../Compiler/Gen/CppVTables.asm --doc ../doc.doc --using storm
 

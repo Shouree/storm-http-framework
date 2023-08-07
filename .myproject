@@ -113,7 +113,7 @@ all+=mps
 all+=smm
 
 # Forward 64-bit flag if present.
-[build,64]
+[build,windows,64]
 all+=64
 
 #Add variables that indicate the GC choice. We add them to the entire project, even though
@@ -134,11 +134,11 @@ include+=../
 #Turn on some runtime checks (implemented purely in Storm).
 define+=FAST_DEBUG
 
-[storm_debug,!64]
+[storm_debug]
 buildDir=build/
 execDir=../debug/
 
-[storm_debug,64]
+[storm_debug,windows,64]
 buildDir=build64/
 execDir=../debug64/
 linkFlags+=/MACHINE:X64
@@ -161,11 +161,11 @@ opt+=-O1
 flags+=-g
 cflags+=-g
 
-[storm_release,!64]
+[storm_release]
 buildDir=release/
 execDir=../release/
 
-[storm_release,64]
+[storm_release,windows,64]
 buildDir=release64/
 execDir=../release64/
 linkFlags+=/MACHINE:X64
