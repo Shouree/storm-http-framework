@@ -226,7 +226,12 @@ namespace code {
 		if (stackCount() > 0) {
 			*to << S("\nOn stack:");
 			for (Nat i = 0; i < stackCount(); i++) {
-				*to << S("\n ") << stackParam(i) << S("@") << stackOffset(i);
+				*to << S("\n ") << stackParam(i) << S("@");
+				Nat offset = stackOffset(i);
+				if (offset < 256)
+					*to << hex(Byte(offset));
+				else
+					*to << hex(offset);
 			}
 		}
 	}
