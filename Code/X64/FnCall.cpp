@@ -235,12 +235,12 @@ namespace code {
 				pos += 8;
 			}
 
-			if (pos + 1 >= nSize) {
+			if (pos < nSize && nSize - pos <= 1) {
 				Reg r = asSize(tmpReg, Size::sByte);
 				*dest << mov(r, byteRel(src, Offset(pos)));
 				*dest << mov(byteRel(ptrStack, Offset(offset + pos)), r);
 				pos += 1;
-			} else if (pos + 4 >= nSize) {
+			} else if (pos < nSize && nSize - pos <= 4) {
 				Reg r = asSize(tmpReg, Size::sInt);
 				*dest << mov(r, intRel(src, Offset(pos)));
 				*dest << mov(intRel(ptrStack, Offset(offset + pos)), r);
