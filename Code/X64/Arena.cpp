@@ -120,7 +120,7 @@ namespace code {
 
 				for (Nat j = 0; j < before->registerCount(); j++) {
 					Param p = before->registerParam(j);
-					if (p.id() == lookFor) {
+					if (p.id() == lookFor && p.offset() == par.offset()) {
 						srcId = j;
 						break;
 					}

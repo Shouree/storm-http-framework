@@ -301,7 +301,7 @@ namespace code {
 			Array<Var> *vars = dest->allVars(init);
 
 			// Figure out which register to use for zero:
-			Reg zeroReg;
+			Reg zeroReg = noReg;
 			Bool initZeroReg = true;
 			Bool pushed = false;
 
