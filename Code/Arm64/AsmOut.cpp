@@ -506,7 +506,12 @@ namespace code {
 			case opLabel:
 			case opRelativeLbl: {
 				Int offset = to->offset(src.label()) + src.offset().v64() - to->tell();
-				putLoadStoreImm(to, 0x58, intRegZR(destReg), offset / 4);
+				Bool large = size(destReg).size64() > 4;
+				if (isIntReg(destReg)) {
+					putLoadStoreImm(to, large ? 0x58 : 0x18, intRegZR(destReg), offset / 4);
+				} else {
+					putLoadStoreImm(to, large ? 0x5C : 0x1C, fpReg(destReg), offset / 4);
+				}
 				return false;
 			}
 			default:

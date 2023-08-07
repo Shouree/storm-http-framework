@@ -12,6 +12,16 @@ namespace code {
 		ParamInfo::ParamInfo(TypeDesc *desc, const Operand &src, Bool ref)
 			: type(desc), src(src), ref(ref), lea(false) {}
 
+		// Helper to handle mov of potentially large constant values.
+		// Note: We can't load directly into the fp registers, so we always treat them as "large".
+		static Instr *movConst(RemoveInvalid *tfm, Reg dest, const Operand &src) {
+			if (src.type() == opConstant)
+				if (!isIntReg(dest) || src.constant() > 0xFFFF)
+					return mov(tfm->engine(), dest, tfm->largeConstant(src));
+
+			return mov(tfm->engine(), dest, src);
+		}
+
 		// Create set of registers used for function parameters.
 		static RegSet *dirtyRegs(Engine &e) {
 			RegSet *r = new (e) RegSet();
@@ -253,11 +263,7 @@ namespace code {
 						inlineMemcpy(dest, dst, info.src, reg1, reg2);
 					} else if (info.src.type() == opConstant) {
 						Reg r = asSize(reg1, sz);
-						if (info.src.constant() > 0xFFFF) {
-							*dest << mov(r, tfm->largeConstant(info.src));
-						} else {
-							*dest << mov(r, info.src);
-						}
+						*dest << movConst(tfm, r, info.src);
 						*dest << mov(dst, r);
 					} else {
 						// We can copy it natively.
@@ -294,6 +300,8 @@ namespace code {
 		struct RegEnv {
 			// Output listing.
 			Listing *dest;
+			// Transform.
+			RemoveInvalid *tfm;
 			// All parameters.
 			Array<ParamInfo> *src;
 			// Layout we want to produce.
@@ -346,7 +354,7 @@ namespace code {
 						Size s = src.size() + Size::sInt.alignment();
 						*env.dest << mov(asSize(target, s), xRel(s, src.var(), Offset()));
 					} else {
-						*env.dest << mov(to, src);
+						*env.dest << movConst(env.tfm, to, src);
 					}
 				}
 			} else if (src.type() == opVariable) {
@@ -432,9 +440,10 @@ namespace code {
 			env.depth--;
 		}
 
-		static void setRegisters(Listing *dest, Array<ParamInfo> *src, Params *layout) {
+		static void setRegisters(Listing *dest, RemoveInvalid *tfm, Array<ParamInfo> *src, Params *layout) {
 			RegEnv env = {
 				dest,
+				tfm,
 				src,
 				layout,
 				{ false },
@@ -522,7 +531,7 @@ namespace code {
 			Nat extraStack = pushParams(tfm, dest, params, paramLayout);
 
 			// Start copying parameters into registers.
-			setRegisters(dest, params, paramLayout);
+			setRegisters(dest, tfm, params, paramLayout);
 
 			// Set x8 to a pointer to the result if required.
 			if (resultLayout.memoryRegister() != noReg) {

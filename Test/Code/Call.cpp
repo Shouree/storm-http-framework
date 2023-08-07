@@ -502,6 +502,35 @@ BEGIN_TEST(CallComplex, Code) {
 	CHECK(DbgVal::clear());
 } END_TEST
 
+BEGIN_TEST(CallComplexFwd, Code) {
+	Engine &e = gEngine();
+	Arena *arena = code::arena(e);
+	Type *dbgVal = DbgVal::stormType(e);
+
+	Ref toCall = arena->external(S("callComplex"), address(&callComplex));
+	ComplexDesc *desc = new (e) ComplexDesc(dbgVal->size(), dbgVal->copyCtor()->ref(), dbgVal->destructor()->ref());
+
+	Listing *l = new (e) Listing();
+	l->result = intDesc(e);
+	Var a = l->createParam(desc);
+
+	*l << prolog();
+
+	*l << fnParam(desc, a);
+	*l << fnParam(intDesc(e), intConst(9));
+	*l << fnCall(toCall, false, intDesc(e), eax);
+
+	*l << fnRet(eax);
+
+	Binary *b = new (e) Binary(arena, l);
+	typedef Int(*Fn)(DbgVal);
+	Fn fn = (Fn)b->address();
+
+	DbgVal::clear();
+	CHECK_EQ((*fn)(DbgVal()), 19);
+	CHECK(DbgVal::clear());
+} END_TEST
+
 BEGIN_TEST(CallRefComplex, Code) {
 	Engine &e = gEngine();
 	Arena *arena = code::arena(e);
