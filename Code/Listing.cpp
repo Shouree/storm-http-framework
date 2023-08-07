@@ -58,10 +58,12 @@ namespace code {
 		if (o & freeNoInit)
 			to << S(", no init");
 
-		if (o & freePtr)
-			to << S(", by ptr");
-		else
-			to << S(", by value");
+		if (addByPtr) {
+			if (o & freePtr)
+				to << S(", by ptr");
+			else
+				to << S(", by value");
+		}
 
 		if (o & freeInactive)
 			to << S(", needs activation");
