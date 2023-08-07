@@ -233,7 +233,7 @@ namespace code {
 
 		void nopOut(Output *to, Instr *instr) {
 			// According to ARM manual.
-			to->putInt(0xD403201F);
+			to->putInt(0xD503201F);
 		}
 
 		void prologOut(Output *to, Instr *instr) {
