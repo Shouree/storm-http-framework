@@ -26,13 +26,13 @@ Gc &gc();
 
 
 // Basic threading, no GC yet.
-SUITE(OS, 0); // TODO: Disable
+SUITEX(OS, 0);
 // Basic gc operation, scanning simple objects without anything strange.
-SUITE(GcScan, 1); // TODO: Disable
+SUITEX(GcScan, 1);
 // Gc operation on Storm objects declared in C++.
-SUITE(GcObjects, 2); // TODO: Disable
+SUITEX(GcObjects, 2);
 // GC along with threads.
-SUITE(GcThreads, 3); // TODO: Disable
+SUITEX(GcThreads, 3);
 // Basic operation of the runtime. No code generation apart from what is required to boot the
 // compiler, and some glue code for making templates work.
 SUITE(Core, 4);
