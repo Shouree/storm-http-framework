@@ -257,4 +257,15 @@ namespace code {
 	}
 }
 
+#else
+
+namespace code {
+	namespace eh {
+
+		extern "C"
+		void windowsHandler() {}
+
+	}
+}
+
 #endif

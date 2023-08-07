@@ -712,7 +712,6 @@ namespace code {
 
 			// Shared state for other functions:
 			FnCallState state(arena, dest, params, used, currentBlock, member);
-			bool complex = hasComplex(params);
 
 			state.layout->result(resultType);
 			for (Nat i = 0; i < params->count(); i++)

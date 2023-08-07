@@ -84,7 +84,6 @@ namespace code {
 			// registers from code generated for the generic platform. However, we would need to
 			// save as soon as we perform a function call anyway, which is probably more expensive
 			// than just spilling them unconditionally in the function prolog.
-
 			Array<Var> *all = l->allParams();
 
 			{
@@ -119,7 +118,7 @@ namespace code {
 				// This is more concentrated than when pushing registers to the stack. On the stack, all
 				// parameters are aligned to 8 bytes, while we do not need that here. We only need to keep
 				// the natural alignment of the parameters to keep the CPU happy.
-				Size sz = p.size();
+				Size sz = var.size();
 				if (l->freeOpt(var) & freeIndirection)
 					sz = Size::sPtr;
 

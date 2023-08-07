@@ -392,7 +392,7 @@ BEGIN_TEST(ExceptionCatch, Code) {
 	// Separate function called.
 	// This function ensures that we call destructors even when the return address points to the
 	// start of the function epilog. This was an issue in the 64-bit Windows backend earlier.
-	Listing *shim = new (e) Listing(false);
+	Listing *shim = new (e) Listing();
 	Var p = shim->createParam(intDesc(e));
 	Var w = shim->createVar(shim->root(), Size::sInt, freeInt, freeOnException);
 	*shim << prolog();

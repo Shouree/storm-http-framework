@@ -69,4 +69,16 @@ namespace code {
 #define EXCEPTION_TARGET_UNWIND 0x20
 #endif
 
+#else
+
+namespace code {
+	namespace eh {
+
+		// To make code compile on non-windows platforms.
+		extern "C"
+		void windowsHandler();
+
+	}
+}
+
 #endif

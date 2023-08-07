@@ -542,8 +542,6 @@ namespace code {
 		void Layout::fnRetRefTfm(Listing *dest, Listing *src, Nat line) {
 			Operand value = resolve(src, src->at(line)->src());
 
-			Bool loadRax = false;
-
 			// Handle the return value.
 			if (PrimitiveDesc *p = as<PrimitiveDesc>(src->result)) {
 				if (params->result().registerCount() > 0)
@@ -553,7 +551,6 @@ namespace code {
 				*dest << mov(params->registerSrc(1), value);
 				*dest << mov(params->registerSrc(0), ptrRel(ptrFrame, resultParam()));
 				*dest << call(c->ctor, Size());
-				loadRax = true;
 				// Set 'rax' to the address of the return value.
 				*dest << mov(ptrA, ptrRel(ptrFrame, resultParam()));
 			} else if (SimpleDesc *s = as<SimpleDesc>(src->result)) {

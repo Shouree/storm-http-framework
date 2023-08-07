@@ -233,10 +233,10 @@ BEGIN_TEST(CalleeIntFloat, Code) {
 	*l << prolog();
 	*l << mov(eax, p1);
 	*l << icastf(ecx, p2);
-	*l << fadd(eax, ecx);
-	*l << fadd(eax, p3);
+	*l << code::fadd(eax, ecx);
+	*l << code::fadd(eax, p3);
 	*l << icastf(ecx, p4);
-	*l << fadd(eax, ecx);
+	*l << code::fadd(eax, ecx);
 	*l << fnRet(eax);
 
 	Binary *b = new (e) Binary(arena, l);
