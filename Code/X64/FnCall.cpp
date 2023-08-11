@@ -597,7 +597,7 @@ namespace code {
 						freeOpt |= freeOnBlockExit;
 
 					Var v = state.dest->createVar(currentBlock, c, freeOpt);
-					TODO(L"On 64-bit Windows, these parameters might need to be 16-byte aligned.");
+					// TODO: On 64-bit Windows, these parameters might need to be 16-byte aligned.
 
 					// Call the copy constructor.
 					*state.dest << lea(state.layout->registerSrc(0), v);
@@ -671,7 +671,7 @@ namespace code {
 			// OK, we found a parameter to copy! Create a variable and copy it! It is simple, so we
 			// don't need to worry about copy-ctors and dtors!
 			Var v = state.dest->createVar(state.block(), info.type, freeOnNone);
-			TODO(L"On 64-bit windows, these parameters might need to be 16-byte aligned!");
+			// TODO: On 64-bit windows, these parameters might need to be 16-byte aligned!
 
 			Reg tmpReg = asSize(state.findFreeReg(), Size::sLong);
 			Nat size = info.type->size().size64();
