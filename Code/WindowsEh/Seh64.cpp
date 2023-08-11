@@ -208,6 +208,7 @@ namespace code {
 			}
 
 			assert(false, L"Register not supported!");
+			return 0;
 		}
 
 	}
