@@ -481,9 +481,11 @@ namespace gui {
 		if (!myEnabled)
 			style |= WS_DISABLED;
 
-		Point p = myPos.p0;
-		Size s = myPos.size();
-
+		// Note: This was rewritten to not copy myPos.p0 into 'p' here. This seems to trigger an
+		// interesting bug(?) on the 64-bit compiler (VS2008, likely fixed since) where the position
+		// becomes completely corrupted.
+		Point p;
+		Size s;
 		if (WS_CHILD & ~style) {
 			RECT r = convert(myPos);
 			AdjustWindowRectEx(&r, style & ~WS_OVERLAPPED, FALSE, exStyle);
@@ -492,8 +494,11 @@ namespace gui {
 			s = c.size();
 		} else if (parent) {
 			Nat dpi = windowDpi(parent);
-			p = p * dpiScale(dpi);
-			s = s * dpiScale(dpi);
+			p = myPos.p0 * dpiScale(dpi);
+			s = myPos.size() * dpiScale(dpi);
+		} else {
+			p = myPos.p0;
+			s = myPos.size();
 		}
 
 		// Put everything in ints now, so that we can properly set CW_USEDEFAULT without potential
