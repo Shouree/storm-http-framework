@@ -13,6 +13,7 @@ Binary releases
 -----------------
 
 - [Windows (32-bit, X86)](storm_mps_win32.zip)
+- [Windows (64-bit, X86)](storm_mps_win64.zip)
 - [Linux (64-bit, X86)](storm_mps_amd64.tar.gz) (should work for recent Debian-based distributions)
 - [Linux (64-bit, ARM)](storm_mps_arm64.tar.gz) (should work for recent Debian-based distributions)
 
@@ -42,6 +43,7 @@ currently in the experimental stage.
   Ravenbrook Ltd. for memory management. The Memory Pool System is very stable and performant.
 
   - [Windows (32-bit), MPS](storm_mps_win32.zip)
+  - [Windows (64-bit), MPS](storm_mps_win64.zip)
   - [Linux (64-bit), MPS](storm_mps_amd64.tar.gz)
   - [Linux (64-bit), MPS](storm_mps_arm64.tar.gz)
 
