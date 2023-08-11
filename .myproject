@@ -286,10 +286,16 @@ postBuild+=cp <output> <path|packagePath><libPrefix><title|output>
 
 [sharedlib,storm_debug]
 libPrefix=Debug
+[sharedlib,storm_debug,windows,64]
+libPrefix=Debug64
 [sharedlib,storm_release]
 libPrefix=Release
+[sharedlib,storm_release,windows,64]
+libPrefix=Release64
 [sharedlib,storm_slow]
 libPrefix=Slow
+[sharedlib,storm_slow,windows,64]
+libPrefix=Slow64
 
 # No prefix on Dist releases.
 [sharedlib,storm_release,dist]
