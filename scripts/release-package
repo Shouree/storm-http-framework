@@ -132,20 +132,12 @@ mv ${OUT} ${OUT_BASE}_${arch}${OUT_EXT}
 
 if [[ $OUT_EXT == .tar ]]
 then
-    if [[ -e ${OUT_BASE}_mps_$arch.tar.gz ]]
+    if [[ -e ${OUT_BASE}_$arch.tar.gz ]]
     then
-	rm ${OUT_BASE}_mps_$arch.tar.gz
-    fi
-    if [[ -e ${OUT_BASE}_smm_$arch.tar.gz ]]
-    then
-	rm ${OUT_BASE}_smm_$arch.tar.gz
+	rm ${OUT_BASE}_$arch.tar.gz
     fi
 
-    gzip ${OUT_BASE}_mps_$arch.tar
-    if [[ ! $arch == arm64 ]]
-    then
-	gzip ${OUT_BASE}_smm_$arch.tar
-    fi
+    gzip ${OUT_BASE}_$arch.tar
 fi
 
 echo "Done!"
