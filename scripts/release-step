@@ -5,7 +5,7 @@
 
 # Parameters are: <archlist> <version> <hash> <release-notes>
 # Where:
-# <archlist> is a list of architectures to compile for: <arch>!<host>!<arch>!... first one is the current arch, if more are in the list, will build there as well.
+# <archlist> is a list of build instructions. Separated by commas. See 'release-full' for specification.
 # <version> is the current version
 # <hash> is the hash of the current Git-commit
 # <release-notes> is a file containing the release notes (we might not have the latest tags)
@@ -16,52 +16,64 @@ hash="$3"
 notes="$4"
 export notes
 
-arch="${archlist%%!*}"
-if [[ $archlist == *!* ]]
-then
-    archlist="${archlist#*!}"
-else
-    archlist=""
-fi
-
-echo "----- Building for ${arch}... -----"
-
-
-if [[ $arch == win* ]]
-then
-    packext="zip"
-else
-    packext="tar.gz"
-fi
-
-release-compile "$arch" "$version" || { echo "Compilation failed on $arch"; exit 1; }
-release-package "$arch" "$notes"
-release-test $STORM_ROOT/release/storm_mps_$arch.$packext || { echo "The packaged compiler (mps) does not seem to be working on $arch."; exit 1; }
-if [[ -e $STORM_ROOT/release/storm_smm_$arch.$packext ]]
-then
-    release-test $STORM_ROOT/release/storm_smm_$arch.$packext || { echo "The packaged compiler (smm) does not seem to be working on $arch."; exit 1; }
-fi
-
-
-if [[ ! "$archlist" == "" ]]
-then
-    host="${archlist%%!*}"
-    archlist="${archlist#*!}"
-
-    function tar_files {
-	cd $STORM_ROOT/release
-	if [[ -f $notes ]]
+# Tar the relevant files into one, so we can transmit it through ssh conveniently.
+function tar_files {
+    cd $STORM_ROOT/release
+    if [[ -f $notes ]]
+    then
+	if [[ $notes != $STORM_ROOT/release/release_notes.md ]]
 	then
 	    cp $notes $STORM_ROOT/release/release_notes.md
-	else
-	    release-notes > $STORM_ROOT/release/release_notes.md
 	fi
-	shopt -s nullglob
-	tar cz release_notes.md storm_*.{zip,tar.gz}
-    }
+    else
+	release-notes > $STORM_ROOT/release/release_notes.md
+    fi
+    shopt -s nullglob
+    tar cz release_notes.md storm_*.{zip,tar.gz}
+}
 
-    echo "Continuing build at ${host}..."
-    tar_files | ssh "$host" '~/build-storm.sh' "$archlist" "$version" "$hash" || exit 1;
-fi
+updateversion=yes
+
+# Parse the archlist and do what it says.
+while [[ $archlist != "" ]]
+do
+    first="${archlist%%,*}"
+    if [[ $archlist == *,* ]]
+    then
+	archlist="${archlist#*,}"
+    else
+	archlist=""
+    fi
+
+    if [[ $first == *@* ]]
+    then
+	echo "Continuing build at ${first}..."
+	tar_files | ssh "$first" '~/build_storm.sh' "$archlist" "$version" "$hash" || exit 1;
+	exit 0;
+
+    elif [[ $first == *:* ]]
+    then
+	archtag="${first%%:*}"
+	command="${first#*:}"
+	echo "----- Building ${archtag}... -----"
+
+	if [[ $archtag == *_win* ]]
+	then
+	    packext="zip"
+	else
+	    packext="tar.gz"
+	fi
+
+	release-compile "$archtag" "$command" "$version" "$updateversion" || { echo "Compilation of $archtag failed."; exit 1; }
+	release-package "$archtag" "$command" "$notes" || { echo "Failed to package $archtag."; exit 1; }
+	release-test $STORM_ROOT/release/storm_$archtag.$packext || { echo "The packaged compiler ($archtag) does not seem to be working."; exit 1; }
+
+	updateversion=no
+    else
+	echo "ERROR: Unknown build command: ${first}"
+	exit 1
+    fi
+
+done
 
 exit 0

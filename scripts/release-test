@@ -3,7 +3,7 @@
 IN="$1"
 if [[ "$IN" == *.zip ]]
 then
-    extract="7z x $IN"
+    extract="7z x -y $IN"
     dir=$(basename "$IN" .zip)
 else
     extract="tar xzf $IN"

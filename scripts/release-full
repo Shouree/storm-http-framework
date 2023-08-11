@@ -1,6 +1,23 @@
 #!/bin/bash
 
-ARCHLIST="win32!filip@192.168.0.105!arm64!filip-www@fprg.se!amd64"
+# List of architectures and commands to build.
+# Interpreted as a list of steps to execute. Each instruction is separated by a comma.
+# Elements containing a colon: <target>:<args> - build <target> using <args> to Mymake.
+# Elements containing an at sign: treated as a hostname, SSH there and continue build.
+
+# Convenience for specifying build configuration. Commas will be inserted between each line.
+ARCHLIST=(
+    "mps_win32:mps"
+    "smm_win32:smm"
+    "mps_win64:mps 64"
+    "filip@192.168.0.105"
+    "mps_arm64:mps"
+    "filip-www@fprg.se"
+    "mps_amd64:mps"
+    "smm_amd64:smm"
+)
+function join_array { local IFS=","; echo "$*"; }
+ARCHLIST=$(join_array "${ARCHLIST[@]}")
 
 completed=false
 

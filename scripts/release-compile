@@ -1,17 +1,22 @@
 #!/bin/bash
 
 arch="$1"
-
-if [[ $# -ge 2 ]]
-then
-    version=$2
-else
-    version=$(find_version)
-fi
+command="$2"
+version="$3"
 echo "Compiling $version..."
 
-echo "core.info" > ${STORM_ROOT}/Compiler/COMPILER.version
-echo "$version" >> ${STORM_ROOT}/Compiler/COMPILER.version
+updateversion=yes
+if [[ $# -gt 3 ]]
+then
+    updateversion="$4"
+fi
+
+if [[ $updateversion == yes ]]
+then
+    echo "core.info" > ${STORM_ROOT}/Compiler/COMPILER.version
+    echo "$version" >> ${STORM_ROOT}/Compiler/COMPILER.version
+fi
+
 
 cd $STORM_ROOT
 
@@ -22,15 +27,14 @@ else
     compat=""
 fi
 
-# Seems to be more or less standard in Git bash at least. If we fail, we will just run the build
-# less efficiently, so it is not a big problem.
-mm release $compat mps -ne || { echo "Compilation (mps) failed!"; exit 1; }
-if [[ ! $arch == arm64 ]]
+mm release $compat $command -ne || { echo "Compilation ($arch) failed!"; exit 1; }
+
+releasedir=release
+if [[ $command == *64* ]]
 then
-    mm release $compat smm -ne || { echo "Compilation (smm) failed!"; exit 1; }
+    releasedir=release64
 fi
 
 echo "Done! Running test suite..."
-release/Test_mps --all || { echo "Tests failed (mps)!"; exit 1; }
-#release/Test_smm --all || { echo "Tests failed (smm)!"; exit 1; }
+${releasedir}/Test_mps --all || { echo "Tests failed ($arch)!"; exit 1; }
 echo "Success!"

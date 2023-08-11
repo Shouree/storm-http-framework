@@ -5,10 +5,11 @@ launchers="progvis.main@STORM_RENDER_BACKEND=gtk"
 
 OUT_BASE=$STORM_ROOT/release/storm
 
-# Architecture
 arch="$1"
+command="$2"
+notes="$3"
 
-if [[ $arch == win* ]]
+if [[ $arch == *_win* ]]
 then
     OUT_EXT=.zip
     add="7z a"
@@ -24,7 +25,21 @@ else
 fi
 OUT=$OUT_BASE$OUT_EXT
 
-notes="$2"
+# We only need the build command to know where to look for compiled files.
+namesuffix=""
+if [[ $command == *64* ]]
+then
+    namesuffix="64"
+fi
+
+# Figure out the GC used, we need it to find the executable.
+if [[ $command == *mps* ]]
+then
+    gc=_mps
+elif [[ $command == *smm* ]]
+then
+    gc=_smm
+fi
 
 function launcher {
     fn=${1%%@*}
@@ -84,14 +99,14 @@ fi
 $add $OUT doc/release_notes.md > /dev/null
 rm doc/release_notes.md
 
-# Source code.
+# Source code from root/
 find root/ -type f -not -name "*$lib" | grep -v "server-tests/" | xargs --delimiter='\n' $add $OUT > /dev/null
 
 # Rename and add dynamic libraries
 IFS=$'\n'
-for j in $(find root/ -name "Release*$lib")
+for j in $(find root/ -name "Release${namesuffix}*${lib}")
 do
-    name=$(echo $j | sed 's/Release//')
+    name=$(echo $j | sed "s/Release${namesuffix}//")
     add_rename $j $name
 done
 
@@ -109,20 +124,11 @@ do
     rm "$name"
 done
 
+# Add the main executable
+add_rename_custom ${OUT} release${namesuffix}/Storm${gc}$exe Storm$exe
 
-# Copy the file to two separate ones, one for each release:
-if [[ ! $arch == arm64 ]]
-then
-    cp $OUT ${OUT_BASE}_smm_$arch$OUT_EXT
-fi
-mv $OUT ${OUT_BASE}_mps_$arch$OUT_EXT
-
-# Add the main executables
-if [[ ! $arch == arm64 ]]
-then
-    add_rename_custom ${OUT_BASE}_smm_$arch$OUT_EXT release/Storm_smm$exe Storm$exe
-fi
-add_rename_custom ${OUT_BASE}_mps_$arch$OUT_EXT release/Storm_mps$exe Storm$exe
+# Make it the proper name.
+mv ${OUT} ${OUT_BASE}_${arch}${OUT_EXT}
 
 if [[ $OUT_EXT == .tar ]]
 then
