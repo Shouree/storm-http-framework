@@ -48,7 +48,7 @@ do
     if [[ $first == *@* ]]
     then
 	echo "Continuing build at ${first}..."
-	tar_files | ssh "$first" '~/build_storm.sh' "$archlist" "$version" "$hash" || exit 1;
+	tar_files | ssh "$first" '~/build-storm.sh' "$archlist" "$version" "$hash" || exit 1;
 	exit 0;
 
     elif [[ $first == *:* ]]

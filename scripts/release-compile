@@ -35,6 +35,15 @@ then
     releasedir=release64
 fi
 
-echo "Done! Running test suite..."
-${releasedir}/Test_mps --all || { echo "Tests failed ($arch)!"; exit 1; }
-echo "Success!"
+if [[ $command == *mps* ]]
+then
+    echo "Done! Running test suite..."
+    ${releasedir}/Test_mps --all || { echo "Tests failed ($arch)!"; exit 1; }
+    echo "Success!"
+elif [[ $command == *smm* ]]
+then
+    echo "Skipping test suite for SMM."
+else
+    echo "ERROR: Unknown garbage collector. Command line: ${command}"
+    exit 1
+fi
