@@ -103,6 +103,10 @@ namespace storm {
 		return start;
 	}
 
+	void *GcImpl::allocArrayRehash(const GcType *type, size_t count) {
+		return allocArray(type, count);
+	}
+
 	void *GcImpl::allocWeakArray(const GcType *type, size_t count) {
 		size_t size = sizeof(type->stride)*count + 2*sizeof(size_t) + headerSizeWords*sizeof(size_t);
 		void *mem = poolAlloc(size);
@@ -114,6 +118,10 @@ namespace storm {
 		void *start = (size_t *)mem + headerSizeWords;
 		*(size_t *)start = (count << 1) | 1;
 		return start;
+	}
+
+	void *GcImpl::allocWeakArrayRehash(const GcType *type, size_t count) {
+		return allocWeakArray(type, count);
 	}
 
 	Bool GcImpl::liveObject(RootObject *obj) {

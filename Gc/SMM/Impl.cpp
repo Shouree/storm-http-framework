@@ -176,6 +176,10 @@ namespace storm {
 		return result;
 	}
 
+	void *GcImpl::allocArrayRehash(const GcType *type, size_t count) {
+		return allocArray(type, count);
+	}
+
 	void *GcImpl::allocWeakArray(const GcType *type, size_t count) {
 		size_t size = fmt::overflowSizeArray(type, count);
 		if (size == 0)
@@ -194,6 +198,10 @@ namespace storm {
 		} while (!alloc.commit());
 
 		return result;
+	}
+
+	void *GcImpl::allocWeakArrayRehash(const GcType *type, size_t count) {
+		return allocWeakArray(type, count);
 	}
 
 	Bool GcImpl::liveObject(RootObject *obj) {

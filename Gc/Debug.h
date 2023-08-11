@@ -53,16 +53,12 @@ namespace storm {
 
 		// Allocate an array of objects.
 		void *allocArray(const GcType *type, size_t count);
-		void *allocArrayRehash(const GcType *type, size_t count) {
-			return allocArray(type, count);
-		}
+		void *allocArrayRehash(const GcType *type, size_t count);
 
 		// Allocate an array of weak pointers. 'type' is always a GcType instance that is set to
 		// WeakArray with one pointer as elements.
 		void *allocWeakArray(const GcType *type, size_t count);
-		void *allocWeakArrayRehash(const GcType *type, size_t count) {
-			return allocWeakArray(type, count);
-		}
+		void *allocWeakArrayRehash(const GcType *type, size_t count);
 
 		// See if an object is live, ie. not finalized.
 		static Bool liveObject(RootObject *obj);

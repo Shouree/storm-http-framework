@@ -200,10 +200,18 @@ namespace storm {
 		return fmt::initArray(mem, type, size, count);
 	}
 
+	void *GcImpl::allocArrayRehash(const GcType *type, size_t count) {
+		return allocArray(type, count);
+	}
+
 	void *GcImpl::allocWeakArray(const GcType *type, size_t count) {
 		size_t size = fmt::sizeArray(type, count);
 		void *mem = poolAlloc(size);
 		return fmt::initWeakArray(mem, type, size, count);
+	}
+
+	void *GcImpl::allocWeakArrayRehash(const GcType *type, size_t count) {
+		return allocWeakArray(type, count);
 	}
 
 	Bool GcImpl::liveObject(RootObject *obj) {
