@@ -40,7 +40,7 @@ namespace storm {
 		virtual Nat STORM_FN hash() const;
 
 		// Deep copy.
-		virtual void STORM_FN deepCopy(CloneEnv *env) const;
+		virtual void STORM_FN deepCopy(CloneEnv *env);
 
 		// Serialization.
 		static SerializedType *STORM_FN serializedType(EnginePtr e);

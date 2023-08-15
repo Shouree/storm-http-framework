@@ -34,7 +34,7 @@ namespace storm {
 		this->build = new (this) Array<Str *>(*src.build);
 	}
 
-	void Version::deepCopy(CloneEnv *env) const {
+	void Version::deepCopy(CloneEnv *env) {
 		// We do a deep copy in the copy constructor, so we do not need to do anything here.
 	}
 
