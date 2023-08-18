@@ -8,6 +8,8 @@ in the Git repository by a tag with the name `release/<version>`.
 Release notes for each release are found [here](md://Introduction/Downloads/Release_Notes) or in the
 annotated release tags in the Git repository.
 
+Storm is licensed under the BSD 2-clause license from version 0.6.18 and onwards.
+
 
 Binary releases
 -----------------
@@ -65,7 +67,7 @@ currently in the experimental stage.
 Source releases
 ----------------
 
-The source code (licensed under GNU LGPL version 2.1) is freely available through Git at the following URL:
+The source code is freely available through Git at the following URL:
 
 `git clone git://storm-lang.org/storm.git`
 
@@ -103,12 +105,11 @@ API instead of separate libraries.
 License
 --------
 
-Storm is licensed under the LGPL version 2.1. Note, however, that the MPS release uses the
-[Memory Pool System](http://www.ravenbrook.com/project/mps/) from Ravenbrook Ltd. which has a
-separate license (BSD 2-clause license). The SMM is licensed under the LGPL version 2.1, just like Storm.
+Storm is licensed under the 2-clause BSD license. Note, however, that some libraries used by the
+system come with different licenses. To check which libraries are used and which licenses apply,
+type `licenses` in the Basic Storm top loop, or call `core.info.licenses` from your code. Note that
+this only shows loaded libraries. You might want to use the library you are interested in (e.g. by
+typing `help ui`) to make sure they are loaded before querying license information.
 
-Parts of the libraries, such as the Ui library, may rely on other third party libraries. To check
-which libraries are used and which licenses apply, type `licenses` in the Basic Storm top loop, or
-call `core.info.licenses` from your code. Note that this only shows loaded libraries. You might want
-to use the library you are interested in (e.g. by typing `help ui`) to make sure they are loaded
-before querying the license information.
+Also note that some programs, most notably Progvis, have different licenses. Check the About menu
+option for details.
