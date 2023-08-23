@@ -34,6 +34,8 @@ namespace sql {
 		// Getter for the contained MYSQL handle.
 		MYSQL *raw() const;
 
+		class Stmt;
+
 	protected:
 		// Create the connection.
 		STORM_CTOR MariaDBBase(Host c, Str *user, MAYBE(Str *) password, Str *database);
@@ -41,12 +43,25 @@ namespace sql {
 		// Throw an error if one is present.
 		void throwError();
 
+		// Called by Stmt: Inform us that we a statement wishes to start fetching data.
+		void startFetch(Stmt *stmt);
+
+		// Called by Stmt: Inform us that a statement is no longer fetching data.
+		void stopFetch(Stmt *stmt);
+
+		// Called by Stmt: Ask any current fetching statement to stop fetching data.
+		void clearFetch();
+
 	private:
 		// Handle to the database.
 		UNKNOWN(PTR_NOGC) MYSQL *handle;
 
 		// Pointer to the API block of the handle for easy access.
 		UNKNOWN(PTR_NOGC) st_mariadb_api *api;
+
+		// Current statement that has not yet stored its results. We use this to tell it to finish
+		// result extraction when we need to execute another statement. Might be null.
+		Stmt *currentFetching;
 
 	public:
 
@@ -77,6 +92,10 @@ namespace sql {
 			// Finalize the statement.
 			void STORM_FN finalize() override;
 
+			// Called by MariaDBBase to store the remainder of the data set in the class, so that
+			// other queries can be made through the established database connection.
+			void STORM_FN fetchAll();
+
 		protected:
 			// Dispose of the results.
 			void STORM_FN disposeResult() override;
@@ -99,6 +118,10 @@ namespace sql {
 
 			// Number of changes from last execute.
 			Nat lastChanges;
+
+			// Array of rows that we have buffered. In reverse order, so it is easy to pop them all. Might be null.
+			Array<Row> *buffer;
+
 
 			/**
 			 * Bound buffers for the parameters:

@@ -17,6 +17,7 @@ namespace sql {
 		: MariaDBBase(c, user, password, database) {}
 
 	MariaDBBase::MariaDBBase(Host c, Str *user, MAYBE(Str *) password, Str *database) {
+		currentFetching = null;
 		handle = createDriver(engine());
 		api = handle->methods->api;
 
@@ -92,7 +93,29 @@ namespace sql {
 		throw new (this) SQLError(new (this) Str(toWChar(engine(), msg)));
 	}
 
+	void MariaDBBase::startFetch(Stmt *stmt) {
+		clearFetch();
+		currentFetching = stmt;
+	}
 
+	void MariaDBBase::stopFetch(Stmt *stmt) {
+		if (currentFetching == stmt)
+			currentFetching = null;
+	}
+
+	void MariaDBBase::clearFetch() {
+		if (currentFetching) {
+			currentFetching->fetchAll();
+			// Should be cleared by 'fetchAll'.
+			assert(currentFetching == null);
+			currentFetching = null;
+		}
+	}
+
+
+	/**
+	 * The statement.
+	 */
 
 	static void freeBinds(Nat &count, MYSQL_BIND *&binds, Value *&values) {
 		if (values) {
@@ -123,6 +146,9 @@ namespace sql {
 		: owner(owner),
 		  paramCount(0), paramBinds(null), paramValues(0),
 		  resultCount(0), resultBinds(null), resultValues(0) {
+
+		// We need access to the data stream now!
+		owner->clearFetch();
 
 		stmt = (*owner->api->mysql_stmt_init)(owner->handle);
 		if (!stmt)
@@ -161,20 +187,26 @@ namespace sql {
 	void MariaDBBase::Stmt::finalize() {
 		freeBinds(paramCount, paramBinds, paramValues);
 		freeBinds(resultCount, resultBinds, resultValues);
+		buffer = null;
 
 		if (stmt) {
 			(*owner->api->mysql_stmt_close)(stmt);
 			stmt = null;
 		}
+
+		owner->stopFetch(this);
 	}
 
 	void MariaDBBase::Stmt::reset() {
 		freeBinds(resultCount, resultBinds, resultValues);
+		buffer = null;
 
 		if (stmt) {
 			(*owner->api->mysql_stmt_free_result)(stmt);
 			(*owner->api->mysql_stmt_reset)(stmt);
 		}
+
+		owner->stopFetch(this);
 	}
 
 	void MariaDBBase::Stmt::bind(Nat pos, Str *str) {
@@ -215,6 +247,9 @@ namespace sql {
 	Statement::Result MariaDBBase::Stmt::execute() {
 		reset();
 
+		// Make sure no other statement is fetching results now.
+		owner->clearFetch();
+
 		if (paramBinds) {
 			(*owner->api->mysql_stmt_bind_param)(stmt, paramBinds);
 		}
@@ -225,42 +260,53 @@ namespace sql {
 		lastChanges = (*owner->api->mysql_stmt_affected_rows)(stmt);
 
 		MYSQL_RES *metadata = (*owner->api->mysql_stmt_result_metadata)(stmt);
-		resultCount = (*owner->api->mysql_num_fields)(metadata);
 
-		MYSQL_FIELD *columns = (*owner->api->mysql_fetch_fields)(metadata);
-		allocBinds(resultCount, resultBinds, resultValues);
+		if (metadata) {
+			resultCount = (*owner->api->mysql_num_fields)(metadata);
 
-		for (Nat i = 0; i < resultCount; i++) {
-			switch (columns[i].type) {
-			case MYSQL_TYPE_STRING:
-			case MYSQL_TYPE_VAR_STRING:
-			case MYSQL_TYPE_BLOB:
-				// Allocate some size. We ask for the real size later on.
-				resultValues[i].setString(DEFAULT_STRING_SIZE);
-				break;
+			MYSQL_FIELD *columns = (*owner->api->mysql_fetch_fields)(metadata);
+			allocBinds(resultCount, resultBinds, resultValues);
 
-			case MYSQL_TYPE_FLOAT:
-			case MYSQL_TYPE_DOUBLE:
-				resultValues[i].setFloat(0);
-				break;
+			for (Nat i = 0; i < resultCount; i++) {
+				switch (columns[i].type) {
+				case MYSQL_TYPE_STRING:
+				case MYSQL_TYPE_VAR_STRING:
+				case MYSQL_TYPE_BLOB:
+					// Allocate some size. We ask for the real size later on.
+					resultValues[i].setString(DEFAULT_STRING_SIZE);
+					break;
 
-			default:
-				if (IS_NUM(columns[i].type)) {
-					// Treat all integers as 'Long'.
-					if (columns[i].flags & UNSIGNED_FLAG)
-						resultValues[i].setUInt(0);
-					else
-						resultValues[i].setInt(0);
+				case MYSQL_TYPE_FLOAT:
+				case MYSQL_TYPE_DOUBLE:
+					resultValues[i].setFloat(0);
+					break;
+
+				default:
+					if (IS_NUM(columns[i].type)) {
+						// Treat all integers as 'Long'.
+						if (columns[i].flags & UNSIGNED_FLAG)
+							resultValues[i].setUInt(0);
+						else
+							resultValues[i].setInt(0);
+					}
+					break;
 				}
-				break;
 			}
+
+			(*owner->api->mysql_free_result)(metadata);
+
+			// Bind the result now.
+			if ((*owner->api->mysql_stmt_bind_result)(stmt, resultBinds))
+				throwError();
+
+			owner->startFetch(this);
+
+		} else {
+			// No result, the metadata returned null.
+			TODO(L"We might want to take this opportunity to fetch the last insert id!");
+			resultCount = 0;
+			reset();
 		}
-
-		(*owner->api->mysql_free_result)(metadata);
-
-		// Bind the result now.
-		if ((*owner->api->mysql_stmt_bind_result)(stmt, resultBinds))
-			throwError();
 
 		return Result(this);
 	}
@@ -276,10 +322,19 @@ namespace sql {
 	}
 
 	Maybe<Row> MariaDBBase::Stmt::nextRow() {
+		if (buffer) {
+			if (buffer->empty()) {
+				reset();
+				return Maybe<Row>();
+			}
+
+			Row r = buffer->last();
+			buffer->pop();
+			return Maybe<Row>(r);
+		}
+
 		if (!resultValues)
 			return Maybe<Row>();
-
-		TODO(L"If we detect that another statement should be executed, we need to call store_result for this one so we can continue!");
 
 		// Fetch the next row.
 		int result = (*owner->api->mysql_stmt_fetch)(stmt);
@@ -325,6 +380,22 @@ namespace sql {
 		}
 
 		return Maybe<Row>(Row(builder));
+	}
+
+	void MariaDBBase::Stmt::fetchAll() {
+		Array<Row> *b = new (this) Array<Row>();
+		while (true) {
+			Maybe<Row> r = nextRow();
+			if (r.any())
+				b->push(r.value());
+			else
+				break;
+		}
+		b->reverse();
+
+		reset();
+
+		buffer = b;
 	}
 
 }
