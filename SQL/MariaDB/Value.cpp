@@ -142,16 +142,16 @@ namespace sql {
 
 
 	/**
-	 * Value_Set
+	 * ValueSet
 	 */
 
-	Value_Set::Value_Set(size_t count) : bind_data(count) {
+	ValueSet::ValueSet(size_t count) : bind_data(count) {
 		values.reserve(count);
 		for (size_t i = 0; i < count; i++)
 			values.emplace_back(&bind_data[i]);
 	}
 
-	Value_Set::~Value_Set() {
+	ValueSet::~ValueSet() {
 		// We need to destroy the Value instances first, as they need to look at what is inside
 		// bind_data.
 		values.clear();

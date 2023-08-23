@@ -1,5 +1,6 @@
 #pragma once
-#include <mysql.h>
+#include "Driver.h"
+#include "ConnectionType.h"
 #include "Core/Io/Url.h"
 #include "Core/Net/Address.h"
 #include "Core/Array.h"
@@ -14,7 +15,7 @@ namespace sql {
 		STORM_CLASS;
 	public:
 		// Destructor of an Mariadb database connection. Calls MariaDB:close().
-		virtual ~MariaDB();
+		virtual ~MariaDBBase();
 
 		// Prepares a statement for execution.
 		Statement *STORM_FN prepare(Str *query) override;
@@ -35,7 +36,7 @@ namespace sql {
 
 	protected:
 		// Create the connection.
-		STORM_CTOR MariaDBBase(Address *host, Str *user, Str *password, Str *database);
+		STORM_CTOR MariaDBBase(ConnectionType c, Str *user, MAYBE(Str *) password, Str *database);
 
 		// Throw an error if one is present.
 		void throwError();
@@ -123,7 +124,7 @@ namespace sql {
 		STORM_CLASS;
 	public:
 		// Connect.
-		STORM_CTOR MySQL(Address *host, Str *user, Str *password, Str *database);
+		STORM_CTOR MySQL(ConnectionType c, Str *user, MAYBE(Str *) password, Str *database);
 	};
 
 
@@ -138,7 +139,7 @@ namespace sql {
 		STORM_CLASS;
 	public:
 		// Connect.
-		STORM_CTOR MySQL(Address *host, Str *user, Str *password, Str *database);
+		STORM_CTOR MariaDB(ConnectionType c, Str *user, MAYBE(Str *) password, Str *database);
 	};
 
 }

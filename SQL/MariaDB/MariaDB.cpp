@@ -1,22 +1,44 @@
 #include "stdafx.h"
 #include "MariaDB.h"
 #include "Value.h"
+#include "Exception.h"
 #include "Core/Convert.h"
 
 namespace sql {
 
-	MariaDBBase::MariaDBBase(Address *host, Str *user, Str *password, Str *database) {
+	MySQL::MySQL(ConnectionType c, Str *user, MAYBE(Str *) password, Str *database)
+		: MariaDBBase(c, user, password, database) {}
+
+	MariaDB::MariaDB(ConnectionType c, Str *user, MAYBE(Str *) password, Str *database)
+		: MariaDBBase(c, user, password, database) {}
+
+	MariaDBBase::MariaDBBase(ConnectionType c, Str *user, MAYBE(Str *) password, Str *database) {
 		handle = mysql_init(null);
 
 		try {
+			const char *host = null;
+			const char *pipe = null;
+			unsigned int port = 0;
+
+			if (Address *addr = c.isSocket()) {
+				host = addr->withPort(0)->toS()->utf8_str();
+				port = addr->port();
+			} else if (Str *local = c.isLocal()) {
+				host = null;
+				pipe = local->utf8_str();
+			} else {
+				host = null;
+				pipe = null;
+			}
+
 			if (!mysql_real_connect(
 					handle,
-					address->withPort(0)->toS()->utf8_str(),
-					username->utf8_str(),
-					password->utf8_str(),
+					host,
+					user->utf8_str(),
+					password ? password->utf8_str() : null,
 					database->utf8_str(),
-					host->port(),
-					null,
+					port,
+					pipe,
 					0)) {
 				throwError();
 			}
@@ -66,7 +88,7 @@ namespace sql {
 
 
 	MariaDBBase::Stmt::Stmt(MariaDBBase *owner, Str *query) : owner(owner) {
-		stmt = mysql_stmt_init(database->handle);
+		stmt = mysql_stmt_init(owner->handle);
 		if (!stmt)
 			owner->throwError();
 
@@ -132,6 +154,8 @@ namespace sql {
 
 		colCount = mysql_stmt_field_count(stmt);
 		lastChanges = mysql_stmt_affected_rows(stmt);
+
+		return Result(this);
 	}
 
 	Int MariaDBBase::Stmt::lastRowId() {
@@ -144,8 +168,8 @@ namespace sql {
 		reset();
 	}
 
-	Maybe<Row> MariaDB_Statement::nextRow() {
-		if (!column)
+	Maybe<Row> MariaDBBase::Stmt::nextRow() {
+		if (!columns)
 			return Maybe<Row>();
 
 		TODO(L"We don't want to re-allocate the Value_Set and re-bind it all the time!");
@@ -179,9 +203,9 @@ namespace sql {
 
 		// Fetch the next row.
 		int result = mysql_stmt_fetch(stmt);
-		if (status == 1) {
+		if (result == 1) {
 			throwError();
-		} else if (status == MYSQL_NO_DATA) {
+		} else if (result == MYSQL_NO_DATA) {
 			// End of the query!
 			reset();
 			return Maybe<Row>();
@@ -194,7 +218,7 @@ namespace sql {
 		for (Nat i = 0; i < colCount; i++) {
 			if (IS_NUM(columns[i].type)) {
 				if (columns[i].flags & UNSIGNED_FLAG)
-					builder.push(Word(output[i].get_uint()));
+					builder.push(Long(output[i].get_uint())); // TODO: Maybe support unsigned also?
 				else
 					builder.push(Long(output[i].get_int()));
 			} else if (columns[i].type == MYSQL_TYPE_STRING
@@ -204,11 +228,11 @@ namespace sql {
 				size_t sz = val.is_truncated();
 				if (sz) {
 					// Re-fetch if it was truncated.
-					v.set_string(sz);
+					val.set_string(sz);
 					mysql_stmt_fetch_column(stmt, output.data() + i, i, 0);
 				}
 
-				builder.push(new (this) Str(toWChar(engine(), v.get_string().c_str())));
+				builder.push(new (this) Str(toWChar(engine(), val.get_string().c_str())));
 			} else {
 				StrBuf *msg = new (this) StrBuf();
 				*msg << S("Unknown column type: ") << columns[i].type << S("!");
@@ -216,7 +240,7 @@ namespace sql {
 			}
 		}
 
-		return row;
+		return Maybe<Row>(Row(builder));
 	}
 
 }

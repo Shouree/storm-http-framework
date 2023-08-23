@@ -1,5 +1,5 @@
 #pragma once
-#include <mysql.h>
+#include "Driver.h"
 
 namespace sql {
 
@@ -76,17 +76,17 @@ namespace sql {
 	 *
 	 * TODO: Make this better suited to Storm.
 	 */
-	class Value_Set {
+	class ValueSet {
 	public:
 		// Set size.
-		Value_Set(size_t count);
+		ValueSet(size_t count);
 
 		// Destroy.
-		~Value_Set();
+		~ValueSet();
 
 		// No copying.
-		Value_Set(const Value_Set &) = delete;
-		Value_Set &operator =(const Value_Set &) = delete;
+		ValueSet(const ValueSet &) = delete;
+		ValueSet &operator =(const ValueSet &) = delete;
 
 		// Get a particular value.
 		Value &operator[](size_t id) { return values[id]; }
