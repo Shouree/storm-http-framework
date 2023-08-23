@@ -42,6 +42,11 @@ class Operator extends SQLExpr {
 		lhs = lhs.resolve(context);
 		rhs = rhs.resolve(context);
 
+		// If this is a non-typed context, we don't know enough to really do anything. Calling
+		// .result might cause an exception since we don't have type information for example.
+		if (!context.typed)
+			return this;
+
 		// If maybe types are involved, we bail out in trying to simplify.
 		if (isMaybe(lhs.result) | isMaybe(rhs.result))
 			return this;
