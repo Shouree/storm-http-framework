@@ -1,9 +1,10 @@
 #pragma once
 #include "Driver.h"
-#include "ConnectionType.h"
+#include "Host.h"
 #include "Core/Io/Url.h"
 #include "Core/Net/Address.h"
 #include "Core/Array.h"
+#include "Value.h"
 #include "SQL.h"
 
 namespace sql {
@@ -28,15 +29,14 @@ namespace sql {
 		Array<Str*> *STORM_FN tables() override;
 
 		// Returns a Schema for MariaDB connection.
-		// NOT IMPLEMENTED.
 		MAYBE(Schema *) STORM_FN schema(Str *table);
 
-		// Getter for member variable db.
-		MYSQL * raw() const;
+		// Getter for the contained MYSQL handle.
+		MYSQL *raw() const;
 
 	protected:
 		// Create the connection.
-		STORM_CTOR MariaDBBase(ConnectionType c, Str *user, MAYBE(Str *) password, Str *database);
+		STORM_CTOR MariaDBBase(Host c, Str *user, MAYBE(Str *) password, Str *database);
 
 		// Throw an error if one is present.
 		void throwError();
@@ -44,6 +44,9 @@ namespace sql {
 	private:
 		// Handle to the database.
 		UNKNOWN(PTR_NOGC) MYSQL *handle;
+
+		// Pointer to the API block of the handle for easy access.
+		UNKNOWN(PTR_NOGC) st_mariadb_api *api;
 
 	public:
 
@@ -100,8 +103,13 @@ namespace sql {
 			// Number of columns in the result.
 			Nat colCount;
 
-			// Fields in the result.
-			MYSQL_FIELD *columns;
+			// Allocated MYSQL_BIND structures that are bound to the statement. These are allocated
+			// with 'malloc' since they are not allowed to move!
+			UNKNOWN(PTR_NOGC) MYSQL_BIND *colBind;
+
+			// Allocated Value structures that are referenced from colBind. These are allocated with
+			// 'malloc' since 'colBind' contains references into them.
+			UNKNOWN(PTR_NOGC) Value *colValues;
 
 			// Resets a prepared statement on client and server to state after prepare if needed.
 			void reset();
@@ -124,7 +132,7 @@ namespace sql {
 		STORM_CLASS;
 	public:
 		// Connect.
-		STORM_CTOR MySQL(ConnectionType c, Str *user, MAYBE(Str *) password, Str *database);
+		STORM_CTOR MySQL(Host c, Str *user, MAYBE(Str *) password, Str *database);
 	};
 
 
@@ -139,7 +147,7 @@ namespace sql {
 		STORM_CLASS;
 	public:
 		// Connect.
-		STORM_CTOR MariaDB(ConnectionType c, Str *user, MAYBE(Str *) password, Str *database);
+		STORM_CTOR MariaDB(Host c, Str *user, MAYBE(Str *) password, Str *database);
 	};
 
 }

@@ -6,14 +6,18 @@
 
 namespace sql {
 
-	MySQL::MySQL(ConnectionType c, Str *user, MAYBE(Str *) password, Str *database)
+	MySQL::MySQL(Host c, Str *user, MAYBE(Str *) password, Str *database)
 		: MariaDBBase(c, user, password, database) {}
 
-	MariaDB::MariaDB(ConnectionType c, Str *user, MAYBE(Str *) password, Str *database)
+	MariaDB::MariaDB(Host c, Str *user, MAYBE(Str *) password, Str *database)
 		: MariaDBBase(c, user, password, database) {}
 
-	MariaDBBase::MariaDBBase(ConnectionType c, Str *user, MAYBE(Str *) password, Str *database) {
-		handle = mysql_init(null);
+	MariaDBBase::MariaDBBase(Host c, Str *user, MAYBE(Str *) password, Str *database) {
+		handle = createDriver(engine());
+		api = handle->methods->api;
+
+		// Set charset. utf8 is the default for MariaDB, but if the default ever changes it is better to be explicit.
+		(*api->mysql_options)(handle, MYSQL_SET_CHARSET_NAME, "utf8mb4");
 
 		try {
 			const char *host = null;
@@ -31,7 +35,7 @@ namespace sql {
 				pipe = null;
 			}
 
-			if (!mysql_real_connect(
+			if (!(*api->mysql_real_connect)(
 					handle,
 					host,
 					user->utf8_str(),
@@ -54,7 +58,7 @@ namespace sql {
 
 	void MariaDBBase::close() {
 		if (handle) {
-			mysql_close(handle);
+			destroyDriver(handle);
 			handle = null;
 		}
 	}
@@ -77,7 +81,7 @@ namespace sql {
 		if (!handle)
 			return;
 
-		const char *msg = mysql_error(handle);
+		const char *msg = (*api->mysql_error)(handle);
 		if (!msg)
 			return;
 
@@ -88,15 +92,12 @@ namespace sql {
 
 
 	MariaDBBase::Stmt::Stmt(MariaDBBase *owner, Str *query) : owner(owner) {
-		stmt = mysql_stmt_init(owner->handle);
+		stmt = (*owner->api->mysql_stmt_init)(owner->handle);
 		if (!stmt)
 			owner->throwError();
 
 		try {
-
-			// TODO: Seems like MySQL/MariaDB does not like quoting table names with "
-
-			if (mysql_stmt_prepare(stmt, query->utf8_str(), -1)) {
+			if ((*owner->api->mysql_stmt_prepare)(stmt, query->utf8_str(), -1)) {
 				throwError();
 			}
 
@@ -114,7 +115,7 @@ namespace sql {
 		if (!stmt)
 			return;
 
-		const char *error = mysql_stmt_error(stmt);
+		const char *error = (*owner->api->mysql_stmt_error)(stmt);
 		if (!error)
 			return;
 
@@ -122,20 +123,38 @@ namespace sql {
 	}
 
 	void MariaDBBase::Stmt::finalize() {
+		for (Nat i = 0; i < colCount; i++)
+			colValues[i].~Value();
+
+		free(colValues);
+		colValues = null;
+
+		free(colBind);
+		colBind = null;
+
+		colCount = 0;
+
 		if (stmt) {
-			columns = null;
-			colCount = 0;
-			mysql_stmt_close(stmt);
+			(*owner->api->mysql_stmt_close)(stmt);
 			stmt = null;
 		}
 	}
 
 	void MariaDBBase::Stmt::reset() {
+		for (Nat i = 0; i < colCount; i++)
+			colValues[i].~Value();
+
+		free(colValues);
+		colValues = null;
+
+		free(colBind);
+		colBind = null;
+
+		colCount = 0;
+
 		if (stmt) {
-			columns = null;
-			colCount = 0;
-			mysql_stmt_free_result(stmt);
-			mysql_stmt_reset(stmt);
+			(*owner->api->mysql_stmt_free_result)(stmt);
+			(*owner->api->mysql_stmt_reset)(stmt);
 		}
 	}
 
@@ -150,16 +169,40 @@ namespace sql {
 	Statement::Result MariaDBBase::Stmt::execute() {
 		reset();
 
-		if (mysql_stmt_execute(stmt))
+		if ((*owner->api->mysql_stmt_execute)(stmt))
 			throwError();
 
-		lastChanges = mysql_stmt_affected_rows(stmt);
+		lastChanges = (*owner->api->mysql_stmt_affected_rows)(stmt);
 
-		MYSQL_RES *metadata = mysql_stmt_result_metadata(stmt);
-		colCount = mysql_num_fields(metadata);
-		// columns = mysql_fetch_fields(metadata);
-		TODO(L"free_result here will likely invalidate columns, so we need to re-write ValueSet!");
-		mysql_free_result(metadata);
+		MYSQL_RES *metadata = (*owner->api->mysql_stmt_result_metadata)(stmt);
+		colCount = (*owner->api->mysql_num_fields)(metadata);
+
+		MYSQL_FIELD *columns = (*owner->api->mysql_fetch_fields)(metadata);
+		colBind = (MYSQL_BIND *)calloc(colCount, sizeof(MYSQL_BIND));
+		colValues = (Value *)calloc(colCount, sizeof(Value));
+
+		for (Nat i = 0; i < colCount; i++) {
+			new (colValues + i) Value(colBind + i);
+
+			if (IS_NUM(columns[i].type)) {
+				// Treat all integers as 'Long'.
+				if (columns[i].flags & UNSIGNED_FLAG)
+					colValues[i].setUInt(0);
+				else
+					colValues[i].setInt(0);
+			} else if (columns[i].type == MYSQL_TYPE_STRING
+					|| columns[i].type == MYSQL_TYPE_VAR_STRING
+					|| columns[i].type == MYSQL_TYPE_BLOB) {
+				// Set length to 0 to ask for the real size.
+				colValues[i].setString(0);
+			}
+		}
+
+		(*owner->api->mysql_free_result)(metadata);
+
+		// Bind the result now.
+		if ((*owner->api->mysql_stmt_bind_result)(stmt, colBind))
+			throwError();
 
 		return Result(this);
 	}
@@ -175,40 +218,11 @@ namespace sql {
 	}
 
 	Maybe<Row> MariaDBBase::Stmt::nextRow() {
-		if (!columns)
+		if (!colValues)
 			return Maybe<Row>();
 
-		TODO(L"We don't want to re-allocate the Value_Set and re-bind it all the time!");
-		TODO(L"If there are multiple concurrent fetches, we need to do something intelligent.");
-
-		ValueSet output(colCount);
-
-		// Set type of values in 'output'.
-		for (Nat i = 0; i < colCount; i++) {
-			if (IS_NUM(columns[i].type)) {
-				// Treat all integers as Long.
-				if (columns[i].flags & UNSIGNED_FLAG)
-					output[i].set_uint(0);
-				else
-					output[i].set_int(0);
-			} else if (columns[i].type == MYSQL_TYPE_STRING
-					|| columns[i].type == MYSQL_TYPE_VAR_STRING
-					|| columns[i].type == MYSQL_TYPE_BLOB) {
-				// Set length to 0 to ask for the real size.
-				output[i].set_string(0);
-			} else {
-				StrBuf *msg = new (this) StrBuf();
-				*msg << S("Unknown column type: ") << columns[i].type << S("!");
-				throw new (this) SQLError(msg->toS());
-			}
-		}
-
-		// Bind the result. TODO: We can probably get away with doing this only once.
-		if (mysql_stmt_bind_result(stmt, output.data()))
-			throwError();
-
 		// Fetch the next row.
-		int result = mysql_stmt_fetch(stmt);
+		int result = (*owner->api->mysql_stmt_fetch)(stmt);
 		if (result == 1) {
 			throwError();
 		} else if (result == MYSQL_NO_DATA) {
@@ -216,32 +230,34 @@ namespace sql {
 			reset();
 			return Maybe<Row>();
 		}
-		// TODO: if status is MYSQL_DATA_TRUNCATED, we need to check lengths. We do this always in this impl.
+
+		// Note: If we get MYSQL_DATA_TRUNCATED, we know that something was truncated. We don't need
+		// to check specifically for this here, since we always check string lengths.
 
 		// Extract the results.
 		Row::Builder builder = Row::builder(engine(), colCount);
 
 		for (Nat i = 0; i < colCount; i++) {
-			if (IS_NUM(columns[i].type)) {
-				if (columns[i].flags & UNSIGNED_FLAG)
-					builder.push(Long(output[i].get_uint())); // TODO: Maybe support unsigned also?
-				else
-					builder.push(Long(output[i].get_int()));
-			} else if (columns[i].type == MYSQL_TYPE_STRING
-					|| columns[i].type == MYSQL_TYPE_VAR_STRING
-					|| columns[i].type == MYSQL_TYPE_BLOB) {
-				Value &val = output[i];
-				size_t sz = val.is_truncated();
+			Value &v = colValues[i];
+
+			if (v.isNull()) {
+				builder.pushNull();
+			} else if (v.isInt()) {
+				builder.push(Long(v.getInt()));
+			} else if (v.isUInt()) {
+				builder.push(Long(v.getUInt())); // TODO: Maybe support unsigned values also?
+			} else if (v.isString()) {
+				size_t sz = v.isTruncated();
 				if (sz) {
-					// Re-fetch if it was truncated.
-					val.set_string(sz);
-					mysql_stmt_fetch_column(stmt, output.data() + i, i, 0);
+					// Re-fetch to see if it was truncated.
+					v.setString(sz);
+					(*owner->api->mysql_stmt_fetch_column)(stmt, colBind + i, i, 0);
 				}
 
-				builder.push(new (this) Str(toWChar(engine(), val.get_string().c_str())));
+				builder.push(v.getString(engine()));
 			} else {
 				StrBuf *msg = new (this) StrBuf();
-				*msg << S("Unknown column type: ") << columns[i].type << S("!");
+				*msg << S("Unknown column type for column ") << i << S("!");
 				throw new (this) SQLError(msg->toS());
 			}
 		}

@@ -9,17 +9,17 @@ namespace sql {
 	 * Many databases support at least TCP connections and UNIX sockets/Win32 pipes. This class
 	 * attempts to represent these choices in a generic fashion.
 	 */
-	class ConnectionType {
+	class Host {
 		STORM_VALUE;
 	public:
 		// Use a socket to connect to the specified address.
-		ConnectionType STORM_FN socket(Address *address);
+		static Host STORM_FN socket(Address *address);
 
 		// Use a UNIX socket, or a pipe to connect. Specify the name/path.
-		ConnectionType STORM_FN local(Str *name);
+		static Host STORM_FN local(Str *name);
 
 		// Connect to localhost, using default method.
-		ConnectionType STORM_FN local();
+		static Host STORM_FN local();
 
 		// Check if the connection is a socket.
 		MAYBE(Address *) STORM_FN isSocket() const;
@@ -29,7 +29,7 @@ namespace sql {
 
 	private:
 		// Create a default initialized connection.
-		ConnectionType();
+		Host();
 
 		// Contains either:
 		// - Address: connect to the specified host + port.
@@ -39,6 +39,6 @@ namespace sql {
 	};
 
 	// Output.
-	StrBuf *operator <<(StrBuf *to, const ConnectionType &c);
+	StrBuf *operator <<(StrBuf *to, const Host &c);
 
 }

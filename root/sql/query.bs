@@ -294,7 +294,16 @@ class QueryBuilder on Compiler {
 		// It seems in standard SQL, double quotes are used for identifiers.
 		// I am unable to find anything that describes how to include double quotes in an identifier.
 		// Perhaps we should just disallow that (currently it is implicitly disallowed due to the grammar).
-		query << "\"" << name << "\"";
+		print("TODO: Generalize quoting in query.bs! Current approach works on SQLite and MySQL, but is not standard.");
+		query << "`" << name << "`";
+		// query << "\"" << name << "\"";
+	}
+
+	// Append a bound parameter.
+	void bind(Expr expr) {
+		// TODO: This also varies...
+		query << "?";
+		bind << expr;
 	}
 
 	// To string.

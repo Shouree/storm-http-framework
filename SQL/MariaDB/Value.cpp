@@ -1,10 +1,11 @@
 #include "stdafx.h"
 #include "Value.h"
+#include "Core/Convert.h"
 
 namespace sql {
 
 	Value::Value(MYSQL_BIND *data)
-		: data(data), null_value(false), unsigned_value(false), error(false) {
+		: data(data), nullValue(false), error(false) {
 
 		// Clear the data, as per the manual. There are many fields that are not "public", so
 		// this is the "sanctioned" way of doing this...
@@ -16,10 +17,9 @@ namespace sql {
 
 		// Set is_null so that we can change null values. Documentation says that
 		// MYSQL_TYPE_NULL is an alternative.
-		data->is_null = &null_value;
+		data->is_null = &nullValue;
 
-		// Unsigned flag and error.
-		data->is_unsigned = unsigned_value; // &unsigned_value; gick inte.. data vill inte ha en pekare
+		// Unsigned error.
 		data->error = &error;
 
 		// Set our representation to null.
@@ -33,28 +33,28 @@ namespace sql {
 		memset(data, 0, sizeof(MYSQL_BIND));
 	}
 
-	void Value::set_int(int64_t value) {
+	void Value::setInt(int64_t value) {
 		clear();
 		data->buffer_type = MYSQL_TYPE_LONGLONG;
-		data->buffer = &local_buffer;
+		data->buffer = &localBuffer;
 		data->buffer_length = sizeof(int64_t);
-		unsigned_value = false;
-		null_value = false;
-		local_buffer.signed_v = value;
+		data->is_unsigned = false;
+		nullValue = false;
+		localBuffer.signedVal = value;
 	}
 
-	void Value::set_uint(uint64_t value) {
+	void Value::setUInt(uint64_t value) {
 		clear();
 		data->buffer_type = MYSQL_TYPE_LONGLONG;
-		data->buffer = &local_buffer;
+		data->buffer = &localBuffer;
 		data->buffer_length = sizeof(int64_t);
-		data->buffer = &local_buffer;
-		unsigned_value = true;
-		null_value = false;
-		local_buffer.unsigned_v = value;
+		data->buffer = &localBuffer;
+		data->is_unsigned = true;
+		nullValue = false;
+		localBuffer.unsignedVal = value;
 	}
 
-	void Value::set_string(const std::string &value) {
+	void Value::setString(const std::string &value) {
 		clear();
 
 		size_t length = value.size() + 1;
@@ -63,10 +63,10 @@ namespace sql {
 		data->buffer = malloc(length);
 		strncpy(static_cast<char *>(data->buffer), value.c_str(), length);
 		data->buffer_length = length;
-		null_value = false;
+		nullValue = false;
 	}
 
-	void Value::set_string(size_t length) {
+	void Value::setString(size_t length) {
 		clear();
 
 		data->buffer_type = MYSQL_TYPE_STRING;
@@ -77,84 +77,79 @@ namespace sql {
 			data->buffer = malloc(length);
 	}
 
-	void Value::set_null() {
+	void Value::setNull() {
 		clear();
 	}
 
-	int64_t Value::get_int() const {
-		if (data->buffer_type != MYSQL_TYPE_LONGLONG)
-			////throw Error("Trying to get an integer from a non-integer value."); ///Kasta ett stormerror
-
-			if (null_value)
-				return 0;
-
-		if (unsigned_value)
-			return static_cast<int64_t>(local_buffer.unsigned_v);
-		else
-			return local_buffer.signed_v;
+	bool Value::isInt() const {
+		return data->buffer_type == MYSQL_TYPE_LONGLONG;
 	}
 
-	uint64_t Value::get_uint() const {
-		if (data->buffer_type != MYSQL_TYPE_LONGLONG)
-			//// throw Error("Trying to get an integer from a non-integer value."); //Kasta ett storm errro
+	int64_t Value::getInt() const {
+		assert(isInt());
 
-			if (null_value)
-				return 0;
+		if (nullValue)
+			return 0;
 
-		if (unsigned_value)
-			return local_buffer.unsigned_v;
+		if (data->is_unsigned)
+			return static_cast<int64_t>(localBuffer.unsignedVal);
 		else
-			return static_cast<uint64_t>(local_buffer.signed_v);
+			return localBuffer.signedVal;
 	}
 
-	std::string Value::get_string() const {
-		if (data->buffer_type != MYSQL_TYPE_STRING && data->buffer_type != MYSQL_TYPE_VAR_STRING){
-			//throw Error("Trying to get a string from a non-string value."); //Kasta ett storm error istället för PLN
-			PLN(L"Trying to get a string from a non-string value.");
-		}
-		if (null_value)
-			return "";
+	bool Value::isUInt() const {
+		return data->buffer_type == MYSQL_TYPE_LONGLONG;
+	}
+
+	uint64_t Value::getUInt() const {
+		assert(isUInt());
+
+		if (nullValue)
+			return 0;
+
+		if (data->is_unsigned)
+			return localBuffer.unsignedVal;
+		else
+			return static_cast<uint64_t>(localBuffer.signedVal);
+	}
+
+	bool Value::isString() const {
+		return data->buffer_type == MYSQL_TYPE_STRING
+			|| data->buffer_type == MYSQL_TYPE_VAR_STRING;
+	}
+
+	Str *Value::getString(Engine &e) const {
+		assert(isString());
+
+		if (nullValue)
+			return new (e) Str();
 
 		if (data->buffer_length == 0)
-			return "";
+			return new (e) Str();
+
 		const char *buffer = static_cast<const char *>(data->buffer);
-		if (buffer[data->buffer_length - 1] == '\0')
-			return std::string(buffer, buffer + data->buffer_length - 1);
-		else
-			return std::string(buffer, buffer + data->buffer_length);
+		GcArray<wchar> *converted = toWChar(e, buffer, data->buffer_length);
+		return new (e) Str(converted);
 	}
 
-	bool Value::is_null() const {
+	bool Value::isNull() const {
 		return data->buffer_type == MYSQL_TYPE_NULL
-			|| null_value;
+			|| nullValue;
 	}
 
 	void Value::clear() {
-		if (data->buffer && data->buffer != &local_buffer) {
+		// Safeguard if we were not initialized.
+		if (!data)
+			return;
+
+		if (data->buffer && data->buffer != &localBuffer) {
 			free(data->buffer);
 		}
 		data->buffer = nullptr;
 		data->buffer_type = MYSQL_TYPE_NULL;
-		null_value = true;
-		unsigned_value = false;
+		nullValue = true;
+		data->is_unsigned = false;
 		error = false;
-	}
-
-
-	/**
-	 * ValueSet
-	 */
-
-	ValueSet::ValueSet(size_t count) : bind_data(count) {
-		values.reserve(count);
-		for (size_t i = 0; i < count; i++)
-			values.emplace_back(&bind_data[i]);
-	}
-
-	ValueSet::~ValueSet() {
-		// We need to destroy the Value instances first, as they need to look at what is inside
-		// bind_data.
-		values.clear();
 	}
 
 }

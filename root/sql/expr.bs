@@ -303,8 +303,7 @@ class StormValue extends SQLExpr {
 
 	// Build.
 	void build(QueryBuilder into) : override {
-		into.query << "?";
-		into.bind << expr;
+		into.bind(expr);
 	}
 
 	// Get a Storm expression.
