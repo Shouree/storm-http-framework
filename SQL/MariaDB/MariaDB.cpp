@@ -134,6 +134,7 @@ namespace sql {
 		if (stmt) {
 			columns = null;
 			colCount = 0;
+			mysql_stmt_free_result(stmt);
 			mysql_stmt_reset(stmt);
 		}
 	}
@@ -152,8 +153,13 @@ namespace sql {
 		if (mysql_stmt_execute(stmt))
 			throwError();
 
-		colCount = mysql_stmt_field_count(stmt);
 		lastChanges = mysql_stmt_affected_rows(stmt);
+
+		MYSQL_RES *metadata = mysql_stmt_result_metadata(stmt);
+		colCount = mysql_num_fields(metadata);
+		// columns = mysql_fetch_fields(metadata);
+		TODO(L"free_result here will likely invalidate columns, so we need to re-write ValueSet!");
+		mysql_free_result(metadata);
 
 		return Result(this);
 	}
