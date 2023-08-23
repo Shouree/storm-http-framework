@@ -100,16 +100,29 @@ namespace sql {
 			// Number of changes from last execute.
 			Nat lastChanges;
 
-			// Number of columns in the result.
-			Nat colCount;
+			/**
+			 * Bound buffers for the parameters:
+			 *
+			 * Arrays are allocated with malloc since the library has pointers into them (at least
+			 * "values", but maybe also to "resultBind").
+			 */
 
-			// Allocated MYSQL_BIND structures that are bound to the statement. These are allocated
-			// with 'malloc' since they are not allowed to move!
-			UNKNOWN(PTR_NOGC) MYSQL_BIND *colBind;
+			Nat paramCount;
+			UNKNOWN(PTR_NOGC) MYSQL_BIND *paramBinds;
+			UNKNOWN(PTR_NOGC) Value *paramValues;
 
-			// Allocated Value structures that are referenced from colBind. These are allocated with
-			// 'malloc' since 'colBind' contains references into them.
-			UNKNOWN(PTR_NOGC) Value *colValues;
+
+			/**
+			 * Bound buffers for the result:
+			 *
+			 * Arrays are allocated with malloc since the library has pointers into them (at least
+			 * "values", but maybe also to "resultBind").
+			 */
+
+			Nat resultCount;
+			UNKNOWN(PTR_NOGC) MYSQL_BIND *resultBinds;
+			UNKNOWN(PTR_NOGC) Value *resultValues;
+
 
 			// Resets a prepared statement on client and server to state after prepare if needed.
 			void reset();

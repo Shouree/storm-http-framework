@@ -6,6 +6,10 @@
 
 namespace sql {
 
+	// Number of bytes to allocate for strings as an initial guess. If most strings fit here, we
+	// avoid back and forth to the library. We don't want to waste too much memory, however.
+	static const size_t DEFAULT_STRING_SIZE = 32;
+
 	MySQL::MySQL(Host c, Str *user, MAYBE(Str *) password, Str *database)
 		: MariaDBBase(c, user, password, database) {}
 
@@ -90,8 +94,36 @@ namespace sql {
 
 
 
+	static void freeBinds(Nat &count, MYSQL_BIND *&binds, Value *&values) {
+		if (values) {
+			for (Nat i = 0; i < count; i++)
+				values[i].~Value();
 
-	MariaDBBase::Stmt::Stmt(MariaDBBase *owner, Str *query) : owner(owner) {
+			free(values);
+			values = null;
+		}
+
+		if (binds) {
+			free(binds);
+			binds = null;
+		}
+
+		count = 0;
+	}
+
+	static void allocBinds(Nat count, MYSQL_BIND *&binds, Value *&values) {
+		binds = (MYSQL_BIND *)calloc(count, sizeof(MYSQL_BIND));
+		values = (Value *)calloc(count, sizeof(Value));
+
+		for (Nat i = 0; i < count; i++)
+			new (values + i) Value(binds + i);
+	}
+
+	MariaDBBase::Stmt::Stmt(MariaDBBase *owner, Str *query)
+		: owner(owner),
+		  paramCount(0), paramBinds(null), paramValues(0),
+		  resultCount(0), resultBinds(null), resultValues(0) {
+
 		stmt = (*owner->api->mysql_stmt_init)(owner->handle);
 		if (!stmt)
 			owner->throwError();
@@ -100,6 +132,10 @@ namespace sql {
 			if ((*owner->api->mysql_stmt_prepare)(stmt, query->utf8_str(), -1)) {
 				throwError();
 			}
+
+			paramCount = (*owner->api->mysql_stmt_param_count)(stmt);
+			if (paramCount > 0)
+				allocBinds(paramCount, paramBinds, paramValues);
 
 		} catch (...) {
 			finalize();
@@ -123,16 +159,8 @@ namespace sql {
 	}
 
 	void MariaDBBase::Stmt::finalize() {
-		for (Nat i = 0; i < colCount; i++)
-			colValues[i].~Value();
-
-		free(colValues);
-		colValues = null;
-
-		free(colBind);
-		colBind = null;
-
-		colCount = 0;
+		freeBinds(paramCount, paramBinds, paramValues);
+		freeBinds(resultCount, resultBinds, resultValues);
 
 		if (stmt) {
 			(*owner->api->mysql_stmt_close)(stmt);
@@ -141,16 +169,7 @@ namespace sql {
 	}
 
 	void MariaDBBase::Stmt::reset() {
-		for (Nat i = 0; i < colCount; i++)
-			colValues[i].~Value();
-
-		free(colValues);
-		colValues = null;
-
-		free(colBind);
-		colBind = null;
-
-		colCount = 0;
+		freeBinds(resultCount, resultBinds, resultValues);
 
 		if (stmt) {
 			(*owner->api->mysql_stmt_free_result)(stmt);
@@ -158,16 +177,47 @@ namespace sql {
 		}
 	}
 
-	void MariaDBBase::Stmt::bind(Nat pos, Str *str) {}
-	void MariaDBBase::Stmt::bind(Nat pos, Bool b) {}
-	void MariaDBBase::Stmt::bind(Nat pos, Int i) {}
-	void MariaDBBase::Stmt::bind(Nat pos, Long l) {}
-	void MariaDBBase::Stmt::bind(Nat pos, Float f) {}
-	void MariaDBBase::Stmt::bind(Nat pos, Double d) {}
-	void MariaDBBase::Stmt::bindNull(Nat pos) {}
+	void MariaDBBase::Stmt::bind(Nat pos, Str *str) {
+		if (pos < paramCount)
+			paramValues[pos].setString(str);
+	}
+
+	void MariaDBBase::Stmt::bind(Nat pos, Bool b) {
+		if (pos < paramCount)
+			paramValues[pos].setInt(b ? 1 : 0);
+	}
+
+	void MariaDBBase::Stmt::bind(Nat pos, Int i) {
+		if (pos < paramCount)
+			paramValues[pos].setInt(i);
+	}
+
+	void MariaDBBase::Stmt::bind(Nat pos, Long l) {
+		if (pos < paramCount)
+			paramValues[pos].setInt(l);
+	}
+
+	void MariaDBBase::Stmt::bind(Nat pos, Float f) {
+		if (pos < paramCount)
+			paramValues[pos].setFloat(f);
+	}
+
+	void MariaDBBase::Stmt::bind(Nat pos, Double d) {
+		if (pos < paramCount)
+			paramValues[pos].setFloat(d);
+	}
+
+	void MariaDBBase::Stmt::bindNull(Nat pos) {
+		if (pos < paramCount)
+			paramValues[pos].setNull();
+	}
 
 	Statement::Result MariaDBBase::Stmt::execute() {
 		reset();
+
+		if (paramBinds) {
+			(*owner->api->mysql_stmt_bind_param)(stmt, paramBinds);
+		}
 
 		if ((*owner->api->mysql_stmt_execute)(stmt))
 			throwError();
@@ -175,33 +225,41 @@ namespace sql {
 		lastChanges = (*owner->api->mysql_stmt_affected_rows)(stmt);
 
 		MYSQL_RES *metadata = (*owner->api->mysql_stmt_result_metadata)(stmt);
-		colCount = (*owner->api->mysql_num_fields)(metadata);
+		resultCount = (*owner->api->mysql_num_fields)(metadata);
 
 		MYSQL_FIELD *columns = (*owner->api->mysql_fetch_fields)(metadata);
-		colBind = (MYSQL_BIND *)calloc(colCount, sizeof(MYSQL_BIND));
-		colValues = (Value *)calloc(colCount, sizeof(Value));
+		allocBinds(resultCount, resultBinds, resultValues);
 
-		for (Nat i = 0; i < colCount; i++) {
-			new (colValues + i) Value(colBind + i);
+		for (Nat i = 0; i < resultCount; i++) {
+			switch (columns[i].type) {
+			case MYSQL_TYPE_STRING:
+			case MYSQL_TYPE_VAR_STRING:
+			case MYSQL_TYPE_BLOB:
+				// Allocate some size. We ask for the real size later on.
+				resultValues[i].setString(DEFAULT_STRING_SIZE);
+				break;
 
-			if (IS_NUM(columns[i].type)) {
-				// Treat all integers as 'Long'.
-				if (columns[i].flags & UNSIGNED_FLAG)
-					colValues[i].setUInt(0);
-				else
-					colValues[i].setInt(0);
-			} else if (columns[i].type == MYSQL_TYPE_STRING
-					|| columns[i].type == MYSQL_TYPE_VAR_STRING
-					|| columns[i].type == MYSQL_TYPE_BLOB) {
-				// Set length to 0 to ask for the real size.
-				colValues[i].setString(0);
+			case MYSQL_TYPE_FLOAT:
+			case MYSQL_TYPE_DOUBLE:
+				resultValues[i].setFloat(0);
+				break;
+
+			default:
+				if (IS_NUM(columns[i].type)) {
+					// Treat all integers as 'Long'.
+					if (columns[i].flags & UNSIGNED_FLAG)
+						resultValues[i].setUInt(0);
+					else
+						resultValues[i].setInt(0);
+				}
+				break;
 			}
 		}
 
 		(*owner->api->mysql_free_result)(metadata);
 
 		// Bind the result now.
-		if ((*owner->api->mysql_stmt_bind_result)(stmt, colBind))
+		if ((*owner->api->mysql_stmt_bind_result)(stmt, resultBinds))
 			throwError();
 
 		return Result(this);
@@ -218,8 +276,10 @@ namespace sql {
 	}
 
 	Maybe<Row> MariaDBBase::Stmt::nextRow() {
-		if (!colValues)
+		if (!resultValues)
 			return Maybe<Row>();
+
+		TODO(L"If we detect that another statement should be executed, we need to call store_result for this one so we can continue!");
 
 		// Fetch the next row.
 		int result = (*owner->api->mysql_stmt_fetch)(stmt);
@@ -235,10 +295,10 @@ namespace sql {
 		// to check specifically for this here, since we always check string lengths.
 
 		// Extract the results.
-		Row::Builder builder = Row::builder(engine(), colCount);
+		Row::Builder builder = Row::builder(engine(), resultCount);
 
-		for (Nat i = 0; i < colCount; i++) {
-			Value &v = colValues[i];
+		for (Nat i = 0; i < resultCount; i++) {
+			Value &v = resultValues[i];
 
 			if (v.isNull()) {
 				builder.pushNull();
@@ -246,12 +306,14 @@ namespace sql {
 				builder.push(Long(v.getInt()));
 			} else if (v.isUInt()) {
 				builder.push(Long(v.getUInt())); // TODO: Maybe support unsigned values also?
+			} else if (v.isFloat()) {
+				builder.push(v.getFloat());
 			} else if (v.isString()) {
 				size_t sz = v.isTruncated();
 				if (sz) {
 					// Re-fetch to see if it was truncated.
 					v.setString(sz);
-					(*owner->api->mysql_stmt_fetch_column)(stmt, colBind + i, i, 0);
+					(*owner->api->mysql_stmt_fetch_column)(stmt, resultBinds + i, i, 0);
 				}
 
 				builder.push(v.getString(engine()));

@@ -9,7 +9,7 @@ namespace storm {
 	 *
 	 * All functions named 'convert' read from a null-terminated string and outputs the encoded data
 	 * to 'to' until a maximum of 'maxCount' characters have been emitted (including the null
-	 * character). The number of filled entries is returning, including the terminating null character.
+	 * character). The number of filled entries is returned, including the terminating null character.
 	 * Note that encoding might be invalid if the convert functions run out of space.
 	 */
 

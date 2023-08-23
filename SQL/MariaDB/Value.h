@@ -25,27 +25,30 @@ namespace sql {
 		// dynamic data types (e.g. strings), it is possible to set an "empty" representation
 		// and populate it later. In these cases, call the version that takes a length parameter
 		// as appropriate.
-		void setInt(int64_t value);
-		void setUInt(uint64_t value);
-		void setString(const std::string &value);
+		void setInt(Long value);
+		void setUInt(Word value);
+		void setFloat(Double value);
+		void setString(Str *value);
 		void setString(size_t max_length);
 		void setNull();
 
 		// Check contained type.
 		bool isInt() const;
 		bool isUInt() const;
+		bool isFloat() const;
 		bool isString() const;
 		bool isNull() const;
 
 		// Get the value as a particular type.
 		Long getInt() const;
 		Word getUInt() const;
+		Double getFloat() const;
 		Str *getString(Engine &e) const;
 
 		// Check if truncated. If truncated, return the full size of the data.
 		size_t isTruncated() const {
 			if (error)
-				return data->buffer_length;
+				return dataLength;
 			else
 				return 0;
 		}
@@ -60,11 +63,15 @@ namespace sql {
 		// Truncation error?
 		my_bool error;
 
+		// Data length. Only used for strings and other dynamic data structures.
+		unsigned long dataLength;
+
 		// Inline data storage large enough to store an integer. This is so that we can avoid
 		// some allocations when interoperating with MySQL.
 		union Data {
 			Long signedVal;
 			Word unsignedVal;
+			Double floatVal;
 		} localBuffer;
 
 		// Clear any data in this value, and re-set into the generic null representation.

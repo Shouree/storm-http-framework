@@ -5,7 +5,7 @@
 namespace sql {
 
 	Value::Value(MYSQL_BIND *data)
-		: data(data), nullValue(false), error(false) {
+		: data(data), nullValue(false), error(false), dataLength(0) {
 
 		// Clear the data, as per the manual. There are many fields that are not "public", so
 		// this is the "sanctioned" way of doing this...
@@ -13,7 +13,7 @@ namespace sql {
 
 		// Set 'length' to 'buffer_length'. This is allowed in the documentation, and allows us
 		// to change 'length' without re-submitting the binds to MySQL.
-		data->length = &data->buffer_length;
+		data->length = &dataLength;
 
 		// Set is_null so that we can change null values. Documentation says that
 		// MYSQL_TYPE_NULL is an alternative.
@@ -33,36 +33,46 @@ namespace sql {
 		memset(data, 0, sizeof(MYSQL_BIND));
 	}
 
-	void Value::setInt(int64_t value) {
+	void Value::setInt(Long value) {
 		clear();
 		data->buffer_type = MYSQL_TYPE_LONGLONG;
 		data->buffer = &localBuffer;
-		data->buffer_length = sizeof(int64_t);
+		data->buffer_length = sizeof(Long);
 		data->is_unsigned = false;
 		nullValue = false;
 		localBuffer.signedVal = value;
 	}
 
-	void Value::setUInt(uint64_t value) {
+	void Value::setUInt(Word value) {
 		clear();
 		data->buffer_type = MYSQL_TYPE_LONGLONG;
 		data->buffer = &localBuffer;
-		data->buffer_length = sizeof(int64_t);
-		data->buffer = &localBuffer;
+		data->buffer_length = sizeof(Word);
 		data->is_unsigned = true;
 		nullValue = false;
 		localBuffer.unsignedVal = value;
 	}
 
-	void Value::setString(const std::string &value) {
+	void Value::setFloat(Double value) {
+		clear();
+		data->buffer_type = MYSQL_TYPE_DOUBLE;
+		data->buffer_length = sizeof(Double);
+		data->buffer = &localBuffer;
+		data->is_unsigned = false;
+		nullValue = false;
+		localBuffer.floatVal = value;
+	}
+
+	void Value::setString(Str *value) {
 		clear();
 
-		size_t length = value.size() + 1;
+		size_t length = convert(value->c_str(), null, 0);
 
 		data->buffer_type = MYSQL_TYPE_STRING;
 		data->buffer = malloc(length);
-		strncpy(static_cast<char *>(data->buffer), value.c_str(), length);
 		data->buffer_length = length;
+		convert(value->c_str(), (char *)data->buffer, length);
+		dataLength = length - 1; // Don't add the null terminator.
 		nullValue = false;
 	}
 
@@ -75,6 +85,7 @@ namespace sql {
 			data->buffer = nullptr;
 		else
 			data->buffer = malloc(length);
+		dataLength = 0;
 	}
 
 	void Value::setNull() {
@@ -85,14 +96,14 @@ namespace sql {
 		return data->buffer_type == MYSQL_TYPE_LONGLONG;
 	}
 
-	int64_t Value::getInt() const {
+	Long Value::getInt() const {
 		assert(isInt());
 
 		if (nullValue)
 			return 0;
 
 		if (data->is_unsigned)
-			return static_cast<int64_t>(localBuffer.unsignedVal);
+			return static_cast<Long>(localBuffer.unsignedVal);
 		else
 			return localBuffer.signedVal;
 	}
@@ -101,7 +112,7 @@ namespace sql {
 		return data->buffer_type == MYSQL_TYPE_LONGLONG;
 	}
 
-	uint64_t Value::getUInt() const {
+	Word Value::getUInt() const {
 		assert(isUInt());
 
 		if (nullValue)
@@ -110,7 +121,20 @@ namespace sql {
 		if (data->is_unsigned)
 			return localBuffer.unsignedVal;
 		else
-			return static_cast<uint64_t>(localBuffer.signedVal);
+			return static_cast<Word>(localBuffer.signedVal);
+	}
+
+	bool Value::isFloat() const {
+		return data->buffer_type == MYSQL_TYPE_DOUBLE;
+	}
+
+	Double Value::getFloat() const {
+		assert(isFloat());
+
+		if (nullValue)
+			return 0;
+
+		return localBuffer.floatVal;
 	}
 
 	bool Value::isString() const {
@@ -124,11 +148,11 @@ namespace sql {
 		if (nullValue)
 			return new (e) Str();
 
-		if (data->buffer_length == 0)
+		if (data->buffer_length == 0 || dataLength == 0)
 			return new (e) Str();
 
 		const char *buffer = static_cast<const char *>(data->buffer);
-		GcArray<wchar> *converted = toWChar(e, buffer, data->buffer_length);
+		GcArray<wchar> *converted = toWChar(e, buffer, dataLength);
 		return new (e) Str(converted);
 	}
 
@@ -150,6 +174,7 @@ namespace sql {
 		nullValue = true;
 		data->is_unsigned = false;
 		error = false;
+		dataLength = 0;
 	}
 
 }
