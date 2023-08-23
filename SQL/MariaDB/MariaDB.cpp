@@ -112,6 +112,17 @@ namespace sql {
 		}
 	}
 
+	Int MariaDBBase::queryLastRowId() {
+		if (!lastRowIdQuery) {
+			lastRowIdQuery = new (this) Stmt(this, new (this) Str(S("SELECT LAST_INSERT_ID();")));
+		}
+
+		Statement::Result result = lastRowIdQuery->execute();
+		Int id = result.next().value().getInt(0);
+		result.finalize();
+		return id;
+	}
+
 
 	/**
 	 * The statement.
@@ -143,7 +154,7 @@ namespace sql {
 	}
 
 	MariaDBBase::Stmt::Stmt(MariaDBBase *owner, Str *query)
-		: owner(owner),
+		: owner(owner), lastId(-1),
 		  paramCount(0), paramBinds(null), paramValues(0),
 		  resultCount(0), resultBinds(null), resultValues(0) {
 
@@ -303,18 +314,17 @@ namespace sql {
 
 		} else {
 			// No result, the metadata returned null.
-			TODO(L"We might want to take this opportunity to fetch the last insert id!");
-			resultCount = 0;
 			reset();
+
+			// This means it is interesting to query for a row id!
+			lastId = owner->queryLastRowId();
 		}
 
 		return Result(this);
 	}
 
 	Int MariaDBBase::Stmt::lastRowId() {
-		// Need to execute query: SELECT LAST_INSERT_ID() to the DB.
-		assert(false, L"Not implemented yet!");
-		return -1;
+		return lastId;
 	}
 
 	void MariaDBBase::Stmt::disposeResult() {
@@ -393,6 +403,8 @@ namespace sql {
 		}
 		b->reverse();
 
+		// Not really necessary, since 'nextRow' calls reset() when we reach the end. But here for
+		// clarity as it does not hurt.
 		reset();
 
 		buffer = b;

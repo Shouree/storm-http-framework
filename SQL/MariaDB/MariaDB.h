@@ -52,6 +52,9 @@ namespace sql {
 		// Called by Stmt: Ask any current fetching statement to stop fetching data.
 		void clearFetch();
 
+		// Find the last row id.
+		Int queryLastRowId();
+
 	private:
 		// Handle to the database.
 		UNKNOWN(PTR_NOGC) MYSQL *handle;
@@ -62,6 +65,9 @@ namespace sql {
 		// Current statement that has not yet stored its results. We use this to tell it to finish
 		// result extraction when we need to execute another statement. Might be null.
 		Stmt *currentFetching;
+
+		// Cached statement for querying the last row id.
+		Stmt *lastRowIdQuery;
 
 	public:
 
@@ -118,6 +124,10 @@ namespace sql {
 
 			// Number of changes from last execute.
 			Nat lastChanges;
+
+			// Last row id. Fetched if we detect that there are no "regular" results, which
+			// indicates an insert statement.
+			Int lastId;
 
 			// Array of rows that we have buffered. In reverse order, so it is easy to pop them all. Might be null.
 			Array<Row> *buffer;
