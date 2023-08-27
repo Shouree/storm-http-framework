@@ -72,6 +72,36 @@ namespace sql {
 		return new (this) Stmt(this, query);
 	}
 
+	Statement *MariaDBBase::prepare(QueryString *query) {
+		return prepare(query->generate(new (this) Visitor()));
+	}
+
+	MariaDBBase::Visitor::Visitor() {}
+
+	void MariaDBBase::Visitor::name(StrBuf *to, Str *name) {
+		*to << S("`") << name << S("`");
+	}
+
+	void MariaDBBase::Visitor::type(StrBuf *to, QueryString::Type type, Nat size) {
+		if (size != Nat(-1))
+			TODO(L"Support explicit sizes!");
+
+		switch (type) {
+		case QueryString::text:
+			*to << S("TEXT");
+			break;
+		case QueryString::integer:
+			*to << S("INTEGER");
+			break;
+		case QueryString::real:
+			*to << S("FLOAT");
+			break;
+		default:
+			assert(false, L"Unknown DB type!");
+			break;
+		}
+	}
+
 	Array<Str *> *MariaDBBase::tables() {
 		TODO(L"Implement me!");
 		return new (this) Array<Str *>();
@@ -268,7 +298,7 @@ namespace sql {
 		if ((*owner->api->mysql_stmt_execute)(stmt))
 			throwError();
 
-		lastChanges = (*owner->api->mysql_stmt_affected_rows)(stmt);
+		lastChanges = Nat((*owner->api->mysql_stmt_affected_rows)(stmt));
 
 		MYSQL_RES *metadata = (*owner->api->mysql_stmt_result_metadata)(stmt);
 

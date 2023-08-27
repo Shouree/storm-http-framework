@@ -502,7 +502,7 @@ namespace storm {
 	Url *executableFileUrl(Engine &e) {
 		std::vector<wchar_t> buffer(MAX_PATH + 1, 0);
 		do {
-			GetModuleFileName(NULL, &buffer[0], buffer.size());
+			GetModuleFileName(NULL, &buffer[0], DWORD(buffer.size()));
 			if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
 				buffer.resize(buffer.size() * 2);
 				continue;

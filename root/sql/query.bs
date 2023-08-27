@@ -19,6 +19,29 @@ private Expr bindParam(SrcPos pos, Block block, Expr statement, Nat id, Expr par
 	namedExpr(block, pos, "bind", statement, params);
 }
 
+// Class for injecting a QueryString as a literal in Basic Storm.
+private class QueryStrLiteral extends Expr {
+	init(SrcPos pos, QueryString val) {
+		init(pos) { val = val; }
+	}
+
+	QueryString val;
+
+	ExprResult result() : override {
+		ExprResult(named{QueryString});
+	}
+
+	void code(CodeGen state, CodeResult r) {
+		if (r.needed()) {
+			state.l << core:asm:mov(r.location(state), core:asm:objPtr(val));
+		}
+	}
+
+	void toS(StrBuf to) {
+		to << "{" << val.toS << "}";
+	}
+}
+
 // Create a query expression for a typed query. Helper.
 private Expr typedQueryExpr(SrcPos pos, Block block, Expr connection, Database contents, Query query) on Compiler {
 	query.resolve(ResolveContext(block, contents));
@@ -34,7 +57,7 @@ private Expr typedQueryExpr(SrcPos pos, Block block, Expr connection, Database c
 		// Call "connection.prepare(id, query)".
 		Actuals params;
 		params.add(NumLiteral(pos, id));
-		params.add(StrLiteral(pos, q.query.toS));
+		params.add(QueryStrLiteral(pos, q.query.build));
 		var stmt = namedExpr(r, pos, "prepare", connection, params);
 		var varDecl = Var(r, SStr("statement"), stmt);
 		r.add(varDecl);
@@ -68,7 +91,7 @@ private Expr untypedQueryExpr(SrcPos pos, Block block, Expr database, Query quer
 	ExprBlock r(pos, block);
 
 	var prepared = {
-		var stmt = namedExpr(r, pos, "prepare", database, Actuals(StrLiteral(pos, q.query.toS)));
+		var stmt = namedExpr(r, pos, "prepare", database, Actuals(QueryStrLiteral(pos, q.query.build)));
 		var varDecl = Var(r, SStr("statement"), stmt);
 		r.add(varDecl);
 		LocalVarAccess(pos, varDecl.var);
@@ -174,10 +197,10 @@ class TableName on Compiler {
 
 	// Build.
 	void build(QueryBuilder b) {
-		b.name(name);
+		b.query.name(name);
 		if (name != alias) {
-			b.query << " AS ";
-			b.name(alias);
+			b.query.put(" AS ");
+			b.query.name(alias);
 		}
 	}
 
@@ -284,25 +307,14 @@ class ResolveContext on Compiler {
  */
 class QueryBuilder on Compiler {
 	// String builder that contains the final SQL query.
-	StrBuf query;
+	QueryStringBuilder query;
 
 	// Expressions that are used to bind parameters.
 	Expr[] bind;
 
-	// Append a properly escaped SQL name to the query.
-	void name(Str name) {
-		// It seems in standard SQL, double quotes are used for identifiers.
-		// I am unable to find anything that describes how to include double quotes in an identifier.
-		// Perhaps we should just disallow that (currently it is implicitly disallowed due to the grammar).
-		print("TODO: Generalize quoting in query.bs! Current approach works on SQLite and MySQL, but is not standard.");
-		query << "`" << name << "`";
-		// query << "\"" << name << "\"";
-	}
-
 	// Append a bound parameter.
 	void bind(Expr expr) {
-		// TODO: This also varies...
-		query << "?";
+		query.placeholder();
 		bind << expr;
 	}
 
@@ -430,24 +442,24 @@ class InsertQuery extends Query {
 	QueryBuilder build() : override {
 		QueryBuilder r;
 
-		r.query << "INSERT INTO ";
+		r.query.put("INSERT INTO ");
 		r.name(table.v);
 		if (columns.any) {
-			r.query << " (";
+			r.query.put(" (");
 			for (i, col in columns) {
 				if (i > 0)
-					r.query << ", ";
+					r.query.put(", ");
 				r.name(col.v);
 			}
-			r.query << ")";
+			r.query.put(")");
 		}
-		r.query << " VALUES (";
+		r.query.put(" VALUES (");
 		for (i, v in values) {
 			if (i > 0)
-				r.query << ", ";
+				r.query.put(", ");
 			v.build(r);
 		}
-		r.query << ");";
+		r.query.put(");");
 
 		r;
 	}
@@ -530,22 +542,22 @@ class UpdateQuery extends Query {
 	QueryBuilder build() : override {
 		QueryBuilder r;
 
-		r.query << "UPDATE ";
+		r.query.put("UPDATE ");
 		r.name(table.v);
-		r.query << " SET ";
+		r.query.put(" SET ");
 		for (i, x in update) {
 			if (i > 0)
-				r.query << ", ";
-			r.query << x.column.v << " = ";
+				r.query.put(", ");
+			r.query.put(x.column.v << " = ");
 			x.value.build(r);
 		}
 
 		if (condition) {
-			r.query << " WHERE ";
+			r.query.put(" WHERE ");
 			condition.build(r);
 		}
 
-		r.query << ";";
+		r.query.put(";");
 
 		r;
 	}
@@ -620,13 +632,13 @@ class DeleteQuery extends Query {
 	QueryBuilder build() : override {
 		QueryBuilder r;
 
-		r.query << "DELETE FROM ";
+		r.query.put("DELETE FROM ");
 		r.name(table.v);
 		if (condition) {
-			r.query << " WHERE ";
+			r.query.put(" WHERE ");
 			condition.build(r);
 		}
-		r.query << ";";
+		r.query.put(";");
 
 		r;
 	}
@@ -679,9 +691,9 @@ class SelectBase extends Query {
 
 		// Build.
 		void build(QueryBuilder to) {
-			to.query << type << " ";
+			to.query.put(type << " ");
 			table.build(to);
-			to.query << " ON ";
+			to.query.put(" ON ");
 			expr.build(to);
 		}
 
@@ -728,12 +740,12 @@ class SelectBase extends Query {
 	// Build the tail of the query (i.e. JOIN and WHERE clauses).
 	protected void buildTail(QueryBuilder to) {
 		for (j in joins) {
-			to.query << " ";
+			to.query.put(" ");
 			j.build(to);
 		}
 
 		if (condition) {
-			to.query << " WHERE ";
+			to.query.put(" WHERE ");
 			condition.build(to);
 		}
 	}
@@ -808,7 +820,7 @@ class SelectQuery extends SelectBase {
 		void build(QueryBuilder to) {
 			if (table) {
 				to.name(table);
-				to.query << ".";
+				to.query.put(".");
 			}
 			to.name(column);
 		}
@@ -855,14 +867,14 @@ class SelectQuery extends SelectBase {
 		void build(QueryBuilder to) {
 			if (table) {
 				to.name(table);
-				to.query << ".";
+				to.query.put(".");
 			}
 			to.name(column);
 
 			if (ascending)
-				to.query << " ASC";
+				to.query.put(" ASC");
 			else
-				to.query << " DESC";
+				to.query.put(" DESC");
 		}
 
 		// To string.
@@ -951,31 +963,31 @@ class SelectQuery extends SelectBase {
 	QueryBuilder build() : override {
 		QueryBuilder r;
 
-		r.query << "SELECT ";
+		r.query.put("SELECT ");
 		if (cols.empty) {
-			r.query << "*";
+			r.query.put("*");
 		} else {
 			for (i, name in cols) {
 				if (i > 0)
-					r.query << ", ";
+					r.query.put(", ");
 				name.build(r);
 			}
 		}
-		r.query << " FROM ";
+		r.query.put(" FROM ");
 		table.build(r);
 
 		buildTail(r);
 
 		if (orderBy.any) {
-			r.query << " ORDER BY ";
+			r.query.put(" ORDER BY ");
 			for (i, name in orderBy) {
 				if (i > 0)
-					r.query << ", ";
+					r.query.put(", ");
 				name.build(r);
 			}
 		}
 
-		r.query << ";";
+		r.query.put(";");
 		r;
 	}
 
@@ -1089,12 +1101,12 @@ class CountQuery extends SelectBase {
 	QueryBuilder build() : override {
 		QueryBuilder r;
 
-		r.query << "SELECT COUNT(*) FROM ";
+		r.query.put("SELECT COUNT(*) FROM ");
 		table.build(r);
 
 		buildTail(r);
 
-		r.query << ";";
+		r.query.put(";");
 		r;
 	}
 
@@ -1147,7 +1159,7 @@ class CreateQuery extends Query {
 	// Build the query.
 	QueryBuilder build() : override {
 		QueryBuilder r;
-		r.query << table.toSQL(ifNotExists, []);
+		r.query.put(table.toSQL(ifNotExists, []));
 		r;
 	}
 
@@ -1199,17 +1211,17 @@ class IndexQuery extends Query {
 	QueryBuilder build() : override {
 		QueryBuilder r;
 
-		r.query << "CREATE INDEX ";
+		r.query.put("CREATE INDEX ");
 		r.name(name);
-		r.query << " ON ";
+		r.query.put(" ON ");
 		r.name(table.v);
-		r.query << "(";
+		r.query.put("(");
 		for (i, c in columns) {
 			if (i > 0)
-				r.query << ", ";
+				r.query.put(", ");
 			r.name(c.v);
 		}
-		r.query << ");";
+		r.query.put(");");
 
 		r;
 	}
@@ -1242,9 +1254,9 @@ class DropQuery extends Query {
 	QueryBuilder build() : override {
 		QueryBuilder r;
 
-		r.query << "DROP TABLE ";
+		r.query.put("DROP TABLE ");
 		r.name(table.v);
-		r.query << ";";
+		r.query.put(";");
 
 		r;
 	}

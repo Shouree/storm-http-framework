@@ -24,6 +24,7 @@ namespace sql {
 
 		// Prepare a statement.
 		Statement *STORM_FN prepare(Str *query) override;
+		Statement *STORM_FN prepare(QueryString *query) override;
 
 		// Close the connection.
 		void STORM_FN close() override;
@@ -104,6 +105,17 @@ namespace sql {
 
 			// Ensure that the statement is ready for manipulation.
 			void reset();
+		};
+
+
+		/**
+		 * Visitor to transform query strings into proper queries.
+		 */
+		class Visitor : public QueryString::Visitor {
+			STORM_CLASS;
+		public:
+			STORM_CTOR Visitor();
+			void STORM_FN type(StrBuf *to, QueryString::Type type, Nat size) override;
 		};
 	};
 

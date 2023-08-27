@@ -24,13 +24,91 @@ namespace sql {
 
 #if defined(WINDOWS)
 
+	// MSVC "hack" to get the address of the module:
+	extern "C" IMAGE_DOS_HEADER __ImageBase;
+
 	InitFn findDriverLib(Engine &e) {
-		throw new (e) SQLError(L"Can not load the MariaDB driver on Windows yet!");
+#ifdef X64
+		const char *fnName = "mysql_init";
+#else
+		const char *fnName = "_mysql_init@4";
+#endif
+
+		const char *names[] = {
+			"libmariadb.dll",
+#ifdef X64
+			"libmariadb64.dll",
+#else
+			"libmariadb32.dll",
+#endif
+		};
+
+		HMODULE moduleHandle = (HMODULE)&__ImageBase;
+
+#if 0
+		// Try to get the current DLL handle. Only needed if we are not compiling on MSVC.
+		if (!GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS
+								| GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+								(LPWSTR)&findDriverLib, // ptr to some function in the modle
+								&moduleHandle)) {
+			throw new (e) SQLError(new (e) Str(S("Could not find the path to the SQL lib DLL file.")));
+		}
+#endif
+
+		std::vector<wchar_t> buffer(MAX_PATH + 1, 0);
+		do {
+			GetModuleFileName(moduleHandle, &buffer[0], DWORD(buffer.size()));
+			if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+				buffer.resize(buffer.size() * 2);
+				continue;
+			}
+		} while (false);
+
+		// Find the last backslash:
+		size_t pathEnd = buffer.size();
+		while (pathEnd > 0) {
+			if (buffer[pathEnd - 1] == '\\' || buffer[pathEnd - 1] == '/')
+				break;
+			pathEnd--;
+		}
+
+		// Try all names:
+		for (size_t i = 0; i < ARRAY_COUNT(names); i++) {
+			buffer.resize(pathEnd + strlen(names[i]) + 1);
+			for (size_t j = 0; names[i][j]; j++)
+				buffer[pathEnd + j] = names[i][j];
+
+			HMODULE lib = LoadLibrary(&buffer[0]);
+			if (!lib)
+				continue;
+
+			void *fn = GetProcAddress(lib, fnName);
+			if (!fn) {
+				FreeLibrary(lib);
+				continue;
+			}
+
+			return reinterpret_cast<InitFn>(fn);
+		}
+
+		// We failed. Generate a nice error message!
+		StrBuf *msg = new (e) StrBuf();
+		*msg << S("Failed to load the MariaDB library. Looked in the following locations:");
+
+		for (size_t i = 0; i < ARRAY_COUNT(names); i++) {
+			buffer.resize(pathEnd + strlen(names[i]) + 1);
+			for (size_t j = 0; names[i][j]; j++)
+				buffer[pathEnd + j] = names[i][j];
+
+			*msg << S("\n") << &buffer[0];
+		}
+		throw new (e) SQLError(msg->toS());
 	}
 
 #elif defined(POSIX)
 
 	InitFn findDriverLib(Engine &e) {
+		const char *fnName = "mysql_init";
 		const char *names[] = {
 			"libmariadb.so.3",
 			null
@@ -55,7 +133,6 @@ namespace sql {
 			throw new (e) SQLError(msg->toS());
 		}
 
-		const char *fnName = "mysql_init";
 		void *symbol = dlsym(loaded, fnName);
 
 		if (!symbol) {

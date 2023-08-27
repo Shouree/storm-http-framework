@@ -42,6 +42,31 @@ namespace sql {
 		return new (this) Stmt(this, query);
 	}
 
+	Statement *SQLite::prepare(QueryString *query) {
+		return prepare(query->generate(new (this) Visitor()));
+	}
+
+
+	SQLite::Visitor::Visitor() {}
+
+	void SQLite::Visitor::type(StrBuf *to, QueryString::Type type, Nat) {
+		switch (type) {
+		case QueryString::text:
+			*to << S("TEXT");
+			break;
+		case QueryString::integer:
+			*to << S("INTEGER");
+			break;
+		case QueryString::real:
+			*to << S("FLOAT");
+			break;
+		default:
+			assert(false, L"Unknown type!");
+			break;
+		}
+	}
+
+
 	Array<Str *> *SQLite::tables() {
 		Str *str = new (this) Str(S("SELECT name FROM sqlite_master WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite%'"));
 		Array<Str *> *names = new (this) Array<Str*>();

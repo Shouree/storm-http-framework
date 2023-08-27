@@ -70,9 +70,9 @@ namespace sql {
 
 		data->buffer_type = MYSQL_TYPE_STRING;
 		data->buffer = malloc(length);
-		data->buffer_length = length;
+		data->buffer_length = (unsigned long)length;
 		convert(value->c_str(), (char *)data->buffer, length);
-		dataLength = length - 1; // Don't add the null terminator.
+		dataLength = (unsigned long)(length - 1); // Don't add the null terminator.
 		nullValue = false;
 	}
 
@@ -80,9 +80,9 @@ namespace sql {
 		clear();
 
 		data->buffer_type = MYSQL_TYPE_STRING;
-		data->buffer_length = length;
+		data->buffer_length = (unsigned long)length;
 		if (length == 0)
-			data->buffer = nullptr;
+			data->buffer = null;
 		else
 			data->buffer = malloc(length);
 		dataLength = 0;
@@ -169,7 +169,7 @@ namespace sql {
 		if (data->buffer && data->buffer != &localBuffer) {
 			free(data->buffer);
 		}
-		data->buffer = nullptr;
+		data->buffer = null;
 		data->buffer_type = MYSQL_TYPE_NULL;
 		nullValue = true;
 		data->is_unsigned = false;
