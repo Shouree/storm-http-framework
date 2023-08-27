@@ -409,10 +409,13 @@ namespace storm {
 		return parsePath(s->engine(), s->c_str());
 	}
 
-	Url *parsePath(Engine &e, const wchar *src) {
+	Url *parsePathAsDir(Str *s) {
+		return parsePathAsDir(s->engine(), s->c_str());
+	}
+
+	static Url *parsePathI(Engine &e, const wchar *src, UrlFlags flags) {
 		Array<Str *> *parts = new (e) Array<Str *>();
 		Protocol *protocol = new (e) FileProtocol();
-		UrlFlags flags = nothing;
 
 		if (*src == 0)
 			return new (e) Url(null, parts, flags);
@@ -458,12 +461,28 @@ namespace storm {
 		return new (e) Url(protocol, parts, flags);
 	}
 
+	Url *parsePath(Engine &e, const wchar *src) {
+		return parsePathI(e, src, nothing);
+	}
+
+	Url *parsePathAsDir(Engine &e, const wchar *src) {
+		return parsePathI(e, src, isDir);
+	}
+
 #if defined(WINDOWS)
 	Url *cwdUrl(EnginePtr e) {
-		wchar_t tmp[MAX_PATH + 1];
-		tmp[0] = 0;
-		GetCurrentDirectory(MAX_PATH + 1, tmp);
-		return parsePath(e.v, tmp);
+		DWORD written = GetCurrentDirectory(0, NULL);
+		std::vector<wchar_t> buffer;
+		// Loop is only necessary if another thread modifies CWD while we are getting it.
+		do {
+			// +1 is not really needed, just to have some margin since GetCurrentDirectory sometimes
+			// returns length not including null terminator...
+			buffer.resize(written + 1);
+			buffer[0] = 0;
+			written = GetCurrentDirectory(DWORD(buffer.size()), &buffer[0]);
+		} while (written > buffer.size());
+
+		return parsePathAsDir(e.v, &buffer[0]);
 	}
 
 	Url *userConfigUrl(Str *appName) {
@@ -481,9 +500,16 @@ namespace storm {
 	}
 
 	Url *executableFileUrl(Engine &e) {
-		wchar_t tmp[MAX_PATH + 1];
-		GetModuleFileName(NULL, tmp, MAX_PATH + 1);
-		return parsePath(e, tmp);
+		std::vector<wchar_t> buffer(MAX_PATH + 1, 0);
+		do {
+			GetModuleFileName(NULL, &buffer[0], buffer.size());
+			if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+				buffer.resize(buffer.size() * 2);
+				continue;
+			}
+		} while (false);
+
+		return parsePath(e, &buffer[0]);
 	}
 
 #elif defined(POSIX)
@@ -491,7 +517,7 @@ namespace storm {
 		char path[PATH_MAX + 1] = { 0 };
 		if (!getcwd(path, PATH_MAX))
 			throw new (e.v) InternalError(S("Failed to get the current working directory."));
-		return parsePath(e.v, toWChar(e.v, path)->v);
+		return parsePathAsDir(e.v, toWChar(e.v, path)->v);
 	}
 
 	Url *userConfigUrl(Str *appName) {

@@ -169,7 +169,9 @@ namespace storm {
 	// Parse a path. (assumed to be on the local file system).
 	// TODO: We need something general!
 	Url *STORM_FN parsePath(Str *s);
+	Url *STORM_FN parsePathAsDir(Str *s);
 	Url *parsePath(Engine &e, const wchar *str);
+	Url *parsePathAsDir(Engine &e, const wchar *str);
 
 	// Get some good URL:s.
 	Url *executableFileUrl(Engine &e);
