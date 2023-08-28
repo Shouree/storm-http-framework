@@ -83,11 +83,13 @@ class Operator extends SQLExpr {
 
 	// Build the operator.
 	void build(QueryBuilder to) : override {
-		to.query << "(";
+		to.query.put("(");
 		lhs.build(to);
-		to.query << " " << sqlOp << " ";
+		to.query.put(" ");
+		to.query.put(sqlOp);
+		to.query.put(" ");
 		rhs.build(to);
-		to.query << ")";
+		to.query.put(")");
 	}
 
 	// To string.
@@ -206,7 +208,7 @@ class NotOperator extends SQLExpr {
 	}
 
 	void build(QueryBuilder to) : override {
-		to.query << "!";
+		to.query.put("!");
 		operand.build(to);
 	}
 }
@@ -245,10 +247,10 @@ class LikeOperator extends SQLExpr {
 	}
 
 	void build(QueryBuilder to) : override {
-		to.query << "(";
+		to.query.put("(");
 		lhs.build(to);
-		to.query << " LIKE ";
+		to.query.put(" LIKE ");
 		rhs.build(to);
-		to.query << ")";
+		to.query.put(")");
 	}
 }

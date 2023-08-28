@@ -443,13 +443,13 @@ class InsertQuery extends Query {
 		QueryBuilder r;
 
 		r.query.put("INSERT INTO ");
-		r.name(table.v);
+		r.query.name(table.v);
 		if (columns.any) {
 			r.query.put(" (");
 			for (i, col in columns) {
 				if (i > 0)
 					r.query.put(", ");
-				r.name(col.v);
+				r.query.name(col.v);
 			}
 			r.query.put(")");
 		}
@@ -543,12 +543,13 @@ class UpdateQuery extends Query {
 		QueryBuilder r;
 
 		r.query.put("UPDATE ");
-		r.name(table.v);
+		r.query.name(table.v);
 		r.query.put(" SET ");
 		for (i, x in update) {
 			if (i > 0)
 				r.query.put(", ");
-			r.query.put(x.column.v << " = ");
+			r.query.put(x.column.v);
+			r.query.put(" = ");
 			x.value.build(r);
 		}
 
@@ -633,7 +634,7 @@ class DeleteQuery extends Query {
 		QueryBuilder r;
 
 		r.query.put("DELETE FROM ");
-		r.name(table.v);
+		r.query.name(table.v);
 		if (condition) {
 			r.query.put(" WHERE ");
 			condition.build(r);
@@ -691,7 +692,8 @@ class SelectBase extends Query {
 
 		// Build.
 		void build(QueryBuilder to) {
-			to.query.put(type << " ");
+			to.query.put(type);
+			to.query.put(" ");
 			table.build(to);
 			to.query.put(" ON ");
 			expr.build(to);
@@ -819,10 +821,10 @@ class SelectQuery extends SelectBase {
 		// Build.
 		void build(QueryBuilder to) {
 			if (table) {
-				to.name(table);
+				to.query.name(table);
 				to.query.put(".");
 			}
-			to.name(column);
+			to.query.name(column);
 		}
 
 		// ToS.
@@ -866,10 +868,10 @@ class SelectQuery extends SelectBase {
 		// Build.
 		void build(QueryBuilder to) {
 			if (table) {
-				to.name(table);
+				to.query.name(table);
 				to.query.put(".");
 			}
-			to.name(column);
+			to.query.name(column);
 
 			if (ascending)
 				to.query.put(" ASC");
@@ -1212,14 +1214,14 @@ class IndexQuery extends Query {
 		QueryBuilder r;
 
 		r.query.put("CREATE INDEX ");
-		r.name(name);
+		r.query.name(name);
 		r.query.put(" ON ");
-		r.name(table.v);
+		r.query.name(table.v);
 		r.query.put("(");
 		for (i, c in columns) {
 			if (i > 0)
 				r.query.put(", ");
-			r.name(c.v);
+			r.query.name(c.v);
 		}
 		r.query.put(");");
 
@@ -1255,7 +1257,7 @@ class DropQuery extends Query {
 		QueryBuilder r;
 
 		r.query.put("DROP TABLE ");
-		r.name(table.v);
+		r.query.name(table.v);
 		r.query.put(";");
 
 		r;

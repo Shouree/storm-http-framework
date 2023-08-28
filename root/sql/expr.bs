@@ -65,7 +65,7 @@ class SQLLiteral extends SQLExpr {
 	}
 
 	void build(QueryBuilder into) : override {
-		toSQL(into.query);
+		into.query.put(toSQL());
 	}
 }
 
@@ -267,10 +267,10 @@ class SQLName extends SQLExpr {
 	// Build. Only used in the "unknown" case.
 	void build(QueryBuilder into) : override {
 		if (table) {
-			into.name(table);
-			into.query << ".";
+			into.query.name(table);
+			into.query.put(".");
 		}
-		into.name(name);
+		into.query.name(name);
 	}
 
 	// Result (we don't know the type).
@@ -372,9 +372,9 @@ class SQLColumn extends SQLExpr {
 
 	// Build.
 	void build(QueryBuilder into) : override {
-		into.name(table);
-		into.query << ".";
-		into.name(column.name);
+		into.query.name(table);
+		into.query.put(".");
+		into.query.name(column.name);
 	}
 
 	// Result.
@@ -404,7 +404,7 @@ class SQLBuiltIn extends SQLExpr {
 	}
 
 	void build(QueryBuilder into) : override {
-		into.query << sql;
+		into.query.put(sql);
 	}
 
 	Value computeResult() : override {
