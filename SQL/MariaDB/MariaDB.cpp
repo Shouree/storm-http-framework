@@ -72,7 +72,7 @@ namespace sql {
 		return new (this) Stmt(this, query);
 	}
 
-	Statement *MariaDBBase::prepare(QueryString *query) {
+	Statement *MariaDBBase::prepare(QueryStr *query) {
 		return prepare(query->generate(new (this) Visitor()));
 	}
 
@@ -82,18 +82,18 @@ namespace sql {
 		*to << S("`") << name << S("`");
 	}
 
-	void MariaDBBase::Visitor::type(StrBuf *to, QueryString::Type type, Nat size) {
+	void MariaDBBase::Visitor::type(StrBuf *to, QueryStr::Type type, Nat size) {
 		if (size != Nat(-1))
 			TODO(L"Support explicit sizes!");
 
 		switch (type) {
-		case QueryString::text:
+		case QueryStr::text:
 			*to << S("TEXT");
 			break;
-		case QueryString::integer:
+		case QueryStr::integer:
 			*to << S("INTEGER");
 			break;
-		case QueryString::real:
+		case QueryStr::real:
 			*to << S("FLOAT");
 			break;
 		default:

@@ -15,18 +15,18 @@ namespace sql {
 	 * - Quoting of names: MySQL uses backtick, which is non-standard. Others use single quote.
 	 * - Placeholders in prepared statements: Most accept ?, but Oracle uses a special syntax.
 	 *
-	 * The actual QueryString class is immutable. Use the QueryBuilder to build a string.
+	 * The actual QueryStr class is immutable. Use the QueryBuilder to build a string.
 	 *
 	 * The representation in the class consists of a sequence of integers that dictate what to add,
 	 * accompanied by a sequence of strings that are added as appropriate. The integers act like
 	 * "op-codes" that determine how to interpret the strings, and if anything need to be added in
 	 * between.
 	 */
-	class QueryString : public Object {
+	class QueryStr : public Object {
 		STORM_CLASS;
 	public:
 		// Enum of generic types representable here.
-		// The representation of QueryString allows annotating all types
+		// The representation of QueryStr allows annotating all types
 		// with a size parameter, even though that does not necessarily
 		// make sense for all supported types.
 		enum Type {
@@ -63,7 +63,7 @@ namespace sql {
 
 
 		// Create.
-		QueryString(GcArray<Nat> *ops, GcArray<Str *> *text);
+		QueryStr(GcArray<Nat> *ops, GcArray<Str *> *text);
 
 		// Generate a query string using the specified method.
 		Str *generate(Visitor *visitor) const;
@@ -82,13 +82,13 @@ namespace sql {
 
 
 	/**
-	 * A builder class to create a QueryString.
+	 * A builder class to create a QueryStr.
 	 */
-	class QueryStringBuilder : public Object {
+	class QueryStrBuilder : public Object {
 		STORM_CLASS;
 	public:
 		// Create.
-		STORM_CTOR QueryStringBuilder();
+		STORM_CTOR QueryStrBuilder();
 
 		// Deep copy.
 		void STORM_FN deepCopy(CloneEnv *env);
@@ -103,11 +103,11 @@ namespace sql {
 		void STORM_FN placeholder();
 
 		// Add a generic type.
-		void STORM_FN type(QueryString::Type type);
-		void STORM_FN type(QueryString::Type type, Nat size);
+		void STORM_FN type(QueryStr::Type type);
+		void STORM_FN type(QueryStr::Type type, Nat size);
 
 		// Create the query string.
-		QueryString *STORM_FN build();
+		QueryStr *STORM_FN build();
 
 	private:
 		// String buffer for the string data being built.

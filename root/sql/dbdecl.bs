@@ -441,7 +441,7 @@ class TypedConnection {
 	// Get a cached prepared statement based on its ID.
 	// TODO: One idea here is to remove statements that are "prepared" and not return them
 	// until we are done with them. That allows us to be re-entrant properly.
-	Statement prepare(Nat id, QueryString query) {
+	Statement prepare(Nat id, QueryStr query) {
 		var iter = statements.find(id);
 		if (iter == statements.end) {
 			Statement stmt = connection.prepare(query);

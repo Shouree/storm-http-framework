@@ -42,22 +42,22 @@ namespace sql {
 		return new (this) Stmt(this, query);
 	}
 
-	Statement *SQLite::prepare(QueryString *query) {
+	Statement *SQLite::prepare(QueryStr *query) {
 		return prepare(query->generate(new (this) Visitor()));
 	}
 
 
 	SQLite::Visitor::Visitor() {}
 
-	void SQLite::Visitor::type(StrBuf *to, QueryString::Type type, Nat) {
+	void SQLite::Visitor::type(StrBuf *to, QueryStr::Type type, Nat) {
 		switch (type) {
-		case QueryString::text:
+		case QueryStr::text:
 			*to << S("TEXT");
 			break;
-		case QueryString::integer:
+		case QueryStr::integer:
 			*to << S("INTEGER");
 			break;
-		case QueryString::real:
+		case QueryStr::real:
 			*to << S("FLOAT");
 			break;
 		default:

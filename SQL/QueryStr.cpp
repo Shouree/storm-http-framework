@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "QueryString.h"
+#include "QueryStr.h"
 
 namespace sql {
 
@@ -13,24 +13,24 @@ namespace sql {
 	}
 
 
-	QueryString::QueryString(GcArray<Nat> *ops, GcArray<Str *> *text)
+	QueryStr::QueryStr(GcArray<Nat> *ops, GcArray<Str *> *text)
 		: opData(ops), textData(text) {}
 
-	QueryString::Visitor::Visitor() {}
+	QueryStr::Visitor::Visitor() {}
 
-	void QueryString::Visitor::put(StrBuf *to, Str *text) {
+	void QueryStr::Visitor::put(StrBuf *to, Str *text) {
 		*to << text;
 	}
 
-	void QueryString::Visitor::name(StrBuf *to, Str *name) {
+	void QueryStr::Visitor::name(StrBuf *to, Str *name) {
 		*to << S("'") << text << S("'");
 	}
 
-	void QueryString::Visitor::placeholder(StrBuf *to) {
+	void QueryStr::Visitor::placeholder(StrBuf *to) {
 		*to << S("?");
 	}
 
-	void QueryString::Visitor::type(StrBuf *to, Type type, Nat size) {
+	void QueryStr::Visitor::type(StrBuf *to, Type type, Nat size) {
 		switch (type) {
 		case text:
 			*to << S("TEXT");
@@ -49,7 +49,7 @@ namespace sql {
 			*to << S("(") << size << S(")");
 	}
 
-	Str *QueryString::generate(Visitor *v) const {
+	Str *QueryStr::generate(Visitor *v) const {
 		StrBuf *out = new (this) StrBuf();
 
 		size_t textPos = 0;
@@ -71,7 +71,7 @@ namespace sql {
 		return out->toS();
 	}
 
-	void QueryString::toS(StrBuf *to) const {
+	void QueryStr::toS(StrBuf *to) const {
 		*to << generate(new (this) Visitor());
 	}
 
@@ -80,51 +80,51 @@ namespace sql {
 	 * The builder.
 	 */
 
-	QueryStringBuilder::QueryStringBuilder() {
+	QueryStrBuilder::QueryStrBuilder() {
 		currentStr = new (this) StrBuf();
 		ops = new (this) Array<Nat>();
 		strings = new (this) Array<Str *>();
 	}
 
-	void QueryStringBuilder::deepCopy(CloneEnv *env) {
+	void QueryStrBuilder::deepCopy(CloneEnv *env) {
 		cloned(currentStr, env);
 		cloned(ops, env);
 		cloned(strings, env);
 	}
 
-	void QueryStringBuilder::put(Str *str) {
+	void QueryStrBuilder::put(Str *str) {
 		*currentStr << str;
 	}
 
-	void QueryStringBuilder::flush() {
+	void QueryStrBuilder::flush() {
 		*strings << currentStr->toS();
 		*ops << textValue;
 		currentStr->clear();
 	}
 
-	void QueryStringBuilder::name(Str *str) {
+	void QueryStrBuilder::name(Str *str) {
 		flush();
 		*strings << str;
 		*ops << nameValue;
 	}
 
-	void QueryStringBuilder::placeholder() {
+	void QueryStrBuilder::placeholder() {
 		flush();
 		*ops << placeholderValue;
 	}
 
-	void QueryStringBuilder::type(QueryString::Type type) {
+	void QueryStrBuilder::type(QueryStr::Type type) {
 		flush();
 		*ops << Nat(type);
 	}
 
-	void QueryStringBuilder::type(QueryString::Type type, Nat size) {
+	void QueryStrBuilder::type(QueryStr::Type type, Nat size) {
 		flush();
 		*ops << (Nat(type) | tagValue);
 		*ops << size;
 	}
 
-	QueryString *QueryStringBuilder::build() {
+	QueryStr *QueryStrBuilder::build() {
 		flush();
 
 		GcArray<Nat> *o = runtime::allocArray<Nat>(engine(), &natArrayType, ops->count());
@@ -135,7 +135,7 @@ namespace sql {
 		for (Nat i = 0; i < strings->count(); i++)
 			s->v[i] = strings->at(i);
 
-		return new (this) QueryString(o, s);
+		return new (this) QueryStr(o, s);
 	}
 
 }

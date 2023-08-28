@@ -20,7 +20,7 @@ namespace sql {
 
 		// Prepares a statement for execution.
 		Statement *STORM_FN prepare(Str *query) override;
-		Statement *STORM_FN prepare(QueryString *query) override;
+		Statement *STORM_FN prepare(QueryStr *query) override;
 
 		// Closes the connection.
 		void STORM_FN close() override;
@@ -169,12 +169,12 @@ namespace sql {
 		/**
 		 * Visitor to transform query strings.
 		 */
-		class Visitor : public QueryString::Visitor {
+		class Visitor : public QueryStr::Visitor {
 			STORM_CLASS;
 		public:
 			STORM_CTOR Visitor();
 			void STORM_FN name(StrBuf *to, Str *name) override;
-			void STORM_FN type(StrBuf *to, QueryString::Type type, Nat size) override;
+			void STORM_FN type(StrBuf *to, QueryStr::Type type, Nat size) override;
 		};
 	};
 

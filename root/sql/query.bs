@@ -19,16 +19,16 @@ private Expr bindParam(SrcPos pos, Block block, Expr statement, Nat id, Expr par
 	namedExpr(block, pos, "bind", statement, params);
 }
 
-// Class for injecting a QueryString as a literal in Basic Storm.
+// Class for injecting a QueryStr as a literal in Basic Storm.
 private class QueryStrLiteral extends Expr {
-	init(SrcPos pos, QueryString val) {
+	init(SrcPos pos, QueryStr val) {
 		init(pos) { val = val; }
 	}
 
-	QueryString val;
+	QueryStr val;
 
 	ExprResult result() : override {
-		ExprResult(named{QueryString});
+		ExprResult(named{QueryStr});
 	}
 
 	void code(CodeGen state, CodeResult r) {
@@ -307,7 +307,7 @@ class ResolveContext on Compiler {
  */
 class QueryBuilder on Compiler {
 	// String builder that contains the final SQL query.
-	QueryStringBuilder query;
+	QueryStrBuilder query;
 
 	// Expressions that are used to bind parameters.
 	Expr[] bind;

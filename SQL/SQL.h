@@ -4,7 +4,7 @@
 #include "Core/Variant.h"
 #include "Row.h"
 #include "Schema.h"
-#include "QueryString.h"
+#include "QueryStr.h"
 
 namespace sql {
 
@@ -133,7 +133,7 @@ namespace sql {
 	public:
 		// Returns a prepared statement.
 		virtual Statement *STORM_FN prepare(Str *query) ABSTRACT;
-		virtual Statement *STORM_FN prepare(QueryString *query) ABSTRACT;
+		virtual Statement *STORM_FN prepare(QueryStr *query) ABSTRACT;
 
 		// Calls sqlite3_close(db).
 		virtual void STORM_FN close() ABSTRACT;
