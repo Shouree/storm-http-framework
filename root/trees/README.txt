@@ -23,3 +23,4 @@ The following commands are recognized:
   clears the undo stack.
 - Click and drag a node: Move the node.
 - Click and drag the background: Move all contents of the window.
+- "a": Perform automatic layout in the subtree that starts in the node under the mouse cursor.

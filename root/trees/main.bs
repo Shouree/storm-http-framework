@@ -29,6 +29,7 @@ class TreeWindow extends Frame {
 		keymap.put(Key:q, &this.clearAll());
 		keymap.put(Key(60), &this.insertPipe()); // < on swedish keyboards
 		keymap.put(Key:z, &this.insertPipe());
+		keymap.put(Key:a, &this.layoutNode());
 
 		var me = this;
 		keymap.put(Key:num0, () => me.numKey(0));
@@ -138,6 +139,11 @@ class TreeWindow extends Frame {
 
 	private void numKey(Nat num) {
 		number = number * 10 + num;
+	}
+
+	private void layoutNode() {
+		painter.layoutNode(lastMouse);
+		repaint();
 	}
 
 	private void loadExample() {
@@ -253,6 +259,8 @@ class TreePainter extends Painter {
 	}
 
 	void insertPipe(Point at) {
+		at += offset;
+
 		saveUndo();
 		nodes << Node(at, "|");
 	}
@@ -308,7 +316,21 @@ class TreePainter extends Painter {
 		offset = Point();
 		undoStack.clear();
 
-		loadI(node, 20, 20);
+		Node n = loadI(node);
+		n.at = Point(20, 20);
+		layoutChildren(n);
+	}
+
+	private Node loadI(SimpleNode node) {
+		Node n(Point(), node.text);
+		nodes << n;
+
+		if (left = node.left)
+			n.left = loadI(left);
+		if (right = node.right)
+			n.right = loadI(right);
+
+		n;
 	}
 
 	void rotateLeft(Point pt) {
@@ -347,39 +369,60 @@ class TreePainter extends Painter {
 		}
 	}
 
-	private value PosInfo {
-		Node node;
-		Float width;
+	void layoutNode(Point pt) {
+		pt += offset;
 
-		init(Node node) {
-			init {
-				node = node;
-				width = node.text.size.w * 2;
-			}
+		if (n = nodeAt(pt)) {
+			var delta = layoutChildren(n);
+			moveTree(n, -delta.left);
 		}
 	}
 
-	private PosInfo loadI(SimpleNode node, Float x, Float y) {
-		Node n(Point(x, y), node.text);
-		nodes << n;
-		y += n.text.size.h * 2;
+	private value LayoutDim {
+		Float left;
+		Float width;
 
-		PosInfo info(n);
+		init(Float left, Float width) {
+			init { left = left; width = width; }
+		}
+	}
+
+	private LayoutDim layoutChildren(Node node) {
+		Float prevLeft = 0;
+
+		Size textSz = node.text.size;
+		Float space = textSz.h * 0.2;
+
+		Float height = textSz.h * 2;
+		Float width = textSz.w;
+
 
 		if (left = node.left) {
-			var l = loadI(left, x, y);
-			info.width += l.width;
-			n.at.x += l.width;
-			n.left = l.node;
+			left.at.x = node.at.x;
+			left.at.y = node.at.y + height;
+			var dim = layoutChildren(left);
+
+			prevLeft = dim.width;
+			node.at.x += dim.width + space;
+			width += dim.width + space;
 		}
 
 		if (right = node.right) {
-			var r = loadI(right, x + info.width, y);
-			info.width += r.width;
-			n.right = r.node;
+			right.at.x = node.at.x + textSz.w + space;
+			right.at.y = node.at.y + height;
+			var dim = layoutChildren(right);
+			width += dim.width + space;
 		}
 
-		info;
+		LayoutDim(prevLeft, width);
+	}
+
+	private void moveTree(Node node, Float delta) {
+		node.at.x += delta;
+		if (left = node.left)
+			moveTree(left, delta);
+		if (right = node.right)
+			moveTree(right, delta);
 	}
 
 	void cloneTree(Point pt) {
