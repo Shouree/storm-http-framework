@@ -8,7 +8,7 @@ in the Git repository by a tag with the name `release/<version>`.
 Release notes for each release are found [here](md://Introduction/Downloads/Release_Notes) or in the
 annotated release tags in the Git repository.
 
-Storm is licensed under the BSD 2-clause license from version 0.6.18 and onwards.
+Storm is licensed under the BSD 3-clause license from version 0.6.18 and onwards.
 
 
 Binary releases
@@ -105,7 +105,7 @@ API instead of separate libraries.
 License
 --------
 
-Storm is licensed under the 2-clause BSD license. Note, however, that some libraries used by the
+Storm is licensed under the 3-clause BSD license. Note, however, that some libraries used by the
 system come with different licenses. To check which libraries are used and which licenses apply,
 type `licenses` in the Basic Storm top loop, or call `core.info.licenses` from your code. Note that
 this only shows loaded libraries. You might want to use the library you are interested in (e.g. by
