@@ -3,11 +3,15 @@
 /**
  * Includes required to include the "mysql.h" file on the current system.
  *
- * TODO: We might want to provide a copy of the mysql.h header, since the dynamic loading means that
- * we only need the header to be present to compile Storm.
+ * On Linux, we typically use the header found in the system. On Windows, we use (and compile) a
+ * copy of the library ourselves.
  */
 
+#ifdef MARIADB_LOCAL_DRIVER
+#include "Windows/mariadb/include/mysql.h"
+#else
 #include <mariadb/mysql.h>
+#endif
 
 
 namespace sql {

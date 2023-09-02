@@ -40,6 +40,8 @@ Gui+=noskia
 Gui+=usecairogl
 [build,nobacktrace]
 Utils+=nobacktrace
+[build,localmariadb]
+SQL+=localmariadb
 
 # Compatibility flag. For various backwards-compatibility fixes.
 # Currently, we disable large file support in SQLite, since that causes issues on Ubuntu 18.04 LTS.

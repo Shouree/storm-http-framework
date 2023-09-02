@@ -37,9 +37,9 @@ namespace sql {
 		const char *names[] = {
 			"libmariadb.dll",
 #ifdef X64
-			"libmariadb64.dll",
+			"libmariadb_64.dll",
 #else
-			"libmariadb32.dll",
+			"libmariadb_32.dll",
 #endif
 		};
 
@@ -77,6 +77,7 @@ namespace sql {
 			buffer.resize(pathEnd + strlen(names[i]) + 1);
 			for (size_t j = 0; names[i][j]; j++)
 				buffer[pathEnd + j] = names[i][j];
+			buffer[buffer.size() - 1] = 0;
 
 			HMODULE lib = LoadLibrary(&buffer[0]);
 			if (!lib)
@@ -99,6 +100,7 @@ namespace sql {
 			buffer.resize(pathEnd + strlen(names[i]) + 1);
 			for (size_t j = 0; names[i][j]; j++)
 				buffer[pathEnd + j] = names[i][j];
+			buffer[buffer.size() - 1] = 0;
 
 			*msg << S("\n") << &buffer[0];
 		}

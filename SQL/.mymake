@@ -4,9 +4,29 @@ input=*
 stormUsingNamespace=storm
 
 noIncludes+=*/sqlite3.c
+noIncludes+=*/Windows/mariadb/include/*
 
 [unix]
 cflags+=-Wno-cast-function-type
 cflags+=-Wno-implicit-fallthrough
 cflags+=-D_HAVE_SQLITE_CONFIG_H
 library+=dl
+
+[unix,localmariadb]
+# Allow using local copy of the header for the MariaDB driver if instructed to.
+define+=MARIADB_LOCAL_DRIVER
+
+
+[windows]
+# On Windows, we need to compile the mariadb library ourselves (it is not distributed in 32-bit mode)
+# Also, we use local headers to compile it. On Linux, we rely on the system's installation instead.
+define+=MARIADB_LOCAL_DRIVER
+preBuild+=MariaDB\compile_driver.bat <mariadbname>
+
+
+[windows,!64]
+mariadbname=libmariadb_32.dll
+
+[windows,64]
+mariadbname=libmariadb_64.dll
+
