@@ -102,6 +102,10 @@ namespace sql {
 		}
 	}
 
+	void MariaDBBase::Visitor::autoincrement(StrBuf *to) {
+		*to << S("AUTO_INCREMENT");
+	}
+
 	Array<Str *> *MariaDBBase::tables() {
 		TODO(L"Implement me!");
 		return new (this) Array<Str *>();

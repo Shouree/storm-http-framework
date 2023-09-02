@@ -157,13 +157,13 @@ namespace sql {
 		e.object = null;
 	}
 
-	StrBuf *operator <<(StrBuf *to, const Row &row) {
-		*to << S("row: ");
+	StrBuf &operator <<(StrBuf &to, const Row &row) {
+		to << S("row: ");
 		for (Nat i = 0; i < row.count(); i++) {
 			if (i > 0)
-				*to << S(", ");
+				to << S(", ");
 			// Note: slower than necessary, but OK for debugging.
-			*to << at(to->engine(), row, i);
+			to << at(to.engine(), row, i);
 		}
 		return to;
 	}

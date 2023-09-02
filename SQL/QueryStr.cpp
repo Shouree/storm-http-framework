@@ -7,6 +7,7 @@ namespace sql {
 	static const Nat textValue = tagValue - 1;
 	static const Nat nameValue = textValue - 1;
 	static const Nat placeholderValue = nameValue - 1;
+	static const Nat autoincrementValue = placeholderValue - 1;
 
 	static Bool hasTag(Nat val) {
 		return (val & tagValue) != 0;
@@ -23,11 +24,15 @@ namespace sql {
 	}
 
 	void QueryStr::Visitor::name(StrBuf *to, Str *name) {
-		*to << S("'") << text << S("'");
+		*to << S("\"") << name << S("\"");
 	}
 
 	void QueryStr::Visitor::placeholder(StrBuf *to) {
 		*to << S("?");
+	}
+
+	void QueryStr::Visitor::autoincrement(StrBuf *to) {
+		*to << S("AUTOINCREMENT");
 	}
 
 	void QueryStr::Visitor::type(StrBuf *to, Type type, Nat size) {
@@ -60,6 +65,8 @@ namespace sql {
 				v->name(out, textData->v[textPos++]);
 			} else if (opData->v[i] == placeholderValue) {
 				v->placeholder(out);
+			} else if (opData->v[i] == autoincrementValue) {
+				v->autoincrement(out);
 			} else if (hasTag(opData->v[i])) {
 				Nat type = opData->v[i++] & ~tagValue;
 				v->type(out, Type(type), opData->v[i]);
@@ -111,6 +118,11 @@ namespace sql {
 	void QueryStrBuilder::placeholder() {
 		flush();
 		*ops << placeholderValue;
+	}
+
+	void QueryStrBuilder::autoincrement() {
+		flush();
+		*ops << autoincrementValue;
 	}
 
 	void QueryStrBuilder::type(QueryStr::Type type) {

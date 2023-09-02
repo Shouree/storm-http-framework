@@ -124,6 +124,6 @@ namespace sql {
 	Variant STORM_FN at(EnginePtr e, const Row &row, Nat index);
 
 	// Print a row, for convenience.
-	StrBuf *STORM_FN operator <<(StrBuf *to, const Row &row);
+	StrBuf &STORM_FN operator <<(StrBuf &to, const Row &row);
 
 }

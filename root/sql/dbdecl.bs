@@ -48,24 +48,24 @@ class Column {
 	}
 
 	// Create an SQL part for this column.
-	Str toSQL() {
-		StrBuf buffer;
-		buffer << "\"" << name << "\" " << datatype.sql;
-		modifiers(buffer);
-
-		buffer.toS;
+	void toSQL(QueryStrBuilder to) {
+		to.name(name);
+		to.put(" ");
+		to.type(datatype);
+		modifiers(to);
 	}
 
 	void toS(StrBuf to) : override {
-		to << name << " " << datatype.sql;
-		modifiers(to);
+		QueryStrBuilder b;
+		toSQL(b);
+		to << b.build;
 		if (primaryKey)
 			to << " (primary key)";
 	}
 
 	Bool ==(Column o) {
 		Bool same = name == o.name;
-		same &= datatype.sql == o.datatype.sql;
+		same &= datatype == o.datatype;
 		same &= primaryKey == o.primaryKey;
 		same &= allowNull == o.allowNull;
 		same &= unique == o.unique;
@@ -97,15 +97,16 @@ class Column {
 		false;
 	}
 
-	private void modifiers(StrBuf to) {
+	private void modifiers(QueryStrBuilder to) {
 		if (!allowNull)
-			to << " NOT NULL";
+			to.put(" NOT NULL");
 		if (unique)
-			to << " UNIQUE";
+			to.put(" UNIQUE");
 		if (autoIncrement)
-			to << " AUTOINCREMENT";
-		if (default)
-			to << " DEFAULT " << default.toSQL();
+			to.autoincrement();
+		if (default) {
+			to.put(" DEFAULT " + default.toSQL());
+		}
 	}
 }
 
@@ -148,17 +149,18 @@ class Index {
 	}
 
 	// To SQL statement.
-	Str toSQL(Str table) {
-		StrBuf to;
-		to << "CREATE INDEX \"" << name << "\" ON \"" << table << "\"(";
+	void toSQL(QueryStrBuilder to, Str table) {
+		to.put("CREATE INDEX ");
+		to.name(name);
+		to.put(" ON ");
+		to.name(table);
+		to.put("(");
 		for (i, c in columns) {
 			if (i > 0)
-				to << ", ";
-			to << "\"" << c << "\"";
+				to.put(", ");
+			to.name(c);
 		}
-		to << ");";
-
-		to.toS;
+		to.put(");");
 	}
 
 	// To string. No SQL escaping.
@@ -231,38 +233,42 @@ class Table {
 	}
 
 	// Create an SQL statement for this table declaration.
-	Str toSQL(Bool ifNotExists, Str[] options) {
-		StrBuf buffer;
-		buffer << "CREATE TABLE ";
+	void toSQL(QueryStrBuilder to, Bool ifNotExists, Str[] options) {
+		to.put("CREATE TABLE ");
 		if (ifNotExists)
-			buffer << "IF NOT EXISTS ";
-		buffer << "\"" << name << "\" (";
+			to.put("IF NOT EXISTS ");
+		to.name(name);
+		to.put(" (");
 
 		Str[] pk;
 		for (i, col in columns) {
 			if (i > 0)
-				buffer << ", ";
-			buffer << col.toSQL();
+				to.put(", ");
+			col.toSQL(to);
 			if (col.primaryKey)
 				pk << col.name;
 		}
 
 		if (pk.any) {
-			buffer << ", PRIMARY KEY(";
+			to.put(", PRIMARY KEY(");
 			for (i, k in pk) {
 				if (i > 0)
-					buffer << ", ";
-				buffer << "\"" << k << "\"";
+					to.put(", ");
+				to.name(k);
 			}
-			buffer << ")";
+			to.put(")");
 		}
 
-		buffer << ")";
+		to.put(")");
 		if (options.any) {
-			buffer << " " << join(options, ", ");
+			to.put(" ");
+			for (i, k in options) {
+				if (i > 0)
+					to.put(", ");
+				to.put(k);
+			}
 		}
-		buffer << ";";
-		buffer.toS;
+		to.put(";");
 	}
 }
 
@@ -469,12 +475,22 @@ class TypedConnection {
 				// TODO: This should be handled in a more general way...
 				if (connection as SQLite)
 					options << "STRICT";
-				var stmt = connection.prepare(table.toSQL(false, options));
+				var queryStr = {
+					QueryStrBuilder builder;
+					table.toSQL(builder, false, options);
+					builder.build();
+				};
+				var stmt = connection.prepare(queryStr);
 				stmt.execute();
 				stmt.finalize();
 
 				for (index in table.indices) {
-					var stmt = connection.prepare(index.toSQL(table.name));
+					var queryStr = {
+						QueryStrBuilder builder;
+						index.toSQL(builder, table.name);
+						builder.build();
+					};
+					var stmt = connection.prepare(queryStr);
 					stmt.execute();
 					stmt.finalize();
 				}
@@ -485,11 +501,11 @@ class TypedConnection {
 
 // Helper (on the Compiler thread) for checking column declarations. We need the parser, that's why
 // we run on the compiler thread.
-private Str[] checkTable(Table table, Schema schema) on Compiler {
+private QueryStr[] checkTable(Table table, Schema schema) on Compiler {
 	if (table.columns.count < schema.count)
 		throw SchemaError("Too many columns in the database.", table, schema);
 
-	Str[] queries;
+	QueryStr[] queries;
 
 	// We need to parse the modifier string...
 	Parser<SDatatype> typeParser;
@@ -532,7 +548,12 @@ private Str[] checkTable(Table table, Schema schema) on Compiler {
 	for (Nat i = schema.count; i < table.columns.count; i++) {
 		// Add a column!
 		var col = table.columns[i];
-		queries << "ALTER TABLE \"${table.name}\" ADD ${col.toSQL};";
+		QueryStrBuilder to;
+		to.put("ALTER TABLE ");
+		to.name(table.name);
+		to.put(" ADD ");
+		col.toSQL(to);
+		queries << to.build();
 	}
 
 	// Check indices...
@@ -546,14 +567,22 @@ private Str[] checkTable(Table table, Schema schema) on Compiler {
 
 		// See what to remove...
 		for (x in schema.indices) {
-			if (!desired.has(hashIndex(x)))
-				queries << "DROP INDEX \"${x.name}\";";
+			if (!desired.has(hashIndex(x))) {
+				QueryStrBuilder to;
+				to.put("DROP INDEX ");
+				to.name(x.name);
+				to.put(";");
+				queries << to.build();
+			}
 		}
 
 		// See what to add...
 		for (x in table.indices) {
-			if (!current.has(hashIndex(x)))
-				queries << x.toSQL(table.name);
+			if (!current.has(hashIndex(x))) {
+				QueryStrBuilder to;
+				x.toSQL(to, table.name);
+				queries << to.build();
+			}
 		}
 	}
 

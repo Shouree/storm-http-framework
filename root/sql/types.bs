@@ -6,28 +6,60 @@ use lang:bs:macro;
  * A SQL type.
  */
 class SQLType {
-	// SQL-name.
-	Str sql;
+	// Name in SQL. Enum used in the string builder, to allow DB-independent names.
+	QueryStr:Type sqlType;
+
+	// Parameter to the type. If none, then we set it to -1.nat.
+	Nat sqlSize;
 
 	// Storm-type.
 	Type storm;
 
-	init(Str sql, Type storm) {
+	init(QueryStr:Type sql, Type storm) {
 		init {
-			sql = sql;
+			sqlType = sql;
+			sqlSize = (-1).nat;
 			storm = storm;
 		}
+	}
+
+	init(QueryStr:Type sql, Nat size, Type storm) {
+		init {
+			sqlType = sql;
+			sqlSize = size;
+			storm = storm;
+		}
+	}
+
+	Str toS() : override {
+		QueryStrBuilder b;
+		b.type(this);
+		b.build.toS;
+	}
+
+	Bool ==(SQLType o) {
+		(sqlType == o.sqlType) &
+		(sqlSize == o.sqlSize);
+	}
+}
+
+// "put" function for the string builder:
+void type(QueryStrBuilder to, SQLType this) {
+	if (sqlSize == (-1).nat) {
+		to.type(sqlType);
+	} else {
+		to.type(sqlType, sqlSize);
 	}
 }
 
 SQLType sqlInteger() {
-	SQLType("INTEGER", named{Int});
+	SQLType(QueryStr:Type:integer, named{Int});
 }
 SQLType sqlReal() {
-	SQLType("REAL", named{Double});
+	SQLType(QueryStr:Type:real, named{Double});
 }
 SQLType sqlText() {
-	SQLType("TEXT", named{Str});
+	SQLType(QueryStr:Type:text, named{Str});
 }
 
 // Get a function for reading a particular type from a Row instance.

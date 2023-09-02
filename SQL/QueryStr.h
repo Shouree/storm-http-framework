@@ -57,6 +57,9 @@ namespace sql {
 			// Output a placeholder.
 			virtual void STORM_FN placeholder(StrBuf *to);
 
+			// Output autoincrement.
+			virtual void STORM_FN autoincrement(StrBuf *to);
+
 			// Output a type. The size is valid unless it is Nat(-1).
 			virtual void STORM_FN type(StrBuf *to, Type type, Nat size);
 		};
@@ -101,6 +104,9 @@ namespace sql {
 
 		// Add a placeholder for prepared statements.
 		void STORM_FN placeholder();
+
+		// Add "autoincrement" keyword.
+		void STORM_FN autoincrement();
 
 		// Add a generic type.
 		void STORM_FN type(QueryStr::Type type);
