@@ -107,6 +107,21 @@ IFS=$'\n'
 for j in $(find root/ -name "Release${namesuffix}*${lib}")
 do
     name=$(echo $j | sed "s/Release${namesuffix}//")
+    # Otherwise Release64X.dll matches as 64X.dll when it should not.
+    if [[ $name != */64* ]]
+    then
+	add_rename $j $name
+    fi
+done
+# Mariadb library:
+plainsuffix=32
+if [[ $namesuffix != "" ]]
+then
+    plainsuffix=$namesuffix
+fi
+for j in $(find root/ -name "*_${plainsuffix}${lib}")
+do
+    name=${j%_${plainsuffix}${lib}}${lib}
     add_rename $j $name
 done
 
