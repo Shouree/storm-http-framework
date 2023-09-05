@@ -4,6 +4,7 @@ The following commands are recognized:
 - <number> + "i": Insert a new node at the location of the mouse cursor.
   Example: 12i to insert a node with label "12"
 - "d": Remove the node at the location of the mouse cursor.
+- Shift+"d": Remove the subtree starting at the location of the mouse cursor.
 - "c": Clear both edges from the node at the location of the mouse cursor.
 - "q": Clear all nodes.
 - "l" or "j": Add or replace the left child of the node at the location of the mouse cursor.

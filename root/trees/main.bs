@@ -10,7 +10,7 @@ class TreeWindow extends Frame {
 	private Bool mouseDown;
 
 	init() {
-		init("Treez", Size(300, 300)) {
+		init("Treez", Size(500, 500)) {
 			painter();
 		}
 
@@ -81,6 +81,9 @@ class TreeWindow extends Frame {
 				repaint();
 			} else if (key == Key:c) {
 				painter.cloneTree(lastMouse);
+				repaint();
+			} else if (key == Key:d) {
+				painter.deleteTree(lastMouse);
 				repaint();
 			}
 		} else if (modifiers == Modifiers:ctrl) {
@@ -452,6 +455,40 @@ class TreePainter extends Painter {
 			c.right = cloneTree(right, dy);
 
 		c;
+	}
+
+	void deleteTree(Point pt) {
+		pt += offset;
+		unless (n = nodeAt(pt))
+			return;
+
+		saveUndo();
+
+		Set<Node> toDelete;
+		deleteTree(n, toDelete);
+
+		for (Nat n = nodes.count; n > 0; n--) {
+			Node check = nodes[n - 1];
+			if (toDelete.has(check))
+				nodes.remove(n - 1);
+
+			if (l = check.left)
+				if (toDelete.has(l))
+					check.left = null;
+
+			if (r = check.right)
+				if (toDelete.has(r))
+					check.right = null;
+		}
+	}
+
+	private void deleteTree(Node n, Set<Node> toDelete) {
+		toDelete.put(n);
+
+		if (left = n.left)
+			deleteTree(left, toDelete);
+		if (right = n.right)
+			deleteTree(right, toDelete);
 	}
 
 	Node? nodeAt(Point at) {
