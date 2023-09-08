@@ -107,24 +107,133 @@ namespace sql {
 	}
 
 	Array<Str *> *MariaDBBase::tables() {
-		TODO(L"Implement me!");
-		return new (this) Array<Str *>();
+		Statement *query = prepare(new (this) Str(S("SHOW TABLES;")));
+		Array<Str *> *result = new (this) Array<Str *>();
+
+		Statement::Result queryResult = query->execute();
+		for (Maybe<Row> row = queryResult.next(); row.any(); row = queryResult.next()) {
+			result->push(row.value().getStr(0));
+		}
+
+		query->finalize();
+
+		return result;
+	}
+
+	static void addWord(StrBuf *to, Bool &first, const wchar *word) {
+		if (!first)
+			*to << S(" ");
+		first = false;
+		*to << word;
 	}
 
 	MAYBE(Schema *) MariaDBBase::schema(Str *table) {
-		TODO(L"Implement me!");
-		return null;
+		Statement *columnQuery;
+		Statement *indexQuery;
+		{
+			QueryStrBuilder *colBuilder = new (this) QueryStrBuilder();
+			colBuilder->put(S("SHOW COLUMNS FROM "));
+			colBuilder->name(table);
+			colBuilder->put(S(";"));
+			columnQuery = prepare(colBuilder->build());
+
+			QueryStrBuilder *indexBuilder = new (this) QueryStrBuilder();
+			indexBuilder->put(S("SHOW INDEX FROM "));
+			indexBuilder->name(table);
+			indexBuilder->put(S(";"));
+			indexQuery = prepare(indexBuilder->build());
+		}
+
+		try {
+			Array<Schema::Column *> *columns = new (this) Array<Schema::Column *>();
+			Array<Str *> *pk = new (this) Array<Str *>();
+
+			Statement::Result queryResult = columnQuery->execute();
+			// Columns are: field, type, null, key, default, extra
+			for (Maybe<Row> row = queryResult.next(); row.any(); row = queryResult.next()) {
+				Row &v = row.value();
+
+				Str *colName = v.getStr(0);
+
+				StrBuf *attrs = new (this) StrBuf();
+				Bool first = true;
+
+				if (*v.getStr(2) == S("YES"))
+					addWord(attrs, first, S("NOT NULL"));
+
+				if (*v.getStr(3) == S("PRI"))
+					pk->push(v.getStr(0));
+
+				if (!v.isNull(4)) {
+					addWord(attrs, first, S("DEFAULT "));
+					Variant def = at(engine(), v, 4);
+					if (def.has(StormInfo<Str *>::type(engine()))) {
+						*attrs << S("'");
+						Str *s = (Str *)def.getObject();
+						for (Str::Iter i = s->begin(); i != s->end(); ++i) {
+							if (i.v() == Char('\''))
+								*attrs << S("''");
+							else
+								*attrs << i.v();
+						}
+						*attrs << S("'");
+					} else {
+						*attrs << def;
+					}
+				}
+
+				if (v.getStr(5)->any()) {
+					if (!first)
+						*attrs << S(" ");
+					*attrs << v.getStr(5);
+				}
+
+				columns->push(new (this) Schema::Column(colName, v.getStr(1), attrs->toS()));
+			}
+
+			Array<Schema::Index *> *indices = new (this) Array<Schema::Index *>();
+			Map<Str *, Nat> *nameMap = new (this) Map<Str *, Nat>();
+
+			queryResult = indexQuery->execute();
+			// Columns are: table, non_unique, key_name, seq_in_index, column_name, collation, cardinality, ...
+			for (Maybe<Row> row = queryResult.next(); row.any(); row = queryResult.next()) {
+				Row &v = row.value();
+
+				Str *name = v.getStr(2);
+				// Don't add the index for the primary key.
+				if (*name == S("PRIMARY"))
+					continue;
+
+				Nat id = nameMap->get(name, indices->count());
+				if (id >= indices->count()) {
+					indices->push(new (this) Schema::Index(name, new (this) Array<Str *>()));
+					nameMap->put(name, id);
+				}
+
+				indices->at(id)->columns->push(v.getStr(4));
+			}
+
+			return new (this) Schema(table, columns, pk, indices);
+		} catch (SQLError *e) {
+			// Check if the error was that the table does not exist.
+			if (e->code.any() && e->code.value() == ER_NO_SUCH_TABLE)
+				return null;
+
+			// Otherwise, re-throw the exception.
+			throw e;
+		}
 	}
 
 	void MariaDBBase::throwError() {
 		if (!handle)
 			return;
 
-		const char *msg = (*api->mysql_error)(handle);
-		if (!msg)
+		unsigned int code = (*api->mysql_errno)(handle);
+		if (code == 0)
 			return;
 
-		throw new (this) SQLError(new (this) Str(toWChar(engine(), msg)));
+		const char *msg = (*api->mysql_error)(handle);
+		throw new (this) SQLError(new (this) Str(toWChar(engine(), msg)), Maybe<Nat>(code));
 	}
 
 	void MariaDBBase::startFetch(Stmt *stmt) {
@@ -188,7 +297,7 @@ namespace sql {
 	}
 
 	MariaDBBase::Stmt::Stmt(MariaDBBase *owner, Str *query)
-		: owner(owner), lastId(-1),
+		: owner(owner), stmtHasData(false), lastId(-1),
 		  paramCount(0), paramBinds(null), paramValues(0),
 		  resultCount(0), resultBinds(null), resultValues(0) {
 
@@ -222,11 +331,12 @@ namespace sql {
 		if (!stmt)
 			return;
 
-		const char *error = (*owner->api->mysql_stmt_error)(stmt);
-		if (!error)
+		unsigned int code = (*owner->api->mysql_stmt_errno)(stmt);
+		if (code == 0)
 			return;
 
-		throw new (this) SQLError(new (this) Str(toWChar(engine(), error)));
+		const char *error = (*owner->api->mysql_stmt_error)(stmt);
+		throw new (this) SQLError(new (this) Str(toWChar(engine(), error)), Maybe<Nat>(code));
 	}
 
 	void MariaDBBase::Stmt::finalize() {
@@ -246,12 +356,17 @@ namespace sql {
 		freeBinds(resultCount, resultBinds, resultValues);
 		buffer = null;
 
-		if (stmt) {
+		owner->stopFetch(this);
+
+		if (stmt && stmtHasData) {
+			// Note: If any other query is currently fetching data, the driver will crash if we call
+			// reset in the middle of the fetch, even for an unrelated query...
+			owner->clearFetch();
+
 			(*owner->api->mysql_stmt_free_result)(stmt);
 			(*owner->api->mysql_stmt_reset)(stmt);
+			stmtHasData = false;
 		}
-
-		owner->stopFetch(this);
 	}
 
 	void MariaDBBase::Stmt::bind(Nat pos, Str *str) {
@@ -299,6 +414,7 @@ namespace sql {
 			(*owner->api->mysql_stmt_bind_param)(stmt, paramBinds);
 		}
 
+		stmtHasData = true;
 		if ((*owner->api->mysql_stmt_execute)(stmt))
 			throwError();
 

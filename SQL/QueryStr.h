@@ -98,6 +98,7 @@ namespace sql {
 
 		// Add a piece of a regular string.
 		void STORM_FN put(Str *str);
+		void put(const wchar *str) { put(new (this) Str(str)); }
 
 		// Add a quoted name.
 		void STORM_FN name(Str *str);

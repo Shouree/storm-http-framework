@@ -123,6 +123,9 @@ namespace sql {
 			// The prepared statement.
 			UNKNOWN(PTR_NOGC) MYSQL_STMT *stmt;
 
+			// Does the statement contain any results? I.e. do we need to reset it?
+			Bool stmtHasData;
+
 			// Number of changes from last execute.
 			Nat lastChanges;
 

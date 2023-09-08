@@ -6,7 +6,7 @@ namespace sql {
 
 	/**
 	 * The Schema class contains the structure from a table within your database.
-	 * To get the Schema one would need to call the schema() function in the SQLite class.
+	 * To get the Schema one would need to call the schema() function in a database class.
 	 */
 	class Schema : public Object {
 		STORM_CLASS;
@@ -26,6 +26,7 @@ namespace sql {
 			Str *name;
 
 			// Datatype of the column.
+			// TODO: Use same description as for QueryStr!
 			Str *datatype;
 
 			// Attributes for the column. These are not parsed or separated (that requires intricate

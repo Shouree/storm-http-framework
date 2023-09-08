@@ -9,8 +9,10 @@
 
 #ifdef MARIADB_LOCAL_DRIVER
 #include "Windows/mariadb/include/mysql.h"
+#include "Windows/mariadb/include/mysqld_error.h"
 #else
 #include <mariadb/mysql.h>
+#include <mariadb/mysqld_error.h>
 #endif
 
 

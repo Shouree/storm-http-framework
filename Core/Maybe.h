@@ -29,9 +29,8 @@ namespace storm {
 		}
 
 		// Get the value. Will not check whether or not the value is present.
-		T &value() {
-			return data;
-		}
+		T &value() { return data; }
+		const T &value() const { return data; }
 
 	private:
 		// The actual data.
