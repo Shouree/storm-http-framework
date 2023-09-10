@@ -6,29 +6,25 @@ use lang:bs:macro;
  * A SQL type.
  */
 class SQLType {
-	// Name in SQL. Enum used in the string builder, to allow DB-independent names.
-	QueryStr:Type sqlType;
-
-	// Parameter to the type. If none, then we set it to -1.nat.
-	Nat sqlSize;
+	// Type in SQL.
+	QueryType sqlType;
 
 	// Storm-type.
 	Type storm;
 
-	init(QueryStr:Type sql, Type storm) {
+	init(QueryType sql, Type storm) {
 		init {
 			sqlType = sql;
-			sqlSize = (-1).nat;
 			storm = storm;
 		}
 	}
 
-	init(QueryStr:Type sql, Nat size, Type storm) {
-		init {
-			sqlType = sql;
-			sqlSize = size;
-			storm = storm;
-		}
+	// Change size:
+	SQLType sized(Nat size) {
+		SQLType(sqlType.sized(size), storm);
+	}
+	SQLType sized(Str size) {
+		sized(size.toInt());
 	}
 
 	Str toS() : override {
@@ -45,26 +41,25 @@ class SQLType {
 
 // "put" function for the string builder:
 void type(QueryStrBuilder to, SQLType this) {
-	if (sqlSize == (-1).nat) {
-		to.type(sqlType);
-	} else {
-		to.type(sqlType, sqlSize);
-	}
+	to.type(sqlType);
 }
 
+
 SQLType sqlInteger() {
-	SQLType(QueryStr:Type:integer, named{Int});
+	SQLType(QueryType:integer, named{Int});
 }
 SQLType sqlReal() {
-	SQLType(QueryStr:Type:real, named{Double});
+	SQLType(QueryType:real, named{Double});
 }
 SQLType sqlText() {
-	SQLType(QueryStr:Type:text, named{Str});
+	SQLType(QueryType:text, named{Str});
 }
 
 // Get a function for reading a particular type from a Row instance.
 Function getColumnFn(Type? type) on Compiler {
-	if (type is named{Int})
+	if (type is named{Bool})
+		return named{Row:getBool<Row, Nat>};
+	else if (type is named{Int})
 		return named{Row:getInt<Row, Nat>};
 	else if (type is named{Str})
 		return named{Row:getStr<Row, Nat>};

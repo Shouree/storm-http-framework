@@ -49,20 +49,15 @@ namespace sql {
 
 	SQLite::Visitor::Visitor() {}
 
-	void SQLite::Visitor::type(StrBuf *to, QueryStr::Type type, Nat) {
-		switch (type) {
-		case QueryStr::text:
+	void SQLite::Visitor::type(StrBuf *to, QueryType type) {
+		if (type.sameType(QueryType::text())) {
 			*to << S("TEXT");
-			break;
-		case QueryStr::integer:
+		} else if (type.sameType(QueryType::integer())) {
 			*to << S("INTEGER");
-			break;
-		case QueryStr::real:
-			*to << S("FLOAT");
-			break;
-		default:
-			assert(false, L"Unknown type!");
-			break;
+		} else if (type.sameType(QueryType::real())) {
+			*to << S("REAL");
+		} else {
+			throw new (this) SQLError(TO_S(this, S("Unknown type: ") << type << S(".")));
 		}
 	}
 

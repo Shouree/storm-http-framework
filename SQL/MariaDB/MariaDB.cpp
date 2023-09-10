@@ -82,24 +82,25 @@ namespace sql {
 		*to << S("`") << name << S("`");
 	}
 
-	void MariaDBBase::Visitor::type(StrBuf *to, QueryStr::Type type, Nat size) {
-		if (size != Nat(-1))
-			TODO(L"Support explicit sizes!");
+	void MariaDBBase::Visitor::type(StrBuf *to, QueryType type) {
+		Maybe<Nat> size = type.size();
 
-		switch (type) {
-		case QueryStr::text:
-			*to << S("TEXT");
-			break;
-		case QueryStr::integer:
+		if (type.sameType(QueryType::text())) {
+			if (size.any()) {
+				*to << S("VARCHAR");
+			} else {
+				*to << S("TEXT");
+			}
+		} else if (type.sameType(QueryType::integer())) {
 			*to << S("INTEGER");
-			break;
-		case QueryStr::real:
-			*to << S("FLOAT");
-			break;
-		default:
-			assert(false, L"Unknown DB type!");
-			break;
+		} else if (type.sameType(QueryType::real())) {
+			*to << S("REAL");
+		} else {
+			throw new (this) SQLError(TO_S(this, S("Unsupported type: ") << type << S(".")));
 		}
+
+		if (size.any())
+			*to << S("(") << size.value() << S(")");
 	}
 
 	void MariaDBBase::Visitor::autoincrement(StrBuf *to) {

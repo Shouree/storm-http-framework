@@ -115,7 +115,7 @@ namespace sql {
 			STORM_CLASS;
 		public:
 			STORM_CTOR Visitor();
-			void STORM_FN type(StrBuf *to, QueryStr::Type type, Nat size) override;
+			void STORM_FN type(StrBuf *to, QueryType type) override;
 		};
 	};
 

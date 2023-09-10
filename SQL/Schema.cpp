@@ -47,16 +47,28 @@ namespace sql {
 		*to << S("}");
 	}
 
-	Schema::Column::Column(Str *name, Str *dt)
-		: name(name), datatype(dt), attributes(new (engine()) Str()) {}
+	Schema::Column::Column(Str *name, QueryType type)
+		: name(name), type(type), attributes(none) {}
 
-	Schema::Column::Column(Str *name, Str *dt, Str *attrs)
-		: name(name), datatype(dt), attributes(attrs) {}
+	Schema::Column::Column(Str *name, QueryType type, Attributes attrs)
+		: name(name), type(type), attributes(attrs) {}
 
 	void Schema::Column::toS(StrBuf *to) const {
-		*to << name << S(" ") << datatype;
-		if (!attributes->empty())
-			*to << S(" ") << attributes;
+		*to << name << S(" ") << type;
+		if (attributes & notNull)
+			*to << S(" NOT NULL");
+		if (attributes & primaryKey)
+			*to << S(" PRIMARY KEY");
+		if (attributes & unique)
+			*to << S(" UNIQUE");
+		if (attributes & autoIncrement)
+			*to << S(" AUTOINCREMENT");
+
+		if (defaultValue)
+			*to << S(" ") << defaultValue;
+
+		if (unknown)
+			*to << S(" unknown: ") << unknown;
 	}
 
 	Schema::Index::Index(Str *name, Array<Str *> *columns)

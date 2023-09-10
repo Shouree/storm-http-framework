@@ -49,8 +49,13 @@ Column SColumn();
 SColumn => Column(name, type) : SName name ~ SDatatype type - (~ SModifier(me))*;
 
 // Data types in table declarations.
-SQLType SDatatype() #typeName;
+SQLType SDatatype();
+SDatatype => x : SBaseType x;
+SDatatype => sized(x, size) : SBaseType x, "(", "[0-9]+" size, ")";
+
+SQLType SBaseType() #typeName;
 SDatatype => sqlInteger() : "INTEGER";
+SDatatype => sqlInteger() : "INT";
 SDatatype => sqlReal() : "REAL";
 SDatatype => sqlText() : "TEXT";
 
@@ -65,6 +70,7 @@ SModifier => to : "PRIMARY" ~ "KEY" -> setPrimary;
 SModifier => to : "ALLOW" ~ "NULL" -> setAllowNull;
 SModifier => to : "UNIQUE" -> setUnique;
 SModifier => to : "AUTOINCREMENT" -> setAutoIncrement;
+SModifier => to : "AUTO_INCREMENT" -> setAutoIncrement;
 SModifier => to : "DEFAULT" ~ SLiteral -> setDefault;
 
 SModifier => to : ("NOT" ~ "NULL")@ -> setNotNull;

@@ -1,6 +1,8 @@
 #pragma once
 #include "Core/Array.h"
 #include "Core/Str.h"
+#include "Utils/Bitmask.h"
+#include "Type.h"
 
 namespace sql {
 
@@ -12,6 +14,22 @@ namespace sql {
 		STORM_CLASS;
 	public:
 		/**
+		 * Attributes for a column.
+		 */
+		enum Attributes {
+			// No attributes.
+			none,
+			// Not null.
+			notNull = 0x01,
+			// Primary key.
+			primaryKey = 0x02,
+			// Unique.
+			unique = 0x04,
+			// Autoincrement.
+			autoIncrement = 0x08,
+		};
+
+		/**
 		 * Schema contains the content class, which holds the name, datatype and all attributes for
 		 * a given row.  This row is specified in the getRow function from the Schema class.
 		 */
@@ -19,19 +37,23 @@ namespace sql {
 			STORM_CLASS;
 		public:
 			// Constructors of the Column class.
-			STORM_CTOR Column(Str *name, Str *dt);
-			STORM_CTOR Column(Str *name, Str *dt, Str *attributes);
+			STORM_CTOR Column(Str *name, QueryType dt);
+			STORM_CTOR Column(Str *name, QueryType dt, Attributes attributes);
 
 			// Name of the column.
 			Str *name;
 
 			// Datatype of the column.
-			// TODO: Use same description as for QueryStr!
-			Str *datatype;
+			QueryType type;
 
-			// Attributes for the column. These are not parsed or separated (that requires intricate
-			// understanding of the SQL syntax).
-			Str *attributes;
+			// Attribtes.
+			Attributes attributes;
+
+			// Default value, if any.
+			MAYBE(Str *) defaultValue;
+
+			// Unknown parts of the declaration. If 'type' is VOID, then the type is here also.
+			MAYBE(Str *) unknown;
 
 		protected:
 			// To string.
@@ -105,4 +127,5 @@ namespace sql {
 		Array<Index *> *index;
 	};
 
+	BITMASK_OPERATORS(Schema::Attributes);
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Array.h"
+#include "Type.h"
 
 namespace sql {
 
@@ -25,20 +26,6 @@ namespace sql {
 	class QueryStr : public Object {
 		STORM_CLASS;
 	public:
-		// Enum of generic types representable here.
-		// The representation of QueryStr allows annotating all types
-		// with a size parameter, even though that does not necessarily
-		// make sense for all supported types.
-		enum Type {
-			// TEXT - generic string. If parameterized, specifies maximum size.
-			text,
-			// INTEGER - generic integer.
-			integer,
-			// REAL - generic float.
-			real,
-			// ...
-		};
-
 
 		/**
 		 * Class to generate a visitor.
@@ -60,8 +47,8 @@ namespace sql {
 			// Output autoincrement.
 			virtual void STORM_FN autoincrement(StrBuf *to);
 
-			// Output a type. The size is valid unless it is Nat(-1).
-			virtual void STORM_FN type(StrBuf *to, Type type, Nat size);
+			// Output a type.
+			virtual void STORM_FN type(StrBuf *to, QueryType type);
 		};
 
 
@@ -110,8 +97,7 @@ namespace sql {
 		void STORM_FN autoincrement();
 
 		// Add a generic type.
-		void STORM_FN type(QueryStr::Type type);
-		void STORM_FN type(QueryStr::Type type, Nat size);
+		void STORM_FN type(QueryType type);
 
 		// Create the query string.
 		QueryStr *STORM_FN build();

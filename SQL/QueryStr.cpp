@@ -35,23 +35,8 @@ namespace sql {
 		*to << S("AUTOINCREMENT");
 	}
 
-	void QueryStr::Visitor::type(StrBuf *to, Type type, Nat size) {
-		switch (type) {
-		case text:
-			*to << S("TEXT");
-			break;
-		case integer:
-			*to << S("INTEGER");
-			break;
-		case real:
-			*to << S("FLOAT");
-			break;
-		default:
-			*to << S("UNKNOWN ") << type;
-			break;
-		}
-		if (size != Nat(-1))
-			*to << S("(") << size << S(")");
+	void QueryStr::Visitor::type(StrBuf *to, QueryType type) {
+		*to << type;
 	}
 
 	Str *QueryStr::generate(Visitor *v) const {
@@ -69,9 +54,9 @@ namespace sql {
 				v->autoincrement(out);
 			} else if (hasTag(opData->v[i])) {
 				Nat type = opData->v[i++] & ~tagValue;
-				v->type(out, Type(type), opData->v[i]);
+				v->type(out, QueryType(type, opData->v[i]));
 			} else {
-				v->type(out, Type(opData->v[i]), Nat(-1));
+				v->type(out, QueryType(opData->v[i]));
 			}
 		}
 
@@ -125,15 +110,14 @@ namespace sql {
 		*ops << autoincrementValue;
 	}
 
-	void QueryStrBuilder::type(QueryStr::Type type) {
+	void QueryStrBuilder::type(QueryType type) {
 		flush();
-		*ops << Nat(type);
-	}
-
-	void QueryStrBuilder::type(QueryStr::Type type, Nat size) {
-		flush();
-		*ops << (Nat(type) | tagValue);
-		*ops << size;
+		if (type.typeSize == 0) {
+			*ops << type.type;
+		} else {
+			*ops << (type.type | tagValue);
+			*ops << type.typeSize;
+		}
 	}
 
 	QueryStr *QueryStrBuilder::build() {
