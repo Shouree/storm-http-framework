@@ -687,12 +687,13 @@ static void parseNamespace(Tokenizer &tok, ParseEnv &env, const CppName &name) {
 		} else if (t.token == L"BITMASK_OPERATORS") {
 			tok.skip();
 			tok.expect(L"(");
-			Token n = tok.next();
-			Type *t = env.world.types.find(CppName(n.token), name, n.pos);
+			SrcPos pos = tok.peek().pos;
+			CppName n = parseName(tok);
+			Type *t = env.world.types.find(n, name, pos);
 			if (Enum *e = as<Enum>(t)) {
 				e->bitmask = true;
 			} else {
-				throw Error(L"The type " + n.token + L" is not an enum.", n.pos);
+				throw Error(L"The type " + toS(n) + L" is not an enum.", pos);
 			}
 			tok.expect(L")");
 			tok.expect(L";");
