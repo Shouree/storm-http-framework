@@ -59,9 +59,12 @@ namespace storm {
 		// Hash.
 		virtual Nat STORM_FN hash() const;
 
-		// Is this an integer?
+		// Is this an integer? Does not validate size.
 		Bool STORM_FN isInt() const;
 		Bool STORM_FN isNat() const;
+
+		// Is this a floating point value?
+		Bool STORM_FN isFloat() const;
 
 		// Interpret as numbers.
 		Int STORM_FN toInt() const;

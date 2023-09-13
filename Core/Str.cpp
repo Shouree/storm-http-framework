@@ -272,6 +272,45 @@ namespace storm {
 		return true;
 	}
 
+	Bool Str::isFloat() const {
+		Nat at = 0;
+		if (data->v[0] == '-')
+			at++;
+
+		Bool hasDecimal = false;
+		while (at < data->count - 1) {
+			if (data->v[at] == '.' && !hasDecimal) {
+				hasDecimal = true;
+			} else if (data->v[at] >= '0' && data->v[at] <= '9') {
+				// Number, OK
+			} else if (data->v[at] == 'e' || data->v[at] == 'E') {
+				break;
+			} else {
+				return false;
+			}
+
+			at++;
+		}
+
+		if (at == data->count - 1)
+			return true;
+
+		// If not at end already, it must be the exponential part:
+		if (data->v[at] != 'e' && data->v[at] != 'E')
+			return false;
+
+		if (data->v[at] == '-')
+			at++;
+
+		while (at < data->count - 1) {
+			if (data->v[at] < '0' || data->v[at] > '9')
+				return false;
+			at++;
+		}
+
+		return true;
+	}
+
 	Int Str::toInt() const {
 		wchar *end;
 		Int r = wcstol(data->v, &end, 10);
