@@ -24,7 +24,8 @@ namespace sql {
 		static QueryType STORM_FN integer() { return QueryType(2); }
 		static QueryType STORM_FN real() { return QueryType(3); }
 
-		// Parse from string.
+		// Parse from string. Returns "void" if the type is unknown. Throws SQLError on malformed
+		// type specification.
 		static QueryType STORM_FN parse(Str *from);
 
 		// Create a copy of the type with the specified size.
@@ -48,6 +49,10 @@ namespace sql {
 		// Check if we are compatible with the parameter. Compatibility compares the size, but
 		// allows any size of 'o', assuming our size is not specified.
 		Bool STORM_FN compatible(const QueryType &o) const;
+
+		// Any type?
+		Bool empty() const { return type == 0; }
+		Bool any() const { return type != 0; }
 
 	private:
 		// Create a custom type.

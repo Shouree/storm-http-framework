@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "SQLite.h"
 #include "Exception.h"
+#include "String.h"
 
 namespace sql {
 
@@ -147,14 +148,7 @@ namespace sql {
 	}
 
 	static bool cmp(const wchar *begin, const wchar *end, const wchar *str) {
-		for (; begin != end; begin++, str++) {
-			if (*str == 0)
-				return false;
-			if (*str != *begin)
-				return false;
-		}
-
-		return *str == 0;
+		return compareNoCase(begin, end, str);
 	}
 
 	static Str *identifier(Engine &e, const wchar *begin, const wchar *end) {
@@ -235,6 +229,31 @@ namespace sql {
 		return cols;
 	}
 
+	static bool nextIf(const wchar *&begin, const wchar *&end, const wchar *find) {
+		if (!cmp(begin, end, find))
+			return false;
+
+		next(begin, end);
+		return true;
+	}
+
+	static bool nextIf(const wchar *&begin, const wchar *&end, const wchar *find1, const wchar *find2) {
+		const wchar *tBegin = begin;
+		const wchar *tEnd = end;
+
+		if (!cmp(tBegin, tEnd, find1))
+			return false;
+
+		next(tBegin, tEnd);
+		if (!cmp(tBegin, tEnd, find2))
+			return false;
+
+		next(tBegin, tEnd);
+		begin = tBegin;
+		end = tEnd;
+		return true;
+	}
+
 	Schema *SQLite::schema(Str *table) {
 		// Note: There is PRAGMA table_info(table); that we could use. It does not seem like we get
 		// information on other constraints from there though.
@@ -268,22 +287,36 @@ namespace sql {
 				next(begin, end);
 				end = parseType(end);
 				Str *typeName = identifier(engine(), begin, end);
-				Str *attributes = null;
+
+				Schema::Column *col = new (this) Schema::Column(colName, QueryType::parse(typeName));
+				if (col->type.empty())
+					col->unknown = typeName;
 
 				next(begin, end);
-				if (cmp(begin, end, S(",")) || cmp(begin, end, S(")"))) {
-					attributes = new (this) Str();
-				} else {
-					const wchar *attrStart = begin;
-					const wchar *attrEnd = begin;
-					do {
-						attrEnd = end;
+				while (!cmp(begin, end, S(",")) && !cmp(begin, end, S(")"))) {
+					if (nextIf(begin, end, S("UNIQUE"))) {
+						col->attributes |= Schema::unique;
+					} else if (nextIf(begin, end, S("PRIMARY"), S("KEY"))) {
+						col->attributes |= Schema::primaryKey;
+					} else if (nextIf(begin, end, S("NOT"), S("NULL"))) {
+						col->attributes |= Schema::notNull;
+					} else if (nextIf(begin, end, S("AUTOINCREMENT")) || nextIf(begin, end, S("AUTO_INCREMENT"))) {
+						col->attributes |= Schema::autoIncrement;
+					} else if (nextIf(begin, end, S("DEFAULT"))) {
+						col->defaultValue = new (this) Str(begin, end);
 						next(begin, end);
-					} while (*begin != 0 && !cmp(begin, end, S(")")) && !cmp(begin, end, S(",")));
-					attributes = new (this) Str(attrStart, attrEnd);
+					} else {
+						Str *here = new (this) Str(begin, end);
+						next(begin, end);
+
+						if (col->unknown)
+							col->unknown = TO_S(this, col->unknown << S(" ") << here);
+						else
+							col->unknown = here;
+					}
 				}
 
-				cols->push(new (this) Schema::Column(colName, typeName, attributes));
+				cols->push(col);
 			}
 
 			if (cmp(begin, end, S(")")))

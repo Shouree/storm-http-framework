@@ -2,6 +2,7 @@
 #include "MariaDB.h"
 #include "Value.h"
 #include "Exception.h"
+#include "String.h"
 #include "Core/Convert.h"
 
 namespace sql {
@@ -121,11 +122,36 @@ namespace sql {
 		return result;
 	}
 
-	static void addWord(StrBuf *to, Bool &first, const wchar *word) {
-		if (!first)
-			*to << S(" ");
-		first = false;
-		*to << word;
+	static bool findAndRemove(Str *&original, const wchar *lookFor) {
+		const wchar *begin = original->c_str();
+		const wchar *at = begin;
+		while (*at) {
+			// Skip whitespace.
+			while (*at == ' ')
+				at++;
+
+			const wchar *end = at;
+			while (*end && *end != ' ')
+				end++;
+
+			if (compareNoCase(at, end, lookFor)) {
+				while (*end == ' ')
+					end++;
+
+				if (*end == '\0')
+					while (at > begin && *(at - 1) == ' ')
+						at--;
+
+				Str *front = new (original) Str(begin, at);
+				Str *back = new (original) Str(end);
+				original = *front + back;
+				return true;
+			}
+
+			at = end;
+		}
+
+		return false;
 	}
 
 	MAYBE(Schema *) MariaDBBase::schema(Str *table) {
@@ -154,42 +180,49 @@ namespace sql {
 			for (Maybe<Row> row = queryResult.next(); row.any(); row = queryResult.next()) {
 				Row &v = row.value();
 
-				Str *colName = v.getStr(0);
+				Schema::Column *col = new (this) Schema::Column(v.getStr(0), QueryType::parse(v.getStr(1)));
 
-				StrBuf *attrs = new (this) StrBuf();
-				Bool first = true;
+				// Do we not know the type?
+				if (col->type.empty())
+					col->unknown = v.getStr(1);
 
-				if (*v.getStr(2) == S("YES"))
-					addWord(attrs, first, S("NOT NULL"));
+				// Is it null?
+				if (!compareNoCase(v.getStr(2), S("YES")))
+					col->attributes |= Schema::notNull;
 
-				if (*v.getStr(3) == S("PRI"))
-					pk->push(v.getStr(0));
+				// Check what kind of key it is.
+				{
+					Str *key = v.getStr(3);
+					if (compareNoCase(key, S("PRI")))
+						col->attributes |= Schema::primaryKey;
+					else if (compareNoCase(key, S("UNI")))
+						col->attributes |= Schema::unique;
+					// Note: May also be MUL, which means that it is a part of an index.
+				}
 
 				if (!v.isNull(4)) {
-					addWord(attrs, first, S("DEFAULT "));
 					Variant def = at(engine(), v, 4);
 					if (def.has(StormInfo<Str *>::type(engine()))) {
-						*attrs << S("'");
-						Str *s = (Str *)def.getObject();
-						for (Str::Iter i = s->begin(); i != s->end(); ++i) {
-							if (i.v() == Char('\''))
-								*attrs << S("''");
-							else
-								*attrs << i.v();
-						}
-						*attrs << S("'");
+						col->defaultValue = toSQLStrLiteral((Str *)def.getObject());
 					} else {
-						*attrs << def;
+						col->defaultValue = TO_S(this, v);
 					}
 				}
 
-				if (v.getStr(5)->any()) {
-					if (!first)
-						*attrs << S(" ");
-					*attrs << v.getStr(5);
+				{
+					Str *extra = v.getStr(5);
+					if (findAndRemove(extra, S("AUTO_INCREMENT")))
+						col->attributes |= Schema::autoIncrement;
+
+					if (extra->any()) {
+						if (col->unknown)
+							col->unknown = TO_S(this, col->unknown << S(" ") << v.getStr(5));
+						else
+							col->unknown = v.getStr(5);
+					}
 				}
 
-				columns->push(new (this) Schema::Column(colName, v.getStr(1), attrs->toS()));
+				columns->push(col);
 			}
 
 			Array<Schema::Index *> *indices = new (this) Array<Schema::Index *>();

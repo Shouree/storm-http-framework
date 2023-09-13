@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Type.h"
 #include "Exception.h"
+#include "String.h"
 
 namespace sql {
 
@@ -21,51 +22,76 @@ namespace sql {
 		return typeSize == o.typeSize;
 	}
 
-	// Note: Assumes 'to' is small ASCII characters!
-	static bool compare(Str *cmp, const wchar *to) {
-		for (const wchar *i = cmp->c_str(); *i; i++) {
-			if (*i == *to || *i == *to - ('a' - 'A')) {
-				to++;
-			} else if (*to == 0) {
-				// We're at the end. Ensure that 'i' only contains spaces, and possibly a start paren.
-				if (*i != ' ' && *i != '(')
-					return false;
-			} else {
-				return false;
-			}
-		}
-
-		return *to == 0;
+	static bool isAlpha(wchar ch) {
+		return (ch >= 'a' && ch <= 'z')
+			|| (ch >= 'A' && ch <= 'Z');
 	}
 
 	QueryType QueryType::parse(Str *from) {
-		Nat size = 0;
-		QueryType result;
+		const wchar *nameBegin = from->c_str();
+		while (*nameBegin == ' ')
+			nameBegin++;
 
-		Str::Iter paren = from->find(Char('('));
-		if (paren != from->end()) {
-			Str::Iter endParen = from->find(Char(')'), paren);
-			Str *sz = from->substr(paren + 1, endParen);
-			if (!sz->isNat())
-				throw new (from) SQLError(TO_S(from, S("Incorrect size in type: ") << from));
-			size = sz->toNat() + 1;
+		const wchar *nameEnd = nameBegin;
+		while (isAlpha(*nameEnd))
+			nameEnd++;
+
+		QueryType result;
+		if (compareNoCase(nameBegin, nameEnd, S("int"))) {
+			result = QueryType::integer();
+		} else if (compareNoCase(nameBegin, nameEnd, S("integer"))) {
+			result = QueryType::integer();
+		} else if (compareNoCase(nameBegin, nameEnd, S("real"))) {
+			result = QueryType::real();
+		} else if (compareNoCase(nameBegin, nameEnd, S("text"))) {
+			result = QueryType::text();
+		} else if (compareNoCase(nameBegin, nameEnd, S("varchar"))) {
+			result = QueryType::text();
+		} else {
+			// We don't know the type. Just return the empty result.
+			return result;
+			// StrBuf *msg = new (from) StrBuf();
+			// *msg << S("Unknown type: ");
+			// *msg << new (from) Str(nameBegin, nameEnd);
+			// throw new (from) SQLError(msg->toS());
 		}
 
-		if (compare(from, S("int")))
-			result = QueryType::integer();
-		else if (compare(from, S("integer")))
-			result = QueryType::integer();
-		else if (compare(from, S("real")))
-			result = QueryType::real();
-		else if (compare(from, S("text")))
-			result = QueryType::text();
-		else if (compare(from, S("varchar")))
-			result = QueryType::text();
+		// Find the size if it exists.
+		const wchar *paren = nameEnd;
+		while (*paren == ' ')
+			paren++;
 
-		if (result.sameType(QueryType()))
-			throw new (from) SQLError(TO_S(from, S("Unknown type: ") << from));
+		if (*paren == '(') {
+			paren++;
 
-		result.typeSize = size;
+			Nat size = 0;
+			while (*paren != ')') {
+				if (*paren == ' ') {
+					paren++;
+					continue;
+				}
+
+				if (*paren < '0' || *paren > '9')
+					throw new (from) SQLError(TO_S(from, S("Invalid size in SQL type: ") << from));
+
+				size = size*10 + (*paren - '0');
+				paren++;
+			}
+
+			// Consume end )
+			paren++;
+
+			// Consume any whitespace.
+			while (*paren == ' ')
+				paren++;
+
+			result.typeSize = size + 1;
+		}
+
+		if (*paren != '\0') {
+			throw new (from) SQLError(TO_S(from, S("Improperly formatted SQL type: ") << from));
+		}
+
 		return result;
 	}
 
