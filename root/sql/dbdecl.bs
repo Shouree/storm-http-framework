@@ -63,24 +63,26 @@ class Column {
 			to << " (primary key)";
 	}
 
-	Bool ==(Column o) {
-		Bool same = name == o.name;
-		same &= datatype == o.datatype;
-		same &= primaryKey == o.primaryKey;
-		same &= allowNull == o.allowNull;
-		same &= unique == o.unique;
-		same &= autoIncrement == o.autoIncrement;
+	// Check if we are similar enough to "other".
+	Bool sameAs(Schema:Column other) {
+		Bool same = name == other.name;
+		same &= datatype.sqlType.compatible(other.type);
+		same &= primaryKey == other.attributes.has(Schema:Attributes:primaryKey);
+		same &= allowNull != other.attributes.has(Schema:Attributes:notNull);
+		same &= unique == other.attributes.has(Schema:Attributes:unique);
+		same &= autoIncrement == other.attributes.has(Schema:Attributes:autoIncrement);
+
 		if (default) {
-			if (odefault = o.default) {
+			if (odefault = other.default) {
 				same &= default.same(odefault);
 			} else {
 				same = false;
 			}
 		} else {
-			if (o.default) {
-				same = false;
-			}
+			// It is fine if the DB has a default value that we don't know about. We will not
+			// utilize it anyway.
 		}
+
 		same;
 	}
 
@@ -98,34 +100,19 @@ class Column {
 	}
 
 	private void modifiers(QueryStrBuilder to) {
-		if (!allowNull)
+		if (!allowNull) {
 			to.put(" NOT NULL");
-		if (unique)
+		}
+		if (unique) {
 			to.put(" UNIQUE");
-		if (autoIncrement)
-			to.autoincrement();
+		}
+		if (autoIncrement) {
+			to.put(" ");
+			to.autoIncrement();
+		}
 		if (default) {
 			to.put(" DEFAULT " + default.toSQL());
 		}
-	}
-}
-
-/**
- * Column declaration that acts as standard SQL (we have slightly different defaults).
- */
-class ParseColumn extends Column {
-	init(SStr name, SQLType type) {
-		init(name, type) {}
-		allowNull = true;
-	}
-
-	void setNotNull(SStr x) : override {
-		allowNull = false;
-	}
-
-	void toS(StrBuf to) : override {
-		super:toS(to);
-		to << "!";
 	}
 }
 
@@ -232,19 +219,49 @@ class Table {
 		count > 1;
 	}
 
+	// Figure out what index, if any, has an implicit AUTOINCREMENT. Returns "count" if none has it.
+	Nat implicitAutoIncrementColumn() {
+		Nat count = columns.count();
+		Nat firstPrimary = count();
+
+		for (i, c in columns) {
+			if (c.primaryKey) {
+				if (firstPrimary < count)
+					return count;
+				firstPrimary = i;
+			}
+		}
+
+		var col = columns[firstPrimary];
+		// Reset if it is either already marked as autoincrement, or if it is of the improper type.
+		if (col.autoIncrement) {
+			firstPrimary = count;
+		} else if (!col.datatype.sqlType.sameType(QueryType:integer)) {
+			firstPrimary = count;
+		}
+
+		return firstPrimary;
+	}
+
 	// Create an SQL statement for this table declaration.
-	void toSQL(QueryStrBuilder to, Bool ifNotExists, Str[] options) {
+	void toSQL(QueryStrBuilder to, Bool ifNotExists, Bool implicitAutoIncrement, Str[] options) {
 		to.put("CREATE TABLE ");
 		if (ifNotExists)
 			to.put("IF NOT EXISTS ");
 		to.name(name);
 		to.put(" (");
 
+		Nat implicitCol = if (implicitAutoIncrement) { columns.count; } else { implicitAutoIncrementColumn(); };
 		Str[] pk;
 		for (i, col in columns) {
 			if (i > 0)
 				to.put(", ");
 			col.toSQL(to);
+
+			if (implicitCol == i) {
+				to.put(" ");
+				to.autoIncrement();
+			}
 			if (col.primaryKey)
 				pk << col.name;
 		}
@@ -477,7 +494,7 @@ class TypedConnection {
 					options << "STRICT";
 				var queryStr = {
 					QueryStrBuilder builder;
-					table.toSQL(builder, false, options);
+					table.toSQL(builder, false, connection.implicitAutoIncrement, options);
 					builder.build();
 				};
 				var stmt = connection.prepare(queryStr);
@@ -497,96 +514,107 @@ class TypedConnection {
 			}
 		}
 	}
-}
 
-// Helper (on the Compiler thread) for checking column declarations. We need the parser, that's why
-// we run on the compiler thread.
-private QueryStr[] checkTable(Table table, Schema schema) on Compiler {
-	if (table.columns.count < schema.count)
-		throw SchemaError("Too many columns in the database.", table, schema);
+	// Check a single table, and perform migrations as required.
+	private QueryStr[] checkTable(Table table, Schema schema) {
+		if (table.columns.count < schema.count)
+			throw SchemaError("Too many columns in the database.", table, schema);
 
-	QueryStr[] queries;
+		QueryStr[] queries;
 
-	// We need to parse the modifier string...
-	Parser<SDatatype> typeParser;
-	Parser<SModifiers> modifierParser;
-	typeParser.addSyntax(named{lang:bs});
-	modifierParser.addSyntax(named{lang:bs});
-
-	Set<Str> pk;
-	for (k in schema.primaryKeys)
-		pk.put(k);
-
-	for (Nat i = 0; i < schema.count; i++) {
-		var ref = table.columns[i];
-		var curr = schema[i];
-
-		typeParser.parse(curr.datatype, core:io:Url());
-		if (typeParser.hasError())
-			throw SQLError("Unknown column datatype for ${curr.name}: ${curr.datatype}.");
-
-		ParseColumn c(SStr(ref.name), typeParser.tree.transform());
-
-		modifierParser.parse(curr.attributes, core:io:Url());
-		if (modifierParser.hasError()) {
-			modifierParser.throwError();
-			throw SQLError("Failed to parse the column attributes for column ${curr.name}: ${curr.attributes}");
+		if (!connection.implicitAutoIncrement()) {
+			// Make changes to a copy of "table" to give better error messages:
+			Nat col = table.implicitAutoIncrementColumn();
+			if (col < table.columns.count) {
+				table = table.clone();
+				table.columns[col].autoIncrement = true;
+			}
 		}
 
-		modifierParser.tree.transform(c);
+		// Check columns:
+		for (Nat i = 0; i < schema.count; i++) {
+			var current = schema[i];
+			var desired = table.columns[i];
 
-		if (pk.has(ref.name))
-			c.primaryKey = true;
+			if (!desired.sameAs(current)) {
+				if (current.name == desired.name) {
+					if (!connection.fullAlterTable())
+						throw SchemaError("Unable to update column ${i} since the database does not support ALTER TABLE fully.", table, schema);
 
-		Bool modify = ref != c;
+					// This is fairly easy, we can just ask the DB to modify the properties. It
+					// might fail though.
+					queries << updateColumn(table.name, desired, current);
+				} else {
+					// This could be done. We could try to find another column with the same name
+					// and use that. Renames makes this a bit more difficult, so we don't support it
+					// for now.
+					throw SchemaError("Incorrect name for column ${i}. New columns can only be added last for auto-migration to work.", table, schema);
+				}
+			}
+		}
 
-		// Note: On databases other than SQLite, we are probably able to change these aspects.
-		if (modify)
-			throw SchemaError("Incorrect attributes for column ${i}", table, schema);
+		// TODO: We need to consider primary keys separately by re-creating the constraint.
+
+		// Add any new columns:
+		for (Nat i = schema.count; i < table.columns.count; i++) {
+			var col = table.columns[i];
+			QueryStrBuilder to;
+			to.put("ALTER TABLE ");
+			to.name(table.name);
+			to.put(" ADD ");
+			col.toSQL(to);
+			to.put(";");
+			queries << to.build();
+		}
+
+		// Check indices:
+		{
+			Set<Str> desired;
+			for (x in table.indices)
+				desired.put(hashIndex(x));
+			Set<Str> current;
+			for (x in schema.indices)
+				current.put(hashIndex(x));
+
+			// See what to remove:
+			for (x in schema.indices) {
+				if (!desired.has(hashIndex(x))) {
+					QueryStrBuilder to;
+					to.put("DROP INDEX ");
+					to.name(x.name);
+					to.put(";");
+					queries << to.build();
+				}
+			}
+
+			// See what to add:
+			for (x in table.indices) {
+				if (!current.has(hashIndex(x))) {
+					QueryStrBuilder to;
+					x.toSQL(to, table.name);
+					queries << to.build();
+				}
+			}
+		}
+
+		queries;
 	}
 
-	for (Nat i = schema.count; i < table.columns.count; i++) {
-		// Add a column!
-		var col = table.columns[i];
+	QueryStr updateColumn(Str table, Column desired, Schema:Column current) {
 		QueryStrBuilder to;
 		to.put("ALTER TABLE ");
-		to.name(table.name);
-		to.put(" ADD ");
-		col.toSQL(to);
-		queries << to.build();
-	}
-
-	// Check indices...
-	{
-		Set<Str> desired;
-		for (x in table.indices)
-			desired.put(hashIndex(x));
-		Set<Str> current;
-		for (x in schema.indices)
-			current.put(hashIndex(x));
-
-		// See what to remove...
-		for (x in schema.indices) {
-			if (!desired.has(hashIndex(x))) {
-				QueryStrBuilder to;
-				to.put("DROP INDEX ");
-				to.name(x.name);
-				to.put(";");
-				queries << to.build();
-			}
+		to.name(table);
+		if (desired.name == current.name) {
+			to.put(" MODIFY ");
+		} else {
+			to.put(" CHANGE ");
+			to.name(current.name);
+			to.put(" ");
 		}
-
-		// See what to add...
-		for (x in table.indices) {
-			if (!current.has(hashIndex(x))) {
-				QueryStrBuilder to;
-				x.toSQL(to, table.name);
-				queries << to.build();
-			}
-		}
+		desired.toSQL(to);
+		to.put(";");
+		to.build();
 	}
-
-	queries;
 }
 
 // Produce a "hash" of an index.

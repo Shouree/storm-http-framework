@@ -104,7 +104,7 @@ namespace sql {
 			*to << S("(") << size.value() << S(")");
 	}
 
-	void MariaDBBase::Visitor::autoincrement(StrBuf *to) {
+	void MariaDBBase::Visitor::autoIncrement(StrBuf *to) {
 		*to << S("AUTO_INCREMENT");
 	}
 
@@ -173,7 +173,6 @@ namespace sql {
 
 		try {
 			Array<Schema::Column *> *columns = new (this) Array<Schema::Column *>();
-			Array<Str *> *pk = new (this) Array<Str *>();
 
 			Statement::Result queryResult = columnQuery->execute();
 			// Columns are: field, type, null, key, default, extra
@@ -201,12 +200,8 @@ namespace sql {
 				}
 
 				if (!v.isNull(4)) {
-					Variant def = at(engine(), v, 4);
-					if (def.has(StormInfo<Str *>::type(engine()))) {
-						col->defaultValue = toSQLStrLiteral((Str *)def.getObject());
-					} else {
-						col->defaultValue = TO_S(this, v);
-					}
+					// Note: Any string values are already properly quoted by MariaDB.
+					col->defaultValue = TO_S(this, v.getStr(4));
 				}
 
 				{
@@ -247,7 +242,7 @@ namespace sql {
 				indices->at(id)->columns->push(v.getStr(4));
 			}
 
-			return new (this) Schema(table, columns, pk, indices);
+			return new (this) Schema(table, columns, indices);
 		} catch (SQLError *e) {
 			// Check if the error was that the table does not exist.
 			if (e->code.any() && e->code.value() == ER_NO_SUCH_TABLE)

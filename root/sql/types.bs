@@ -24,18 +24,13 @@ class SQLType {
 		SQLType(sqlType.sized(size), storm);
 	}
 	SQLType sized(Str size) {
-		sized(size.toInt());
+		sized(size.toNat());
 	}
 
 	Str toS() : override {
 		QueryStrBuilder b;
 		b.type(this);
 		b.build.toS;
-	}
-
-	Bool ==(SQLType o) {
-		(sqlType == o.sqlType) &
-		(sqlSize == o.sqlSize);
 	}
 }
 

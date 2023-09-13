@@ -52,13 +52,8 @@ class SchemaError extends SQLError {
 		out.dedent();
 		out << "But got the following columns:\n";
 		out.indent();
-		Set<Str> pk;
-		for (x in actual.primaryKeys)
-			pk.put(x);
 		for (Nat i = 0; i < actual.count; i++) {
 			out << actual[i];
-			if (pk.has(actual[i].name))
-				out << " (primary key)";
 			out << "\n";
 		}
 		out.dedent();

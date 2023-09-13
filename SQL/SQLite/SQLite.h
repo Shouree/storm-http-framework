@@ -35,6 +35,12 @@ namespace sql {
 		// Returns a Schema for SQLite connection.
 		MAYBE(Schema *) STORM_FN schema(Str *table);
 
+		// It is possible to omit AUTOINCREMENT!
+		Bool STORM_FN implicitAutoIncrement() const override;
+
+		// We don't support the full ALTER TABLE syntax.
+		Bool STORM_FN fullAlterTable() const override;
+
 	private:
 		// The SQLite3 object.
 		UNKNOWN(PTR_NOGC) sqlite3 *db;

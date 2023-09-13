@@ -131,4 +131,16 @@ namespace sql {
 	}
 
 
+	/**
+	 * Connection.
+	 */
+
+	Bool DBConnection::implicitAutoIncrement() const {
+		return false;
+	}
+
+	Bool DBConnection::fullAlterTable() const {
+		return true;
+	}
+
 }

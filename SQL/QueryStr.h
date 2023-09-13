@@ -45,7 +45,7 @@ namespace sql {
 			virtual void STORM_FN placeholder(StrBuf *to);
 
 			// Output autoincrement.
-			virtual void STORM_FN autoincrement(StrBuf *to);
+			virtual void STORM_FN autoIncrement(StrBuf *to);
 
 			// Output a type.
 			virtual void STORM_FN type(StrBuf *to, QueryType type);
@@ -94,7 +94,7 @@ namespace sql {
 		void STORM_FN placeholder();
 
 		// Add "autoincrement" keyword.
-		void STORM_FN autoincrement();
+		void STORM_FN autoIncrement();
 
 		// Add a generic type.
 		void STORM_FN type(QueryType type);

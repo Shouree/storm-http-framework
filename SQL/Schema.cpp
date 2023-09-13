@@ -7,18 +7,8 @@ namespace sql {
 	Schema::Schema(Str *tableName, Array<Column *> *columns)
 		: tableName(tableName), columns(columns) {}
 
-	Schema::Schema(Str *tableName, Array<Column *> *columns, Array<Str *> *pk)
-		: tableName(tableName), columns(columns), pk(pk) {}
-
-	Schema::Schema(Str *tableName, Array<Column *> *columns, Array<Str *> *pk, Array<Index *> *indices)
-		: tableName(tableName), columns(columns), pk(pk), index(indices) {}
-
-	Array<Str *> *Schema::primaryKeys() const {
-		if (pk)
-			return pk;
-		else
-			return new (this) Array<Str *>();
-	}
+	Schema::Schema(Str *tableName, Array<Column *> *columns, Array<Index *> *indices)
+		: tableName(tableName), columns(columns), index(indices) {}
 
 	Array<Schema::Index *> *Schema::indices() const {
 		if (index)
@@ -32,11 +22,6 @@ namespace sql {
 		to->indent();
 		for (Nat i = 0; i < columns->count(); i++) {
 			*to << columns->at(i) << S("\n");
-		}
-		if (pk) {
-			*to << S("PRIMARY KEY(");
-			*to << join(pk, S(", "));
-			*to << S(")");
 		}
 		if (index) {
 			for (Nat i = 0; i < index->count(); i++) {
@@ -55,17 +40,17 @@ namespace sql {
 
 	void Schema::Column::toS(StrBuf *to) const {
 		*to << name << S(" ") << type;
+		if (attributes & primaryKey)
+			*to <<S (" PRIMARY KEY");
 		if (attributes & notNull)
 			*to << S(" NOT NULL");
-		if (attributes & primaryKey)
-			*to << S(" PRIMARY KEY");
 		if (attributes & unique)
 			*to << S(" UNIQUE");
 		if (attributes & autoIncrement)
 			*to << S(" AUTOINCREMENT");
 
 		if (defaultValue)
-			*to << S(" ") << defaultValue;
+			*to << S(" DEFAULT ") << defaultValue;
 
 		if (unknown)
 			*to << S(" unknown: ") << unknown;

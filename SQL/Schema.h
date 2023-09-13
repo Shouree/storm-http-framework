@@ -19,10 +19,10 @@ namespace sql {
 		enum Attributes {
 			// No attributes.
 			none,
-			// Not null.
-			notNull = 0x01,
 			// Primary key.
-			primaryKey = 0x02,
+			primaryKey = 0x01,
+			// Not null.
+			notNull = 0x02,
 			// Unique.
 			unique = 0x04,
 			// Autoincrement.
@@ -50,7 +50,7 @@ namespace sql {
 			Attributes attributes;
 
 			// Default value, if any.
-			MAYBE(Str *) defaultValue;
+			MAYBE(Str *) STORM_NAME(defaultValue, default);
 
 			// Unknown parts of the declaration. If 'type' is VOID, then the type is here also.
 			MAYBE(Str *) unknown;
@@ -82,8 +82,7 @@ namespace sql {
 
 		// Create a filled schema.
 		STORM_CTOR Schema(Str *tableName, Array<Column *> *columns);
-		STORM_CTOR Schema(Str *tableName, Array<Column *> *columns, Array<Str *> *pk);
-		STORM_CTOR Schema(Str *tableName, Array<Column *> *columns, Array<Str *> *pk, Array<Index *> *indices);
+		STORM_CTOR Schema(Str *tableName, Array<Column *> *columns, Array<Index *> *indices);
 
 		// Number of columns in this table.
 		Nat STORM_FN count() const {
@@ -103,9 +102,6 @@ namespace sql {
 			return columns->at(id);
 		}
 
-		// Get primary keys.
-		Array<Str *> *STORM_FN primaryKeys() const;
-
 		// Indices.
 		Array<Index *> *STORM_FN indices() const;
 
@@ -119,9 +115,6 @@ namespace sql {
 
 		// Columns.
 		Array<Column *> *columns;
-
-		// Primary keys (declared separatly).
-		Array<Str *> *pk;
 
 		// Indices.
 		Array<Index *> *index;

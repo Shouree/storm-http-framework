@@ -178,7 +178,7 @@ namespace sql {
 			STORM_CTOR Visitor();
 			void STORM_FN name(StrBuf *to, Str *name) override;
 			void STORM_FN type(StrBuf *to, QueryType type) override;
-			void STORM_FN autoincrement(StrBuf *to) override;
+			void STORM_FN autoIncrement(StrBuf *to) override;
 		};
 	};
 

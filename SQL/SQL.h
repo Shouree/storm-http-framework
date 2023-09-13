@@ -143,6 +143,18 @@ namespace sql {
 
 		// Returns a Schema for a particular table.
 		virtual MAYBE(Schema *) STORM_FN schema(Str *table) ABSTRACT;
+
+
+		/**
+		 * Peculiarities of the database, that the database library might need to consider:
+		 */
+
+		// Does this database implicitly assign IDs to the first primary key? I.e., can we omit
+		// autoincrement in this case?
+		virtual Bool STORM_FN implicitAutoIncrement() const;
+
+		// Does this database support full ALTER TABLE syntax?
+		virtual Bool STORM_FN fullAlterTable() const;
 	};
 
 }

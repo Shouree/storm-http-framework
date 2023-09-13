@@ -2,6 +2,7 @@
 #include "SQLite.h"
 #include "Exception.h"
 #include "String.h"
+#include "Core/Set.h"
 
 namespace sql {
 
@@ -30,6 +31,14 @@ namespace sql {
 
 	SQLite::~SQLite() {
 		close();
+	}
+
+	Bool SQLite::implicitAutoIncrement() const {
+		return true;
+	}
+
+	Bool SQLite::fullAlterTable() const {
+		return false;
 	}
 
 	void SQLite::close() {
@@ -198,7 +207,7 @@ namespace sql {
 		return identifier(e, nameBegin, nameEnd);
 	}
 
-	static Array<Str *> *parsePK(Engine &e, const wchar *&oBegin, const wchar *&oEnd) {
+	static Set<Str *> *parsePK(Engine &e, const wchar *&oBegin, const wchar *&oEnd) {
 		const wchar *begin = oBegin;
 		const wchar *end = oEnd;
 
@@ -213,9 +222,9 @@ namespace sql {
 		if (!cmp(begin, end, S("(")))
 			return null;
 
-		Array<Str *> *cols = new (e) Array<Str *>();
+		Set<Str *> *cols = new (e) Set<Str *>();
 		while (next(begin, end)) {
-			cols->push(identifier(e, begin, end));
+			cols->put(identifier(e, begin, end));
 
 			next(begin, end);
 			if (cmp(begin, end, S(")")))
@@ -277,7 +286,7 @@ namespace sql {
 		// Find the "(" and remember the name in the previous token.
 		Str *tableName = identifierBefore(engine(), begin, end, S("("));
 
-		Array<Str *> *pk = null;
+		Set<Str *> *pk = null;
 		Array<Schema::Column *> *cols = new (this) Array<Schema::Column *>();
 		while (next(begin, end)) {
 			if (pk = parsePK(engine(), begin, end)) {
@@ -323,6 +332,16 @@ namespace sql {
 				break;
 		}
 
+		// Update columns to store primary key information.
+		if (pk) {
+			for (Nat i = 0; i < cols->count(); i++) {
+				Schema::Column *col = cols->at(i);
+				if (pk->has(col->name))
+					col->attributes |= Schema::primaryKey;
+			}
+		}
+
+
 		// Indices:
 
 		Array<Schema::Index *> *indices = new (this) Array<Schema::Index *>();
@@ -359,7 +378,7 @@ namespace sql {
 
 		prepared->finalize();
 
-		return new (this) Schema(tableName, cols, pk, indices);
+		return new (this) Schema(tableName, cols, indices);
 	}
 
 
