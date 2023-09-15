@@ -144,7 +144,7 @@ class Database {
 	// Find a user's identity from its client key.
 	UserInfo? findUser(Str clientId) {
 		if (x = WITH db: SELECT ONE users.id, users.displayName, users.admin FROM clients JOIN users ON clients.user == users.id WHERE clients.id == clientId) {
-			return UserInfo(x.users_id, x.users_displayName, x.users_admin > 0);
+			return UserInfo(x.users.id, x.users.displayName, x.users.admin > 0);
 		}
 		null;
 	}
@@ -152,7 +152,7 @@ class Database {
 	// Find user info from its ID.
 	UserInfo? findUser(Int userId) {
 		if (x = WITH db: SELECT ONE users.id, users.displayName, users.admin FROM users WHERE users.id == userId) {
-			return UserInfo(x.users_id, x.users_displayName, x.users_admin > 0);
+			return UserInfo(x.users.id, x.users.displayName, x.users.admin > 0);
 		}
 		null;
 	}
