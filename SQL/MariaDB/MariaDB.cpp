@@ -2,7 +2,7 @@
 #include "MariaDB.h"
 #include "Value.h"
 #include "Exception.h"
-#include "String.h"
+#include "StrUtils.h"
 #include "Core/Convert.h"
 
 namespace sql {

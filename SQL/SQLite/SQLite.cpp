@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "SQLite.h"
 #include "Exception.h"
-#include "String.h"
+#include "StrUtils.h"
 #include "Core/Set.h"
 
 namespace sql {

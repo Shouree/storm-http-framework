@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Type.h"
 #include "Exception.h"
-#include "String.h"
+#include "StrUtils.h"
 
 namespace sql {
 

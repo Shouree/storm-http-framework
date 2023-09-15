@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "String.h"
+#include "StrUtils.h"
 
 namespace sql {
 
