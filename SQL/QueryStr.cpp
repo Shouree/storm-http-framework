@@ -134,4 +134,10 @@ namespace sql {
 		return new (this) QueryStr(o, s);
 	}
 
+	void QueryStrBuilder::clear() {
+		currentStr->clear();
+		ops->clear();
+		strings->clear();
+	}
+
 }

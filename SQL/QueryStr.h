@@ -102,6 +102,9 @@ namespace sql {
 		// Create the query string.
 		QueryStr *STORM_FN build();
 
+		// Clear contents.
+		void STORM_FN clear();
+
 	private:
 		// String buffer for the string data being built.
 		StrBuf *currentStr;

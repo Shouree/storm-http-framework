@@ -553,8 +553,6 @@ class TypedConnection {
 			}
 		}
 
-		// TODO: We need to consider primary keys separately by re-creating the constraint.
-
 		// Add any new columns:
 		for (Nat i = schema.count; i < table.columns.count; i++) {
 			var col = table.columns[i];
@@ -562,9 +560,75 @@ class TypedConnection {
 			to.put("ALTER TABLE ");
 			to.name(table.name);
 			to.put(" ADD ");
-			col.toSQL(to);
+			// We can't add autoincrement before adding it as a primary key.
+			if (col.autoIncrement) {
+				col.autoIncrement = false;
+				col.toSQL(to);
+				col.autoIncrement = true;
+			} else {
+				col.toSQL(to);
+			}
 			to.put(";");
 			queries << to.build();
+		}
+
+		// Check if the set of primary keys have changed. If so, we need to re-create the set of
+		// primary keys.
+		{
+			Bool updatePK = false;
+			Bool anyCurrentPK = false;
+			Str[] desiredPK;
+			for (i, col in table.columns) {
+				Bool desired = col.primaryKey;
+				if (desired)
+					desiredPK << col.name;
+
+				if (i < schema.count) {
+					Bool current = schema[i].attributes.has(Schema:Attributes:primaryKey);
+					anyCurrentPK |= current;
+					updatePK |= (desired != current);
+				} else {
+					updatePK |= desired;
+				}
+			}
+
+			if (updatePK) {
+				QueryStrBuilder to;
+				if (anyCurrentPK) {
+					to.put("ALTER TABLE ");
+					to.put(table.name);
+					to.put(" DROP PRIMARY KEY;");
+					queries << to.build;
+					to.clear();
+				}
+
+				to.put("ALTER TABLE ");
+				to.put(table.name);
+				to.put(" ADD PRIMARY KEY (");
+				for (i, v in desiredPK) {
+					if (i > 0)
+						to.put(", ");
+					to.name(v);
+				}
+				to.put(");");
+				queries << to.build;
+
+				// Check if any of the primary keys need to have the autoincrement keyword added now.
+				for (i, col in table.columns) {
+					Bool update = col.autoIncrement;
+					if (i < schema.count)
+						update &= !schema[i].attributes.has(Schema:Attributes:autoIncrement);
+
+					if (update) {
+						QueryStrBuilder to;
+						to.put("ALTER TABLE ");
+						to.put(table.name);
+						to.put(" MODIFY ");
+						col.toSQL(to);
+						queries << to.build;
+					}
+				}
+			}
 		}
 
 		// Check indices:
@@ -611,7 +675,16 @@ class TypedConnection {
 			to.name(current.name);
 			to.put(" ");
 		}
-		desired.toSQL(to);
+
+		if (!current.attributes.has(Schema:Attributes:primaryKey) & desired.autoIncrement) {
+			// We can't add autoincrement before setting it as a primary key. So, temporarily ignore
+			// the autoincrement part:
+			desired.autoIncrement = false;
+			desired.toSQL(to);
+			desired.autoIncrement = true;
+		} else {
+			desired.toSQL(to);
+		}
 		to.put(";");
 		to.build();
 	}
