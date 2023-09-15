@@ -192,7 +192,7 @@ private Expr getColumn(Block block, Expr row, Value type, TypedCol col) on Compi
 			throw InternalError("Nested type rows should be implemented as a TypedRow type!");
 
 		if (col.maybe) {
-			return getMaybeNested(block, row, type, nested);
+			return getMaybeNested(block, row, type, nested, col);
 		} else {
 			return getPlainNested(block, row, nested);
 		}
@@ -232,14 +232,14 @@ private Expr getPlainNested(Block block, Expr row, TypedRow type) on Compiler {
 }
 
 // Extract a column, but check for NULL first.
-private Expr getMaybeNested(Block block, Expr row, Value maybeType, TypedRow plainType) on Compiler {
+private Expr getMaybeNested(Block block, Expr row, Value wrapped, TypedRow plain, NestedTypedCol col) on Compiler {
 	// If all members are null, then we assume that the entire structure is never null since we
 	// can't tell the difference between the entire table being null, and all the columns. We
 	// *could* check all columns and assume that all nulls equal a null structure, but that is too
 	// expensive for a heuristic that is likely seldom used (primary keys are usually not null, for
 	// example).
-	unless (check = plainType.firstNonNull)
-		return callCtor(block, maybeType, Actuals(getPlainNested(block, row, plainType, id)));
+	unless (check = col.firstNonNull)
+		return callCtor(block, wrapped, Actuals(getPlainNested(block, row, plain)));
 
 	var fn = named{Row:isNull<Row, Nat>};
 	Actuals params;
@@ -248,10 +248,11 @@ private Expr getMaybeNested(Block block, Expr row, Value maybeType, TypedRow pla
 	If check(block, FnCall(SrcPos(), Scope(), fn, params));
 
 	CondSuccess ok(SrcPos(), block, check.condition);
-	ok.set(callCtor(block, maybeType, Actuals()));
+	ok.set(callCtor(block, wrapped, Actuals()));
 	check.trueCode = ok;
 
-	check.falseCode = callCtor(block, maybeType, Actuals(getPlainNested(block, row, plainType, id)));
+	check.falseCode = callCtor(block, wrapped, Actuals(getPlainNested(block, row, plain)));
+	check;
 }
 
 // Call a constructor.

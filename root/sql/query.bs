@@ -933,6 +933,10 @@ class SelectQuery extends SelectBase {
 	// Order by.
 	OrderBy[] orderBy;
 
+	// Description of types in each row. Empty for non-typed queries.
+	TypedCol[] rowDesc;
+
+	// Create.
 	init(SrcPos pos, TableName table, Column[] cols, Join[] joins, SQLExpr? condition, OrderBy[] orderBy) {
 		init(pos, table, joins, condition) {
 			cols = cols;
@@ -944,45 +948,103 @@ class SelectQuery extends SelectBase {
 	void resolve(ResolveContext context) : override {
 		super:resolve(context);
 
-		if (context.visible.any)
-			resolveOutput(context);
+		// Type-check and prepare output format:
+		if (context.visible.any) {
+			rowDesc.clear();
+			if (cols.empty) {
+				addAllCols(context);
+			} else {
+				resolveCols(context);
+			}
+
+			resolveOrder(context);
+		}
 	}
 
-	// Resolve the output data.
-	private void resolveOutput(ResolveContext context) {
-		if (cols.empty) {
-			// No columns -> we need to add all visible columns.
+	// Add all columns to our output.
+	private void addAllCols(ResolveContext context) {
+		if (joins.empty) {
+			// Only one table, don't scope names:
+			Nat id = 0;
 			for (name, table in context.visible) {
+				// Note: Currently, nullTable should always be true. This is, however, here for
+				// completeness if this assumption would change in the future.
 				Bool nullTable = context.nullTables.has(name);
+
 				for (col in table.columns) {
-					Column c = if (joins.empty) {
-						Column(pos, null, col.name);
-					} else {
-						Column(pos, name, col.name);
-					};
-					c.type = resultType(nullTable, col);
+					Column c(pos, null, col.name);
+					Type t = resultType(nullTable, col);
+
+					c.type = t;
 					cols << c;
+
+					rowDesc << ScalarTypedCol(col.name, id++, t);
 				}
 			}
 		} else {
-			// We have some columns. Check them.
-			for (col in cols) {
-				unless (result = context.resolve(col.pos, col.table, col.column)) {
-					if (table = col.table)
-						throw NoSuchColumn(col.pos, col.column, table);
-					else
-						throw NoSuchColumn(col.pos, col.column, table.name);
-				}
+			// Mutliple tables, scope them appropriately.
+			Nat id = 0;
+			for (name, table in context.visible) {
+				NestedTypedCol nested(name, context.nullTables.has(name));
+				rowDesc << nested;
 
-				Bool nullTable = false;
-				if (table = col.table) {
-					nullTable = context.nullTables.has(table);
-				}
+				for (col in table.columns) {
+					Column c(pos, name, col.name);
+					Type t = resultType(false, col);
 
-				col.type = resultType(nullTable, result.column);
+					c.type = t;
+					cols << c;
+
+					nested.push(ScalarTypedCol(col.name, id++, t));
+				}
 			}
 		}
+	}
 
+	// Resolve columns and create our rowDesc.
+	private void resolveCols(ResolveContext context) {
+		Nat id = 0;
+		Str->NestedTypedCol nested;
+
+		for (col in cols) {
+			unless (result = context.resolve(col.pos, col.table, col.column)) {
+				if (table = col.table)
+					throw NoSuchColumn(col.pos, col.column, table);
+				else
+					throw NoSuchColumn(col.pos, col.column, table.name);
+			}
+
+			Bool nullTable = context.nullTables.has(result.table);
+
+			// Now, find the type and add it to the rowDesc. We need to wrap the type inside Maybe
+			// only when we put it in a context where it is not scoped.
+			if (altName = col.as) {
+				// If it has an alternate name, it is never scoped.
+				Type t = resultType(nullTable, result.column);
+				col.type = t;
+				rowDesc << ScalarTypedCol(altName, id++, t);
+			} else if (table = col.table) {
+				// A table was specified originally. Always scoped, no need for extra Maybe.
+				Type t = resultType(false, result.column);
+				col.type = t;
+
+				if (!nested.has(table)) {
+					NestedTypedCol created(table, nullTable);
+					nested.put(table, created);
+					rowDesc << created;
+				}
+				nested.get(table).push(ScalarTypedCol(col.column, id++, t));
+			} else {
+				// Else, the table was not specified originally and the result will not be scoped.
+				Type t = resultType(nullTable, result.column);
+				col.type = t;
+				rowDesc << ScalarTypedCol(col.column, id++, t);
+			}
+		}
+	}
+
+	// Resolve the "order by" portion.
+	private void resolveOrder(ResolveContext context) {
 		for (col in orderBy) {
 			if (context.resolve(col.pos, col.table, col.column).empty) {
 				if (table = col.table)
@@ -1035,53 +1097,13 @@ class SelectQuery extends SelectBase {
 		r;
 	}
 
-	// Compute type info. Returns an empty array if we don't have any type info.
-	protected TypedCol[] createTypes() {
-		TypedCol[] result;
-		Str->NestedTypedCol nested;
-
-		Bool multiTable = joins.any;
-
-		for (i, c in cols) {
-			// If no type info, then just return empty array.
-			unless (type = c.type)
-				return [];
-
-			// Use alternate name, if available.
-			if (altName = c.as) {
-				result << ScalarTypedCol(altName, i, type);
-				continue;
-			}
-
-			// If it is a part of a table, use that if we the query involves more than one table.
-			if (multiTable) {
-				if (table = c.table) {
-					if (!nested.has(table)) {
-						NestedTypedCol created(table, false);
-						nested.put(table, created);
-						result << created;
-					}
-					nested.get(table).push(ScalarTypedCol(c.column, i, type));
-					continue;
-				}
-			}
-
-			// Else, just use the plain column name.
-			result << ScalarTypedCol(c.column, i, type);
-		}
-
-		result;
-	}
-
 	// Return a proper iterator.
 	Expr? result(Block context, Expr result) {
-		TypedCol[] types = createTypes();
-
 		// If no type information, fall back to the typeless version.
-		if (types.empty)
+		if (rowDesc.empty)
 			return namedExpr(context, pos, "iter", result);
 
-		var iterType = getTypedIter(types);
+		var iterType = getTypedIter(rowDesc);
 		unless (ctor = iterType.find("__init", [Value(iterType), result.result.type.asRef(false)], Scope()) as Function)
 			throw InternalError("Could not find a suitable constructor in the generated type.");
 
@@ -1116,14 +1138,12 @@ class SelectOneQuery extends SelectQuery {
 
 	// Modified result. Returns a single row (wrapped in Maybe) rather than an iterator.
 	Expr? result(Block context, Expr result) {
-		TypedCol[] types = createTypes();
-
 		// No type info - just return a Maybe<Row> object.
-		if (types.empty)
+		if (rowDesc.empty)
 			return namedExpr(context, pos, "next", result);
 
 		// Otherwise, we want to return either <null> or an instance of the row-type.
-		TypedRow t = getTypedRow(types);
+		TypedRow t = getTypedRow(rowDesc);
 		unless (ctor = t.find("__init", [Value(t), Value(named{Row})], Scope()) as Function)
 			throw InternalError("Could not find a suitable constructor in the generated type.");
 
