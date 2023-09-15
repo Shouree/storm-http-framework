@@ -21,23 +21,15 @@ suite Mixed {
 	}
 }
 
-Int countTables(SQLite db) {
-	Int tables;
-	for (row in WITH db: SELECT name FROM sqlite_master WHERE type == "table") {
-		tables++;
-	}
-	tables;
-}
-
 suite Exclusive {
 	SQLite db;
 
 	WITH db: CREATE TABLE test(id INTEGER PRIMARY KEY, name TEXT);
 	WITH db: CREATE INDEX ON test(name);
 
-	test countTables(db) == 1;
+	test db.tables.count == 1;
 
 	WITH db: DROP TABLE test;
 
-	test countTables(db) == 0;
+	test db.tables.count == 0;
 }

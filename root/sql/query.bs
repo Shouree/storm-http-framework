@@ -1161,7 +1161,8 @@ class CreateQuery extends Query {
 	// Build the query.
 	QueryBuilder build() : override {
 		QueryBuilder r;
-		table.toSQL(r.query, ifNotExists, false, []);
+		// Note: We give 'true' for 'supports automatic autoincrement' to avoid modifying the query.
+		table.toSQL(r.query, ifNotExists, true, []);
 		r;
 	}
 

@@ -251,22 +251,29 @@ class Table {
 		to.name(name);
 		to.put(" (");
 
-		Nat implicitCol = if (implicitAutoIncrement) { columns.count; } else { implicitAutoIncrementColumn(); };
 		Str[] pk;
+		for (col in columns)
+			if (col.primaryKey)
+				pk << col.name;
+
+		Nat implicitCol = if (implicitAutoIncrement) { columns.count; } else { implicitAutoIncrementColumn(); };
 		for (i, col in columns) {
 			if (i > 0)
 				to.put(", ");
 			col.toSQL(to);
 
+			// Note: Some databases (e.g. SQLite) require that the PRIMARY KEY is specified here in
+			// order for AUTOINCREMENT to work properly.
+			if (pk.count == 1 & col.primaryKey)
+				to.put(" PRIMARY KEY");
+
 			if (implicitCol == i) {
 				to.put(" ");
 				to.autoIncrement();
 			}
-			if (col.primaryKey)
-				pk << col.name;
 		}
 
-		if (pk.any) {
+		if (pk.count > 1) {
 			to.put(", PRIMARY KEY(");
 			for (i, k in pk) {
 				if (i > 0)
