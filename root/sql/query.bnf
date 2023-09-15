@@ -90,14 +90,14 @@ Array<SelectQuery.Join> SJoins();
 SJoins => Array<SelectQuery.Join>() : (~ SJoin -> push)*;
 
 SelectQuery.Join SJoin();
-SJoin => SelectQuery.Join(type, table, condition) : (SJoinType) type ~ STableName table ~ "ON" ~ SExpr condition;
+SJoin => SelectQuery.Join(type, table, condition) : SJoinType type ~ STableName table ~ "ON" ~ SExpr condition;
 
 // Types of joins.
-void SJoinType();
-SJoinType : "LEFT" ~ "JOIN";
-SJoinType : "RIGHT" ~ "JOIN";
-SJoinType : "INNER" ~ "JOIN";
-SJoinType : "JOIN";
+SelectQuery.JoinType SJoinType();
+SJoinType => SelectQuery.JoinType.left() : "LEFT" ~ "JOIN";
+SJoinType => SelectQuery.JoinType.right() : "RIGHT" ~ "JOIN";
+SJoinType => SelectQuery.JoinType.inner() : ("INNER" ~)? - "JOIN";
+SJoinType => SelectQuery.JoinType.full() : "FULL" - (~ "OUTER")? ~ "JOIN";
 
 // A list of SQL expressions.
 Array<SQLExpr> SExprList();

@@ -225,6 +225,9 @@ class ResolveContext on Compiler {
 	// Which tables are visible in the current context? Keys are aliases and not necessarily table names.
 	Str->Table visible;
 
+	// Which tables might be null due to a join? Keys are keys in 'visible'.
+	Set<Str> nullTables;
+
 	// Create typed version.
 	init(Block block, Database db) {
 		init { block = block; db = db; }
@@ -673,7 +676,7 @@ class SelectBase extends Query {
 	 */
 	class Join on Compiler {
 		// Type of join.
-		Str type;
+		JoinType type;
 
 		// Table.
 		TableName table;
@@ -682,7 +685,7 @@ class SelectBase extends Query {
 		SQLExpr expr;
 
 		// Create.
-		init(Str type, TableName table, SQLExpr expr) {
+		init(JoinType type, TableName table, SQLExpr expr) {
 			init {
 				type = type;
 				table = table;
@@ -692,17 +695,44 @@ class SelectBase extends Query {
 
 		// Build.
 		void build(QueryBuilder to) {
-			to.query.put(type);
+			to.query.put(typeStr());
 			to.query.put(" ");
 			table.build(to);
 			to.query.put(" ON ");
 			expr.build(to);
 		}
 
+		// String of join type.
+		Str typeStr() {
+			if (type == JoinType:inner) {
+				"JOIN";
+			} else if (type == JoinType:full) {
+				"FULL JOIN";
+			} else if (type == JoinType:left) {
+				"LEFT JOIN";
+			} else if (type == JoinType:right) {
+				"RIGHT JOIN";
+			} else {
+				"";
+			}
+		}
+
 		// ToS.
 		void toS(StrBuf to) : override {
-			to << type << " " << table << " ON " << expr;
+			to << typeStr() << " " << table << " ON " << expr;
 		}
+	}
+
+	// Type of joins.
+	// Masked to easily mask out which tables might be null.
+	enum JoinType : bitmask {
+		inner = 0x0,
+		full = 0x3,
+		left = 0x2,
+		right = 0x1,
+
+		nullBefore = 0x1,
+		nullAfter = 0x2,
 	}
 
 	// Join clauses.
@@ -724,7 +754,18 @@ class SelectBase extends Query {
 		context.addTable(table);
 
 		for (j in joins) {
+			if (j.type.has(JoinType:nullBefore)) {
+				// For left and full, all tables before might be null.
+				for (k, v in context.visible)
+					context.nullTables.put(k);
+			}
+
 			context.addTable(j.table);
+			if (j.type.has(JoinType:nullAfter)) {
+				// For right and full, current table might be null.
+				context.nullTables.put(j.table.alias);
+			}
+
 			// TODO: Might be too early, but I think this is how SQL works.
 			j.expr = j.expr.resolve(context);
 			if (context.typed)
@@ -916,14 +957,15 @@ class SelectQuery extends SelectBase {
 	private void resolveOutput(ResolveContext context) {
 		if (cols.empty) {
 			// No columns -> we need to add all visible columns.
-			for (table in context.visible) {
+			for (name, table in context.visible) {
+				Bool nullTable = context.nullTables.has(name);
 				for (col in table.columns) {
 					Column c = if (joins.empty) {
 						Column(pos, null, col.name);
 					} else {
-						Column(pos, table.name, col.name);
+						Column(pos, name, col.name);
 					};
-					c.type = resultType(col);
+					c.type = resultType(nullTable, col);
 					cols << c;
 				}
 			}
@@ -937,7 +979,12 @@ class SelectQuery extends SelectBase {
 						throw NoSuchColumn(col.pos, col.column, table.name);
 				}
 
-				col.type = resultType(result.column);
+				Bool nullTable = false;
+				if (table = col.table) {
+					nullTable = context.nullTables.has(table);
+				}
+
+				col.type = resultType(nullTable, result.column);
 			}
 		}
 
@@ -952,9 +999,9 @@ class SelectQuery extends SelectBase {
 	}
 
 	// Figure out the type for a column.
-	private Type resultType(sql:Column col) {
+	private Type resultType(Bool nullTable, sql:Column col) {
 		Type t = col.datatype.storm;
-		if (col.allowNull) {
+		if (nullTable | col.allowNull) {
 			if (maybe = wrapMaybe(t).type)
 				return maybe;
 		}

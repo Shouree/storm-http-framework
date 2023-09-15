@@ -1,0 +1,99 @@
+use test;
+use sql;
+use core:io;
+
+DATABASE JoinDB {
+	TABLE textA(
+		id INTEGER PRIMARY KEY,
+		b INTEGER,
+		value TEXT
+		);
+
+	TABLE textB(
+		id INTEGER PRIMARY KEY,
+		value TEXT
+		);
+}
+
+JoinDB joinDB() {
+	SQLite db;
+	JoinDB c(db);
+
+	WITH c {
+		INSERT INTO textB VALUES (1, "one");
+		INSERT INTO textB VALUES (2, "two");
+		INSERT INTO textB VALUES (3, "three");
+		INSERT INTO textB VALUES (4, "four");
+
+		INSERT INTO textA VALUES (1, 2, "1");
+		INSERT INTO textA VALUES (2, 3, "2");
+		INSERT INTO textA VALUES (3, 4, "3");
+		INSERT INTO textA VALUES (4, 5, "4");
+	};
+
+	return c;
+}
+
+suite JoinInner {
+	var res = WITH joinDB(): SELECT textA.id, textA.value, textB.id, textB.value
+		FROM textA
+		JOIN textB ON textA.b == textB.id;
+	Nat rows;
+	for (row in res) {
+		rows++;
+		// print(row.toS);
+	}
+	test rows == 3;
+}
+
+suite JoinLeft {
+	var res = WITH joinDB(): SELECT textA.id, textA.value, textB.id, textB.value
+		FROM textA
+		LEFT JOIN textB ON textA.b == textB.id;
+	Nat rows;
+	Nat rightNull;
+	for (row in res) {
+		rows++;
+		if (row.textB_id.empty)
+			rightNull++;
+		// print(row.toS);
+	}
+	test rows == 4;
+	test rightNull == 1;
+}
+
+suite JoinRight {
+	var res = WITH joinDB(): SELECT textA.id, textA.value, textB.id, textB.value
+		FROM textA
+		RIGHT JOIN textB ON textA.b == textB.id;
+	Nat rows;
+	Nat leftNull;
+	for (row in res) {
+		rows++;
+		if (row.textA_id.empty)
+			leftNull++;
+		// print(row.toS);
+	}
+	test rows == 4;
+	test leftNull == 1;
+}
+
+suite JoinFull {
+	var res = WITH joinDB(): SELECT textA.id, textA.value, textB.id, textB.value
+		FROM textA
+		FULL JOIN textB ON textA.b == textB.id;
+	Nat rows;
+	Nat leftNull;
+	Nat rightNull;
+	for (row in res) {
+		rows++;
+		if (row.textA_id.empty)
+			leftNull++;
+		if (row.textB_id.empty)
+			rightNull++;
+		// print(row.toS);
+	}
+	test rows == 5;
+	test leftNull == 1;
+	test rightNull == 1;
+}
