@@ -200,7 +200,7 @@ suite Join {
 		all.clear();
 
 		for (x in SELECT * FROM test JOIN extra ON extra.test == test.id WHERE test.id == 4) {
-			all << x.test_id << "|" << x.extra_data << "|";
+			all << x.test.id << "|" << x.extra.data << "|";
 		}
 
 		test all.toS == "4|some more|";

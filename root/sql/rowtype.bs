@@ -3,20 +3,115 @@ use lang:bs;
 use lang:bs:macro;
 
 /**
- * Type used to represent a row with typed data from an iterator.
+ * Description of the columns in a table. Support nesting identifiers to an arbitrary depth, even if
+ * we only ever use a single level.
+ */
+class TypedCol on Compiler {
+	// Name.
+	Str name;
+
+	init(Str name) {
+		init { name = name; }
+	}
+
+	Type varType() : abstract;
+
+	Nat? firstNonNull() : abstract;
+
+	protected void toS(StrBuf to) : override {
+		to << name;
+	}
+}
+
+/**
+ * Single column.
+ */
+class ScalarTypedCol extends TypedCol {
+	Nat id;
+	Type type;
+
+	init(Str name, Nat id, Type type) {
+		init(name) { id = id; type = type; }
+	}
+
+	Type varType() : override {
+		type;
+	}
+
+	Nat? firstNonNull() : override {
+		if (isMaybe(Value(type)))
+			return null;
+		else
+			return id;
+	}
+
+	protected void toS(StrBuf to) : override {
+		super:toS(to);
+		to << "->" << type;
+	}
+}
+
+/**
+ * Nested array of columns.
  *
- * Note: We use ValParam to associate strings to types.
+ * Note: We need to preserve the order, so we can't use Map.
+ */
+class NestedTypedCol extends TypedCol {
+	TypedCol[] columns;
+	Bool maybe;
+
+	init(Str name, Bool maybe) {
+		init(name) { maybe = maybe; }
+	}
+
+	void push(TypedCol col) {
+		columns.push(col);
+	}
+
+	Type varType() : override {
+		Type r = TypedRow(columns);
+		if (maybe) {
+			unless (m = wrapMaybe(Value(r)).type)
+				throw InternalError("Failed to find the maybe type.");
+			r = m;
+		}
+		r;
+	}
+
+	Nat? firstNonNull() : override {
+		for (c in columns)
+			if (r = c.firstNonNull())
+				return r;
+		null;
+	}
+
+	protected void toS(StrBuf to) : override {
+		super:toS(to);
+		to << "->";
+		if (maybe)
+			to << "?";
+		to << "(" << join(columns, ",") << ")";
+	}
+}
+
+
+
+/**
+ * Type used to represent a row from an SQL query.
+ *
+ * Might consist of two levels to represent 'table'.'column' properly, and to allow wrapping entire
+ * sub-tables in Maybe types to avoid checking for null in case of left- or right- joins.
  */
 class TypedRow extends Type {
-	init(ValParam[] types) {
+	init(TypedCol[] columns) {
 		init("<row>", TypeFlags:typeClass) {}
 
 		parentLookup = named{};
 
-		// Add variables.
+		// Add member variables.
 		MemberVar[] vars;
-		for (t in types) {
-			MemberVar v(t.name, t.type, this);
+		for (col in columns) {
+			MemberVar v(col.name, col.varType(), this);
 			vars << v;
 			add(v);
 		}
@@ -31,8 +126,8 @@ class TypedRow extends Type {
 
 		{
 			InitBlock init(SrcPos(), body, null);
-			for (i, t in types) {
-				init.init(Initializer(SStr(t.name), getColumn(body, row, t.type, i)));
+			for (i, col in columns) {
+				init.init(Initializer(SStr(col.name), getColumn(body, row, vars[i].type, col)));
 			}
 			body.add(init);
 		}
@@ -48,7 +143,7 @@ class TypedRow extends Type {
 		add(TypeCopyCtor(this));
 	}
 
-	// Generate a to-string function.
+	// Generate a toS function.
 	private Function toString(MemberVar[] vars) {
 		BSTreeFn fn(Value(), SStr("toS"), [thisParam(this), ValParam(named{StrBuf}, "to")], null);
 		FnBody body(fn, Scope(this, BSLookup()));
@@ -59,6 +154,8 @@ class TypedRow extends Type {
 			throw InternalError("Failed to find local variable 'this'.");
 		LocalVarAccess to(SrcPos(), toVar);
 		LocalVarAccess me(SrcPos(), thisVar);
+
+		body.add(namedExpr(body, SrcPos(), "<<", to, Actuals(StrLiteral(SrcPos(), "{ "))));
 
 		for (i, var in vars) {
 			Str s = var.name + ": ";
@@ -73,30 +170,88 @@ class TypedRow extends Type {
 			body.add(namedExpr(body, SrcPos(), "<<", to, Actuals(value)));
 		}
 
+		body.add(namedExpr(body, SrcPos(), "<<", to, Actuals(StrLiteral(SrcPos(), " }"))));
+
 		fn.body = body;
 		fn;
 	}
+
 }
 
-// Get an expression for extracting a particular column.
-private Expr getColumn(Block block, Expr row, Value type, Nat id) on Compiler {
-	if (isMaybe(type)) {
-		var fn = named{Row:isNull<Row, Nat>};
-		Actuals params;
-		params.add(row);
-		params.add(NumLiteral(SrcPos(), id.long));
-		If check(block, FnCall(SrcPos(), Scope(), fn, params));
 
-		CondSuccess ok(SrcPos(), block, check.condition);
-		ok.set(callCtor(block, type, Actuals()));
-		check.trueCode = ok;
+// Generate an expression for extracting a particular column.
+private Expr getColumn(Block block, Expr row, Value type, TypedCol col) on Compiler {
+	if (col as ScalarTypedCol) {
+		if (isMaybe(type)) {
+			return getMaybeColumn(block, row, type, unwrapMaybe(type), col.id);
+		} else {
+			return getPlainColumn(block, row, type, col.id);
+		}
+	} else if (col as NestedTypedCol) {
+		unless (nested = unwrapMaybe(type).type as TypedRow)
+			throw InternalError("Nested type rows should be implemented as a TypedRow type!");
 
-		check.falseCode = callCtor(block, type, Actuals(getPlainColumn(row, unwrapMaybe(type), id)));
-
-		check;
-	} else {
-		getPlainColumn(row, type, id);
+		if (col.maybe) {
+			return getMaybeNested(block, row, type, nested);
+		} else {
+			return getPlainNested(block, row, nested);
+		}
 	}
+
+	throw InternalError("Unknown subclass of TypedCol found!");
+}
+
+// Extract a column, given that we know it is not a maybe type.
+private Expr getPlainColumn(Block block, Expr row, Value type, Nat id) on Compiler {
+	var fn = getColumnFn(type.type);
+	Actuals params;
+	params.add(row);
+	params.add(NumLiteral(SrcPos(), id.long));
+	return FnCall(SrcPos(), Scope(), fn, params);
+}
+
+// Extract a column, but check for NULL first.
+private Expr getMaybeColumn(Block block, Expr row, Value maybeType, Value plainType, Nat id) on Compiler {
+	var fn = named{Row:isNull<Row, Nat>};
+	Actuals params;
+	params.add(row);
+	params.add(NumLiteral(SrcPos(), id.long));
+	If check(block, FnCall(SrcPos(), Scope(), fn, params));
+
+	CondSuccess ok(SrcPos(), block, check.condition);
+	ok.set(callCtor(block, maybeType, Actuals()));
+	check.trueCode = ok;
+
+	check.falseCode = callCtor(block, maybeType, Actuals(getPlainColumn(block, row, plainType, id)));
+	check;
+}
+
+// Extract a column, as a nested type.
+private Expr getPlainNested(Block block, Expr row, TypedRow type) on Compiler {
+	return callCtor(block, Value(type), Actuals(row));
+}
+
+// Extract a column, but check for NULL first.
+private Expr getMaybeNested(Block block, Expr row, Value maybeType, TypedRow plainType) on Compiler {
+	// If all members are null, then we assume that the entire structure is never null since we
+	// can't tell the difference between the entire table being null, and all the columns. We
+	// *could* check all columns and assume that all nulls equal a null structure, but that is too
+	// expensive for a heuristic that is likely seldom used (primary keys are usually not null, for
+	// example).
+	unless (check = plainType.firstNonNull)
+		return callCtor(block, maybeType, Actuals(getPlainNested(block, row, plainType, id)));
+
+	var fn = named{Row:isNull<Row, Nat>};
+	Actuals params;
+	params.add(row);
+	params.add(NumLiteral(SrcPos(), check.long));
+	If check(block, FnCall(SrcPos(), Scope(), fn, params));
+
+	CondSuccess ok(SrcPos(), block, check.condition);
+	ok.set(callCtor(block, maybeType, Actuals()));
+	check.trueCode = ok;
+
+	check.falseCode = callCtor(block, maybeType, Actuals(getPlainNested(block, row, plainType, id)));
 }
 
 // Call a constructor.
@@ -112,23 +267,13 @@ private Expr callCtor(Block block, Value type, Actuals actuals) on Compiler {
 	return CtorCall(SrcPos(), Scope(), fn, actuals);
 }
 
-// Get an expression for extracting a particular column. Does not handle Maybe<>
-private Expr getPlainColumn(Expr row, Value type, Nat id) on Compiler {
-	var fn = getColumnFn(type.type);
-	Actuals params;
-	params.add(row);
-	params.add(NumLiteral(SrcPos(), id.long));
-	return FnCall(SrcPos(), Scope(), fn, params);
-}
-
-
 /**
  * Type used to denote an iterator that produces instances of a TypedRow class.
  *
  * Follows the "simple" iterator type that only has a "next" function.
  */
 class TypedIter extends Type {
-	init(ValParam[] types) {
+	init(TypedCol[] types) {
 		init("<iter>", TypeFlags:typeValue) {}
 
 		parentLookup = named{};
@@ -212,21 +357,20 @@ class TypedIter extends Type {
 	}
 }
 
+
 // Global cache of data types.
 private Map<Str, TypedRow> createdRowTypes on Compiler;
 private Map<Str, TypedIter> createdIterTypes on Compiler;
 
 // Compute a key for use in the map.
-private Str typeKey(ValParam[] types) on Compiler {
+private Str typeKey(TypedCol[] types) on Compiler {
 	StrBuf s;
-	for (x in types) {
-		s << "!" << x.type << ":" << x.name;
-	}
+	s << join(types, ",");
 	return s.toS;
 }
 
 // Get a TypedRow instance.
-TypedRow getTypedRow(ValParam[] types) on Compiler {
+TypedRow getTypedRow(TypedCol[] types) on Compiler {
 	Str key = typeKey(types);
 	if (createdRowTypes.has(key))
 		return createdRowTypes.get(key);
@@ -237,7 +381,7 @@ TypedRow getTypedRow(ValParam[] types) on Compiler {
 }
 
 // Get a TypedIter instance.
-TypedIter getTypedIter(ValParam[] types) on Compiler {
+TypedIter getTypedIter(TypedCol[] types) on Compiler {
 	Str key = typeKey(types);
 	if (createdIterTypes.has(key))
 		return createdIterTypes.get(key);

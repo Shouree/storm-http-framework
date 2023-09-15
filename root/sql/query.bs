@@ -814,14 +814,14 @@ class SelectQuery extends SelectBase {
 		// Position
 		SrcPos pos;
 
-		// Table (optional).
+		// Table (optional). Note, we use the alias of the table if specified.
 		Str? table;
 
 		// Column.
 		Str column;
 
-		// Optional alternate name.
-		Str as;
+		// Alternate name as used in the output.
+		Str? as;
 
 		// Type of this column, if available.
 		Type? type;
@@ -830,7 +830,6 @@ class SelectQuery extends SelectBase {
 			init {
 				pos = pos;
 				column = column.v;
-				as = column.v;
 			}
 		}
 
@@ -839,7 +838,6 @@ class SelectQuery extends SelectBase {
 				pos = pos;
 				table = table.v;
 				column = column.v;
-				as = table.v # "_" # column.v;
 			}
 		}
 
@@ -848,13 +846,10 @@ class SelectQuery extends SelectBase {
 				pos = pos;
 				table = table;
 				column = column;
-				as = column;
 			}
-
-			if (table)
-				as = table # "_" # column;
 		}
 
+		// Set alternate name in the output.
 		void setAs(SStr to) {
 			as = to.v;
 		}
@@ -1040,22 +1035,50 @@ class SelectQuery extends SelectBase {
 		r;
 	}
 
-	// Return a proper iterator.
-	Expr? result(Block context, Expr result) {
-		Bool noTypeInfo = cols.empty;
+	// Compute type info. Returns an empty array if we don't have any type info.
+	protected TypedCol[] createTypes() {
+		TypedCol[] result;
+		Str->NestedTypedCol nested;
 
-		ValParam[] types;
-		if (!noTypeInfo) {
-			for (c in cols) {
-				if (t = c.type)
-					types << ValParam(t, c.as);
-				else
-					noTypeInfo = true;
+		Bool multiTable = joins.any;
+
+		for (i, c in cols) {
+			// If no type info, then just return empty array.
+			unless (type = c.type)
+				return [];
+
+			// Use alternate name, if available.
+			if (altName = c.as) {
+				result << ScalarTypedCol(altName, i, type);
+				continue;
 			}
+
+			// If it is a part of a table, use that if we the query involves more than one table.
+			if (multiTable) {
+				if (table = c.table) {
+					if (!nested.has(table)) {
+						NestedTypedCol created(table, false);
+						nested.put(table, created);
+						result << created;
+					}
+					nested.get(table).push(ScalarTypedCol(c.column, i, type));
+					continue;
+				}
+			}
+
+			// Else, just use the plain column name.
+			result << ScalarTypedCol(c.column, i, type);
 		}
 
-		// If we don't have type info, just return a plain iterator.
-		if (noTypeInfo)
+		result;
+	}
+
+	// Return a proper iterator.
+	Expr? result(Block context, Expr result) {
+		TypedCol[] types = createTypes();
+
+		// If no type information, fall back to the typeless version.
+		if (types.empty)
 			return namedExpr(context, pos, "iter", result);
 
 		var iterType = getTypedIter(types);
@@ -1093,20 +1116,10 @@ class SelectOneQuery extends SelectQuery {
 
 	// Modified result. Returns a single row (wrapped in Maybe) rather than an iterator.
 	Expr? result(Block context, Expr result) {
-		Bool noTypeInfo = cols.empty;
-
-		ValParam[] types;
-		if (!noTypeInfo) {
-			for (c in cols) {
-				if (t = c.type)
-					types << ValParam(t, c.as);
-				else
-					noTypeInfo = true;
-			}
-		}
+		TypedCol[] types = createTypes();
 
 		// No type info - just return a Maybe<Row> object.
-		if (noTypeInfo)
+		if (types.empty)
 			return namedExpr(context, pos, "next", result);
 
 		// Otherwise, we want to return either <null> or an instance of the row-type.
