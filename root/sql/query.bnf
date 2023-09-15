@@ -79,7 +79,10 @@ SSelectCols => Array<SelectQuery.Column>() : "\*";
 
 SelectQuery.Column SSelectCol();
 SSelectCol => x : SSelectColI x;
-SSelectCol => x : SSelectColI x ~ ("AS" ~)? SName -> setAs; // Note: the AS keyword is optional in many dialects.
+// Note: The AS keyword is optional in many dialects. We require it as it easily leads
+// to confusion when one mistypes a later part of a query. E.g. ... FROM foo OUTER JOIN bar
+// would be the same as: ... FROM foo AS OUTER JOIN bar ... which was not intended.
+SSelectCol => x : SSelectColI x ~ "AS" ~ SName -> setAs;
 
 SelectQuery.Column SSelectColI();
 SSelectColI => SelectQuery.Column(pos, column) : SName column;
