@@ -176,97 +176,96 @@ class TypedRow extends Type {
 		fn;
 	}
 
-}
+	// Generate an expression for extracting a particular column.
+	private Expr getColumn(Block block, Expr row, Value type, TypedCol col) : static {
+		if (col as ScalarTypedCol) {
+			if (isMaybe(type)) {
+				return getMaybeColumn(block, row, type, unwrapMaybe(type), col.id);
+			} else {
+				return getPlainColumn(block, row, type, col.id);
+			}
+		} else if (col as NestedTypedCol) {
+			unless (nested = unwrapMaybe(type).type as TypedRow)
+				throw InternalError("Nested type rows should be implemented as a TypedRow type!");
 
-
-// Generate an expression for extracting a particular column.
-private Expr getColumn(Block block, Expr row, Value type, TypedCol col) on Compiler {
-	if (col as ScalarTypedCol) {
-		if (isMaybe(type)) {
-			return getMaybeColumn(block, row, type, unwrapMaybe(type), col.id);
-		} else {
-			return getPlainColumn(block, row, type, col.id);
+			if (col.maybe) {
+				return getMaybeNested(block, row, type, nested, col);
+			} else {
+				return getPlainNested(block, row, nested);
+			}
 		}
-	} else if (col as NestedTypedCol) {
-		unless (nested = unwrapMaybe(type).type as TypedRow)
-			throw InternalError("Nested type rows should be implemented as a TypedRow type!");
 
-		if (col.maybe) {
-			return getMaybeNested(block, row, type, nested, col);
-		} else {
-			return getPlainNested(block, row, nested);
-		}
+		throw InternalError("Unknown subclass of TypedCol found!");
 	}
 
-	throw InternalError("Unknown subclass of TypedCol found!");
+	// Extract a column, given that we know it is not a maybe type.
+	private Expr getPlainColumn(Block block, Expr row, Value type, Nat id) : static {
+		var fn = getColumnFn(type.type);
+		Actuals params;
+		params.add(row);
+		params.add(NumLiteral(SrcPos(), id.long));
+		return FnCall(SrcPos(), Scope(), fn, params);
+	}
+
+	// Extract a column, but check for NULL first.
+	private Expr getMaybeColumn(Block block, Expr row, Value maybeType, Value plainType, Nat id) : static {
+		var fn = named{Row:isNull<Row, Nat>};
+		Actuals params;
+		params.add(row);
+		params.add(NumLiteral(SrcPos(), id.long));
+		If check(block, FnCall(SrcPos(), Scope(), fn, params));
+
+		CondSuccess ok(SrcPos(), block, check.condition);
+		ok.set(callCtor(block, maybeType, Actuals()));
+		check.trueCode = ok;
+
+		check.falseCode = callCtor(block, maybeType, Actuals(getPlainColumn(block, row, plainType, id)));
+		check;
+	}
+
+	// Extract a column, as a nested type.
+	private Expr getPlainNested(Block block, Expr row, TypedRow type) : static {
+		return callCtor(block, Value(type), Actuals(row));
+	}
+
+	// Extract a column, but check for NULL first.
+	private Expr getMaybeNested(Block block, Expr row, Value wrapped, TypedRow plain, NestedTypedCol col) : static {
+		// If all members are null, then we assume that the entire structure is never null since we
+		// can't tell the difference between the entire table being null, and all the columns. We
+		// *could* check all columns and assume that all nulls equal a null structure, but that is too
+		// expensive for a heuristic that is likely seldom used (primary keys are usually not null, for
+		// example).
+		unless (check = col.firstNonNull)
+			return callCtor(block, wrapped, Actuals(getPlainNested(block, row, plain)));
+
+		var fn = named{Row:isNull<Row, Nat>};
+		Actuals params;
+		params.add(row);
+		params.add(NumLiteral(SrcPos(), check.long));
+		If check(block, FnCall(SrcPos(), Scope(), fn, params));
+
+		CondSuccess ok(SrcPos(), block, check.condition);
+		ok.set(callCtor(block, wrapped, Actuals()));
+		check.trueCode = ok;
+
+		check.falseCode = callCtor(block, wrapped, Actuals(getPlainNested(block, row, plain)));
+		check;
+	}
+
+	// Call a constructor.
+	private Expr callCtor(Block block, Value type, Actuals actuals) : static {
+		unless (t = type.type)
+			throw InternalError("Could not find a proper type.");
+
+		var params = actuals.values();
+		params.insert(0, type);
+		unless (fn = t.find("__init", params, Scope()) as Function)
+			throw InternalError("Could not find a constructor for ${type}");
+
+		return CtorCall(SrcPos(), Scope(), fn, actuals);
+	}
 }
 
-// Extract a column, given that we know it is not a maybe type.
-private Expr getPlainColumn(Block block, Expr row, Value type, Nat id) on Compiler {
-	var fn = getColumnFn(type.type);
-	Actuals params;
-	params.add(row);
-	params.add(NumLiteral(SrcPos(), id.long));
-	return FnCall(SrcPos(), Scope(), fn, params);
-}
-
-// Extract a column, but check for NULL first.
-private Expr getMaybeColumn(Block block, Expr row, Value maybeType, Value plainType, Nat id) on Compiler {
-	var fn = named{Row:isNull<Row, Nat>};
-	Actuals params;
-	params.add(row);
-	params.add(NumLiteral(SrcPos(), id.long));
-	If check(block, FnCall(SrcPos(), Scope(), fn, params));
-
-	CondSuccess ok(SrcPos(), block, check.condition);
-	ok.set(callCtor(block, maybeType, Actuals()));
-	check.trueCode = ok;
-
-	check.falseCode = callCtor(block, maybeType, Actuals(getPlainColumn(block, row, plainType, id)));
-	check;
-}
-
-// Extract a column, as a nested type.
-private Expr getPlainNested(Block block, Expr row, TypedRow type) on Compiler {
-	return callCtor(block, Value(type), Actuals(row));
-}
-
-// Extract a column, but check for NULL first.
-private Expr getMaybeNested(Block block, Expr row, Value wrapped, TypedRow plain, NestedTypedCol col) on Compiler {
-	// If all members are null, then we assume that the entire structure is never null since we
-	// can't tell the difference between the entire table being null, and all the columns. We
-	// *could* check all columns and assume that all nulls equal a null structure, but that is too
-	// expensive for a heuristic that is likely seldom used (primary keys are usually not null, for
-	// example).
-	unless (check = col.firstNonNull)
-		return callCtor(block, wrapped, Actuals(getPlainNested(block, row, plain)));
-
-	var fn = named{Row:isNull<Row, Nat>};
-	Actuals params;
-	params.add(row);
-	params.add(NumLiteral(SrcPos(), check.long));
-	If check(block, FnCall(SrcPos(), Scope(), fn, params));
-
-	CondSuccess ok(SrcPos(), block, check.condition);
-	ok.set(callCtor(block, wrapped, Actuals()));
-	check.trueCode = ok;
-
-	check.falseCode = callCtor(block, wrapped, Actuals(getPlainNested(block, row, plain)));
-	check;
-}
-
-// Call a constructor.
-private Expr callCtor(Block block, Value type, Actuals actuals) on Compiler {
-	unless (t = type.type)
-		throw InternalError("Could not find a proper type.");
-
-	var params = actuals.values();
-	params.insert(0, type);
-	unless (fn = t.find("__init", params, Scope()) as Function)
-		throw InternalError("Could not find a constructor for ${type}");
-
-	return CtorCall(SrcPos(), Scope(), fn, actuals);
-}
 
 /**
  * Type used to denote an iterator that produces instances of a TypedRow class.
