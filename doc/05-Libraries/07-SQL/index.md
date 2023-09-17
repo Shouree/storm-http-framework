@@ -138,12 +138,12 @@ void useDB() {
         }
 
         for (row in SELECT * FROM test JOIN extra ON extra.test == test.id WHERE test.id == 4) {
-            print(row.test_id # " " # row.extra_data);
+            print(row.test.id # " " # row.extra.data);
         }
 
         // Special case when you only want one row if it exists. Returns a Maybe-type instead of an iterator.
         if (x = SELECT ONE * FROM test JOIN extra ON extra.text == test.id WHERE test.id == 4) {
-            print(row.test_id # " " # row.extra_data);
+            print(row.test.id # " " # row.extra.data);
         }
 
         // We can also count the number of rows from a query (similar to SELECT COUNT(*) FROM...)
