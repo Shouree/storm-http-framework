@@ -965,40 +965,50 @@ class SelectQuery extends SelectBase {
 	private void addAllCols(ResolveContext context) {
 		if (joins.empty) {
 			// Only one table, don't scope names:
-			Nat id = 0;
-			for (name, table in context.visible) {
-				// Note: Currently, nullTable should always be true. This is, however, here for
-				// completeness if this assumption would change in the future.
-				Bool nullTable = context.nullTables.has(name);
+			var name = this.table.alias;
+			var table = context.visible.get(name);
 
-				for (col in table.columns) {
-					Column c(pos, null, col.name);
-					Type t = resultType(nullTable, col);
+			// Note: Currently, nullTable should always be true. This is, however, here for
+			// completeness if this assumption would change in the future.
+			Bool nullTable = context.nullTables.has(name);
 
-					c.type = t;
-					cols << c;
+			for (id, col in table.columns) {
+				Column c(pos, null, col.name);
+				Type t = resultType(nullTable, col);
 
-					rowDesc << ScalarTypedCol(col.name, id++, t);
-				}
+				c.type = t;
+				cols << c;
+
+				rowDesc << ScalarTypedCol(col.name, id, t);
 			}
 		} else {
 			// Mutliple tables, scope them appropriately.
-			Nat id = 0;
-			for (name, table in context.visible) {
-				NestedTypedCol nested(name, context.nullTables.has(name));
-				rowDesc << nested;
 
-				for (col in table.columns) {
-					Column c(pos, name, col.name);
-					Type t = resultType(false, col);
+			// Note: We could loop through tables in 'context', but to get the order consistent in
+			// the output of row types we traverse 'table' and 'join' instead.
+			rowDesc << addAllCols(this.table.alias, context);
 
-					c.type = t;
-					cols << c;
-
-					nested.push(ScalarTypedCol(col.name, id++, t));
-				}
-			}
+			for (x in joins)
+				rowDesc << addAllCols(x.table.alias, context);
 		}
+	}
+
+	// Add all names from a table to our output.
+	private NestedTypedCol addAllCols(Str tableAlias, ResolveContext context) {
+		NestedTypedCol nested(tableAlias, context.nullTables.has(tableAlias));
+
+		var table = context.visible.get(tableAlias);
+		for (col in table.columns) {
+			Column c(pos, tableAlias, col.name);
+			Type t = resultType(false, col);
+
+			nested.push(ScalarTypedCol(col.name, cols.count, t));
+
+			c.type = t;
+			cols << c;
+		}
+
+		nested;
 	}
 
 	// Resolve columns and create our rowDesc.
