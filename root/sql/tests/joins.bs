@@ -11,6 +11,12 @@ DATABASE JoinDB {
 
 	TABLE textB(
 		id INTEGER PRIMARY KEY,
+		c INTEGER,
+		value TEXT
+		);
+
+	TABLE textC(
+		id INTEGER PRIMARY KEY,
 		value TEXT
 		);
 }
@@ -20,10 +26,15 @@ JoinDB joinDB() {
 	JoinDB c(db);
 
 	WITH c {
-		INSERT INTO textB VALUES (1, "one");
-		INSERT INTO textB VALUES (2, "two");
-		INSERT INTO textB VALUES (3, "three");
-		INSERT INTO textB VALUES (4, "four");
+		INSERT INTO textC VALUES (1, "i");
+		INSERT INTO textC VALUES (2, "ii");
+		INSERT INTO textC VALUES (3, "iii");
+		INSERT INTO textC VALUES (4, "iv");
+
+		INSERT INTO textB VALUES (1, 2, "one");
+		INSERT INTO textB VALUES (2, 3, "two");
+		INSERT INTO textB VALUES (3, 4, "three");
+		INSERT INTO textB VALUES (4, 5, "four");
 
 		INSERT INTO textA VALUES (1, 2, "1");
 		INSERT INTO textA VALUES (2, 3, "2");
@@ -35,65 +46,226 @@ JoinDB joinDB() {
 }
 
 suite JoinInner {
-	var res = WITH joinDB(): SELECT textA.id, textA.value, textB.id, textB.value
-		FROM textA
-		JOIN textB ON textA.b == textB.id;
-	Nat rows;
-	for (row in res) {
-		rows++;
-		// print(row.toS);
+	var db = joinDB();
+	{
+		var res = WITH db: SELECT textA.id, textA.value, textB.id, textB.value
+			FROM textA
+			JOIN textB ON textA.b == textB.id;
+		Nat rows;
+		for (row in res) {
+			rows++;
+			// print(row.toS);
+		}
+		test rows == 3;
 	}
-	test rows == 3;
+
+	{
+		var res = WITH db: SELECT textA.id, textA.value, textB.id, textB.value, textC.id, textC.value
+			FROM textA
+			JOIN textB ON textA.b == textB.id
+			JOIN textC ON textB.c == textC.id;
+		Nat rows;
+		for (row in res) {
+			rows++;
+			// print(row.toS);
+		}
+		test rows == 2;
+	}
 }
 
 suite JoinLeft {
-	var res = WITH joinDB(): SELECT textA.id, textA.value, textB.id, textB.value
-		FROM textA
-		LEFT JOIN textB ON textA.b == textB.id;
-	Nat rows;
-	Nat rightNull;
-	for (row in res) {
-		rows++;
-		if (row.textB.empty)
-			rightNull++;
-		// print(row.toS);
+	var db = joinDB();
+	{
+		var res = WITH db: SELECT textA.id, textA.value, textB.id, textB.value
+			FROM textA
+			LEFT JOIN textB ON textA.b == textB.id;
+		Nat rows;
+		Nat rightNull;
+		for (row in res) {
+			rows++;
+			if (row.textB.empty)
+				rightNull++;
+			// print(row.toS);
+		}
+		test rows == 4;
+		test rightNull == 1;
 	}
-	test rows == 4;
-	test rightNull == 1;
+
+	{
+		var res = WITH db: SELECT textA.id, textA.value, textB.id, textB.value, textC.id, textC.value
+			FROM textA
+			LEFT JOIN textB ON textA.b == textB.id
+			LEFT JOIN textC ON textB.c == textC.id;
+		Nat rows;
+		Nat bNull;
+		Nat cNull;
+		for (row in res) {
+			rows++;
+			if (row.textB.empty)
+				bNull++;
+			if (row.textC.empty)
+				cNull++;
+			// print(row.toS);
+		}
+		test rows == 4;
+		test bNull == 1;
+		test cNull == 2;
+	}
 }
 
 suite JoinRight {
-	var res = WITH joinDB(): SELECT textA.id, textA.value, textB.id, textB.value
-		FROM textA
-		RIGHT JOIN textB ON textA.b == textB.id;
-	Nat rows;
-	Nat leftNull;
-	for (row in res) {
-		rows++;
-		if (row.textA.empty)
-			leftNull++;
-		// print(row.toS);
+	var db = joinDB();
+	{
+		var res = WITH db: SELECT textA.id, textA.value, textB.id, textB.value
+			FROM textA
+			RIGHT JOIN textB ON textA.b == textB.id;
+		Nat rows;
+		Nat leftNull;
+		for (row in res) {
+			rows++;
+			if (row.textA.empty)
+				leftNull++;
+			// print(row.toS);
+		}
+		test rows == 4;
+		test leftNull == 1;
 	}
-	test rows == 4;
-	test leftNull == 1;
+
+	{
+		var res = WITH db: SELECT textA.id, textA.value, textB.id, textB.value, textC.id, textC.value
+			FROM textA
+			RIGHT JOIN textB ON textA.b == textB.id
+			RIGHT JOIN textC ON textB.c == textC.id;
+		Nat rows;
+		Nat aNull;
+		Nat bNull;
+		for (row in res) {
+			rows++;
+			if (row.textA.empty)
+				aNull++;
+			if (row.textB.empty)
+				bNull++;
+			// print(row.toS);
+		}
+		test rows == 4;
+		test aNull == 2;
+		test bNull == 1;
+	}
 }
 
 suite JoinFull {
-	var res = WITH joinDB(): SELECT textA.id, textA.value, textB.id, textB.value
-		FROM textA
-		FULL JOIN textB ON textA.b == textB.id;
-	Nat rows;
-	Nat leftNull;
-	Nat rightNull;
-	for (row in res) {
-		rows++;
-		if (row.textA.empty)
-			leftNull++;
-		if (row.textB.empty)
-			rightNull++;
-		// print(row.toS);
+	var db = joinDB();
+	{
+		var res = WITH db: SELECT textA.id, textA.value, textB.id, textB.value
+			FROM textA
+			FULL JOIN textB ON textA.b == textB.id;
+		Nat rows;
+		Nat leftNull;
+		Nat rightNull;
+		for (row in res) {
+			rows++;
+			if (row.textA.empty)
+				leftNull++;
+			if (row.textB.empty)
+				rightNull++;
+			// print(row.toS);
+		}
+		test rows == 5;
+		test leftNull == 1;
+		test rightNull == 1;
 	}
-	test rows == 5;
-	test leftNull == 1;
-	test rightNull == 1;
+
+	{
+		var res = WITH db: SELECT textA.id, textA.value, textB.id, textB.value, textC.id, textC.value
+			FROM textA
+			FULL JOIN textB ON textA.b == textB.id
+			FULL JOIN textC ON textB.c == textC.id;
+		Nat rows;
+		Nat aNull;
+		Nat bNull;
+		Nat cNull;
+		for (row in res) {
+			rows++;
+			if (row.textA.empty)
+				aNull++;
+			if (row.textB.empty)
+				bNull++;
+			if (row.textC.empty)
+				cNull++;
+			// print(row.toS);
+		}
+		test rows == 6;
+		test aNull == 2;
+		test bNull == 2;
+		test cNull == 2;
+	}
+}
+
+suite JoinMixed {
+	var db = joinDB();
+	{
+		var res = WITH db: SELECT textA.id, textA.value, textB.id, textB.value, textC.id, textC.value
+			FROM textA
+			LEFT JOIN textB ON textA.b == textB.id
+			RIGHT JOIN textC ON textB.c == textC.id;
+		Nat rows;
+		Nat aNull;
+		Nat bNull;
+		for (row in res) {
+			rows++;
+			if (row.textA.empty)
+				aNull++;
+			if (row.textB.empty)
+				bNull++;
+			// print(row.toS);
+		}
+
+		test rows == 4;
+		test aNull == 2;
+		test bNull == 2;
+	}
+
+	{
+		var res = WITH db: SELECT textA.id, textA.value, textB.id, textB.value, textC.id, textC.value
+			FROM textA
+			RIGHT JOIN textB ON textA.b == textB.id
+			LEFT JOIN textC ON textB.c == textC.id;
+		Nat rows;
+		Nat aNull;
+		Nat cNull;
+		for (row in res) {
+			rows++;
+			if (row.textA.empty)
+				aNull++;
+			if (row.textC.empty)
+				cNull++;
+			// print(row.toS);
+		}
+
+		test rows == 4;
+		test aNull == 1;
+		test cNull == 1;
+	}
+
+	{
+		var res = WITH db: SELECT textA.id, textA.value, textB.id, textB.value, textC.id, textC.value
+			FROM textA
+			FULL JOIN textB ON textA.b == textB.id
+			RIGHT JOIN textC ON textB.c == textC.id;
+		Nat rows;
+		Nat aNull;
+		Nat bNull;
+		for (row in res) {
+			rows++;
+			if (row.textA.empty)
+				aNull++;
+			if (row.textB.empty)
+				bNull++;
+			// print(row.toS);
+		}
+
+		test rows == 4;
+		test aNull == 2;
+		test bNull == 1;
+	}
 }
