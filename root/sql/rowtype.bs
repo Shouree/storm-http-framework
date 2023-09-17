@@ -47,7 +47,7 @@ class ScalarTypedCol extends TypedCol {
 
 	protected void toS(StrBuf to) : override {
 		super:toS(to);
-		to << "->" << type;
+		to << "->" << type.identifier << "@" << id;
 	}
 }
 
