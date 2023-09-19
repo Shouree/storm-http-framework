@@ -18,7 +18,7 @@ the building blocks for other languages in the system, they constitute the funda
 languages in the system. This is particularly true for Basic Storm and The Syntax Language, as they
 are designed to closely match the underlying concepts from Storm.
 
-The following subsections are available:
+This section covers the following topics:
 
 - [Threading Model](md://./Threading_Model) covers the way Storm handles threads. The type system is
   aware of the threads in the system, and aims to ensure that data races are not possible.
