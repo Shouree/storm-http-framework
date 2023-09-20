@@ -1,0 +1,28 @@
+use test;
+use markdown;
+
+suite BasicMarkdown {
+	var simple = str {
+		this is a
+		paragraph
+
+		this is the
+		next paragraph
+		with four
+		lines
+
+		this is a heading
+		=================
+
+		this is another paragraph
+	};
+
+	var result = parse(simple + "\n");
+	if (v = result.value) {
+		print("Result:");
+		print(v.toS);
+	} else {
+		print("Error: ${result.error}");
+	}
+	print(result.toS);
+}

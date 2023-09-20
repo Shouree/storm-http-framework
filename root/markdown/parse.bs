@@ -1,0 +1,32 @@
+use parser;
+
+// TODO: A backtracing parser likely makes the grammar a bit easier to write.
+parse : parser(backtracking recursive descent) {
+	start = SDocument;
+
+	Document SDocument();
+	SDocument => Document() : (SElementHead(me))*;
+
+	void SElementHead(Document document);
+	SElementHead : parser.special.Indent() indent - SElement(document, indent);
+
+	void SElement(Document document, Nat indent);
+	SElement : "\n";
+	SElement => document : SText(indent) -> add;
+
+	// Match a chunk of text, figure out what it is afterwards.
+	Element SText(Nat indent);
+	SText => elem : "[^\n]+" first - "\n" - parser.special.MinIndent(indent) - STextTail(indent, first) elem;
+
+	Element STextTail(Nat indent, Str first);
+	STextTail => Heading(1, first) : "=*\n";
+	STextTail => Heading(2, first) : "-*\n";
+	STextTail => Paragraph(first) : "[^=\-][^\n]*" - "\n" - (parser.special.MinIndent(indent) - "[^\n]+\n")+;
+	STextTail => Paragraph(first) : ;
+
+	Paragraph SParagraph();
+	SParagraph => Paragraph(content) : SParImpl content;
+
+	StrBuf SParImpl();
+	SParImpl => StrBuf() : ("[ \t]*[^\n]+\n" -> add)+;
+}

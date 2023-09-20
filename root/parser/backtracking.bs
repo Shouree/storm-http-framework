@@ -1,0 +1,574 @@
+use core:lang;
+use lang:bnf;
+use lang:bs;
+use lang:bs:macro;
+use core:asm;
+use core:io;
+
+/**
+ * A backtracking recursive descent parser.
+ *
+ * It behaves similarly to the recursive LL(1) parser in that it generates functions for each
+ * production. The difference is that it tries matches until one in found, and backtracks on
+ * failures. This means that it supports a larger set of languages, but side-effects from partial
+ * parses are visible in calls to functions, and performance might suffer if backtracking is
+ * required often. To resolve conflicts, the parser requires that productions have a priority set.
+ *
+ * The following structure is generated for each rule:
+ *
+ * T? Rx(State state, ...) {
+ *     var saved = state.pos;
+ *     if (a = match()) {
+ *         if (b = match()) {
+ *             // ...
+ *             return match;
+ *         }
+ *     }
+ *     state.pos = saved;
+ *     if (a = match()) {
+ *         // ...
+ *         return match;
+ *     }
+ *     return null;
+ * }
+ */
+class BacktrackingParser extends Parser {
+	init(Scope env, SStr name) {
+		init(env, name) {}
+	}
+
+	FnBody createBody(BSRawFn fn, Scope scope, Rule start, NameSet[] include) : override {
+		Grammar grammar(start, include, true);
+
+		{
+			var recursive = grammar.leftRecursive;
+			if (recursive.any) {
+				StrBuf msg;
+				msg << "Left recursive grammars are not supported by the backtracking parser. ";
+				msg << "The grammar has at least the following left recursive components:\n";
+				msg << join(recursive, "\n");
+				throw GrammarError(name.pos, msg.toS);
+			}
+		}
+
+		FnBody body(fn, scope);
+
+		// Note: Parameter 0 is the input, parameter 1 is the start position.
+		Var stateVar = {
+			Actuals params;
+			params.add(LocalVarAccess(SrcPos(), body.parameters[0]));
+			params.add(LocalVarAccess(SrcPos(), body.parameters[1]));
+			Var(body, stateType(binary), SStr("state"), params);
+		};
+		body.add(stateVar);
+
+		// Create all required functions.
+		FnCache cache(grammar, fn, scope, binary);
+		cache.createAll();
+
+		// Call the function for the start production.
+		Actuals actuals;
+		actuals.add(LocalVarAccess(SrcPos(), stateVar.var));
+		for (Nat i = 2; i < body.parameters.count; i++)
+			actuals.add(LocalVarAccess(SrcPos(), body.parameters[i]));
+
+		FnCall call(fn.pos, scope, cache.get(grammar.start), actuals);
+
+		Var resultVar(body, fn.result.type, SStr("result"), Actuals());
+		body.add(resultVar);
+
+		body.add(pattern(body) {
+					result.value = ${call};
+					result.end = state.longest;
+					result.error = state.error;
+					return result;
+				});
+
+		body;
+	}
+
+	/**
+	 * State when parsing strings.
+	 */
+	class StrState extends RecursiveStrState {
+		init(Str input, Str:Iter start) {
+			init(input, start) { longest = start; }
+		}
+
+		// Longest match.
+		Str:Iter longest;
+	}
+
+	/**
+	 * State when parsing buffers.
+	 */
+	class BinaryState extends RecursiveBinaryState {
+		init(Buffer input, Nat start) {
+			init(input, start) { longest = start; }
+		}
+
+		// Longest match.
+		Nat longest;
+	}
+
+	// Get the type of the state required, based on if we're in binary mode or not.
+	Type stateType(Bool binary) : static {
+		if (binary)
+			named{BinaryState};
+		else
+			named{StrState};
+	}
+
+	/**
+	 * Keep track of created functions.
+	 */
+	class FnCache on Compiler {
+		init(Grammar grammar, Function parent, Scope scope, Bool binary) {
+			init {
+				grammar = grammar;
+				parent = parent;
+				scope = scope;
+				binary = binary;
+				thread = parent.declaredThread;
+			}
+
+			loadSpecial();
+		}
+
+		// Parent entity.
+		Named parent;
+
+		// Scope.
+		Scope scope;
+
+		// The grammar.
+		Grammar grammar;
+
+		// Running in binary mode?
+		Bool binary;
+
+		// Named thread to run on.
+		NamedThread? thread;
+
+		// Created functions. Not necessarily entirely done.
+		private Rule->Function ruleFns;
+
+		// Get a function. Does not populate it.
+		Function get(Rule r) {
+			if (ruleFns.has(r))
+				return ruleFns.get(r);
+
+			var params = r.params.clone;
+			params.insert(0, ValParam(stateType(binary), "@state"));
+
+			BSTreeFn fn(resultType(r.result), SStr(r.name), params, thread);
+			ruleFns.put(r, fn);
+
+			fn.parentLookup = parent;
+			fn;
+		}
+
+		// Create all functions in the grammar.
+		void createAll() {
+			for (k, v in grammar.rules)
+				create(k, v);
+		}
+
+		/**
+		 * State common to the generator functions below.
+		 */
+		class ProdState on Compiler {
+			init(SrcPos pos, ExprBlock block, Production production, Expr state) {
+				init {
+					pos = pos;
+					block = block;
+					state = state;
+					production = production;
+					inRepeat = null;
+				}
+			}
+
+			// For error messages.
+			SrcPos pos;
+
+			// The block we are currently generating code into.
+			ExprBlock block;
+
+			// Expression to access the state object passed to the parse function.
+			Expr state;
+
+			// Current production.
+			Production production;
+
+			// Variables created so far.
+			Str->LocalVar variables;
+
+			// Start of captured segment. Populated when we encounter it.
+			LocalVar? captureStart;
+
+			// Are we inside the repetition? If so, this contains the expression we shall add with a
+			// repetition in it.
+			Expr? inRepeat;
+
+			// Check if "name" refers to a simple expression we are aware of (integers, booleans).
+			Expr? simpleExpr(Str name) {
+				if (name.isInt) {
+					return NumLiteral(SrcPos(), name.toLong);
+				} else if (name == "false") {
+					return BoolLiteral(SrcPos(), false);
+				} else if (name == "true") {
+					return BoolLiteral(SrcPos(), true);
+				} else {
+					return null;
+				}
+			}
+
+			// Get a variable. Throws appropriate message on error.
+			Expr variable(Str name) {
+				if (!variables.has(name)) {
+					if (name == "me") {
+						if (!createMeVar())
+							throw GrammarError(pos, "The variable 'me' is not declared in this production.");
+					} else if (e = simpleExpr(name)) {
+						return e;
+					} else {
+						StrBuf msg;
+						msg << "The parameter '" << name << "' is used before it is declared. It needs to be ";
+						msg << "initialized by one of the tokens to the left of the one where it is used.";
+						throw GrammarError(pos, msg.toS);
+					}
+				}
+
+				LocalVarAccess(SrcPos(), variables.get(name));
+			}
+
+			// Create the 'me' variable if possible.
+			private Bool createMeVar() {
+				unless (result = production.result)
+					return false;
+
+				if (params = production.resultParams) {
+					// It is a function call!
+					Actuals actuals;
+					for (x in params) {
+						if (variables.has(x)) {
+							actuals.add(LocalVarAccess(pos, variables.get(x)));
+						} else if (e = simpleExpr(x)) {
+							actuals.add(e);
+						} else {
+							throw GrammarError(pos, "When initializing 'me': can not find a variable named ${x}.");
+						}
+					}
+
+					// Note: This is technically done in the wrong context. Should be done in the
+					// context of the production, not that of this function.
+					Expr init = namedExpr(block, pos, result, actuals);
+					Var v(block, SStr("me"), init);
+					block.add(v);
+					variables.put("me", v.var);
+				} else {
+					// It is a variable! That means we can simply "rename" a local variable.
+					if (result.count != 1)
+						throw GrammarError(pos, "Unknown variable: ${result}");
+					Str name = result[0].name;
+					if (!variables.has(name))
+						throw GrammarError(pos, "When initializing 'me': can not find a variable with the name ${name}");
+					variables.put("me", variables.get(name));
+				}
+				true;
+			}
+
+			void onRepStart() {}
+			void onRepEnd() {}
+
+			// Store a variable. Act according to the repetition currently in affect.
+			void storeVariable(Str name, LocalVar var) {
+				if (inRepeat.empty) {
+					variables.put(name, var);
+				} else if (production.repType == RepType:repZeroOne) {
+					var type = wrapMaybe(var.result.asRef(false));
+					Var v(block, type, SStr(name), Actuals());
+					variables.put(name, v.var);
+					block.add(v);
+
+					LocalVarAccess expr(SrcPos(), var);
+					block.add(pattern(block) { ${LocalVarAccess(SrcPos(), v.var)} = ${expr}; });
+				} else {
+					var type = wrapArray(var.result.asRef(false));
+					Var v(block, type, SStr(name), Actuals());
+					variables.put(name, v.var);
+					block.add(v);
+
+					LocalVarAccess expr(SrcPos(), var);
+					block.add(pattern(block) { ${LocalVarAccess(SrcPos(), v.var)}.push(${expr}); });
+				}
+			}
+		}
+
+		// Create a particular rule.
+		void create(Rule rule, Production[] productions) {
+			// Some functions might be defined outside of there.
+			unless (fn = get(rule) as BSTreeFn)
+				return;
+			// Check if we created it. There might be other BSTreeFn:s in the name tree.
+			if (fn.parentLookup !is parent)
+				return;
+
+			// We are good to go!
+			FnBody body(fn, scope);
+			fn.body = body;
+
+			// Store the position in a local variable.
+			Var posStorage(body, SStr("storage"), namedExpr(body, SStr("pos"), LocalVarAccess(SrcPos(), body.parameters[0])));
+			body.add(posStorage);
+
+			// Assignment operator:
+			OpInfo assignInfo = assignOperator(SStr("="), 0);
+
+			// Sort productions according to their priority:
+			productions.sort((a, b) => a.priority < b.priority);
+
+			// Look at first-sets for all productions in each "chunk". If we have a collision there,
+			// ask the user to disambiguate the productions.
+			Set<Regex> seen;
+			Int lastPrio = 0; // Note: Does not matter if it clashes with the first element.
+			for (p in productions) {
+				if (p.priority != lastPrio)
+					seen.clear();
+				lastPrio = p.priority;
+
+				Set<Regex> first = grammar.first(p);
+				for (x in first) {
+					if (!seen.put(x))
+						throwPrioError(x, productions, lastPrio);
+				}
+
+				// Create a clause here.
+				createMatch(body, rule, p);
+				// Restore parse state.
+				var posMember = namedExpr(body, SStr("pos"), LocalVarAccess(SrcPos(), body.parameters[0]));
+				body.add(Operator(body, posMember, assignInfo, LocalVarAccess(SrcPos(), posStorage.var)));
+			}
+
+			// If we get to this point, then the parse failed. Return null or false.
+			if (isMaybe(body.type)) {
+				body.add(NullExpr(SrcPos()));
+			} else {
+				body.add(BoolLiteral(SrcPos(), false));
+			}
+
+			print("For ${rule.name}: ${body}");
+		}
+
+		// Create code that matches a particular production.
+		private void createMatch(FnBody body, Rule rule, Production production) {
+			SrcPos pos = parent.pos;
+			if (x = production.type)
+				pos = x.pos;
+
+			if (production.parent)
+				throw GrammarError(pos, "Parent productions are not supported by the backtracking parser.");
+
+			ProdState state(pos, body, production, LocalVarAccess(SrcPos(), body.parameters[0]));
+
+			// Add parameters to the state object.
+			for (i, x in rule.params) {
+				state.variables.put(x.name, body.parameters[i + 1]);
+			}
+
+			// Go through the tokens:
+			for (id, token in production.tokens) {
+				if (token.raw)
+					throw GrammarError(state.pos, "Capturing a raw parse tree is not supported.");
+
+				if (id == production.repStart) {
+					state.onRepStart();
+				} else if (id == production.repEnd) {
+					state.onRepEnd();
+				}
+
+				parseToken(state, token);
+			}
+
+			if (production.tokens.count == production.repEnd) {
+				state.onRepEnd();
+			}
+
+			// If we get here, we succeeded. Return success!
+			if (isMaybe(body.type)) {
+				state.block.add(Return(SrcPos(), state.block, state.variable("me")));
+			} else {
+				state.block.add(Return(SrcPos(), state.block, BoolLiteral(SrcPos(), true)));
+			}
+		}
+
+		// Parse a single token, and update the state as required.
+		void parseToken(ProdState state, Token token) {
+			if (parseBoundToken(state, token))
+				return;
+
+			// Not bound. Just evaluate it.
+			Condition cond = createCondition(matchExpr(state, token));
+			if (cond as WeakMaybeCast)
+				cond.name(SStr("tmp"));
+
+			If check(state.block, cond);
+			CondSuccess success(SrcPos(), check, cond);
+			check.trueCode = success;
+			state.block.add(check);
+
+			ExprBlock trueBlock(SrcPos(), success);
+			success.set(trueBlock);
+			state.block = trueBlock;
+
+			if (token as RegexToken) {
+				unless (var = cond.result)
+					throw InternalError("Failed to fetch the result.");
+
+				// Need to update the position.
+				var update = pattern(state.block) {
+					${state.state}.pos = ${LocalVarAccess(SrcPos(), var)};
+				};
+				state.block.add(update);
+			}
+		}
+
+		private Bool parseBoundToken(ProdState state, Token token) {
+			unless (target = token.target)
+				return false;
+
+			if (token.invoke.empty & !token.bound)
+				return false;
+
+			Expr match = matchExpr(state, token);
+			if (!isMaybe(match.result.type))
+				throw GrammarError(state.pos, "Can not bind the result from a void rule to a variable.");
+
+			WeakMaybeCast cast(match);
+			SStr targetName(target.name);
+			cast.name(targetName);
+
+			If check(state.block, cast);
+			CondSuccess success(SrcPos(), check, cast);
+			check.trueCode = success;
+			state.block.add(check);
+
+			ExprBlock trueBlock(SrcPos(), success);
+			success.set(trueBlock);
+			state.block = trueBlock;
+
+			unless (var = cast.result)
+				throw InternalError("Failed to fetch the result.");
+
+			if (token as RegexToken) {
+				// For Regex tokens, we need to extract the substring and update 'pos':
+				var access = LocalVarAccess(SrcPos(), var);
+				var expr = pattern(state.block) {
+					var substr = ${state.state}.input.cut(${state.state}.pos, ${access});
+					${state.state}.pos = ${access};
+					substr;
+				};
+				Var strVar(state.block, targetName, expr);
+				state.block.add(strVar);
+				var = strVar.var;
+			}
+
+			if (invoke = token.invoke) {
+				// Invoke a function.
+				// Note: The scope is technically incorrect here. It should be evaluated in
+				// the context of the production rather than wherever the grammar was
+				// declared.
+				Actuals actuals;
+				actuals.add(state.variable("me"));
+				actuals.add(LocalVarAccess(SrcPos(), var));
+				state.block.add(namedExpr(state.block, SrcPos(), invoke, actuals));
+			} else if (token.bound) {
+				state.storeVariable(target.name, var);
+			}
+
+			true;
+		}
+
+		// Create a condition that matches the token.
+		private Expr matchExpr(ProdState state, Token token) {
+			if (token as RegexToken) {
+				RegexValue val(token.regex);
+				Actuals actuals;
+				actuals.add(namedExpr(state.block, state.pos, "input", state.state));
+				actuals.add(namedExpr(state.block, state.pos, "pos", state.state));
+				return namedExpr(state.block, state.pos, "match", val, actuals);
+			} else if (token as RuleToken) {
+				Function toCall = get(token.rule);
+
+				Actuals actuals;
+				actuals.add(state.state);
+				if (params = token.params) {
+					for (param in params) {
+						actuals.add(state.variable(param));
+					}
+				}
+
+				return FnCall(SrcPos(), state.block.scope, toCall, actuals);
+			} else {
+				throw InternalError("Unknown token type: ${token}.");
+			}
+		}
+
+		private void throwPrioError(Regex regex, Production[] productions, Int prio) {
+			StrBuf msg;
+			msg << "The grammar contains ambiguous productions with the same priority. ";
+			msg << "While this works, it will not give predictable results. Therefore, ";
+			msg << "you need to disambiguate this case by specifying priorities on the ";
+			msg << "affected rules.\n";
+			msg << "The following productions may all start with \"" << regex;
+			msg << "\", and they all have the priority: " << prio << "\n";
+			for (x in productions) {
+				if (p.priority != prio)
+					continue;
+				if (grammar.first(x).has(regex))
+					msg << x << "\n";
+			}
+			throw GrammarError(parent.pos, msg.toS);
+		}
+
+		// Load the implementation for the special productions.
+		private void loadSpecial() {
+			Type stateT = stateType(binary);
+
+			// Note: We don't need to call 'loadAll' here. We don't need to load the special
+			// functions if the grammar refers to them. If it does, it will be loaded at this
+			// time. If the package is not loaded, we know that we don't need special functions, and
+			// we thus don't need to force loading speicals.
+			Package special = named{parser:special};
+			for (named in special) {
+				unless (named as Function)
+					continue;
+				unless (named.params.count > 0)
+					continue;
+				unless (named.params[0].mayStore(Value(stateT)))
+					continue;
+
+				// We have something that likely matches a rule now. Find the rule!
+				unless (rule = special.find(SimplePart(named.name), Scope()) as Rule)
+					continue;
+
+				// Check so that parameters match.
+				var params = rule.params;
+				if (params.count + 1 != named.params.count)
+					continue;
+				Bool match = true;
+				for (Nat i = 0; i < params.count; i++) {
+					match &= params[i].type.type is named.params[i + 1].type;
+				}
+				if (!match)
+					continue;
+
+				if (wrapMaybe(rule.result).type !is named.result.type)
+					continue;
+
+				// Good match, add it!
+				ruleFns.put(rule, named);
+			}
+		}
+	}
+}

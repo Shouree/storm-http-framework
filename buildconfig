@@ -32,6 +32,9 @@
 #Main -a -t parser.tests
 #Main -a -t sql.tests
 
+# Generate documentation
+Main -a -t markdown.tests
+
 # SSL
 #Main -a -f tests.ssl.main
 

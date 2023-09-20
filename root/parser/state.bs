@@ -1,0 +1,43 @@
+/**
+ * State for parsing strings with a recursive descent parser.
+ */
+class RecursiveStrState {
+	// String to parse.
+	Str input;
+
+	// Current position.
+	Str:Iter pos;
+
+	// Error?
+	Str error;
+
+	init(Str input, Str:Iter start) {
+		init {
+			input = input;
+			pos = start;
+			error = "";
+		}
+	}
+}
+
+/**
+ * State for parsing binary objects with a recursive descent parser.
+ */
+class RecursiveBinaryState {
+	// Input to parse.
+	Buffer input;
+
+	// Current position.
+	Nat pos;
+
+	// Error?
+	Str error;
+
+	init(Buffer input, Nat start) {
+		init {
+			input = input;
+			pos = start;
+			error = "";
+		}
+	}
+}

@@ -1,0 +1,84 @@
+use lang:bs;
+use lang:bs:macro;
+use core:lang;
+use core:asm;
+
+/**
+ * An array of regular expressions stored as a literal.
+ */
+package class RegexArray extends Expr {
+	private Regex[] data;
+
+	init(Regex[] data) {
+		init(SrcPos()) { data = data; }
+	}
+
+	ExprResult result() {
+		ExprResult(Value(named{Regex[]}));
+	}
+
+	void code(CodeGen state, CodeResult result) {
+		if (result.needed) {
+			var v = result.location(state);
+			state.l << mov(v, objPtr(data));
+			result.created(state);
+		}
+	}
+
+	Str toS() {
+		data.toS;
+	}
+}
+
+/**
+ * A regex stored as a literal.
+ */
+package class RegexValue extends Expr {
+	// We store a pointer to this in the code listing.
+	class RegexClass {
+		Regex regex;
+
+		init(Regex x) {
+			init { regex = x; }
+		}
+
+		void toS(StrBuf to) {
+			to << "Regex[\"" << regex << "\"]";
+		}
+	}
+
+	private RegexClass data;
+
+	init(Regex data) {
+		init(SrcPos()) { data(data); }
+	}
+
+	ExprResult result() {
+		ExprResult(Value(named{Regex}).asRef());
+	}
+
+	void code(CodeGen state, CodeResult result) {
+		unless (result.needed)
+			return;
+
+		var offset = named{RegexClass:regex<RegexClass>}.offset;
+
+		if (result.type.ref) {
+			var v = result.location(state);
+			state.l << mov(v, objPtr(data));
+			state.l << add(v, ptrConst(offset));
+			result.created(state);
+		} else {
+			var v = result.location(state);
+			state.l << mov(ptrA, objPtr(data));
+			state.l << add(ptrA, ptrConst(offset));
+			state.l << fnParam(ptrDesc, v);
+			state.l << fnParam(ptrDesc, ptrA);
+			state.l << fnCall(result.type.copyCtor, false);
+		}
+	}
+
+	Str toS() {
+		data.toS;
+	}
+}

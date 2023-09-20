@@ -101,22 +101,9 @@ class RecursiveParser extends Parser {
 	/**
 	 * State for the parser, when parsing strings.
 	 */
-	class StrState {
-		// String to parse.
-		Str input;
-
-		// Current position.
-		Str:Iter pos;
-
-		// Error?
-		Str error;
-
+	class StrState extends RecursiveStrState {
 		init(Str input, Str:Iter start) {
-			init {
-				input = input;
-				pos = start;
-				error = "";
-			}
+			init(input, start) {}
 		}
 
 		// Helper function from the grammar to match a set of regexes.
@@ -133,22 +120,9 @@ class RecursiveParser extends Parser {
 	/**
 	 * State for the parser, when parsing binary buffers.
 	 */
-	class BinaryState {
-		// Input to parse.
-		Buffer input;
-
-		// Current position.
-		Nat pos;
-
-		// Error?
-		Str error;
-
+	class BinaryState extends RecursiveBinaryState {
 		init(Buffer input, Nat start) {
-			init {
-				input = input;
-				pos = start;
-				error = "";
-			}
+			init(input, start) {}
 		}
 
 		// Helper function from the grammar to match a set of regexes.
@@ -539,18 +513,15 @@ class RecursiveParser extends Parser {
 		}
 
 		private Expr createParse(FnBody body, Rule rule, Production production) {
-			if (production.parent) {
-				SrcPos pos;
-				if (x = production.type)
-					pos = x.pos;
-				throw GrammarError(pos, "Parent productions are not supported by the recursive descent parser.");
-			}
-
-			ExprBlock block(SrcPos(), body);
 			// TODO: It might be good to only use the production's position if it is declared inline?
 			SrcPos pos = parent.pos;
 			if (type = production.type)
 				pos = type.pos;
+
+			if (production.parent)
+				throw GrammarError(pos, "Parent productions are not supported by the recursive descent parser.");
+
+			ExprBlock block(SrcPos(), body);
 			ProdState state(pos, block, production, LocalVarAccess(SrcPos(), body.parameters[0]), errorResult(body.type));
 
 			// Add parameters to the state object.
@@ -708,7 +679,7 @@ class RecursiveParser extends Parser {
 					continue;
 				unless (named.params.count > 0)
 					continue;
-				unless (named.params[0].type is stateT)
+				unless (named.params[0].mayStore(Value(stateT)))
 					continue;
 
 				// We have something that likely matches a rule now. Find the rule!
@@ -733,79 +704,5 @@ class RecursiveParser extends Parser {
 				ruleFns.put(rule, named);
 			}
 		}
-	}
-}
-
-private class RegexArray extends Expr {
-	private Regex[] data;
-
-	init(Regex[] data) {
-		init(SrcPos()) { data = data; }
-	}
-
-	ExprResult result() {
-		ExprResult(Value(named{Regex[]}));
-	}
-
-	void code(CodeGen state, CodeResult result) {
-		if (result.needed) {
-			var v = result.location(state);
-			state.l << mov(v, objPtr(data));
-			result.created(state);
-		}
-	}
-
-	Str toS() {
-		data.toS;
-	}
-}
-
-private class RegexValue extends Expr {
-	// We store a pointer to this in the code listing.
-	class RegexClass {
-		Regex regex;
-
-		init(Regex x) {
-			init { regex = x; }
-		}
-
-		void toS(StrBuf to) {
-			to << "Regex[\"" << regex << "\"]";
-		}
-	}
-
-	private RegexClass data;
-
-	init(Regex data) {
-		init(SrcPos()) { data(data); }
-	}
-
-	ExprResult result() {
-		ExprResult(Value(named{Regex}).asRef());
-	}
-
-	void code(CodeGen state, CodeResult result) {
-		unless (result.needed)
-			return;
-
-		var offset = named{RegexClass:regex<RegexClass>}.offset;
-
-		if (result.type.ref) {
-			var v = result.location(state);
-			state.l << mov(v, objPtr(data));
-			state.l << add(v, ptrConst(offset));
-			result.created(state);
-		} else {
-			var v = result.location(state);
-			state.l << mov(ptrA, objPtr(data));
-			state.l << add(ptrA, ptrConst(offset));
-			state.l << fnParam(ptrDesc, v);
-			state.l << fnParam(ptrDesc, ptrA);
-			state.l << fnCall(result.type.copyCtor, false);
-		}
-	}
-
-	Str toS() {
-		data.toS;
 	}
 }

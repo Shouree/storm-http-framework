@@ -1,0 +1,80 @@
+/**
+ * Root representation of a Markdown document.
+ */
+class Document {
+	// Create an empty document.
+	init() {
+		init {}
+	}
+
+	// Elements in the document.
+	Element[] elements;
+
+	// Add an element.
+	void add(Element e) {
+		elements << e;
+	}
+
+	// To string.
+	protected void toS(StrBuf to) : override {
+		to << join(elements, "\n\n");
+	}
+}
+
+
+/**
+ * Element in a document.
+ */
+class Element {
+}
+
+
+/**
+ * Heading.
+ */
+class Heading extends Element {
+	// Heading level.
+	Nat level;
+
+	// Text.
+	Str text;
+
+	// Create.
+	init(Nat level, Str text) {
+		init { level = level; text = text; }
+	}
+
+	// Create from a StrBuf.
+	init(Nat level, StrBuf text) {
+		init { level = level; text = text.toS; }
+	}
+
+	// Output.
+	protected void toS(StrBuf to) : override {
+		to << "#"*level << " " << text;
+	}
+}
+
+
+/**
+ * A paragraph of text.
+ */
+class Paragraph extends Element {
+	// The text in the paragraph.
+	Str text;
+
+	// Create.
+	init(Str text) {
+		init { text = text; }
+	}
+
+	// Create from a StrBuf (used in the grammar).
+	init(StrBuf text) {
+		init { text = text.toS; }
+	}
+
+	// Output.
+	protected void toS(StrBuf to) : override {
+		to << text;
+	}
+}

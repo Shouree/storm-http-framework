@@ -17,6 +17,8 @@ SParser => parser
 Parser SParserType(Scope env, SStr name) #keyword;
 SParserType => RecursiveParser(env, name) : "recursive" ~ "descent";
 SParserType => RecursiveParser(env, name) : "recursive";
+SParserType => BacktrackingParser(env, name) : "backtracking" - (~ "recursive")?;
+SParserType => BacktrackingParser(env, name) : "backtracking" ~ "recursive" ~ "descent";
 
 
 // Additional options for the parser.
