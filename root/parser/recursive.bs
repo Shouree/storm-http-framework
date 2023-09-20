@@ -344,14 +344,30 @@ class RecursiveParser extends Parser {
 			// repetition in it.
 			Expr? inRepeat;
 
+			// Check if "name" refers to a simple expression we are aware of (integers, booleans).
+			Expr? simpleExpr(Str name) {
+				if (name.isInt) {
+					return NumLiteral(SrcPos(), name.toLong);
+				} else if (name == "false") {
+					return BoolLiteral(SrcPos(), false);
+				} else if (name == "true") {
+					return BoolLiteral(SrcPos(), true);
+				} else {
+					return null;
+				}
+			}
+
 			// Get a variable. Throws appropriate message on error.
-			LocalVarAccess variable(Str name) {
+			Expr variable(Str name) {
 				if (!variables.has(name)) {
 					if (name == "me") {
-						createMeVar();
+						if (!createMeVar())
+							throw GrammarError(pos, "The variable 'me' is not declared in this production.");
+					} else if (e = simpleExpr(name)) {
+						return e;
 					} else {
 						StrBuf msg;
-						msg << "The parameter " << name << " is used before it is declared. It needs to be ";
+						msg << "The parameter '" << name << "' is used before it is declared. It needs to be ";
 						msg << "initialized by one of the tokens to the left of the one where it is used.";
 						throw GrammarError(pos, msg.toS);
 					}
@@ -361,17 +377,21 @@ class RecursiveParser extends Parser {
 			}
 
 			// Create the 'me' variable if possible.
-			private void createMeVar() {
+			private Bool createMeVar() {
 				unless (result = production.result)
-					return;
+					return false;
 
 				if (params = production.resultParams) {
 					// It is a function call!
 					Actuals actuals;
 					for (x in params) {
-						if (!variables.has(x))
+						if (variables.has(x)) {
+							actuals.add(LocalVarAccess(pos, variables.get(x)));
+						} else if (e = simpleExpr(x)) {
+							actuals.add(e);
+						} else {
 							throw GrammarError(pos, "When initializing 'me': can not find a variable named ${x}.");
-						actuals.add(LocalVarAccess(pos, variables.get(x)));
+						}
 					}
 
 					// Note: This is technically done in the wrong context. Should be done in the
@@ -389,6 +409,7 @@ class RecursiveParser extends Parser {
 						throw GrammarError(pos, "When initializing 'me': can not find a variable with the name ${name}");
 					variables.put("me", variables.get(name));
 				}
+				true;
 			}
 
 			// Save a token to a variable, or invoke a function as appropriate.
@@ -526,8 +547,11 @@ class RecursiveParser extends Parser {
 			}
 
 			ExprBlock block(SrcPos(), body);
-			// TODO: Better position?
-			ProdState state(parent.pos, block, production, LocalVarAccess(SrcPos(), body.parameters[0]), errorResult(body.type));
+			// TODO: It might be good to only use the production's position if it is declared inline?
+			SrcPos pos = parent.pos;
+			if (type = production.type)
+				pos = type.pos;
+			ProdState state(pos, block, production, LocalVarAccess(SrcPos(), body.parameters[0]), errorResult(body.type));
 
 			// Add parameters to the state object.
 			for (i, x in rule.params) {

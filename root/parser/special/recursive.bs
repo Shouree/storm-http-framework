@@ -32,6 +32,41 @@ Str? Chars(RecursiveParser:StrState state, Nat count) {
 	state.input.cut(start, end);
 }
 
+private Nat findIndent(RecursiveParser:StrState state, Nat tabWidth) {
+	Nat width = 0;
+	do {
+		var ch = state.pos.v;
+		if (ch == Char(32))
+			width++;
+		else if (ch == Char(9))
+			width += tabWidth;
+		else
+			return width;
+
+		++state.pos;
+	}
+}
+
+Nat? Indent(RecursiveParser:StrState state) {
+	IndentTab(state, 4);
+}
+
+Nat? IndentTab(RecursiveParser:StrState state, Nat tabWidth) {
+	findIndent(state, tabWidth);
+}
+
+Nat? MinIndent(RecursiveParser:StrState state, Nat indent) {
+	MinIndentTab(state, 4, indent);
+}
+
+Nat? MinIndentTab(RecursiveParser:StrState state, Nat tabWidth, Nat indent) {
+	Nat i = findIndent(state, tabWidth);
+	if (i < indent)
+		return null;
+	else
+		return i;
+}
+
 Bool enough(RecursiveParser:BinaryState state, Nat count) {
 	if (state.pos + count > state.input.count) {
 		state.error = "Expected ${count} bytes, but only ${state.input.count} remain.";

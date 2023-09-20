@@ -10,6 +10,14 @@ Buffer Bytes(Nat count);
 // Match a certain number of codepoints. Usable in string recursive descent parsers.
 Str Chars(Nat count);
 
+// Match whitespace and return the length of the match. Assumes tab = 4 spaces unless specified.
+Nat Indent();
+Nat IndentTab(Nat tabWidth);
+
+// Match whitespace of at least the specified width. Returns the new depth.
+Nat MinIndent(Nat width);
+Nat MinIndentTab(Nat tabWidth, Nat width);
+
 
 // For convenience: match various integer types. Usable for binary parsers.
 Byte Nat8();
