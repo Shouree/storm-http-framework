@@ -332,6 +332,9 @@ class RecursiveParser extends Parser {
 			// repetition in it.
 			Expr? inRepeat;
 
+			// Is the variable "me" created?
+			Bool createdMeVar;
+
 			// Check if "name" refers to a simple expression we are aware of (integers, booleans).
 			Expr? simpleExpr(Str name) {
 				if (name.isInt) {
@@ -350,7 +353,7 @@ class RecursiveParser extends Parser {
 				if (!variables.has(name)) {
 					if (name == "me") {
 						if (!createMeVar())
-							throw GrammarError(pos, "The variable 'me' is not declared in this production.");
+							throw GrammarError(pos, "The variable 'me' is not declared in this production, or evaluates to 'void'.");
 					} else if (e = simpleExpr(name)) {
 						return e;
 					} else {
@@ -365,9 +368,13 @@ class RecursiveParser extends Parser {
 			}
 
 			// Create the 'me' variable if possible.
-			private Bool createMeVar() {
+			Bool createMeVar() {
 				unless (result = production.result)
 					return false;
+
+				if (createdMeVar)
+					return false;
+				createdMeVar = true;
 
 				if (params = production.resultParams) {
 					// It is a function call!
@@ -384,17 +391,16 @@ class RecursiveParser extends Parser {
 
 					// Note: This is technically done in the wrong context. Should be done in the
 					// context of the production, not that of this function.
-					Expr init = namedExpr(initIn, pos, result, actuals);
-					if (init.result.type != Value()) {
-						Var v(initIn, SStr("me"), init);
-						initIn.add(v);
-						variables.put("me", v.var);
-					} else {
-						// This is to ensure that we can evaluate void functions for side effects.
-						initIn.add(init);
-						LocalVar dummy("me", Value(named{Bool}), SrcPos(), false);
-						variables.put(dummy.name, dummy);
+					Expr init = namedExpr(rootBlock, pos, result, actuals);
+					if (init.result.type == Value()) {
+						// It evaluates to 'void'. Make sure to stille valuate it.
+						rootBlock.add(init);
+						return false;
 					}
+
+					Var v(rootBlock, SStr("me"), init);
+					rootBlock.add(v);
+					variables.put("me", v.var);
 				} else {
 					// It is a variable! That means we can simply "rename" a local variable.
 					if (result.count != 1)
@@ -582,8 +588,7 @@ class RecursiveParser extends Parser {
 				block.add(Return(SrcPos(), block, state.variable("me")));
 			} else {
 				// Create "me" now if it was not created already.
-				if (production.result.any)
-					state.variable("me");
+				state.createMeVar();
 
 				block.add(Return(SrcPos(), block, BoolLiteral(SrcPos(), true)));
 			}
