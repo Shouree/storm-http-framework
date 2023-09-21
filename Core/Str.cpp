@@ -1151,9 +1151,13 @@ namespace storm {
 
 	StrBuf *operator <<(StrBuf *to, Str::Iter iter) {
 		*to << S("Iterator: ");
-		*to << iter.data()->substr(iter.data()->begin(), iter);
-		*to << S("|>");
-		*to << iter.data()->substr(iter);
+		if (const Str *data = iter.data()) {
+			*to << data->substr(data->begin(), iter);
+			*to << S("|>");
+			*to << data->substr(iter);
+		} else {
+			*to << S("<none>");
+		}
 		return to;
 	}
 

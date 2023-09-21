@@ -127,19 +127,27 @@ namespace storm {
 		}
 
 		void Loop::toS(StrBuf *to) const {
+			Bool any = false;
+
 			if (doExpr) {
 				*to << S("do ") << doExpr;
+				any = true;
 			}
 
 			if (condition) {
 				if (doExpr)
 					*to << S(" ");
 				*to << S("while (") << condition << S(") ");
+				any = true;
 			}
 
 			if (whileExpr) {
 				*to << whileExpr;
+				any = true;
 			}
+
+			if (!any)
+				*to << S("do {}");
 		}
 
 	}
