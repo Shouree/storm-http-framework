@@ -41,6 +41,10 @@ namespace storm {
 			*state->l << jmpBlock(to.label, to.block);
 		}
 
+		void Break::toS(StrBuf *to) const {
+			*to << S("break");
+		}
+
 		Bool Break::isolate() {
 			return false;
 		}
@@ -60,6 +64,10 @@ namespace storm {
 		void Continue::code(CodeGen *state, CodeResult *r) {
 			Breakable::To to = continueIn->continueTo();
 			*state->l << jmpBlock(to.label, to.block);
+		}
+
+		void Continue::toS(StrBuf *to) const {
+			*to << S("continue");
 		}
 
 		Bool Continue::isolate() {

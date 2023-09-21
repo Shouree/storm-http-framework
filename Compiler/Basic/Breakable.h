@@ -55,6 +55,10 @@ namespace storm {
 			// Don't need to isolate this statement.
 			virtual Bool STORM_FN isolate();
 
+		protected:
+			// To string.
+			virtual void STORM_FN toS(StrBuf *to) const;
+
 		private:
 			// Block we will break out of.
 			Breakable *breakFrom;
@@ -77,6 +81,10 @@ namespace storm {
 
 			// Don't need to isolate this statement.
 			virtual Bool STORM_FN isolate();
+
+		protected:
+			// To string.
+			virtual void STORM_FN toS(StrBuf *to) const;
 
 		private:
 			// Block we will continue in.
