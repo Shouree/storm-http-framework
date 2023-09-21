@@ -656,6 +656,8 @@ class RecursiveParser extends Parser {
 				}
 			}
 
+			checkFnParams(token.rule, toCall, actuals, state.pos);
+
 			FnCall fnCall(SrcPos(), state.block.scope, toCall, actuals);
 
 			Condition cond = if (isMaybe(toCall.result)) {
@@ -733,6 +735,26 @@ class RecursiveParser extends Parser {
 				// Good match, add it!
 				ruleFns.put(rule, named);
 			}
+		}
+	}
+}
+
+// Helper to check function parameters. Assumes that the first parameter is not visible to the user.
+package void checkFnParams(Rule rule, Function toCall, Actuals actuals, SrcPos pos) on Compiler {
+	if (toCall.params.count != actuals.count) {
+		StrBuf msg;
+		msg << "Incorrect number of parameters to rule " << rule.name << ". ";
+		msg << "Expected " << (toCall.params.count - 1) << " but got ";
+		msg << (actuals.count - 1) << ".";
+		throw GrammarError(pos, msg.toS);
+	}
+
+	for (i, actual in actuals.expressions) {
+		if (!actual.castable(toCall.params[i], Scope())) {
+			StrBuf msg;
+			msg << "Type mismatch for parameter " << i << " in call to rule " << rule.name << ". ";
+			msg << "Expected type " << toCall.params[i] << ", but got " << actual.result << ".";
+			throw GrammarError(pos, msg.toS);
 		}
 	}
 }

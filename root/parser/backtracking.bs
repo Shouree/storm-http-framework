@@ -683,9 +683,12 @@ class BacktrackingParser extends Parser {
 				actuals.add(state.state);
 				if (params = token.params) {
 					for (param in params) {
-						actuals.add(state.variable(param));
+						Expr src = state.variable(param);
+						actuals.add(src);
 					}
 				}
+
+				checkFnParams(token.rule, toCall, actuals, state.pos);
 
 				return FnCall(SrcPos(), state.block.scope, toCall, actuals);
 			} else {
