@@ -1,6 +1,5 @@
 use parser;
 
-// TODO: A backtracing parser likely makes the grammar a bit easier to write.
 parse : parser(backtracking recursive descent) {
 	start = SDocument;
 
@@ -15,25 +14,40 @@ parse : parser(backtracking recursive descent) {
 	// Match the part after the indentation.
 	void SElementTail(Document document, Nat indent);
 	SElementTail : "\n";
-	SElementTail => document : SText(indent) -> add;
-	SElementTail => Heading(depth, text) : SBracketHeading depth - "[^\n]+" text - "\n";
+	SElementTail[20] => document : SBracketHeading -> add;
+	SElementTail[10] => document : SText(indent) -> add;
 
 	// Match a part of text, after indentation. Then figure out what it is.
 	Element SText(Nat indent);
-	SText[90] => heading : "[^\n]+" text - "\n" - parser.special.MinIndent(indent) - SUnderlinedHeading(text) heading;
+	SText[90] => heading : SFmtText text - "\n" - parser.special.MinIndent(indent) - SUnderline(text) heading;
 	SText[80] => Paragraph(text) : SParText(indent) text;
 
 	// Match a paragraph.
-	StrBuf SParText(Nat indent);
-	SParText => StrBuf() : "[^\n]+" -> add - ("\n" -> add - parser.special.MinIndent(indent) - "[^\n]+" -> add)* - "\n";
+	FormattedText SParText(Nat indent);
+	SParText => FormattedText() :
+		SFmtText -> add - ("\n" -> add - parser.special.MinIndent(indent) - SFmtText -> add)* - "\n";
 
 	// Match the underlined part of a heading.
-	Heading SUnderlinedHeading(Str text);
-	SUnderlinedHeading => Heading(1, text) : "=+\n";
-	SUnderlinedHeading => Heading(2, text) : "-+\n";
+	Heading SUnderline(FormattedText text);
+	SUnderline => Heading(1, text) : "=+\n";
+	SUnderline => Heading(2, text) : "-+\n";
 
 	// Match a bracket heading (# heading)
-	Nat SBracketHeading();
-	SBracketHeading => countChars(text) : "#+" text;
+	Element SBracketHeading();
+	SBracketHeading => Heading(depth, text) : SBracketDepth depth - " *" - SFmtText text - "\n";
+
+	Nat SBracketDepth();
+	SBracketDepth => countChars(text) : "#+" text;
+
+	// Match text, ending in a newline.
+	FormattedText SFmtText();
+	SFmtText => FormattedText() : (SFmtSpan -> add)+;
+
+	TextSpan SFmtSpan();
+	SFmtSpan[10] => TextSpan(text) : "[^\n*\[`]+" text;
+	SFmtSpan[90] => BoldText(text) : "\*\*" - "[^\n*]+" text - "\*\*";
+	SFmtSpan[80] => ItalicText(text) : "\*" - "[^\n*]+" text - "\*";
+	SFmtSpan[70] => InlineCode(text) : "`" - "[^\n`]+" text - "`";
+	SFmtSpan[60] => Link(text, target) : "\[" - "[^\n\]]+" text - "\] *(" - "[^\n)]*" target - ")";
 
 }

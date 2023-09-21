@@ -19,6 +19,21 @@ class Document {
 	protected void toS(StrBuf to) : override {
 		to << join(elements, "\n\n");
 	}
+
+	// To HTML.
+	Html toHtml() {
+		Html out;
+		toHtml(out);
+		out;
+	}
+
+	void toHtml(Html to) {
+		for (i, element in elements) {
+			if (i > 0)
+				to.html("\n");
+			element.toHtml(to);
+		}
+	}
 }
 
 
@@ -26,6 +41,8 @@ class Document {
  * Element in a document.
  */
 class Element {
+	// To HTML.
+	void toHtml(Html to) : abstract;
 }
 
 
@@ -37,30 +54,25 @@ class Heading extends Element {
 	Nat level;
 
 	// Text.
-	Str text;
+	FormattedText text;
 
 	// Create.
-	init(Nat level, Str text) {
+	init(Nat level, FormattedText text) {
 		init { level = level; text = text; }
-	}
-
-	// Create from a StrBuf.
-	init(Nat level, StrBuf text) {
-		init { level = level; text = text.toS; }
+		print("Level: ${level}");
 	}
 
 	// Output.
 	protected void toS(StrBuf to) : override {
 		to << "#"*level << " " << text;
 	}
-}
 
-// Count chars. To determine depth of heading.
-package Nat countChars(Str s) {
-	Nat c;
-	for (x in s)
-		c++;
-	c;
+	// To HTML.
+	void toHtml(Html to) : override {
+		to.html("<h${level}>");
+		text.toHtml(to);
+		to.html("</h${level}>");
+	}
 }
 
 
@@ -69,20 +81,24 @@ package Nat countChars(Str s) {
  */
 class Paragraph extends Element {
 	// The text in the paragraph.
-	Str text;
+	FormattedText text;
 
 	// Create.
-	init(Str text) {
+	init(FormattedText text) {
 		init { text = text; }
-	}
-
-	// Create from a StrBuf (used in the grammar).
-	init(StrBuf text) {
-		init { text = text.toS; }
 	}
 
 	// Output.
 	protected void toS(StrBuf to) : override {
 		to << text;
+	}
+
+	// To HTML.
+	void toHtml(Html to) : override {
+		to.html("<p>\n");
+		to.indent();
+		text.toHtml(to);
+		to.dedent();
+		to.html("\n</p>");
 	}
 }

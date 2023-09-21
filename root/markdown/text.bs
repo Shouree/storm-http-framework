@@ -1,0 +1,176 @@
+/**
+ * A piece of formatted text.
+ *
+ * The text is represented as a list of pieces, each with their own formatting.
+ */
+class FormattedText {
+	// Text pieces.
+	TextSpan[] spans;
+
+	// Create.
+	init() {
+		init {}
+	}
+
+	// Add a span.
+	void add(TextSpan span) {
+		spans << span;
+	}
+
+	// Add a string as a plain span.
+	void add(Str span) {
+		add(TextSpan(span));
+	}
+
+	// Add another FormattedText object.
+	void add(FormattedText other) {
+		spans.append(other.spans);
+	}
+
+	// To string.
+	protected void toS(StrBuf to) : override {
+		for (span in spans) {
+			span.toS(to);
+		}
+	}
+
+	// To HTML.
+	void toHtml(Html to) {
+		for (span in spans)
+			span.toHtml(to);
+	}
+}
+
+/**
+ * A piece of formatted text.
+ */
+class TextSpan {
+	// The text itself.
+	Str text;
+
+	// Create.
+	init(Str text) {
+		init { text = text; }
+	}
+
+	// To string.
+	void toS(StrBuf to) : override {
+		to << text;
+	}
+
+	// To HTML.
+	void toHtml(Html to) {
+		to.text(text);
+	}
+}
+
+/**
+ * Italics.
+ */
+class ItalicText extends TextSpan {
+	// Create.
+	init(Str text) {
+		init(text) {}
+	}
+
+	// To string.
+	void toS(StrBuf to) : override {
+		to << "*" << text << "*";
+	}
+
+	// To HTML.
+	void toHtml(Html to) {
+		to.html("<em>");
+		super:toHtml(to);
+		to.html("</em>");
+	}
+}
+
+/**
+ * Bold.
+ */
+class BoldText extends TextSpan {
+	// Create.
+	init(Str text) {
+		init(text) {}
+	}
+
+	// To string.
+	void toS(StrBuf to) : override {
+		to << "**" << text << "**";
+	}
+
+	// To HTML.
+	void toHtml(Html to) {
+		to.html("<strong>");
+		super:toHtml(to);
+		to.html("</strong>");
+	}
+}
+
+/**
+ * Bold and italic text.
+ */
+class BoldItalicText extends TextSpan {
+	// Create.
+	init(Str text) {
+		init(text) {}
+	}
+
+	// To string.
+	void toS(StrBuf to) : override {
+		to << "***" << text << "***";
+	}
+
+	// To HTML.
+	void toHtml(Html to) {
+		to.html("<em><strong>");
+		super:toHtml(to);
+		to.html("</strong></em>");
+	}
+}
+
+/**
+ * Inline code.
+ */
+class InlineCode extends TextSpan {
+	// Create.
+	init(Str text) {
+		init(text) {}
+	}
+
+	// To string.
+	void toS(StrBuf to) : override {
+		to << "`" << text << "`";
+	}
+
+	// To HTML.
+	void toHtml(Html to) {
+		to.html("<em>");
+		super:toHtml(to);
+		to.html("</em>");
+	}
+}
+
+/**
+ * Link.
+ */
+class Link extends TextSpan {
+	// Link target (TODO: Make into a URL).
+	Str target;
+
+	// Create.
+	init(Str text, Str target) {
+		init(text) { target = target; }
+	}
+
+	// To string.
+	void toS(StrBuf to) : override {
+		to << "[" << text << "](" << target << ")";
+	}
+
+	// To HTML.
+	void toHtml(Html to) {
+		to.text(text);
+	}
+}

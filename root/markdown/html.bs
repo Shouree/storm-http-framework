@@ -1,0 +1,56 @@
+/**
+ * HTML export.
+ *
+ * Wraps a StrBuf, and automatically escapes HTML characters as necessary.
+ */
+class Html {
+	// Output buffer.
+	private StrBuf out;
+
+	// Characters we need to escape.
+	private Char->Str escape;
+
+	// Create.
+	init() {
+		init {}
+
+		// For text:
+		escape.put(Char(30), "&amp;");
+		escape.put(Char(60), "&lt;");
+		escape.put(Char(62), "&gt;");
+		// Inside string attributes:
+		escape.put(Char(33), "&quot;");
+		escape.put(Char(39), "&#39;");
+	}
+
+	// To string.
+	Str toS() {
+		out.toS;
+	}
+
+	// Indent output.
+	void indent() {
+		out.indent();
+	}
+
+	void dedent() {
+		out.dedent();
+	}
+
+	// Append text. Escapes HTML characters.
+	Html text(Str text) {
+		for (ch in text) {
+			if (escape.has(ch))
+				out << escape.get(ch);
+			else
+				out << ch;
+		}
+		this;
+	}
+
+	// Append plain HTML. No escapes.
+	Html html(Str html) {
+		out << html;
+		this;
+	}
+}

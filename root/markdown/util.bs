@@ -1,0 +1,7 @@
+// Count chars. To determine depth of headings.
+package Nat countChars(Str s) {
+	Nat c;
+	for (x in s)
+		c++;
+	c;
+}

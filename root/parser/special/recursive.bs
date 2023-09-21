@@ -67,6 +67,27 @@ Nat? MinIndentTab(RecursiveStrState state, Nat tabWidth, Nat indent) {
 		return i;
 }
 
+Bool ExactIndent(RecursiveStrState state, Nat indent) {
+	ExactIndentTab(state, 4, indent);
+}
+
+Bool ExactIndentTab(RecursiveStrState state, Nat tabWidth, Nat indent) {
+	Nat consumed = 0;
+	while (consumed < indent) {
+		if (state.pos.v == state.input.end)
+			return false;
+
+		var ch = state.pos.v;
+		if (ch == Char(32))
+			consumed++;
+		else if (ch == Char(9))
+			consumed += tabWidth;
+		else
+			return false;
+	}
+	return true;
+}
+
 Bool enough(RecursiveBinaryState state, Nat count) {
 	if (state.pos + count > state.input.count) {
 		state.error("Expected ${count} bytes, but only ${state.input.count} remain.");

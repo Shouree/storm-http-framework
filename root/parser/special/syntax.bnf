@@ -18,6 +18,9 @@ Nat IndentTab(Nat tabWidth);
 Nat MinIndent(Nat width);
 Nat MinIndentTab(Nat tabWidth, Nat width);
 
+// Match exactly the specified amount of whitespace.
+void ExactIndent(Nat width);
+void ExactIndentTab(Nat tabWidth, Nat width);
 
 // For convenience: match various integer types. Usable for binary parsers.
 Byte Nat8();
