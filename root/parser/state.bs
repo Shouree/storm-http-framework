@@ -8,16 +8,15 @@ class RecursiveStrState {
 	// Current position.
 	Str:Iter pos;
 
-	// Error?
-	Str error;
-
 	init(Str input, Str:Iter start) {
 		init {
 			input = input;
 			pos = start;
-			error = "";
 		}
 	}
+
+	// Set error.
+	void error(Str error) : abstract;
 }
 
 /**
@@ -40,4 +39,7 @@ class RecursiveBinaryState {
 			error = "";
 		}
 	}
+
+	// Set error.
+	void error(Str error) : abstract;
 }

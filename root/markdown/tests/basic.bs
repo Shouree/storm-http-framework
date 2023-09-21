@@ -11,8 +11,12 @@ suite BasicMarkdown {
 		with four
 		lines
 
+		single line
+
 		this is a heading
 		=================
+
+		### deep heading
 
 		this is another paragraph
 	};

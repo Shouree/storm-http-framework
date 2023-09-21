@@ -5,7 +5,7 @@ Buffer? Bytes(RecursiveBinaryState state, Nat count) {
 	Nat from = state.pos;
 	Nat to = from + count;
 	if (to > state.input.count) {
-		state.error = "Expected ${count} bytes, but only ${state.input.count - from} remain.";
+		state.error("Expected ${count} bytes, but only ${state.input.count - from} remain.");
 		return null;
 	}
 
@@ -24,7 +24,7 @@ Str? Chars(RecursiveStrState state, Nat count) {
 
 	// If we failed to go the last step, then we did not have enough.
 	if (iter == end) {
-		state.error = "Expected ${count} codepoints, but reached end of the input too early.";
+		state.error("Expected ${count} codepoints, but reached end of the input too early.");
 		return null;
 	}
 
@@ -69,7 +69,7 @@ Nat? MinIndentTab(RecursiveStrState state, Nat tabWidth, Nat indent) {
 
 Bool enough(RecursiveBinaryState state, Nat count) {
 	if (state.pos + count > state.input.count) {
-		state.error = "Expected ${count} bytes, but only ${state.input.count} remain.";
+		state.error("Expected ${count} bytes, but only ${state.input.count} remain.");
 		return false;
 	} else {
 		return true;

@@ -79,8 +79,13 @@ class BacktrackingParser extends Parser {
 
 		body.add(pattern(body) {
 					result.value = ${call};
-					result.end = state.longest;
-					result.error = state.error;
+					if (result.value) {
+						result.end = state.pos;
+						result.error = ""; // TODO: Would be nice to get an error for partial matches.
+					} else {
+						result.end = state.longest;
+						result.error = state.error;
+					}
 					return result;
 				});
 
@@ -91,24 +96,66 @@ class BacktrackingParser extends Parser {
 	 * State when parsing strings.
 	 */
 	class StrState extends RecursiveStrState {
+		Str error;
+
 		init(Str input, Str:Iter start) {
 			init(input, start) { longest = start; }
 		}
 
 		// Longest match.
 		Str:Iter longest;
+
+		// Set error.
+		void error(Str error) : override {
+			if (pos >= longest) {
+				if (this.error.empty)
+					this.error = error;
+				else
+					this.error = this.error + "\n" + error;
+			}
+		}
+
+		// Update the position, set 'longest' if necessary.
+		void update(Str:Iter p) {
+			pos = p;
+			if (p > longest) {
+				longest = p;
+				error = "";
+			}
+		}
 	}
 
 	/**
 	 * State when parsing buffers.
 	 */
 	class BinaryState extends RecursiveBinaryState {
+		Str error;
+
 		init(Buffer input, Nat start) {
 			init(input, start) { longest = start; }
 		}
 
 		// Longest match.
 		Nat longest;
+
+		// Set error.
+		void error(Str error) : override {
+			if (pos >= longest) {
+				if (this.error.empty)
+					this.error = error;
+				else
+					this.error = this.error + "\n" + error;
+			}
+		}
+
+		// Update the position, set 'longest' if necessary.
+		void update(Nat p) {
+			pos = p;
+			if (p > longest) {
+				longest = p;
+				error = "";
+			}
+		}
 	}
 
 	// Get the type of the state required, based on if we're in binary mode or not.
@@ -178,13 +225,13 @@ class BacktrackingParser extends Parser {
 		 * State common to the generator functions below.
 		 */
 		class ProdState on Compiler {
-			init(SrcPos pos, ExprBlock block, Production production, Expr state) {
+			init(SrcPos pos, ExprBlock block, Production production, Expr state, Expr failResult) {
 				init {
 					pos = pos;
 					block = block;
 					state = state;
 					production = production;
-					inRepeat = null;
+					failResult = failResult;
 				}
 			}
 
@@ -200,15 +247,26 @@ class BacktrackingParser extends Parser {
 			// Current production.
 			Production production;
 
+			// What to return on failure.
+			Expr failResult;
+
 			// Variables created so far.
 			Str->LocalVar variables;
 
 			// Start of captured segment. Populated when we encounter it.
 			LocalVar? captureStart;
 
-			// Are we inside the repetition? If so, this contains the expression we shall add with a
-			// repetition in it.
-			Expr? inRepeat;
+			// If in a repeat: the loop we are populating.
+			Expr? repeatRoot;
+
+			// If in a repeat: the block in the loop we are populating.
+			ExprBlock? repeatBlock;
+
+			// If in a repeat: the block used outside the loop.
+			ExprBlock? repeatPrev;
+
+			// Operations to "commit" whenever an repetation is complete.
+			Expr[] repeatCommit;
 
 			// Check if "name" refers to a simple expression we are aware of (integers, booleans).
 			Expr? simpleExpr(Str name) {
@@ -247,6 +305,11 @@ class BacktrackingParser extends Parser {
 				unless (result = production.result)
 					return false;
 
+				// Initialize outside of any loops.
+				ExprBlock initIn = block;
+				if (repeatPrev)
+					initIn = repeatPrev;
+
 				if (params = production.resultParams) {
 					// It is a function call!
 					Actuals actuals;
@@ -262,10 +325,17 @@ class BacktrackingParser extends Parser {
 
 					// Note: This is technically done in the wrong context. Should be done in the
 					// context of the production, not that of this function.
-					Expr init = namedExpr(block, pos, result, actuals);
-					Var v(block, SStr("me"), init);
-					block.add(v);
-					variables.put("me", v.var);
+					Expr init = namedExpr(initIn, pos, result, actuals);
+					if (init.result.type != Value()) {
+						Var v(initIn, SStr("me"), init);
+						initIn.add(v);
+						variables.put("me", v.var);
+					} else {
+						// This is to ensure that we can evaluate void functions for side effects.
+						initIn.add(init);
+						LocalVar dummy("me", Value(named{Bool}), SrcPos(), false);
+						variables.put(dummy.name, dummy);
+					}
 				} else {
 					// It is a variable! That means we can simply "rename" a local variable.
 					if (result.count != 1)
@@ -278,12 +348,82 @@ class BacktrackingParser extends Parser {
 				true;
 			}
 
-			void onRepStart() {}
-			void onRepEnd() {}
+			// Start a repeating section.
+			void onRepStart() {
+				if (production.repType == RepType:repNone)
+					return;
+
+				repeatPrev = block;
+
+				Loop loop(SrcPos(), block);
+				repeatRoot = loop;
+
+				block = ExprBlock(SrcPos(), loop);
+				repeatBlock = block;
+				loop.doBody(block);
+
+				Var posVar(block, SStr("@repPos"), namedExpr(block, SStr("pos"), state));
+				block.add(posVar);
+			}
+
+			// End a repeating section.
+			void onRepEnd() {
+				unless (repeatRoot)
+					return;
+				unless (repeatPrev)
+					return;
+				unless (repeatBlock)
+					return;
+
+				// Check what to do if we failed. Regardless, we first have to restore the position.
+				unless (oldPos = repeatBlock.variable(SimplePart("@repPos")))
+					throw InternalError("Could not find the start-of-loop variable!");
+
+				var posMember = namedExpr(repeatBlock, SStr("pos"), state);
+				var assignOp = assignOperator(SStr("="), 0);
+				repeatBlock.add(Operator(repeatBlock, posMember, assignOp, LocalVarAccess(SrcPos(), oldPos)));
+
+				if (production.repType.skippable) {
+					repeatBlock.add(Break(SrcPos(), repeatBlock));
+				} else {
+					// If we need one or more iteration, we need to ensure that the loop is executed
+					// at least once!
+					Var onceVar(repeatPrev, SStr("@once"), BoolLiteral(SrcPos(), false));
+					repeatPrev.add(onceVar);
+
+					LocalVarAccess once(SrcPos(), onceVar.var);
+
+					// Set once to true when done.
+					block.add(Operator(block, once, assignOperator(SStr("="), 0), BoolLiteral(SrcPos(), true)));
+
+					// Check at the end:
+					repeatBlock.add(pattern(repeatBlock) {
+										if (${once})
+											break;
+										else
+											return ${failResult};
+									});
+				}
+
+				// Commit pending operations:
+				for (x in repeatCommit)
+					block.add(x);
+				repeatCommit.clear();
+
+				// Then restore position as appropriate.
+				if (production.repType.repeatable)
+					block.add(Continue(SrcPos(), block));
+				else
+					block.add(Break(SrcPos(), block));
+
+				block = repeatPrev;
+				// Added here to ensure that declaration of "me" is before the loop.
+				block.add(repeatRoot);
+			}
 
 			// Store a variable. Act according to the repetition currently in affect.
 			void storeVariable(Str name, LocalVar var) {
-				if (inRepeat.empty) {
+				if (repeatRoot.empty) {
 					variables.put(name, var);
 				} else if (production.repType == RepType:repZeroOne) {
 					var type = wrapMaybe(var.result.asRef(false));
@@ -292,7 +432,8 @@ class BacktrackingParser extends Parser {
 					block.add(v);
 
 					LocalVarAccess expr(SrcPos(), var);
-					block.add(pattern(block) { ${LocalVarAccess(SrcPos(), v.var)} = ${expr}; });
+					LocalVarAccess target(SrcPos(), v.var);
+					repeatCommit << Operator(block, target, assignOperator(SStr("="), 0), expr);
 				} else {
 					var type = wrapArray(var.result.asRef(false));
 					Var v(block, type, SStr(name), Actuals());
@@ -300,8 +441,17 @@ class BacktrackingParser extends Parser {
 					block.add(v);
 
 					LocalVarAccess expr(SrcPos(), var);
-					block.add(pattern(block) { ${LocalVarAccess(SrcPos(), v.var)}.push(${expr}); });
+					LocalVarAccess to(SrcPos(), v.var);
+					repeatCommit << namedExpr(block, SrcPos(), "push", to, Actuals(expr));
 				}
+			}
+
+			// Invoke a function when appropriate (i.e. when we are done with the current "loop")
+			void invokeLater(Expr expr) {
+				if (repeatRoot.empty)
+					block.add(expr);
+				else
+					repeatCommit << expr;
 			}
 		}
 
@@ -318,15 +468,22 @@ class BacktrackingParser extends Parser {
 			FnBody body(fn, scope);
 			fn.body = body;
 
+			// What to return on failure?
+			Expr failResult = if (isMaybe(body.type)) {
+				NullExpr(SrcPos());
+			} else {
+				BoolLiteral(SrcPos(), false);
+			};
+
 			// Store the position in a local variable.
-			Var posStorage(body, SStr("storage"), namedExpr(body, SStr("pos"), LocalVarAccess(SrcPos(), body.parameters[0])));
+			Var posStorage(body, SStr("@prevPos"), namedExpr(body, SStr("pos"), LocalVarAccess(SrcPos(), body.parameters[0])));
 			body.add(posStorage);
 
 			// Assignment operator:
 			OpInfo assignInfo = assignOperator(SStr("="), 0);
 
 			// Sort productions according to their priority:
-			productions.sort((a, b) => a.priority < b.priority);
+			productions.sort((a, b) => a.priority > b.priority);
 
 			// Look at first-sets for all productions in each "chunk". If we have a collision there,
 			// ask the user to disambiguate the productions.
@@ -338,30 +495,28 @@ class BacktrackingParser extends Parser {
 				lastPrio = p.priority;
 
 				Set<Regex> first = grammar.first(p);
+				// TODO: Detect empty productions and put them last, or at least treat them as if
+				// they are clashing with everything.
 				for (x in first) {
 					if (!seen.put(x))
 						throwPrioError(x, productions, lastPrio);
 				}
 
 				// Create a clause here.
-				createMatch(body, rule, p);
+				createMatch(body, rule, p, failResult);
 				// Restore parse state.
 				var posMember = namedExpr(body, SStr("pos"), LocalVarAccess(SrcPos(), body.parameters[0]));
 				body.add(Operator(body, posMember, assignInfo, LocalVarAccess(SrcPos(), posStorage.var)));
 			}
 
 			// If we get to this point, then the parse failed. Return null or false.
-			if (isMaybe(body.type)) {
-				body.add(NullExpr(SrcPos()));
-			} else {
-				body.add(BoolLiteral(SrcPos(), false));
-			}
+			body.add(failResult);
 
 			print("For ${rule.name}: ${body}");
 		}
 
 		// Create code that matches a particular production.
-		private void createMatch(FnBody body, Rule rule, Production production) {
+		private void createMatch(FnBody body, Rule rule, Production production, Expr failResult) {
 			SrcPos pos = parent.pos;
 			if (x = production.type)
 				pos = x.pos;
@@ -369,7 +524,14 @@ class BacktrackingParser extends Parser {
 			if (production.parent)
 				throw GrammarError(pos, "Parent productions are not supported by the backtracking parser.");
 
-			ProdState state(pos, body, production, LocalVarAccess(SrcPos(), body.parameters[0]));
+			// Separate block to avoid variable clashes between productions (for variables created early).
+			ExprBlock block(pos, body);
+			body.add(block);
+
+			// TODO: It might be relevant to examine the first-sets before attempting to parse in
+			// order to avoid creating unnecessary objects?
+
+			ProdState state(pos, block, production, LocalVarAccess(SrcPos(), body.parameters[0]), failResult);
 
 			// Add parameters to the state object.
 			for (i, x in rule.params) {
@@ -398,6 +560,10 @@ class BacktrackingParser extends Parser {
 			if (isMaybe(body.type)) {
 				state.block.add(Return(SrcPos(), state.block, state.variable("me")));
 			} else {
+				// Create "me" now if it was not created already.
+				if (production.result.any)
+					state.variable("me");
+
 				state.block.add(Return(SrcPos(), state.block, BoolLiteral(SrcPos(), true)));
 			}
 		}
@@ -410,7 +576,7 @@ class BacktrackingParser extends Parser {
 			// Not bound. Just evaluate it.
 			Condition cond = createCondition(matchExpr(state, token));
 			if (cond as WeakMaybeCast)
-				cond.name(SStr("tmp"));
+				cond.name(SStr("@tmp"));
 
 			If check(state.block, cond);
 			CondSuccess success(SrcPos(), check, cond);
@@ -426,10 +592,10 @@ class BacktrackingParser extends Parser {
 					throw InternalError("Failed to fetch the result.");
 
 				// Need to update the position.
-				var update = pattern(state.block) {
-					${state.state}.pos = ${LocalVarAccess(SrcPos(), var)};
-				};
-				state.block.add(update);
+				LocalVarAccess newPos(SrcPos(), var);
+				state.block.add(namedExpr(state.block, state.pos, "update", state.state, Actuals(newPos)));
+
+				addError(state, token.regex, check);
 			}
 		}
 
@@ -465,12 +631,14 @@ class BacktrackingParser extends Parser {
 				var access = LocalVarAccess(SrcPos(), var);
 				var expr = pattern(state.block) {
 					var substr = ${state.state}.input.cut(${state.state}.pos, ${access});
-					${state.state}.pos = ${access};
+					${state.state}.update(${access});
 					substr;
 				};
 				Var strVar(state.block, targetName, expr);
 				state.block.add(strVar);
 				var = strVar.var;
+
+				addError(state, token.regex, check);
 			}
 
 			if (invoke = token.invoke) {
@@ -481,12 +649,18 @@ class BacktrackingParser extends Parser {
 				Actuals actuals;
 				actuals.add(state.variable("me"));
 				actuals.add(LocalVarAccess(SrcPos(), var));
-				state.block.add(namedExpr(state.block, SrcPos(), invoke, actuals));
+				state.invokeLater(namedExpr(state.block, SrcPos(), invoke, actuals));
 			} else if (token.bound) {
 				state.storeVariable(target.name, var);
 			}
 
 			true;
+		}
+
+		// Add error message to condition.
+		private void addError(ProdState state, Regex regex, If check) {
+			StrLiteral msg(SrcPos(), "Expected: \"${regex}\"");
+			check.falseCode = namedExpr(state.block, SrcPos(), "error", state.state, Actuals(msg));
 		}
 
 		// Create a condition that matches the token.

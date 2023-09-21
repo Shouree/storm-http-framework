@@ -1,9 +1,0 @@
-use core:io;
-
-void test() {
-	Url base = cwdUrl / "doc" / "index.md";
-	Str text = base.readAllText;
-
-	var result = base.readAllText;
-
-}

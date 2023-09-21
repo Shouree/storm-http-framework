@@ -55,6 +55,14 @@ class Heading extends Element {
 	}
 }
 
+// Count chars. To determine depth of heading.
+package Nat countChars(Str s) {
+	Nat c;
+	for (x in s)
+		c++;
+	c;
+}
+
 
 /**
  * A paragraph of text.
@@ -71,6 +79,7 @@ class Paragraph extends Element {
 	// Create from a StrBuf (used in the grammar).
 	init(StrBuf text) {
 		init { text = text.toS; }
+		print("<p>" + text.toS + "</p>");
 	}
 
 	// Output.

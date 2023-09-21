@@ -5,28 +5,35 @@ parse : parser(backtracking recursive descent) {
 	start = SDocument;
 
 	Document SDocument();
-	SDocument => Document() : (SElementHead(me))*;
+	SDocument => Document() : (SElement(me, 0))*;
 
-	void SElementHead(Document document);
-	SElementHead : parser.special.Indent() indent - SElement(document, indent);
-
+	// Match an entire element.
+	// The first part matches the indentation and delegates to SElementTail.
 	void SElement(Document document, Nat indent);
-	SElement : "\n";
-	SElement => document : SText(indent) -> add;
+	SElement : parser.special.MinIndent(indent) newIndent - SElementTail(document, newIndent);
 
-	// Match a chunk of text, figure out what it is afterwards.
+	// Match the part after the indentation.
+	void SElementTail(Document document, Nat indent);
+	SElementTail : "\n";
+	SElementTail => document : SText(indent) -> add;
+	SElementTail => Heading(depth, text) : SBracketHeading depth - "[^\n]+" text - "\n";
+
+	// Match a part of text, after indentation. Then figure out what it is.
 	Element SText(Nat indent);
-	SText => elem : "[^\n]+" first - "\n" - parser.special.MinIndent(indent) - STextTail(indent, first) elem;
+	SText[90] => heading : "[^\n]+" text - "\n" - parser.special.MinIndent(indent) - SUnderlinedHeading(text) heading;
+	SText[80] => Paragraph(text) : SParText(indent) text;
 
-	Element STextTail(Nat indent, Str first);
-	STextTail => Heading(1, first) : "=*\n";
-	STextTail => Heading(2, first) : "-*\n";
-	STextTail => Paragraph(first) : "[^=\-][^\n]*" - "\n" - (parser.special.MinIndent(indent) - "[^\n]+\n")+;
-	STextTail => Paragraph(first) : ;
+	// Match a paragraph.
+	StrBuf SParText(Nat indent);
+	SParText => StrBuf() : "[^\n]+" -> add - ("\n" -> add - parser.special.MinIndent(indent) - "[^\n]+" -> add)* - "\n";
 
-	Paragraph SParagraph();
-	SParagraph => Paragraph(content) : SParImpl content;
+	// Match the underlined part of a heading.
+	Heading SUnderlinedHeading(Str text);
+	SUnderlinedHeading => Heading(1, text) : "=+\n";
+	SUnderlinedHeading => Heading(2, text) : "-+\n";
 
-	StrBuf SParImpl();
-	SParImpl => StrBuf() : ("[ \t]*[^\n]+\n" -> add)+;
+	// Match a bracket heading (# heading)
+	Nat SBracketHeading();
+	SBracketHeading => countChars(text) : "#+" text;
+
 }

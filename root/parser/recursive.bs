@@ -102,8 +102,15 @@ class RecursiveParser extends Parser {
 	 * State for the parser, when parsing strings.
 	 */
 	class StrState extends RecursiveStrState {
+		Str error;
+
 		init(Str input, Str:Iter start) {
 			init(input, start) {}
+		}
+
+		// Set error.
+		void error(Str error) : override {
+			this.error = error;
 		}
 
 		// Helper function from the grammar to match a set of regexes.
@@ -121,8 +128,15 @@ class RecursiveParser extends Parser {
 	 * State for the parser, when parsing binary buffers.
 	 */
 	class BinaryState extends RecursiveBinaryState {
+		Str error;
+
 		init(Buffer input, Nat start) {
 			init(input, start) {}
+		}
+
+		// Set error.
+		void error(Str error) : override {
+			this.error = error;
 		}
 
 		// Helper function from the grammar to match a set of regexes.
@@ -370,10 +384,17 @@ class RecursiveParser extends Parser {
 
 					// Note: This is technically done in the wrong context. Should be done in the
 					// context of the production, not that of this function.
-					Expr init = namedExpr(rootBlock, pos, result, actuals);
-					Var v(rootBlock, SStr("me"), init);
-					rootBlock.add(v);
-					variables.put("me", v.var);
+					Expr init = namedExpr(initIn, pos, result, actuals);
+					if (init.result.type != Value()) {
+						Var v(initIn, SStr("me"), init);
+						initIn.add(v);
+						variables.put("me", v.var);
+					} else {
+						// This is to ensure that we can evaluate void functions for side effects.
+						initIn.add(init);
+						LocalVar dummy("me", Value(named{Bool}), SrcPos(), false);
+						variables.put(dummy.name, dummy);
+					}
 				} else {
 					// It is a variable! That means we can simply "rename" a local variable.
 					if (result.count != 1)
@@ -560,6 +581,10 @@ class RecursiveParser extends Parser {
 			if (isMaybe(body.type)) {
 				block.add(Return(SrcPos(), block, state.variable("me")));
 			} else {
+				// Create "me" now if it was not created already.
+				if (production.result.any)
+					state.variable("me");
+
 				block.add(Return(SrcPos(), block, BoolLiteral(SrcPos(), true)));
 			}
 
