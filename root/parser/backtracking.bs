@@ -657,7 +657,7 @@ class BacktrackingParser extends Parser {
 				Actuals actuals;
 				actuals.add(state.variable("me"));
 				actuals.add(LocalVarAccess(SrcPos(), var));
-				state.invokeLater(namedExpr(state.block, SrcPos(), invoke, actuals));
+				state.invokeLater(namedExpr(state.block, state.pos, invoke, actuals));
 			} else if (token.bound) {
 				state.storeVariable(target.name, var);
 			}

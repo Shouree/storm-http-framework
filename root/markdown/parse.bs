@@ -23,7 +23,6 @@ Document parse(Str str) {
 	// We require that the string ends in a newline. Extra newlines do not matter, so just add one
 	// always.
 	var result = parser(str + "\n");
-	print(result.toS);
 	if (error = result.error)
 		throw MarkdownError(error.pos, error.message);
 
@@ -39,27 +38,37 @@ private parser : parser(backtracking recursive descent) {
 	start = SDocument;
 
 	Document SDocument();
-	SDocument => Document() : (SElement(me, 0))*;
+	SDocument => Document(content) : SElementSeq(0) content;
+
+	ElementSeq SElementSeq(Nat indent);
+	SElementSeq => ElementSeq() : (SElement(me, indent))*;
 
 	// Match an entire element.
 	// The first part matches the indentation and delegates to SElementTail.
-	void SElement(Document document, Nat indent);
-	SElement : parser.special.MinIndent(indent) newIndent - SElementTail(document, newIndent);
+	void SElement(ElementSeq to, Nat indent);
+	SElement[20] : parser.special.MinIndent(indent) newIndent - SElementTail(to, newIndent);
+	SElement[10] : "[ \t]*\n"; // Empty lines may have too little indentation.
 
 	// Match the part after the indentation.
-	void SElementTail(Document document, Nat indent);
+	void SElementTail(ElementSeq to, Nat indent);
 	SElementTail : "\n";
-	SElementTail[90] => document : SHashHeading -> add;
-	SElementTail[80] => document : SUnorderedList(indent) -> add;
-	SElementTail[10] => document : SText(indent) -> add;
+	SElementTail[90] => to : SHashHeading -> add;
+	SElementTail[80] => to : SUnorderedList(indent) -> add;
+	SElementTail[10] => to : SText(indent) -> add;
 
 	// Match a list.
 	List SUnorderedList(Nat indent);
-	SUnorderedList => List() : SListMarker(indent) newIndent - SParText(newIndent) -> add;
+	SUnorderedList => List() : (SUListElem(indent, me))+;
+
+	void SUListElem(Nat indent, List list);
+	SUListElem => list : SUListMarker(indent) newIndent - SListElemBody(newIndent) -> add;
+
+	ElementSeq SListElemBody(Nat indent);
+	SListElemBody => ElementSeq() : SElementTail(me, indent) - (SElement(me, indent))*;
 
 	// Match a list marker. Returns extra indentation level.
-	Nat SListMarker(Nat indent);
-	SListMarker => addIndentation(indent, extra) : "[+\-*] +" extra;
+	Nat SUListMarker(Nat indent);
+	SUListMarker => addIndentation(indent, extra) : "[+\-*] +" extra;
 
 	// Match a part of text, after indentation. Then figure out what it is.
 	Element SText(Nat indent);
@@ -69,7 +78,7 @@ private parser : parser(backtracking recursive descent) {
 	// Match a paragraph.
 	FormattedText SParText(Nat indent);
 	SParText => FormattedText() :
-		SFmtText -> add - ("\n" -> add - parser.special.MinIndent(indent) - SFmtText -> add)* - "\n";
+		SFmtText -> add - ("\n" -> add - SFmtTextLine(indent) -> add)* - "\n";
 
 	// Match the underlined part of a heading.
 	Heading SUnderline(FormattedText text);
@@ -83,16 +92,29 @@ private parser : parser(backtracking recursive descent) {
 	Nat SHashDepth();
 	SHashDepth => countChars(text) : "#+" text;
 
-	// Match text, ending in a newline.
+	// Match text, ending in a newline. Assumes that this is an entire line, and does not match new
+	// lists etc.
+	FormattedText SFmtTextLine(Nat indent);
+	SFmtTextLine => FormattedText() : parser.special.MinIndent(indent) - SFmtSpanFirst -> add - (SFmtSpan -> add)*;
+
+	// Match text, ending in a newline. Assumes this is in the middle of the line somewhere, and
+	// does not account for special formatting etc.
 	FormattedText SFmtText();
 	SFmtText => FormattedText() : (SFmtSpan -> add)+;
 
+	TextSpan SFmtSpanFirst();
+	SFmtSpanFirst[10] => x : SFmtSpanCommon x;
+	SFmtSpanFirst[20] => TextSpan(text) : "[^*`\n\[\-+][^\n*\[`]*" text; // May not start with list characters.
+
 	TextSpan SFmtSpan();
-	SFmtSpan[10] => TextSpan(text) : "[^\n*\[`]+" text;
-	SFmtSpan[90] => BoldText(text) : "\*\*" - "[^\n*]+" text - "\*\*";
-	SFmtSpan[80] => ItalicText(text) : "\*" - "[^\n*]+" text - "\*";
-	SFmtSpan[70] => InlineCode(text) : "`" - "[^\n`]+" text - "`";
-	SFmtSpan[60] => Link(text, target) : "\[" - "[^\n\]]+" text - "\] *(" - "[^\n)]*" target - ")";
+	SFmtSpan[10] => x : SFmtSpanCommon x;
+	SFmtSpan[20] => TextSpan(text) : "[^\n*\[`]+" text;
+
+	TextSpan SFmtSpanCommon();
+	SFmtSpanCommon[90] => BoldText(text) : "\*\*" - "[^\n*]+" text - "\*\*";
+	SFmtSpanCommon[80] => ItalicText(text) : "\*" - "[^\n*]+" text - "\*";
+	SFmtSpanCommon[70] => InlineCode(text) : "`" - "[^\n`]+" text - "`";
+	SFmtSpanCommon[60] => Link(text, target) : "\[" - "[^\n\]]+" text - "\] *(" - "[^\n)]*" target - ")";
 
 }
 

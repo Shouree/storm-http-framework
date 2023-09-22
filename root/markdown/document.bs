@@ -3,12 +3,37 @@
  */
 class Document {
 	// Create an empty document.
-	init() {
-		init {}
+	init(ElementSeq elements) {
+		init { elements = elements; }
 	}
 
 	// Elements in the document.
+	ElementSeq elements;
+
+	// To string.
+	protected void toS(StrBuf to) : override {
+		elements.toS(to);
+	}
+
+	// To HTML.
+	Html toHtml() {
+		Html out;
+		elements.toHtml(out);
+		out;
+	}
+}
+
+/**
+ * Collection of elements.
+ */
+class ElementSeq {
+	// Elements.
 	Element[] elements;
+
+	// Create.
+	init() {
+		init {}
+	}
 
 	// Add an element.
 	void add(Element e) {
@@ -16,21 +41,31 @@ class Document {
 	}
 
 	// To string.
-	protected void toS(StrBuf to) : override {
+	void toS(StrBuf to) : override {
 		to << join(elements, "\n\n");
 	}
 
 	// To HTML.
-	Html toHtml() {
-		Html out;
-		toHtml(out);
-		out;
-	}
-
 	void toHtml(Html to) {
 		for (i, element in elements) {
 			if (i > 0)
 				to.html("\n");
+			element.toHtml(to);
+		}
+	}
+
+	// To HTML, ignore first paragraph.
+	void toHtmlInline(Html to) {
+		for (i, element in elements) {
+			if (i == 0) {
+				if (element as Paragraph) {
+					element.text.toHtml(to);
+					continue;
+				}
+			} else {
+				to.html("\n");
+			}
+
 			element.toHtml(to);
 		}
 	}
@@ -107,57 +142,38 @@ class Paragraph extends Element {
  * A generic list.
  */
 class List extends Element {
-	// List element
-	value ListElem {
-		// Leading text.
-		FormattedText text;
-
-		// Any additional elements.
-		Element[] content;
-
-		// Create.
-		init(FormattedText text) {
-			init { text = text; }
-		}
-	}
-
 	// Contents of the list.
-	ListElem[] content;
+	ElementSeq[] items;
 
 	// Create.
 	init() {}
 
 	// Add an element. Content can be added later.
-	void add(FormattedText text) {
-		content << ListElem(text);
+	void add(ElementSeq item) {
+		items << item;
 	}
 
 	// To string.
 	protected void toS(StrBuf to) : override {
 		to.indentBy("  ");
-		for (e in content) {
+		for (e in items) {
 			to << "- ";
-			Indent z(to);
-			to << e.text;
-			for (c in e.content) {
-				to << "\n\n" << c;
+			{
+				Indent z(to);
+				e.toS(to);
 			}
+			to << "\n\n";
 		}
 	}
 
 	void toHtml(Html to) : override {
 		to.html("<ul>\n");
 		to.indent();
-		for (e in content) {
+		for (e in items) {
 			to.html("<li>\n");
 			to.indent();
-			e.text.toHtml(to);
+			e.toHtmlInline(to);
 			to.html("\n");
-
-			for (c in e.content) {
-				to.html("\n");
-				c.toHtml(to);
-			}
 			to.dedent();
 			to.html("</li>\n");
 		}

@@ -425,7 +425,7 @@ class RecursiveParser extends Parser {
 						Actuals actuals;
 						actuals.add(variable("me"));
 						actuals.add(expr);
-						block.add(namedExpr(block, SrcPos(), invoke, actuals));
+						block.add(namedExpr(block, pos, invoke, actuals));
 					} else if (token.bound) {
 						// Bind to a variable.
 						storeVariable(target.name, expr);
