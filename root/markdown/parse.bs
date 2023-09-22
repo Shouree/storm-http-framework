@@ -44,31 +44,44 @@ private parser : parser(backtracking recursive descent) {
 	SElementSeq => ElementSeq() : (SElement(me, indent))*;
 
 	// Match an entire element.
-	// The first part matches the indentation and delegates to SElementTail.
+	// The first part matches the indentation and delegates to SElementBaseline.
 	void SElement(ElementSeq to, Nat indent);
-	SElement[20] : parser.special.MinIndent(indent) newIndent - SElementTail(to, newIndent);
+	SElement[20] => canary(to, indent) : parser.special.ExactIndent(indent) - SElementBaseline(indent) -> add;
 	SElement[10] : "[ \t]*\n"; // Empty lines may have too little indentation.
 
-	// Match the part after the indentation.
-	void SElementTail(ElementSeq to, Nat indent);
-	SElementTail : "\n";
-	SElementTail[90] => to : SHashHeading -> add;
-	SElementTail[80] => to : SUnorderedList(indent) -> add;
-	SElementTail[10] => to : SText(indent) -> add;
+	// Match the part after the expected indentation level.
+	Element SElementBaseline(Nat indent);
+	SElementBaseline[10] => x : SExtraIndent(indent) newIndent - SElementNoIndent(newIndent) x;
+	// This is where we would detect things like code blocks, etc.
+
+	// Match the part after all (possibly additional) indentation has been consumed.
+	Element SElementNoIndent(Nat indent);
+	SElementNoIndent[90] => x : SHashHeading x;
+	SElementNoIndent[80] => x : SUList(indent) x;
+	SElementNoIndent[70] => x : SOList(indent) x;
+	SElementNoIndent[10] => x : SText(indent) x;
 
 	// Match a list.
-	List SUnorderedList(Nat indent);
-	SUnorderedList => List() : (SUListElem(indent, me))+;
+	List SUList(Nat indent);
+	SUList => List(false) : (SUListElem(indent, me))+;
 
 	void SUListElem(Nat indent, List list);
 	SUListElem => list : SUListMarker(indent) newIndent - SListElemBody(newIndent) -> add;
 
+	List SOList(Nat indent);
+	SOList => List(true) : (SOListElem(indent, me))+;
+
+	void SOListElem(Nat indent, List list);
+	SOListElem => list : SOListMarker(indent) newIndent - SListElemBody(newIndent) -> add;
+
 	ElementSeq SListElemBody(Nat indent);
-	SListElemBody => ElementSeq() : SElementTail(me, indent) - (SElement(me, indent))*;
+	SListElemBody => canary(indent) : SElementBaseline(indent) -> add - (SElement(me, indent))*;
 
 	// Match a list marker. Returns extra indentation level.
 	Nat SUListMarker(Nat indent);
 	SUListMarker => addIndentation(indent, extra) : "[+\-*] +" extra;
+	Nat SOListMarker(Nat indent);
+	SOListMarker => addIndentation(indent, extra) : "[0-9]+\. +" extra;
 
 	// Match a part of text, after indentation. Then figure out what it is.
 	Element SText(Nat indent);
@@ -116,6 +129,9 @@ private parser : parser(backtracking recursive descent) {
 	SFmtSpanCommon[70] => InlineCode(text) : "`" - "[^\n`]+" text - "`";
 	SFmtSpanCommon[60] => Link(text, target) : "\[" - "[^\n\]]+" text - "\] *(" - "[^\n)]*" target - ")";
 
+	// Extra indentation.
+	Nat SExtraIndent(Nat original);
+	SExtraIndent => +(original, extra) : parser.special.Indent() extra;
 }
 
 // Count chars. To determine depth of headings.
@@ -129,4 +145,13 @@ package Nat countChars(Str s) {
 // Add extra indentation.
 package Nat addIndentation(Nat original, Str extra) {
 	original + countChars(extra);
+}
+
+ElementSeq canary(Nat indent) {
+	print("List at ${indent}");
+	ElementSeq();
+}
+ElementSeq canary(ElementSeq x, Nat indent) {
+	print("Element at ${indent}");
+	x;
 }

@@ -34,16 +34,19 @@ Str? Chars(RecursiveStrState state, Nat count) {
 
 private Nat findIndent(RecursiveStrState state, Nat tabWidth) {
 	Nat width = 0;
+	Str:Iter pos = state.pos;
 	do {
-		var ch = state.pos.v;
-		if (ch == Char(32))
+		var ch = pos.v;
+		if (ch == Char(32)) {
 			width++;
-		else if (ch == Char(9))
+		} else if (ch == Char(9)) {
 			width += tabWidth;
-		else
+		} else {
+			state.pos = pos;
 			return width;
+		}
 
-		++state.pos;
+		++pos;
 	}
 }
 
@@ -73,18 +76,27 @@ Bool ExactIndent(RecursiveStrState state, Nat indent) {
 
 Bool ExactIndentTab(RecursiveStrState state, Nat tabWidth, Nat indent) {
 	Nat consumed = 0;
+	Str:Iter pos = state.pos;
+	Str:Iter end = state.input.end;
 	while (consumed < indent) {
-		if (state.pos.v == state.input.end)
+		if (pos == end)
 			return false;
 
-		var ch = state.pos.v;
+		var ch = pos.v;
 		if (ch == Char(32))
 			consumed++;
 		else if (ch == Char(9))
 			consumed += tabWidth;
-		else
+		else {
+			print("Failed matching ${indent} at ${state.pos}");
 			return false;
+		}
+
+		++pos;
 	}
+
+	print("Success matching ${indent} at ${state.pos}");
+	state.pos = pos;
 	return true;
 }
 

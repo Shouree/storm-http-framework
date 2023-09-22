@@ -142,11 +142,16 @@ class Paragraph extends Element {
  * A generic list.
  */
 class List extends Element {
+	// Ordered?
+	Bool ordered;
+
 	// Contents of the list.
 	ElementSeq[] items;
 
 	// Create.
-	init() {}
+	init(Bool ordered) {
+		init { ordered = ordered; }
+	}
 
 	// Add an element. Content can be added later.
 	void add(ElementSeq item) {

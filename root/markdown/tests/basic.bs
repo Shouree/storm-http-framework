@@ -31,30 +31,39 @@ use markdown;
 // }
 
 suite MarkdownLists {
-	var lists = str {
-		Heading
-		=======
+	// var lists = str {
+	// 	Heading
+	// 	=======
 
-		This is a short list:
-		- First element
-		end of list
+	// 	This is a short list:
+	// 	- First element
+	// 	end of list
 
-		This is a list:
+	// 	This is a list:
 
-		- First element
+	// 	- First element
+	// 	- Second element
+	// 	  with additional text
+	// 	- Third element
+	// 	  - Nested list
 
-		- Second element
-		  with additional text
+	// 	  - Second element
+	// 	    with additional text
 
-		- Third element
-		  - Nested list
+	// 	- Fourth element
+	// };
 
-		  - Second element
-		    with additional text
-		- Fourth element
+	// Document result = parse(lists);
+	// print("Result:");
+	// print(result.toHtml.toS);
+
+	var nested = str {
+		- First
+		  - Second
+		  - Third
+		- Fourth
 	};
-
-	Document result = parse(lists);
+	Document result = parse(nested);
 	print("Result:");
 	print(result.toHtml.toS);
 }

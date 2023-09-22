@@ -748,7 +748,7 @@ class BacktrackingParser extends Parser {
 				if (!match)
 					continue;
 
-				if (wrapMaybe(rule.result).type !is named.result.type)
+				if (resultType(rule.result).type !is named.result.type)
 					continue;
 
 				// Good match, add it!
