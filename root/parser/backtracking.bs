@@ -79,13 +79,16 @@ class BacktrackingParser extends Parser {
 
 		body.add(pattern(body) {
 					result.value = ${call};
-					if (result.value) {
-						result.end = state.pos;
-						result.error = ""; // TODO: Would be nice to get an error for partial matches.
-					} else {
-						result.end = state.longest;
-						result.error = state.error;
+					result.end = state.pos;
+					if (state.error.any) {
+						// Did we manage to parse everything?
+						if (state.pos + 1 == state.pos) {
+							// No error.
+						} else {
+							result.error = createError(state.error, state.longest);
+						}
 					}
+
 					return result;
 				});
 

@@ -91,7 +91,8 @@ class RecursiveParser extends Parser {
 		body.add(pattern(body) {
 					result.value = ${call};
 					result.end = state.pos;
-					result.error = state.error;
+					if (state.error.any)
+						result.error = createError(state.error, state.pos);
 					return result;
 				});
 

@@ -51,11 +51,11 @@ Result : generate(params) {
 	// Parse value, if parse succeeded.
 	t.add(MemberVar("value", resultType(resType), t));
 
-	// Last position parsed.
+	// Last position successfully parsed.
 	t.add(MemberVar("end", named{Str:Iter}, t));
 
 	// Error message.
-	t.add(MemberVar("error", named{Str}, t));
+	t.add(MemberVar("error", named{Maybe<Error>}, t));
 
 	// To string function.
 	t.add(toSFunction(t));
@@ -68,7 +68,6 @@ Result : generate(params) {
 
 	t;
 }
-
 
 /**
  * Result type from parsers in binary mode.
@@ -86,11 +85,11 @@ BinaryResult : generate(params) {
 	// Parse value, if parse succeeded.
 	t.add(MemberVar("value", resultType(resType), t));
 
-	// Last position parsed.
+	// Last position parsed successfully.
 	t.add(MemberVar("end", named{Nat}, t));
 
 	// Error message.
-	t.add(MemberVar("error", named{Str}, t));
+	t.add(MemberVar("error", named{Maybe<BinaryError>}, t));
 
 	// To string function.
 	t.add(toSFunction(t));
@@ -102,4 +101,44 @@ BinaryResult : generate(params) {
 	t.add(TypeDeepCopy(t));
 
 	t;
+}
+
+/**
+ * Error location for a string parse.
+ */
+class Error {
+	// Error message.
+	Str message;
+
+	// Error location.
+	Str:Iter pos;
+
+	// Create.
+	init(Str message, Str:Iter pos) {
+		init { message = message; pos = pos; }
+	}
+}
+
+/**
+ * Error location for a binary parse.
+ */
+class BinaryError {
+	// Error message.
+	Str message;
+
+	// Error location.
+	Nat pos;
+
+	// Create.
+	init(Str message, Nat pos) {
+		init { message = message; pos = pos; }
+	}
+}
+
+// Helper to create an appropriate error.
+Error createError(Str message, Str:Iter pos) {
+	Error(message, pos);
+}
+BinaryError createError(Str message, Nat pos) {
+	BinaryError(message, pos);
 }

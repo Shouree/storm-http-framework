@@ -59,7 +59,6 @@ class Heading extends Element {
 	// Create.
 	init(Nat level, FormattedText text) {
 		init { level = level; text = text; }
-		print("Level: ${level}");
 	}
 
 	// Output.

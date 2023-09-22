@@ -1,6 +1,40 @@
 use parser;
 
-parse : parser(backtracking recursive descent) {
+/**
+ * Error thrown when there is an error in the Markdown syntax.
+ */
+class MarkdownError extends Exception {
+	init(Str:Iter pos, Str msg) {
+		init { pos = pos; msg = msg; }
+	}
+
+	private Str:Iter pos;
+	private Str msg;
+
+	void message(StrBuf to) : override {
+		to << "Failed to parse markdown text:\n";
+		to << msg << "\n";
+		to << "The error is near the |> in the text below:\n" << pos;
+	}
+}
+
+// Parse a markdown document. Throw an exception on error.
+Document parse(Str str) {
+	// We require that the string ends in a newline. Extra newlines do not matter, so just add one
+	// always.
+	var result = parser(str + "\n");
+	if (error = result.error)
+		throw MarkdownError(error.pos, error.message);
+
+	unless (v = result.value)
+		throw InternalError("Should have got an error!");
+	if (result.end != str.end)
+		throw MarkdownError(result.end, "Not all data could be parsed.");
+	return v;
+}
+
+// The parser itself:
+private parser : parser(backtracking recursive descent) {
 	start = SDocument;
 
 	Document SDocument();
