@@ -49,3 +49,13 @@ BEGIN_TEST(SQL, Compile) {
 	Engine &e = gEngine();
 	CHECK_RUNS(e.package(S("sql"))->compile());
 } END_TEST
+
+BEGIN_TEST(Parser, Compile) {
+	Engine &e = gEngine();
+	CHECK_RUNS(e.package(S("parser"))->compile());
+} END_TEST
+
+BEGIN_TEST(Markdown, Compile) {
+	Engine &e = gEngine();
+	CHECK_RUNS(e.package(S("markdown"))->compile());
+} END_TEST
