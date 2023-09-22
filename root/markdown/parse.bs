@@ -23,6 +23,7 @@ Document parse(Str str) {
 	// We require that the string ends in a newline. Extra newlines do not matter, so just add one
 	// always.
 	var result = parser(str + "\n");
+	print(result.toS);
 	if (error = result.error)
 		throw MarkdownError(error.pos, error.message);
 
@@ -48,8 +49,17 @@ private parser : parser(backtracking recursive descent) {
 	// Match the part after the indentation.
 	void SElementTail(Document document, Nat indent);
 	SElementTail : "\n";
-	SElementTail[20] => document : SBracketHeading -> add;
+	SElementTail[90] => document : SHashHeading -> add;
+	SElementTail[80] => document : SUnorderedList(indent) -> add;
 	SElementTail[10] => document : SText(indent) -> add;
+
+	// Match a list.
+	List SUnorderedList(Nat indent);
+	SUnorderedList => List() : SListMarker(indent) newIndent - SParText(newIndent) -> add;
+
+	// Match a list marker. Returns extra indentation level.
+	Nat SListMarker(Nat indent);
+	SListMarker => addIndentation(indent, extra) : "[+\-*] +" extra;
 
 	// Match a part of text, after indentation. Then figure out what it is.
 	Element SText(Nat indent);
@@ -67,11 +77,11 @@ private parser : parser(backtracking recursive descent) {
 	SUnderline => Heading(2, text) : "-+\n";
 
 	// Match a bracket heading (# heading)
-	Element SBracketHeading();
-	SBracketHeading => Heading(depth, text) : SBracketDepth depth - " *" - SFmtText text - "\n";
+	Element SHashHeading();
+	SHashHeading => Heading(depth, text) : SHashDepth depth - " *" - SFmtText text - "\n";
 
-	Nat SBracketDepth();
-	SBracketDepth => countChars(text) : "#+" text;
+	Nat SHashDepth();
+	SHashDepth => countChars(text) : "#+" text;
 
 	// Match text, ending in a newline.
 	FormattedText SFmtText();
@@ -84,4 +94,17 @@ private parser : parser(backtracking recursive descent) {
 	SFmtSpan[70] => InlineCode(text) : "`" - "[^\n`]+" text - "`";
 	SFmtSpan[60] => Link(text, target) : "\[" - "[^\n\]]+" text - "\] *(" - "[^\n)]*" target - ")";
 
+}
+
+// Count chars. To determine depth of headings.
+package Nat countChars(Str s) {
+	Nat c;
+	for (x in s)
+		c++;
+	c;
+}
+
+// Add extra indentation.
+package Nat addIndentation(Nat original, Str extra) {
+	original + countChars(extra);
 }

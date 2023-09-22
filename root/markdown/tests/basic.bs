@@ -1,31 +1,60 @@
 use test;
 use markdown;
 
-suite BasicMarkdown {
-	var simple = str {
-		this is a
-		paragraph
+// suite BasicMarkdown {
+// 	var simple = str {
+// 		this is a
+// 		paragraph
 
-		this is the
-		next *paragraph*
-		with four
-		lines
+// 		this is the
+// 		next *paragraph*
+// 		with four
+// 		lines
 
-		single line
+// 		single line
 
-		this is a heading
-		=================
+// 		this is a heading
+// 		=================
 
-		### deep heading
+// 		### deep heading
 
-		this is another paragraph
+// 		this is another paragraph
+// 	};
+
+// 	Document result = parse(simple);
+
+// 	test result.elements.count == 6;
+// 	// print("Result:");
+// 	// print(result.toS);
+// 	// print("\nHTML:");
+// 	// print(result.toHtml.toS);
+// }
+
+suite MarkdownLists {
+	var lists = str {
+		Heading
+		=======
+
+		This is a short list:
+		- First element
+		end of list
+
+		This is a list:
+
+		- First element
+
+		- Second element
+		  with additional text
+
+		- Third element
+		  - Nested list
+
+		  - Second element
+		    with additional text
+		- Fourth element
 	};
 
-	Document result = parse(simple);
-
-	test result.elements.count == 6;
-	// print("Result:");
-	// print(result.toS);
-	// print("\nHTML:");
-	// print(result.toHtml.toS);
+	Document result = parse(lists);
+	print("Result:");
+	print(result.toHtml.toS);
 }

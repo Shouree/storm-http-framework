@@ -101,3 +101,67 @@ class Paragraph extends Element {
 		to.html("\n</p>");
 	}
 }
+
+
+/**
+ * A generic list.
+ */
+class List extends Element {
+	// List element
+	value ListElem {
+		// Leading text.
+		FormattedText text;
+
+		// Any additional elements.
+		Element[] content;
+
+		// Create.
+		init(FormattedText text) {
+			init { text = text; }
+		}
+	}
+
+	// Contents of the list.
+	ListElem[] content;
+
+	// Create.
+	init() {}
+
+	// Add an element. Content can be added later.
+	void add(FormattedText text) {
+		content << ListElem(text);
+	}
+
+	// To string.
+	protected void toS(StrBuf to) : override {
+		to.indentBy("  ");
+		for (e in content) {
+			to << "- ";
+			Indent z(to);
+			to << e.text;
+			for (c in e.content) {
+				to << "\n\n" << c;
+			}
+		}
+	}
+
+	void toHtml(Html to) : override {
+		to.html("<ul>\n");
+		to.indent();
+		for (e in content) {
+			to.html("<li>\n");
+			to.indent();
+			e.text.toHtml(to);
+			to.html("\n");
+
+			for (c in e.content) {
+				to.html("\n");
+				c.toHtml(to);
+			}
+			to.dedent();
+			to.html("</li>\n");
+		}
+		to.dedent();
+		to.html("</ul>");
+	}
+}
