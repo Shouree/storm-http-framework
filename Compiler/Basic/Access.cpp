@@ -5,6 +5,7 @@
 #include "Class.h"
 #include "Function.h"
 #include "Scope.h"
+#include "Content.h"
 
 namespace storm {
 	namespace bs {
@@ -73,6 +74,12 @@ namespace storm {
 			return to;
 		}
 
+		MultiDecl *apply(SrcPos pos, MultiDecl *to, Visibility *v) {
+			for (Nat i = 0; i < to->data->count(); i++)
+				apply(pos, to->data->at(i), v);
+			return to;
+		}
+
 		TObject *apply(SrcPos pos, TObject *to, Visibility *v) {
 			if (Named *n = as<Named>(to))
 				return apply(pos, n, v);
@@ -80,6 +87,8 @@ namespace storm {
 				return apply(pos, d, v);
 			else if (MemberWrap *wrap = as<MemberWrap>(to))
 				return apply(pos, wrap, v);
+			else if (MultiDecl *multi = as<MultiDecl>(to))
+				return apply(pos, multi, v);
 			else
 				throw new (to) InternalError(TO_S(to, S("I can not apply visibility to ") << to));
 		}
