@@ -937,12 +937,18 @@ namespace storm {
 	}
 
 	Bool Str::Iter::operator >(const Iter &o) const {
-		return o < *this;
+		if (!o.atEnd() && atEnd())
+			return true;
+
+		if (owner != o.owner)
+			return false;
+
+		return pos > o.pos;
 	}
 
 	Bool Str::Iter::operator <(const Iter &o) const {
 		if (o.atEnd() && !atEnd())
-			return false;
+			return true;
 
 		if (owner != o.owner)
 			return false;
