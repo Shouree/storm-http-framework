@@ -1,36 +1,93 @@
 use test;
 use markdown;
+use lang:bs:macro;
 
-// suite BasicMarkdown {
-// 	var simple = str {
-// 		this is a
-// 		paragraph
+class CountVisitor extends Visitor {
+	Nat count;
+	core:lang:Type type;
 
-// 		this is the
-// 		next *paragraph*
-// 		with four
-// 		lines
+	init(core:lang:Type t) {
+		init { type = t; }
+	}
 
-// 		single line
+	ElementSeq visit(ElementSeq seq) {
+		if (core:lang:typeOf(seq) is type)
+			count++;
+		seq;
+	}
 
-// 		this is a heading
-// 		=================
+	Element visit(Element element) {
+		if (core:lang:typeOf(element) is type)
+			count++;
+		element;
+	}
 
-// 		### deep heading
+	FormattedText visit(FormattedText text) {
+		if (core:lang:typeOf(text) is type)
+			count++;
+		text;
+	}
 
-// 		this is another paragraph
-// 	};
+	TextSpan visit(TextSpan span) {
+		if (core:lang:typeOf(span) is type)
+			count++;
+		span;
+	}
 
-// 	Document result = parse(simple);
+}
 
-// 	test result.elements.count == 6;
-// 	// print("Result:");
-// 	// print(result.toS);
-// 	// print("\nHTML:");
-// 	// print(result.toHtml.toS);
-// }
+Nat countType(Document d, core:lang:Type t) {
+	CountVisitor x(t);
+	d.visit(x);
+	x.count;
+}
+
+suite BasicMarkdown {
+	var simple = str {
+		this is a
+		paragraph
+
+		this is the
+		next *paragraph*
+		with four
+		lines
+
+		single line
+
+		this is a heading
+		=================
+
+		### deep heading
+
+		this is another paragraph
+	};
+
+	Document result = parse(simple);
+
+	test result.elements.elements.count == 6;
+	test result.countType(named{Paragraph}) == 4;
+	test result.countType(named{Heading}) == 2;
+	// print("Result:");
+	// print(result.toS);
+	// print("\nHTML:");
+	// print(result.toHtml.toS);
+}
 
 suite MarkdownLists {
+	var nested = str {
+		- First
+		  - Second
+		  - Third
+		- Fourth
+	};
+	{
+		Document result = parse(nested);
+		test result.countType(named{List}) == 2;
+
+		// print("Result:");
+		// print(result.toHtml.toS);
+	}
+
 	var lists = str {
 		Heading
 		=======
@@ -58,19 +115,9 @@ suite MarkdownLists {
 
 	{
 		Document result = parse(lists);
-		print("Result:");
-		print(result.toHtml.toS);
-	}
+		test result.countType(named{List}) == 4;
 
-	var nested = str {
-		- First
-		  - Second
-		  - Third
-		- Fourth
-	};
-	{
-		Document result = parse(nested);
-		print("Result:");
-		print(result.toHtml.toS);
+		// print("Result:");
+		// print(result.toHtml.toS);
 	}
 }

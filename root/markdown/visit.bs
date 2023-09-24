@@ -1,0 +1,23 @@
+
+/**
+ * Visitor interface to traverse a document.
+ *
+ * The element is replaced by whatever is returned by each function. This allows modifying the
+ * structure as well.
+ *
+ * Children are traversed before parents. This means that each transform function will "see" changes
+ * made to children.
+ */
+class Visitor {
+	// Called for all sequences of elements.
+	ElementSeq visit(ElementSeq seq) { seq; }
+
+	// Called for all elements.
+	Element visit(Element element) { element; }
+
+	// Called for all formatted text elements.
+	FormattedText visit(FormattedText text) { text; }
+
+	// Called for all elements in a text span.
+	TextSpan visit(TextSpan span) { span; }
+}

@@ -27,6 +27,13 @@ class FormattedText {
 		spans.append(other.spans);
 	}
 
+	// Visit the entire structure.
+	FormattedText visit(Visitor v) {
+		for (i, x in spans)
+			spans[i] = v.visit(x);
+		return v.visit(this);
+	}
+
 	// To string.
 	protected void toS(StrBuf to) : override {
 		for (span in spans) {
@@ -171,6 +178,10 @@ class Link extends TextSpan {
 
 	// To HTML.
 	void toHtml(Html to) {
+		to.html("<a href=\"");
+		to.text(target);
+		to.html("\">");
 		to.text(text);
+		to.html("</a>");
 	}
 }
