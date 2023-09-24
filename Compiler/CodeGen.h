@@ -122,7 +122,7 @@ namespace storm {
 	 * store the result from another part of code generation (usually a sub-block).
 	 *
 	 * This class allows the caller to explicitly ask for the result to be stored in a specific
-	 * location, or it can leave that decision up to the calee or to this class.
+	 * location, or it can leave that decision up to the callee or to this class.
 	 *
 	 * TODO: Make toS and deepCopy (no-op).
 	 */

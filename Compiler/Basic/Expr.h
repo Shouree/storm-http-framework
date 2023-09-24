@@ -160,6 +160,32 @@ namespace storm {
 			Bool value;
 		};
 
+		/**
+		 * Character literal.
+		 */
+		class CharLiteral : public Expr {
+			STORM_CLASS;
+		public:
+			// Create.
+			STORM_CTOR CharLiteral(SrcPos pos, Char value);
+
+			// Return value.
+			virtual ExprResult STORM_FN result();
+
+			// Generate code.
+			virtual void STORM_FN code(CodeGen *state, CodeResult *r);
+
+			// To string.
+			virtual void STORM_FN toS(StrBuf *to) const;
+
+		private:
+			// Value.
+			Char value;
+		};
+
+		// Create a literal from a string.
+		CharLiteral *STORM_FN charConstant(SrcPos pos, Str *value);
+
 
 		/**
 		 * Dummy expression, tells that we're returning a value of a specific type, but will not

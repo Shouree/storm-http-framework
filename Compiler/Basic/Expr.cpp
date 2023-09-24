@@ -298,6 +298,44 @@ namespace storm {
 
 
 		/**
+		 * Character literals.
+		 */
+
+		CharLiteral::CharLiteral(SrcPos pos, Char value) : Expr(pos), value(value) {}
+
+		ExprResult CharLiteral::result() {
+			return Value(StormInfo<Char>::type(engine()));
+		}
+
+		void CharLiteral::code(CodeGen *s, CodeResult *r) {
+			if (!r->needed())
+				return;
+
+			// Note: We know that the representation of Char is simple enough to allow this even
+			// though it is a class.
+			code::Var to = r->location(s);
+			*s->l << code::mov(to, code::natConst(value.codepoint()));
+			r->created(s);
+		}
+
+		void CharLiteral::toS(StrBuf *to) const {
+			Str *x = TO_S(this, value);
+			*to << S("'") << x->escape(Char('\'')) << S("'");
+		}
+
+		CharLiteral *charConstant(SrcPos pos, Str *value) {
+			value = value->unescape(Char('\''));
+
+			Str::Iter x = value->begin();
+			CharLiteral *result = new (value) CharLiteral(pos, x.v());
+			++x;
+			if (x != value->end())
+				throw new (value) SyntaxError(pos, S("Expected a single character, but the supplied literal contains multiple characters."));
+			return result;
+		}
+
+
+		/**
 		 * Dummy expression.
 		 */
 
