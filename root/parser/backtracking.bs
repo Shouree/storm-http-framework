@@ -80,12 +80,13 @@ class BacktrackingParser extends Parser {
 		body.add(pattern(body) {
 					result.value = ${call};
 					result.end = state.pos;
-					if (state.error.any) {
+
+					if (state.errors.any) {
 						// Did we manage to parse everything?
 						if (state.pos + 1 == state.pos) {
 							// No error.
 						} else {
-							result.error = createError(state.error, state.longest);
+							result.error = createError(state.errorMsg, state.longest);
 						}
 					}
 
@@ -99,8 +100,10 @@ class BacktrackingParser extends Parser {
 	 * State when parsing strings.
 	 */
 	class StrState extends RecursiveStrState {
-		Str error;
+		// List of errors. We make a string of them on demand.
+		Str[] errors;
 
+		// Create.
 		init(Str input, Str:Iter start) {
 			init(input, start) { longest = start; }
 		}
@@ -108,13 +111,17 @@ class BacktrackingParser extends Parser {
 		// Longest match.
 		Str:Iter longest;
 
+		// Create an error message.
+		Str errorMsg() {
+			StrBuf out;
+			out << join(errors, "\n");
+			out.toS;
+		}
+
 		// Set error.
 		void error(Str error) : override {
 			if (pos >= longest) {
-				if (this.error.empty)
-					this.error = error;
-				else
-					this.error = this.error + "\n" + error;
+				errors << error;
 			}
 		}
 
@@ -123,7 +130,7 @@ class BacktrackingParser extends Parser {
 			pos = p;
 			if (p > longest) {
 				longest = p;
-				error = "";
+				errors.clear();
 			}
 		}
 	}
