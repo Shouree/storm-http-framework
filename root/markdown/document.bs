@@ -161,11 +161,15 @@ class List extends Element {
 	// To string.
 	protected void toS(StrBuf to) : override {
 		if (ordered) {
-			to.indentBy("    ");
+			Nat width = 0;
+			for (x in items.count.toS)
+				width++;
+
+			to.indentBy(" "*(width + 2));
 			for (i, e in items) {
 				if (i > 0)
 					to << "\n\n";
-				to << width(3) << fill(Char(48)) << (i + 1) << ". ";
+				to << width(width) << fill(Char(48)) << (i + 1) << ". ";
 				{
 					Indent z(to);
 					e.toS(to);
