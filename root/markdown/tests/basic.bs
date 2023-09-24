@@ -31,31 +31,36 @@ use markdown;
 // }
 
 suite MarkdownLists {
-	// var lists = str {
-	// 	Heading
-	// 	=======
+	var lists = str {
+		Heading
+		=======
 
-	// 	This is a short list:
-	// 	- First element
-	// 	end of list
+		This is a short list:
+		- First element
+		end of list
 
-	// 	This is a list:
+		This is a list:
 
-	// 	- First element
-	// 	- Second element
-	// 	  with additional text
-	// 	- Third element
-	// 	  - Nested list
+		- First element
+		- Second element
+		  with additional text
+		- Third element
+		  - Nested list
 
-	// 	  - Second element
-	// 	    with additional text
+		  - Second element
+		    with additional text
 
-	// 	- Fourth element
-	// };
+		- Fourth element
 
-	// Document result = parse(lists);
-	// print("Result:");
-	// print(result.toHtml.toS);
+		1. Number first
+		2. number second
+	};
+
+	{
+		Document result = parse(lists);
+		print("Result:");
+		print(result.toHtml.toS);
+	}
 
 	var nested = str {
 		- First
@@ -63,7 +68,9 @@ suite MarkdownLists {
 		  - Third
 		- Fourth
 	};
-	Document result = parse(nested);
-	print("Result:");
-	print(result.toHtml.toS);
+	{
+		Document result = parse(nested);
+		print("Result:");
+		print(result.toHtml.toS);
+	}
 }

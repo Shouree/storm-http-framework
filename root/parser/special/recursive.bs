@@ -88,14 +88,12 @@ Bool ExactIndentTab(RecursiveStrState state, Nat tabWidth, Nat indent) {
 		else if (ch == Char(9))
 			consumed += tabWidth;
 		else {
-			print("Failed matching ${indent} at ${state.pos}");
 			return false;
 		}
 
 		++pos;
 	}
 
-	print("Success matching ${indent} at ${state.pos}");
 	state.pos = pos;
 	return true;
 }

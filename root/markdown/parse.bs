@@ -46,7 +46,7 @@ private parser : parser(backtracking recursive descent) {
 	// Match an entire element.
 	// The first part matches the indentation and delegates to SElementBaseline.
 	void SElement(ElementSeq to, Nat indent);
-	SElement[20] => canary(to, indent) : parser.special.ExactIndent(indent) - SElementBaseline(indent) -> add;
+	SElement[20] => to : parser.special.ExactIndent(indent) - SElementBaseline(indent) -> add;
 	SElement[10] : "[ \t]*\n"; // Empty lines may have too little indentation.
 
 	// Match the part after the expected indentation level.
@@ -61,21 +61,22 @@ private parser : parser(backtracking recursive descent) {
 	SElementNoIndent[70] => x : SOList(indent) x;
 	SElementNoIndent[10] => x : SText(indent) x;
 
-	// Match a list.
+	// Match a list. Note: We don't have to care about empty lines with "too little" indentation
+	// here since the body matches SElement, which consumes them for us.
 	List SUList(Nat indent);
-	SUList => List(false) : (SUListElem(indent, me))+;
+	SUList => List(false) : SUListElem(indent, me) - (parser.special.ExactIndent(indent) - SUListElem(indent, me))*;
 
 	void SUListElem(Nat indent, List list);
 	SUListElem => list : SUListMarker(indent) newIndent - SListElemBody(newIndent) -> add;
 
 	List SOList(Nat indent);
-	SOList => List(true) : (SOListElem(indent, me))+;
+	SOList => List(true) : SOListElem(indent, me) - (parser.special.ExactIndent(indent) - SOListElem(indent, me))*;
 
 	void SOListElem(Nat indent, List list);
 	SOListElem => list : SOListMarker(indent) newIndent - SListElemBody(newIndent) -> add;
 
 	ElementSeq SListElemBody(Nat indent);
-	SListElemBody => canary(indent) : SElementBaseline(indent) -> add - (SElement(me, indent))*;
+	SListElemBody => ElementSeq() : SElementBaseline(indent) -> add - (SElement(me, indent))*;
 
 	// Match a list marker. Returns extra indentation level.
 	Nat SUListMarker(Nat indent);
@@ -145,13 +146,4 @@ package Nat countChars(Str s) {
 // Add extra indentation.
 package Nat addIndentation(Nat original, Str extra) {
 	original + countChars(extra);
-}
-
-ElementSeq canary(Nat indent) {
-	print("List at ${indent}");
-	ElementSeq();
-}
-ElementSeq canary(ElementSeq x, Nat indent) {
-	print("Element at ${indent}");
-	x;
 }

@@ -160,19 +160,36 @@ class List extends Element {
 
 	// To string.
 	protected void toS(StrBuf to) : override {
-		to.indentBy("  ");
-		for (e in items) {
-			to << "- ";
-			{
-				Indent z(to);
-				e.toS(to);
+		if (ordered) {
+			to.indentBy("    ");
+			for (i, e in items) {
+				if (i > 0)
+					to << "\n\n";
+				to << width(3) << fill(Char(48)) << (i + 1) << ". ";
+				{
+					Indent z(to);
+					e.toS(to);
+				}
 			}
-			to << "\n\n";
+		} else {
+			to.indentBy("  ");
+			for (i, e in items) {
+				if (i > 0)
+					to << "\n\n";
+				to << "- ";
+				{
+					Indent z(to);
+					e.toS(to);
+				}
+			}
 		}
 	}
 
 	void toHtml(Html to) : override {
-		to.html("<ul>\n");
+		if (ordered)
+			to.html("<ol>\n");
+		else
+			to.html("<ul>\n");
 		to.indent();
 		for (e in items) {
 			to.html("<li>\n");
@@ -183,6 +200,9 @@ class List extends Element {
 			to.html("</li>\n");
 		}
 		to.dedent();
-		to.html("</ul>");
+		if (ordered)
+			to.html("</ol>");
+		else
+			to.html("</ul>");
 	}
 }
