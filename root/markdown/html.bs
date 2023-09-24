@@ -10,9 +10,12 @@ class Html {
 	// Characters we need to escape.
 	private Char->Str escape;
 
+	// Indentation level.
+	private Nat indentLevel;
+
 	// Create.
 	init() {
-		init {}
+		init { indentLevel = 0; }
 
 		// For text:
 		escape.put('&', "&amp;");
@@ -30,11 +33,26 @@ class Html {
 
 	// Indent output.
 	void indent() {
+		indentLevel++;
 		out.indent();
 	}
 
 	void dedent() {
+		if (indentLevel > 0)
+			indentLevel--;
 		out.dedent();
+	}
+
+	// Temporarily set indent to 0.
+	void pauseIndent() {
+		for (Nat i = 0; i < indentLevel; i++)
+			out.dedent();
+	}
+
+	// Restore indentation.
+	void restoreIndent() {
+		for (Nat i = 0; i < indentLevel; i++)
+			out.indent();
 	}
 
 	// Append text. Escapes HTML characters.

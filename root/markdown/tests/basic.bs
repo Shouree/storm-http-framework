@@ -121,3 +121,32 @@ suite MarkdownLists {
 		// print(result.toHtml.toS);
 	}
 }
+
+suite MarkdownCode {
+	var code = str {
+		Paragraph
+
+		```c++
+		inline code in C++
+		has two lines
+		```
+
+		another with `inline code`!
+
+		- In a list:
+
+		  ```java
+		  test code
+		  second line
+		  ```
+		- Next element
+	};
+
+	Document result = parse(code);
+	test result.countType(named{CodeBlock}) == 2;
+	test result.countType(named{Paragraph}) == 4;
+	test result.countType(named{InlineCode}) == 1;
+	test result.countType(named{List}) == 1;
+
+	print(result.toHtml.toS);
+}

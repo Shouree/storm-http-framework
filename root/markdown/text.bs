@@ -153,9 +153,9 @@ class InlineCode extends TextSpan {
 
 	// To HTML.
 	void toHtml(Html to) {
-		to.html("<em>");
+		to.html("<code>");
 		super:toHtml(to);
-		to.html("</em>");
+		to.html("</code>");
 	}
 }
 
@@ -183,5 +183,20 @@ class Link extends TextSpan {
 		to.html("\">");
 		to.text(text);
 		to.html("</a>");
+	}
+}
+
+/**
+ * Custom text (text inside [], but no () afterwards).
+ */
+class CustomText extends TextSpan {
+	// Create.
+	init(Str text) {
+		init(text) {}
+	}
+
+	// To string.
+	void toS(StrBuf to) : override {
+		to << "[" << text << "]";
 	}
 }

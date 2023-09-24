@@ -225,6 +225,7 @@ class List extends Element {
 		}
 	}
 
+	// To HTML.
 	void toHtml(Html to) : override {
 		if (ordered)
 			to.html("<ol>\n");
@@ -244,5 +245,52 @@ class List extends Element {
 			to.html("</ol>");
 		else
 			to.html("</ul>");
+	}
+}
+
+
+/**
+ * Code.
+ */
+class CodeBlock extends Element {
+	// Language of the code, if specified.
+	Str language;
+
+	// Lines of code in the code block.
+	Str[] code;
+
+	// Create.
+	init(Str language) {
+		init { language = language; }
+	}
+
+	// Add a line of code.
+	void addLine(Str line) {
+		code << line;
+	}
+
+	// Visit.
+	Element visit(Visitor v) {
+		return v.visit(this);
+	}
+
+	// To string.
+	protected void toS(StrBuf to) : override {
+		to << "```" << language << "\n";
+		to << join(code, "\n") << "\n";
+		to << "```";
+	}
+
+	// To HTML.
+	void toHtml(Html to) : override {
+		to.html("<code><pre>");
+		to.pauseIndent();
+		for (i, l in code) {
+			if (i > 0)
+				to.text("\n");
+			to.text(l);
+		}
+		to.restoreIndent();
+		to.html("</pre></code>");
 	}
 }

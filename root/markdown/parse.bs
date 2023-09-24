@@ -59,7 +59,17 @@ private parser : parser(backtracking recursive descent) {
 	SElementNoIndent[90] => x : SHashHeading x;
 	SElementNoIndent[80] => x : SUList(indent) x;
 	SElementNoIndent[70] => x : SOList(indent) x;
+	SElementNoIndent[60] => x : SCode(indent) x;
 	SElementNoIndent[10] => x : SText(indent) x;
+
+	// Match a code block.
+	CodeBlock SCode(Nat indent);
+	SCode => CodeBlock(language) : "```" - "[^\n ]*" language - " *\n" - SCodeContent(indent, me);
+
+	void SCodeContent(Nat indent, CodeBlock to);
+	SCodeContent[90] : parser.special.ExactIndent(indent) - "``` *\n";
+	SCodeContent[50] => to : parser.special.ExactIndent(indent) - "[^\n]*" -> addLine - "\n" - SCodeContent(indent, to);
+	SCodeContent[10] : "[ \t]*\n" - SCodeContent(indent, to);
 
 	// Match a list. Note: We don't have to care about empty lines with "too little" indentation
 	// here since the body matches SElement, which consumes them for us.
@@ -118,17 +128,20 @@ private parser : parser(backtracking recursive descent) {
 
 	TextSpan SFmtSpanFirst();
 	SFmtSpanFirst[10] => x : SFmtSpanCommon x;
-	SFmtSpanFirst[20] => TextSpan(text) : "[^*`\n\[\-+][^\n*\[`]*" text; // May not start with list characters.
+	SFmtSpanFirst[20] => TextSpan(text) : "[^*`\n\[\-+\\][^\n*\[`\\]*" text; // May not start with list characters.
 
 	TextSpan SFmtSpan();
 	SFmtSpan[10] => x : SFmtSpanCommon x;
-	SFmtSpan[20] => TextSpan(text) : "[^\n*\[`]+" text;
+	SFmtSpan[20] => TextSpan(text) : "[^\n*\[`\\]+" text;
 
 	TextSpan SFmtSpanCommon();
 	SFmtSpanCommon[90] => BoldText(text) : "\*\*" - "[^\n*]+" text - "\*\*";
 	SFmtSpanCommon[80] => ItalicText(text) : "\*" - "[^\n*]+" text - "\*";
 	SFmtSpanCommon[70] => InlineCode(text) : "`" - "[^\n`]+" text - "`";
 	SFmtSpanCommon[60] => Link(text, target) : "\[" - "[^\n\]]+" text - "\] *(" - "[^\n)]*" target - ")";
+	SFmtSpanCommon[50] => CustomText(text) : "\[" - "[^\n\]]+" text - "\]";
+	// Escape special characters:
+	SFmtSpanCommon[40] => TextSpan(text) : "\\" - "." text;
 
 	// Extra indentation.
 	Nat SExtraIndent(Nat original);
