@@ -708,7 +708,7 @@ class BacktrackingParser extends Parser {
 			msg << "The following productions may all start with \"" << regex;
 			msg << "\", and they all have the priority: " << prio << "\n";
 			for (x in productions) {
-				if (p.priority != prio)
+				if (x.priority != prio)
 					continue;
 				if (grammar.first(x).has(regex))
 					msg << x << "\n";

@@ -4,24 +4,30 @@ use parser;
 Str check(Result<Array<Str>> r) {
 	if (x = r.value) {
 		x.toS;
+	} else if (e = r.error) {
+		"Error at ${e.pos}, ${e.message}";
 	} else {
-		"Error at ${r.end}, ${r.error}";
+		"<invalid>";
 	}
 }
 
 Str check(Result<Str> r) {
 	if (x = r.value) {
 		x;
+	} else if (e = r.error) {
+		"Error at ${e.pos}, ${e.message}";
 	} else {
-		"Error at ${r.end}, ${r.error}";
+		"<invalid>";
 	}
 }
 
 Str check(Result<Maybe<Str>> r) {
 	if (x = r.value) {
 		x.toS;
+	} else if (e = r.error) {
+		"Error at ${e.pos}, ${e.message}";
 	} else {
-		"Error at ${r.end}, ${r.error}";
+		"<invalid>";
 	}
 }
 

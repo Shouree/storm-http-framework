@@ -117,6 +117,16 @@ class Error {
 	init(Str message, Str:Iter pos) {
 		init { message = message; pos = pos; }
 	}
+
+	// To string.
+	void toS(StrBuf to) {
+		to << "{\n";
+		to.indent();
+		to << "message: " << message << "\n";
+		to << "pos: " << pos << "\n";
+		to.dedent();
+		to << "}";
+	}
 }
 
 /**
@@ -132,6 +142,16 @@ class BinaryError {
 	// Create.
 	init(Str message, Nat pos) {
 		init { message = message; pos = pos; }
+	}
+
+	// To string.
+	void toS(StrBuf to) {
+		to << "{\n";
+		to.indent();
+		to << "message: " << message << "\n";
+		to << "pos: " << pos << "\n";
+		to.dedent();
+		to << "}";
 	}
 }
 

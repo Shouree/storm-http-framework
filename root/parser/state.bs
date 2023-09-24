@@ -1,3 +1,5 @@
+use core:io;
+
 /**
  * State for parsing strings with a recursive descent parser.
  */

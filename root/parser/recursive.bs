@@ -521,23 +521,6 @@ class RecursiveParser extends Parser {
 
 				namedExpr(block, SrcPos(), "matches", state, Actuals(RegexArray(candidates)));
 			}
-
-			// Find candidates for a rule. Assumes we're inside a repeat segment.
-			private void findCandidates(Nat position, Regex[] candidates) {
-				Token token = production.tokens[position];
-				if (token as RuleToken) {
-					for (x in grammar.first[token.rule])
-						candidates << x;
-
-					if (grammar.epsilon[token.rule]) {
-						if (position + 1 >= productions.repEnd)
-							throw GrammarError(pos, "The production ${production} matches epsilon inside its repeat statement.");
-						findCandidates(position + 1, candidates);
-					}
-				} else if (token as RegexToken) {
-					candidates << token.regex;
-				}
-			}
 		}
 
 		private Expr createParse(FnBody body, Rule rule, Production production) {
