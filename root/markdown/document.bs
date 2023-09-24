@@ -169,7 +169,7 @@ class List extends Element {
 			for (i, e in items) {
 				if (i > 0)
 					to << "\n\n";
-				to << width(width) << fill(Char(48)) << (i + 1) << ". ";
+				to << width(width) << fill('0') << (i + 1) << ". ";
 				{
 					Indent z(to);
 					e.toS(to);

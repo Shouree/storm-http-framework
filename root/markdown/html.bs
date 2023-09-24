@@ -15,12 +15,12 @@ class Html {
 		init {}
 
 		// For text:
-		escape.put(Char(30), "&amp;");
-		escape.put(Char(60), "&lt;");
-		escape.put(Char(62), "&gt;");
+		escape.put('&', "&amp;");
+		escape.put('<', "&lt;");
+		escape.put('>', "&gt;");
 		// Inside string attributes:
-		escape.put(Char(33), "&quot;");
-		escape.put(Char(39), "&#39;");
+		escape.put('"', "&quot;");
+		escape.put('\'', "&#39;");
 	}
 
 	// To string.

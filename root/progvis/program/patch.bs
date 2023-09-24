@@ -43,9 +43,9 @@ private class PatchState on Compiler {
 		if (res as Function) {
 			if (namedSrc.type == Char()) {
 				return res.ref;
-			} else if (namedSrc.type == Char(116)) { // 't'
+			} else if (namedSrc.type == 't') {
 				return res.thunkRef;
-			} else if (namedSrc.type == Char(100)) { // 'd'
+			} else if (namedSrc.type == 'd') {
 				return res.directRef;
 			} else {
 				throw InternalError("Unknown subtype of function reference.");
