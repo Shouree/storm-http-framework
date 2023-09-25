@@ -789,9 +789,37 @@ namespace code {
 						*dest << mov(resultPos, result.registerAt(0));
 					}
 				} else {
+					// We need to be a bit careful with data in memory so that we don't overwrite
+					// too much in the output. There might not be enough alignment between the
+					// target variable and the next one.
 					for (Nat i = 0; i < result.registerCount(); i++) {
-						Reg r = result.registerAt(i);
-						*dest << mov(opOffset(size(r), resultPos, result.registerOffset(i).v64()), r);
+						Reg srcReg = result.registerAt(i);
+						Nat regSize = size(srcReg).size64();
+						Nat offset = result.registerOffset(i).v64();
+
+						// Sometimes we can get away with copying slightly more than the register.
+						// This depends on the alignment of the variable.
+						Nat targetSize = resultPos.size().aligned().size64();
+
+						Nat remaining = std::min(regSize, targetSize - offset);
+						while (remaining > 0) {
+							Size toCopy;
+							if (remaining >= 8)
+								toCopy = Size::sLong;
+							else if (remaining >= 4)
+								toCopy = Size::sInt;
+							else
+								toCopy = Size::sByte;
+
+							// Copy some bytes:
+							*dest << mov(opOffset(toCopy, resultPos, offset), asSize(srcReg, toCopy));
+							remaining -= toCopy.size64();
+							offset += toCopy.size64();
+
+							// If we need to copy more, then shift the src register by the appropriate amount.
+							if (remaining > 0)
+								*dest << shr(srcReg, byteConst(toCopy.size64() * 8));
+						}
 					}
 				}
 			}

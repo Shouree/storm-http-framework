@@ -165,7 +165,7 @@ namespace code {
 		Bool STORM_FN operator ==(const Offset &o) const;
 		Bool STORM_FN operator !=(const Offset &o) const;
 
-		// Align this offset to the align presen in 'size'.
+		// Align this offset to the align present in 'size'.
 		Offset STORM_FN alignAs(const Size &s) const;
 
 		// Find out the 32- and 64-bit sizes (for storage).
