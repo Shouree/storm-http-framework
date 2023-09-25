@@ -27,7 +27,7 @@ namespace storm {
 
 		// Number of bytes containing valid data. Constrains 'filled' to not be larger than 'count'.
 		inline Nat STORM_FN filled() const { return data ? Nat(data->filled) : 0; }
-		inline void STORM_FN filled(Nat p) { if (data) data->filled = min(p, count()); }
+		inline void STORM_ASSIGN filled(Nat p) { if (data) data->filled = min(p, count()); }
 
 		// Number of free bytes.
 		inline Nat STORM_FN free() const { return count() - filled(); }
