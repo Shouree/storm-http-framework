@@ -29,6 +29,16 @@ the parse tree in the syntax transformations. Due to how the parser works, it is
 to pass parameters to productions from tokens appearing "later" in the text.
 
 
+Backtracking Recursive Descent
+------------------------------
+
+This is an extension of the recursive descent parser. It allows parsing grammars that are not LL(1)
+by utilizing backtracking. This means that the backtracking parser is potentially slower than the
+non-backtracking variant. It also means that side-effects from backtracking attempts might be
+visible to the actions specified in the grammar. For example, if the backtracking parser parses a
+production successfully but later determines that it does not match, the side-effects of the
+production will still be visible (e.g. object creation, member function calls).
+
 Syntax
 ------
 
