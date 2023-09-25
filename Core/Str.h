@@ -198,9 +198,19 @@ namespace storm {
 		Iter STORM_FN find(Char ch) const;
 		Iter STORM_FN find(Char ch, Iter start) const;
 
+		// Find a substring in the string. Returns the first match. Note: this approach is not
+		// necessarily optimal for long search strings.
+		Iter STORM_FN find(Str *str) const;
+		Iter STORM_FN find(Str *str, Iter start) const;
+
 		// Find the last occurrence of 'ch' in the string. Note that 'last' is *not* examined.
 		Iter STORM_FN findLast(Char ch) const;
 		Iter STORM_FN findLast(Char ch, Iter last) const;
+
+		// Find the last occurrence of 'str' in the string. Note that the match has to end before
+		// 'last' if specified.
+		Iter STORM_FN findLast(Str *str) const;
+		Iter STORM_FN findLast(Str *str, Iter last) const;
 
 		// Read/write (raw).
 		void STORM_FN write(OStream *to) const;

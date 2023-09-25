@@ -758,20 +758,105 @@ namespace storm {
 		return pos;
 	}
 
+	Str::Iter Str::find(Str *str) const {
+		return find(str, begin());
+	}
+
+	Str::Iter Str::find(Str *str, Iter start) const {
+		Iter sFirst = str->begin();
+		Iter sLast = str->end();
+		Char firstCh = sFirst.v();
+		++sFirst;
+
+		Iter last = end();
+		for (Iter pos = start; pos != last; ++pos) {
+			if (pos.v() == firstCh) {
+				Bool ok = true;
+
+				// Check the remainder of the strings.
+				for (Iter i = sFirst, j = pos + 1; i != sLast; i++, j++) {
+					if (j == last || i.v() != j.v()) {
+						ok = false;
+						break;
+					}
+				}
+
+				// Did we find it?
+				if (ok)
+					return pos;
+			}
+		}
+
+		return last;
+	}
+
 	Str::Iter Str::findLast(Char ch) const {
 		return findLast(ch, end());
 	}
 
 	Str::Iter Str::findLast(Char ch, Iter last) const {
-		// TODO: We should search backwards...
-		Iter pos = begin();
-		Iter result = end();
-		for (; pos != last; ++pos) {
-			if (pos.v() == ch)
-				result = pos;
+		if (!data)
+			return end();
+		if (last.owner && last.owner != this)
+			return end();
+
+		wchar leading = ch.leading();
+		wchar trailing = ch.trailing();
+		if (leading == 0) {
+			leading = trailing;
+			trailing = 0;
 		}
 
-		return result;
+		Nat endPos = data->count - 1;
+		if (!last.atEnd())
+			endPos = std::min(endPos, last.pos);
+
+		const wchar *start = data->v;
+		for (const wchar *at = data->v + endPos; at > start; at--) {
+			const wchar check = at[-1];
+			if (check == leading) {
+				if (trailing == 0 || trailing == at[0])
+					return Iter(this, at - start - 1);
+			}
+		}
+
+		return end();
+	}
+
+	Str::Iter Str::findLast(Str *str) const {
+		return findLast(str, end());
+	}
+
+	Str::Iter Str::findLast(Str *str, Iter last) const {
+		if (!data)
+			return end();
+		if (last.owner && last.owner != this)
+			return end();
+
+		Nat endPos = data->count;
+		if (!last.atEnd())
+			endPos = std::min(endPos, last.pos);
+
+		const wchar *strStart = str->data->v;
+		const wchar *strEnd = strStart + str->data->count - 1;
+		const wchar *thisStart = data->v;
+		for (const wchar *at = data->v + endPos; at > thisStart; at--) {
+			if (at[-1] == strEnd[-1]) {
+				bool ok = true;
+
+				for (const wchar *other = strEnd - 1, *me = at - 1; other > strStart; other--, me--) {
+					if (me <= thisStart || me[-1] != other[-1]) {
+						ok = false;
+						break;
+					}
+				}
+
+				if (ok)
+					return Iter(this, at - thisStart - (strEnd - strStart));
+			}
+		}
+
+		return end();
 	}
 
 	void Str::write(OStream *to) const {
