@@ -56,7 +56,7 @@ namespace storm {
 #endif
 
 	static GcArray<wchar> empty = {
-		1,
+		1, 0, { 0 }
 	};
 
 	Str::Str() : data(&storm::empty) {}
@@ -64,8 +64,11 @@ namespace storm {
 	Str::Str(const wchar *s) {
 		nat count = nat(wcslen(s));
 		allocData(count + 1);
-		for (nat i = 0; i < count; i++)
+		for (nat i = 0; i < count; i++) {
 			data->v[i] = s[i];
+			if (utf16::leading(s[i]))
+				data->filled++;
+		}
 		data->v[count] = 0;
 		validate();
 	}
@@ -73,6 +76,10 @@ namespace storm {
 #ifdef POSIX
 	Str::Str(const wchar_t *s) {
 		data = toWChar(engine(), s);
+		// Count surrogate pairs:
+		for (Nat i = 0; i < data->count; i++)
+			if (utf16::leading(data->v[i]))
+				data->filled++;
 		validate();
 	}
 #endif
@@ -80,23 +87,29 @@ namespace storm {
 	Str::Str(const wchar *from, const wchar *to) {
 		nat count = nat(to - from);
 		allocData(count + 1);
-		for (nat i = 0; i < count; i++)
+		for (nat i = 0; i < count; i++) {
 			data->v[i] = from[i];
+			if (utf16::leading(from[i]))
+				data->filled++;
+		}
 		data->v[count] = 0;
 		validate();
 	}
 
-	static inline void copy(wchar *&to, const wchar *begin, const wchar *end) {
-		for (const wchar *at = begin; at != end; at++)
+	static inline void copy(wchar *&to, const wchar *begin, const wchar *end, size_t &leading) {
+		for (const wchar *at = begin; at != end; at++) {
 			*(to++) = *at;
+			if (utf16::leading(*at))
+				leading++;
+		}
 	}
 
 	Str::Str(const wchar *fromA, const wchar *toA, const wchar *fromB, const wchar *toB) {
 		nat count = nat((toA - fromA) + (toB - fromB));
 		allocData(count + 1);
 		wchar *to = data->v;
-		copy(to, fromA, toA);
-		copy(to, fromB, toB);
+		copy(to, fromA, toA, data->filled);
+		copy(to, fromB, toB, data->filled);
 		*to = 0;
 		validate();
 	}
@@ -109,9 +122,9 @@ namespace storm {
 		const wchar *first = src->data->v;
 		const wchar *cut = src->toPtr(pos);
 		const wchar *last = first + src->charCount();
-		copy(to, first, cut);
-		copy(to, insert->data->v, insert->data->v + insert->charCount());
-		copy(to, cut, last);
+		copy(to, first, cut, data->filled);
+		copy(to, insert->data->v, insert->data->v + insert->charCount(), data->filled);
+		copy(to, cut, last, data->filled);
 		*to = 0;
 		validate();
 	}
@@ -124,6 +137,7 @@ namespace storm {
 			allocData(3);
 			data->v[0] = lead;
 			data->v[1] = trail;
+			data->filled = 1;
 		} else if (trail) {
 			allocData(2);
 			data->v[0] = trail;
@@ -143,6 +157,7 @@ namespace storm {
 				data->v[i*2] = lead;
 				data->v[i*2 + 1] = trail;
 			}
+			data->filled = times;
 		} else if (trail) {
 			allocData(times + 1);
 			for (nat i = 0; i < times; i++) {
@@ -155,17 +170,25 @@ namespace storm {
 	}
 
 	Str::Str(GcArray<wchar> *data) : data(data) {
+		// Count surrogate pairs:
+		for (Nat i = 0; i < data->count; i++)
+			if (utf16::leading(data->v[i]))
+				data->filled++;
 		validate();
 	}
 
 	void Str::validate() const {
 #ifdef SLOW_DEBUG
+		Nat surrogates = 0;
 		for (nat i = 0; i < data->count - 1; i++) {
 			if (data->v[i] == 0) {
 				assert(false, L"String contains a premature null terminator!");
+			} else if (utf16::leading(data->v[i])) {
+				surrogates++;
 			}
 		}
 		assert(data->v[data->count - 1] == 0, L"String is missing a null terminator!");
+		assert(data->filled == surrogates, L"Number of surrogates is incorrect.");
 #endif
 	}
 
@@ -175,6 +198,10 @@ namespace storm {
 
 	Bool Str::any() const {
 		return !empty();
+	}
+
+	Nat Str::count() const {
+		return data->count - data->filled - 1;
 	}
 
 	Str *Str::operator +(Str *o) const {

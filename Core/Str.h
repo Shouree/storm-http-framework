@@ -118,6 +118,11 @@ namespace storm {
 		Bool operator ==(const wchar *s) const;
 		Bool operator !=(const wchar *s) const;
 
+		// Count the number of characters in the string. This counts the number of steps the
+		// iterators would take when iterating through the representation. That is, this count
+		// represents the number of code points in the string.
+		Nat STORM_FN count() const;
+
 		// Peek at the length of the underlying representation.
 		Nat peekLength() const;
 
