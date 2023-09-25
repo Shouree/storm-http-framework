@@ -15,6 +15,9 @@ class Node {
 	// Is this node a directory? (i.e. should this file be named "index" in the output?).
 	Bool dirNode;
 
+	// Parent node, if any.
+	Node? parent;
+
 	// Child nodes, if any. Sorted according to display order.
 	Node[] children;
 
@@ -22,10 +25,11 @@ class Node {
 	Document? content;
 
 	// Create.
-	init(Url file) {
+	init(Url file, Node? parent) {
 		init {
 			source = file;
 			name = file.title;
+			parent = parent;
 		}
 
 		if (file.dir()) {
@@ -45,13 +49,21 @@ class Node {
 				continue;
 
 			if (f.dir) {
-				children << Node(f);
+				children << Node(f, this);
 			} else if (f.ext == "md") {
-				children << Node(f);
+				children << Node(f, this);
 			}
 		}
 
 		children.sort((a, b) => a.name < b.name);
+	}
+
+	// Find the ID of a child. Returns a value larger than child.count if not found.
+	Nat findChild(Node child) {
+		for (i, c in children)
+			if (c is child)
+				return i;
+		return children.count;
 	}
 
 	// Load this node and all children. 'treePath' is the relative path in the tree.
@@ -70,6 +82,7 @@ class Node {
 
 		Url abs = root / treePath;
 		if (dirNode) {
+			treePath = treePath.makeDir;
 			abs.createDir();
 			abs = abs / "index.html";
 		} else {
@@ -77,7 +90,7 @@ class Node {
 		}
 
 		// Output this document.
-		Str html = theme.toHtml(content, treePath);
+		Str html = theme.toHtml(this, content, treePath);
 		var out = Utf8Output(abs.write(), unixTextInfo());
 		out.write(html);
 		out.close();
@@ -121,7 +134,7 @@ class Tree {
 	// Create the tree.
 	init(Str title, Url rootDir) {
 		init {
-			root(rootDir.updated());
+			root(rootDir.updated(), null);
 		}
 
 		root.name = title;

@@ -6,11 +6,11 @@ use markdown:doc;
  * The theme itself.
  */
 class StormTheme extends Theme {
-	// Header.
-	private Str header;
+	// Template.
+	private Str template;
 
-	// Footer.
-	private Str footer;
+	// HTML for the menu.
+	private Str menu;
 
 	// Url where resources are stored.
 	private Url resUrl;
@@ -26,38 +26,206 @@ class StormTheme extends Theme {
 
 	// Create.
 	init() {
+		var url = resUrl("storm_res");
+
 		init {
-			resUrl = resUrl("storm_res");
+			template = (url / "template.html").readAllText;
+			resUrl = url;
 			version = "0.0.0";
 			date = "2023-01-01";
 		}
-
-		Str file = (resUrl / "template.html").readAllText;
-		var divider = "<?content?>";
-
-		var split = file.find(divider);
-		header = file.cut(file.begin, split);
-		footer = file.cut(split + divider.count);
 	}
 
 	// Initialization.
-	void initialize(Tree tree) {}
+	void initialize(Tree tree) : override {
+		// Create the menu.
+		menu = createMenu(tree);
+	}
 
-	// Output data.
-	Str toHtml(Document document, Url treePath) {
-		document.visit(StormVisitor(this));
-
-		StrBuf out;
-		out << header;
-		out << document.toHtml().toS;
-		out << footer;
+	// Create menu.
+	private Str createMenu(Tree tree) {
+		Html out;
+		out.html("<ul id=\"menu\">\n");
+		out.indent();
+		createMenu(out, tree.root, "");
+		out.dedent();
+		out.html("</ul>");
 		out.toS;
 	}
 
+	// Create menu, recursive helper.
+	private void createMenu(Html out, Node current, Str path) {
+		for (child in current.children) {
+			out.html("<li><a href=\"<?path?>");
+			if (child.dirNode)
+				out.text("${path}${child.name}/index.html");
+			else
+				out.text("${path}${child.name}.html");
+			out.html("\">");
+			out.text(child.title);
+			out.html("</a>");
+
+			if (child.children.any) {
+				out.indent();
+				out.html("\n<ul>\n");
+				out.indent();
+				createMenu(out, child, "${path}${child.name}/");
+				out.dedent();
+				out.html("\n</ul>\n");
+				out.dedent();
+			}
+			out.html("</li>\n");
+		}
+	}
+
+	// Output data.
+	Str toHtml(Node node, Document document, Url treePath) : override {
+		document.visit(StormVisitor(this));
+
+		Nat relLevels = treePath.count;
+		if (!node.dirNode)
+			relLevels--;
+		Str relPath = "../" * relLevels;
+
+		Str->Str markers;
+		markers.put("path", relPath);
+		markers.put("title", fullTitle(node));
+		markers.put("year", year);
+		markers.put("menu", replaceMarkers(menu, markers));
+		markers.put("navigation", createNavigation(node));
+		markers.put("content", document.toHtml.toS);
+
+		replaceMarkers(template, markers);
+	}
+
+	// Create full title.
+	private Str fullTitle(Node node) {
+		Str[] titles;
+		Node? current = node;
+		while (c = current) {
+			titles << c.title;
+
+			current = c.parent;
+		}
+
+		titles.reverse();
+		join(titles, " -> ").toS();
+	}
+
+	// Create navigation.
+	private Str createNavigation(Node node) {
+		Html out;
+
+		Str startRel = "";
+		if (node.dirNode)
+			startRel = "../";
+
+		// Find "prev".
+		createPrevNav(out, node, startRel);
+
+		// Find "next".
+		createNextNav(out, node, startRel);
+
+		// Find "up".
+		if (parent = node.parent) {
+			Str link = if (node.dirNode) { "../index.html"; } else { "index.html"; };
+			navigationDiv(out, "nav-up", "Up:", link, parent.title);
+		}
+
+		out.toS;
+	}
+
+	// Output a navigation div.
+	private void navigationDiv(Html out, Str type, Str text, Str link, Str title) {
+		out.html("<div id=\"" + type + "\">");
+		out.text(text);
+		out.html(" <a href=\"");
+		out.text(link);
+		out.html("\">");
+		out.text(title);
+		out.html("</a></div>\n");
+	}
+
+	// Create a previous navigation link.
+	private void createPrevNav(Html out, Node current, Str relPath) {
+		unless (parent = current.parent)
+			return;
+
+		Nat childId = parent.findChild(current);
+		if (childId >= parent.children.count)
+			return;
+
+		if (childId == 0) {
+			// Pick our parent.
+			Str link = relPath + if (current.dirNode) { "../index.html"; } else { "index.html"; };
+			navigationDiv(out, "nav-prev", "Previous:", link, parent.title);
+		} else {
+			// Pick the last element in the previous.
+			var child = parent.children[childId - 1];
+			findLastNode(out, child, relPath);
+		}
+	}
+
+	// Find the last element in the specified node, and place a prev nav there.
+	private void findLastNode(Html out, Node current, Str relPath) {
+		if (current.children.any) {
+			var last = current.children.last;
+			findLastNode(out, last, relPath + last.name + "/");
+		} else {
+			Str link = relPath + current.name;
+			if (current.dirNode)
+				link += "/index.html";
+			else
+				link += ".html";
+			navigationDiv(out, "nav-prev", "Previous:", link, current.title);
+		}
+	}
+
+	// Create a next navigation link.
+	private void createNextNav(Html out, Node current, Str relPath) {
+		if (current.children.any) {
+			var child = current.children.first;
+			Str link = relPath + child.name;
+			if (child.dirNode)
+				link += "/index.html";
+			else
+				link += ".html";
+			navigationDiv(out, "nav-next", "Next:", link, child.title);
+			return;
+		}
+
+		unless (parent = current.parent)
+			return;
+
+		Nat childId = parent.findChild(current);
+		if (childId >= parent.children.count)
+			return;
+
+		if (childId == parent.children.count - 1) {
+			// Proceed upwards in the directory tree, pick the first one that has a next element.
+			createNextNav(out, parent, relPath + "../");
+		} else {
+			var child = parent.children[childId + 1];
+			Str link = relPath + child.name;
+			if (child.dirNode)
+				link += "/index.html";
+			else
+				link += ".html";
+			navigationDiv(out, "nav-next", "Next:", link, child.title);
+		}
+	}
+
 	// Copy files.
-	void copyFiles(Url root) {
+	void copyFiles(Url root) : override {
 		copyFiles(resUrl, root, files);
 	}
+
+	// Get the year from the date.
+	Str year() {
+		var sep = date.find('-');
+		date.cut(date.begin, sep);
+	}
+
 }
 
 /**

@@ -55,3 +55,55 @@ void copyFile(Url from, Url to) {
 	src.close();
 	dst.close();
 }
+
+// Replace markers (of the form <?...?>) in a string with whatever is in a hashtable of potential
+// markers.
+Str replaceMarkers(Str in, Str->Str replace) {
+	StrBuf out;
+
+	Str markerStart = "<?";
+	Str markerEnd = "?>";
+
+	var lastOut = in.begin;
+	var nextSearch = in.begin;
+	do {
+		var start = in.find(markerStart, nextSearch);
+		out << in.cut(lastOut, start);
+		lastOut = start;
+
+	} while (start < in.end) {
+		nextSearch = start + markerStart.count;
+
+		var end = in.find(markerEnd, nextSearch);
+		if (end == in.end)
+			continue;
+
+		Str title = in.cut(start + markerStart.count, end);
+		if (!replace.has(title))
+			continue;
+
+		// If nothing is before the marker on the line, indent it accordingly.
+		var indentStart = in.findLast('\n', start);
+		Bool useIndent = true;
+		for (var i = indentStart + 1; i != start; i++) {
+			if (i.v != ' ' & i.v != '\t') {
+				useIndent = false;
+				break;
+			}
+		}
+
+		if (useIndent) {
+			out.indentBy(in.cut(indentStart + 1, start));
+			out.indent();
+		}
+
+		out << replace.get(title);
+
+		if (useIndent) {
+			out.dedent();
+		}
+		lastOut = end + markerEnd.count;
+	}
+
+	out.toS;
+}

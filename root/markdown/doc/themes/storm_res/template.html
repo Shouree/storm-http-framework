@@ -1,68 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
+    <head>
+        <meta charset="utf-8" />
 
-		<link rel="stylesheet" href="style.css" type="text/css" />
+        <link rel="stylesheet" href="<?path?>style.css" type="text/css" />
 
-		<link rel="stylesheet" media="only screen and (min-width: 1040px)"
-			  href="desktop.css" type="text/css" />
+        <link rel="stylesheet" media="only screen and (min-width: 1040px)"
+              href="<?path?>desktop.css" type="text/css" />
 
-		<link rel="stylesheet" media="only screen and (max-width: 1039px)"
-			  href="mobile.css" type="text/css" />
+        <link rel="stylesheet" media="only screen and (max-width: 1039px)"
+              href="<?path?>mobile.css" type="text/css" />
 
-		<!-- <link rel="stylesheet" media="only screen and (min-width: 1367px)" -->
-		<!-- 	  href="desktop.css" type="text/css" /> -->
+        <!-- <link rel="stylesheet" media="only screen and (min-width: 1367px)" -->
+        <!--      href="desktop.css" type="text/css" /> -->
 
-		<!-- <link rel="stylesheet" media="only screen and (max-width: 1366px)" -->
-		<!-- 	  href="mobile.css" type="text/css" /> -->
+        <!-- <link rel="stylesheet" media="only screen and (max-width: 1366px)" -->
+        <!--      href="mobile.css" type="text/css" /> -->
 
-		<title>Storm</title>
-	</head>
-	<body>
+        <title><?title?></title>
+    </head>
+    <body>
 
-		<!-- please ignore my dirty code -->
-		<script>
-			function responsive_menu(){document.getElementById("menu").classList.toggle("responsive");}
-		</script>
+        <!-- please ignore my dirty code -->
+        <script>
+            function responsive_menu(){document.getElementById("menu").classList.toggle("responsive");}
+        </script>
 
-		<!-- github banner -->
-		<!--
-			<a id="github-banner" href="https://github.com/you">
-				<img src="fork_me.png" alt="Fork me on GitHub">
-			</a>
-			-->
+        <!-- page -->
 
-		<!-- page -->
+        <div id="page">
+            <div id="header">
+                <span id="home"><a href="https://storm-lang.org"><img src="<?path?>images/logo.png"></a></span>
+                <a href="javascript:void(0);" onclick="responsive_menu()"
+                   id="icon">&nbsp;</a>
 
-		<div id="page">
-			<div id="header">
-				<span id="home"><a href="https://storm-lang.org"><img src="images/logo.png"></a></span>
-				<a href="javascript:void(0);" onclick="responsive_menu()"
-				   id="icon">&nbsp;</a>
+                <!-- Menu: can recurse indefinetly -->
 
-				<!-- Menu: can recurse indefinetly -->
+                <?menu?>
+            </div>
 
-				<?php menu(); ?>
-			</div>
+            <!-- content -->
 
-			<!-- content -->
+            <div id="content">
+                <?content?>
+            </div>
 
-			<div id="content">
-				<?content?>
-			</div>
+            <div id="nav">
+                <?navigation?>
+            </div>
 
+            <!-- footer -->
 
-			<!-- footer -->
-
-			<div id="footer">
-				<p>
-					&copy; 2017-2023 Filip Strömbäck
-				</p>
-				<p>
-					Design by Christoffer Holm
-				</p>
-			</div>
-		</div>
-	</body>
+            <div id="footer">
+                <p>
+                    &copy; 2017-<?year?> Filip Strömbäck
+                </p>
+                <p>
+                    Design by Christoffer Holm
+                </p>
+            </div>
+        </div>
+    </body>
 </html>
