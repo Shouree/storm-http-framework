@@ -1,0 +1,17 @@
+use core:io;
+
+/**
+ * Documentation error.
+ */
+class DocError extends Exception {
+	init(Url file, Str msg) {
+		init { file = file; msg = msg; }
+	}
+
+	Url file;
+	Str msg;
+
+	void message(StrBuf to) {
+		to << "Documentation error in " << file << ": " << msg;
+	}
+}

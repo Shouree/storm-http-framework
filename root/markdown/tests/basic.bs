@@ -148,5 +148,5 @@ suite MarkdownCode {
 	test result.countType(named{InlineCode}) == 1;
 	test result.countType(named{List}) == 1;
 
-	print(result.toHtml.toS);
+	// print(result.toHtml.toS);
 }

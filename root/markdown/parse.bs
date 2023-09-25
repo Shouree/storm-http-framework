@@ -138,8 +138,8 @@ private parser : parser(backtracking recursive descent) {
 	SFmtSpanCommon[90] => BoldText(text) : "\*\*" - "[^\n*]+" text - "\*\*";
 	SFmtSpanCommon[80] => ItalicText(text) : "\*" - "[^\n*]+" text - "\*";
 	SFmtSpanCommon[70] => InlineCode(text) : "`" - "[^\n`]+" text - "`";
-	SFmtSpanCommon[60] => Link(text, target) : "\[" - "[^\n\]]+" text - "\] *(" - "[^\n)]*" target - ")";
-	SFmtSpanCommon[50] => CustomText(text) : "\[" - "[^\n\]]+" text - "\]";
+	SFmtSpanCommon[60] => Link(text, target) : "\[" - "[^\]]+" text - "\] *(" - "[^\n)]*" target - ")";
+	SFmtSpanCommon[50] => CustomText(text) : "\[" - "[^\]]+" text - "\]";
 	// Escape special characters:
 	SFmtSpanCommon[40] => TextSpan(text) : "\\" - "." text;
 

@@ -1,0 +1,116 @@
+use core:io;
+use markdown;
+
+/**
+ * Documentation node. Corresponds to a file or directory in the source code. Each node generates
+ * exactly one document in the output hierarchy.
+ */
+class Node {
+	// Location of the source file.
+	Url source;
+
+	// Logical name of this node (i.e. the name of the directory if this is an "index" file).
+	Str name;
+
+	// Is this node a directory? (i.e. should this file be named "index" in the output?).
+	Bool dirNode;
+
+	// Child nodes, if any. Sorted according to display order.
+	Node[] children;
+
+	// Loaded document.
+	Document? content;
+
+	// Create.
+	init(Url file) {
+		init {
+			source = file;
+			name = file.title;
+		}
+
+		if (file.dir()) {
+			dirNode = true;
+			source = file / "index.md";
+			if (!source.exists())
+				throw DocError(file, "A directory should contain a file called \"index.md\".");
+			findChildren(file);
+		}
+	}
+
+	// Find children.
+	private void findChildren(Url dir) {
+		for (f in dir.children) {
+			// We already account for the index file.
+			if (f.title == "index")
+				continue;
+
+			if (f.dir) {
+				children << Node(f);
+			} else if (f.ext == "md") {
+				children << Node(f);
+			}
+		}
+
+		children.sort((a, b) => a.name < b.name);
+	}
+
+	// Load this node and all children. 'treePath' is the relative path in the tree.
+	void load(Tree tree, Url treePath) {
+		if (content.empty)
+			content = loadDocument(tree, treePath, source);
+
+		for (x in children)
+			x.load(tree, treePath / x.name);
+	}
+
+	// Compute the title of this node.
+	Str title() {
+		StrBuf out;
+		for (x in name) {
+			if (x == '-')
+				out.clear();
+			else if (x == '_')
+				out << ' ';
+			else
+				out << x;
+		}
+		out.toS();
+	}
+
+	// To string.
+	protected void toS(StrBuf to) : override {
+		to << name;
+		Indent z(to);
+		for (x in children)
+			to << "\n" << x;
+	}
+}
+
+
+/**
+ * Documentation tree. Contains the root node of the tree, and the associate logic to traverse the
+ * tree.
+ */
+class Tree {
+	// Root node of the tree.
+	Node root;
+
+	// Create the tree.
+	init(Str title, Url rootDir) {
+		init {
+			root(rootDir.updated());
+		}
+
+		root.name = title;
+	}
+
+	// Load all documents.
+	void load() {
+		root.load(this, Url());
+	}
+
+	// Output.
+	protected void toS(StrBuf to) : override {
+		to << root;
+	}
+}

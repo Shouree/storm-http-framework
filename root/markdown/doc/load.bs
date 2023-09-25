@@ -1,0 +1,82 @@
+use core:io;
+use markdown;
+
+// Load a markdown document and add post-processing as required.
+// The tree is used to resolve links, 'treePath' is a relative path inside the tree.
+Document loadDocument(Tree tree, Url treePath, Url file) {
+	Document doc = try {
+		parse(file.readAllText());
+	} catch (MarkdownError error) {
+		throw DocError(file, error.message);
+	};
+
+	// Add post-processing.
+	doc.visit(DocVisitor(tree, treePath));
+
+	return doc;
+}
+
+
+/**
+ * Visitor to transform the markdown document to be more suitable for documentation.
+ */
+class DocVisitor extends markdown:Visitor {
+	// Tree used to resolve links.
+	Tree tree;
+
+	// Path inside the tree.
+	Url treePath;
+
+	// Create.
+	init(Tree tree, Url treePath) {
+		init { tree = tree; treePath = treePath; }
+	}
+
+	// Transform elements:
+	Element visit(Element element) {
+		if (element as CodeBlock) {
+			if (element.language == "inlinehtml") {
+				return InlineHtml(element.code);
+			} else {
+				// Apply syntax highlighting!
+			}
+		}
+
+		element;
+	}
+}
+
+
+/**
+ * Custom element that just emits inline HTML.
+ */
+class InlineHtml extends markdown:Element {
+	// Code.
+	Str[] code;
+
+	// Create.
+	init(Str[] code) {
+		init { code = code; }
+	}
+
+	// Visit.
+	Element visit(Visitor v) {
+		return v.visit(this);
+	}
+
+	// To string.
+	protected void toS(StrBuf to) {
+		to << "```<inline HTML>\n";
+		to << join(code, "\n");
+		to << "```";
+	}
+
+	// To HTML.
+	void toHtml(Html to) {
+		for (i, l in code) {
+			if (i > 0)
+				to.html("\n");
+			to.html(l);
+		}
+	}
+}

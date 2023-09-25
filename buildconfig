@@ -33,7 +33,8 @@
 #Main -a -t sql.tests
 
 # Generate documentation
-Main -a -t markdown.tests
+#Main -a -t markdown.tests
+Main -a -f markdown.doc.generate
 
 # SSL
 #Main -a -f tests.ssl.main
