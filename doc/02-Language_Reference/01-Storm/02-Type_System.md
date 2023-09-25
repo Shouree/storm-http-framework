@@ -58,14 +58,22 @@ by-reference semantics using actors.
 
 The semantics are summarized in the table below:
 
-|----------------|--------|--------------|--------------|
-|                | Values | Classes      | Actors       |
-|----------------|--------|--------------|--------------|
-| Assignment     | Copy   | By reference | By reference |
-| Function calls | Copy   | By reference | By reference |
-| Messages       | Copy   | Copy         | By reference |
-|----------------|--------|--------------|--------------|
-
+```inlinehtml
+<table>
+    <tr>
+        <td></td><th>Values</th><th>Classes</th><th>Actors</th>
+    </tr>
+    <tr>
+        <td>Assignment</td><td>Copy</td><td>By reference</td><td>By reference</td>
+    </tr>
+    <tr>
+        <td>Function calls</td><td>Copy</td><td>By reference</td><td>By reference</td>
+    </tr>
+    <tr>
+        <td>Messages</td><td>Copy</td><td>Copy</td><td>By reference</td>
+    </tr>
+</table>
+```
 
 
 Virtual Functions

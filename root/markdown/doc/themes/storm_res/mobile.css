@@ -1,0 +1,90 @@
+@media screen and (orientation: landscape) {
+    html {
+	font-size: 1rem;
+    }
+}
+
+@media screen and (orientation: portrait) {
+    html {
+	font-size: 1.5rem;
+    }
+}
+
+a#github-banner {
+    display: none;
+}
+
+div#page {
+    width: 100%;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+div#footer {
+    width: calc(100% - 32px);
+    margin-left: 16px;
+    margin-right: 16px;
+}
+
+div#header {
+    padding: 0;
+    margin: 0;
+    margin-bottom: 32px;
+    position: relative;
+    top: 16px;
+    left: 0;
+}
+
+a#icon {
+    text-align: center;
+    position: absolute;
+    top: 1rem;
+    right: 0;
+    padding: 4px 8px;
+    font-size: 6vmin;
+    width: 2rem;
+    height: 2rem;
+    background-size: 2rem 2rem;
+    background-image: url("images/food.png");
+}
+
+a#icon:hover {
+    background-image: url("images/food-marked.png");
+}
+
+ul#menu {
+    position: absolute;
+    top: calc(2rem + 64px);
+    display: none;
+    width: 100%;
+    background-color: white;
+    border-bottom: 1px solid black;
+}
+
+ul#menu.responsive {
+    display: block;
+}
+
+ul#menu ul {
+    background-color: white;
+    padding-left: 1rem;
+}
+
+ul#menu>li {
+    padding: 4px;
+}
+
+ul#menu>li>a {
+    border-top: 1px dotted black;
+}
+
+ul#menu>li li {
+    border-left: 1px solid #acf;
+    background-color: white;
+}
+
+ul#menu li>a {
+    padding: 4px;
+    display: block;
+    width: 100%;
+}

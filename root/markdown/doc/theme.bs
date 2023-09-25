@@ -1,0 +1,50 @@
+use core:io;
+use core:lang;
+use markdown;
+use lang:bs:macro;
+
+/**
+ * A description of a theme for documentation generation.
+ *
+ * The theme specifies headers and footers for HTML outputs, how to generate table of contents,
+ * navigation, and if any additional files are necessary.
+ */
+class Theme {
+	// Called once for each tree before generation of HTML begins. This allows the theme to generate
+	// any auxiliary data structures that might be necessary for table of contents, etc.
+	void initialize(Tree tree) {}
+
+	// Called once for each document to generate the HTML code for a document. The supplied
+	// 'treePath' specifies the relative path of the document inside the tree.
+	Str toHtml(Document document, Url treePath) {
+		document.toHtml().toS();
+	}
+
+	// Called to copy any additional files to the output directory.
+	void copyFiles(Url outputRoot) {}
+}
+
+// Load a theme.
+Theme loadTheme(Str theme) {
+	if (theme.empty) {
+		print("Warning: No theme selected, output will not be valid HTML.");
+		return Theme();
+	}
+
+	var fn = findThemeFn(theme);
+	return fn.call();
+}
+
+private Fn<Theme> findThemeFn(Str theme) {
+	var name = parseSimpleName(theme);
+
+	// Will look in "themes" first, then in the root.
+	Scope scope(named{themes});
+	if (found = scope.find(name) as Function) {
+		if (ptr = found.pointer as Fn<Theme>) {
+			return ptr;
+		}
+	}
+
+	throw DocError(Url(), "Can not find the theme \"${theme}\".");
+}

@@ -1,7 +1,7 @@
 Storm
 ========
 
-?Button(md://Introduction/Downloads)Download Storm?
+[downloadbutton:md://Introduction/Downloads]
 
 Storm is a **programming language platform** with a strong focus on **extensibility**. Storm itself is
 mostly a framework for creating languages rather than a complete compiler. The framework is designed

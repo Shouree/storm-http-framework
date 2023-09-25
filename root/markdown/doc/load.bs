@@ -36,47 +36,12 @@ class DocVisitor extends markdown:Visitor {
 	Element visit(Element element) {
 		if (element as CodeBlock) {
 			if (element.language == "inlinehtml") {
-				return InlineHtml(element.code);
+				return CustomHtml((StrBuf() << join(element.code, "\n")).toS);
 			} else {
 				// Apply syntax highlighting!
 			}
 		}
 
 		element;
-	}
-}
-
-
-/**
- * Custom element that just emits inline HTML.
- */
-class InlineHtml extends markdown:Element {
-	// Code.
-	Str[] code;
-
-	// Create.
-	init(Str[] code) {
-		init { code = code; }
-	}
-
-	// Visit.
-	Element visit(Visitor v) {
-		return v.visit(this);
-	}
-
-	// To string.
-	protected void toS(StrBuf to) {
-		to << "```<inline HTML>\n";
-		to << join(code, "\n");
-		to << "```";
-	}
-
-	// To HTML.
-	void toHtml(Html to) {
-		for (i, l in code) {
-			if (i > 0)
-				to.html("\n");
-			to.html(l);
-		}
 	}
 }

@@ -1,0 +1,145 @@
+div#page, div#footer {
+    width: 1024px;
+    left: calc(50% - 512px);
+}
+
+a#icon {
+    display: none;
+}
+
+ul#menu {
+    text-align: center;
+    width: 100%;
+    position: relative;
+}
+
+ul#menu li {
+    text-align: left;
+}
+
+ul#menu>li {
+    overflow: show;
+    display: inline-block;
+    min-width: calc(1024px / 8);
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+ul#menu>li ul>li {
+    display: none;
+}
+
+ul#menu>li>ul::before {
+    display: block;
+    position: absolute;
+    top: -1.15rem;
+    left: -1.0rem;
+    font-size: 1.7rem;
+    content: ' ';
+    width: 0.7rem;
+    height: 0.7rem;
+    background-image: url("images/arrow.png");
+    background-size: 0.7rem 0.7rem;
+}
+
+ul#menu>li:hover>ul::before {
+    background-image: url("images/arrow-filled.png");
+}
+
+ul#menu>li>ul {
+    position: absolute;
+    text-align: left;
+}
+
+ul#menu>li li {
+    overflow: show;
+}
+
+ul#menu>li ul {
+    background-color: #efefff;
+}
+
+ul#menu>li li>a {
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 4px 16px;
+}
+
+ul#menu>li li>a {
+    background-color: #efefff;
+}
+
+ul#menu>li li>a:hover {
+    background-color: #cfcfff;
+}
+
+ul#menu>li:hover>ul>li {
+    display: block;
+}
+
+ul#menu>li ul>li {
+    position: relative;
+}
+
+ul#menu>li:not(:last-child) ul>li>ul {
+    position: absolute;
+    left: 100%;
+    width: 100%;
+    top: 0;
+}
+
+ul#menu>li:last-child ul>li>ul {
+    position: absolute;
+    right: 100%;
+    width: 100%;
+    top: 0;
+}
+
+ul#menu>li:last-child ul>li>ul {
+    position: absolute;
+    right: 100%;
+    width: 100%;
+    top: 0;
+}
+
+ul#menu>li ul>li:hover>ul>li {
+    display: block;
+}
+
+ul#menu>li:not(:last-child) ul>li>ul::before {
+    display: block;
+    position: absolute;
+    top: 0.5rem;
+    left: -0.7rem;
+    content: ' ';
+    background-image: url("images/arrow-right.png");
+    background-size: 0.7rem 0.7rem;
+    width: 0.7rem;
+    height: 0.7rem;
+}
+
+ul#menu>li:not(:last-child) ul>li:hover>ul::before {
+    background-image: url("images/arrow-right-filled.png");
+}
+
+ul#menu>li:last-child ul>li>ul::before {
+    display: block;
+    position: absolute;
+    top: 0.5rem;
+    right: -0.7rem;
+    content: ' ';
+    background-image: url("images/arrow-left.png");
+    background-size: 0.7rem 0.7rem;
+    width: 0.7rem;
+    height: 0.7rem;
+}
+
+ul#menu>li:last-child ul>li:hover>ul::before {
+    background-image: url("images/arrow-left-filled.png");
+}
+
+ul#menu>li li {
+    margin-top: -1px;
+    border: 1px solid black;
+}

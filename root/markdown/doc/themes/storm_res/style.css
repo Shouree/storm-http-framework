@@ -1,0 +1,213 @@
+/* do not touch anything here */
+
+/* latin-ext */
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Raleway'), local('Raleway-Regular'), url('Raleway.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+1E00-1EFF, U+20A0-20AB, U+20AD-20CF, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Raleway'), local('Raleway-Regular'), url('Raleway_ext.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215;
+}
+
+/* turn off padding and margin */
+* {
+    padding: 0;
+    margin: 0;
+    font-family: 'Raleway';
+    box-sizing: border-box;
+    font-size: 1rem;
+}
+
+html, body, div#page {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    box-sizing: border-box;
+}
+
+/* turn off list styling */
+ul {
+    list-style:none;
+    display: block;
+}
+
+ul#menu {
+    z-index: 1000;
+}
+
+/* main content page */
+div#page {
+    margin: auto;
+    display-style: block;
+    padding-bottom: 96px;
+    position: absolute;
+}
+
+div#footer {
+    z-index: 100;
+    border-top: 1px solid black;
+    padding-top: 16px;
+    margin-top: 8px;
+    position: absolute;
+    height: 96px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+div#footer>p {
+    float: left;
+    padding-right: 32px;
+}
+
+div#footer>p:not(:first-child)::before {
+    content: '|';
+    margin-right: 32px;
+}
+
+div#nav {
+    border-top: 1px solid black;
+    margin-top: 16px;
+    margin-bottom: 24px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    text-align: center;
+}
+
+#nav-prev {
+    float: left;
+    text-align: left;
+    width: 300px;
+}
+
+#nav-up {
+    margin: 0 auto;
+    width: 300px;
+}
+
+#nav-next {
+    float: right;
+    text-align: right;
+    width: 300px;
+}
+
+span#home img, span#home a {
+    width: 192px;
+    z-index: 10000;
+}
+
+span#home {
+    text-align: center;
+    display: block;
+    width: 100%;
+    margin: auto;
+}
+
+/* header */
+div#header {
+    margin-top: 16px;
+    overflow: show;
+    min-height: 64px;
+    margin-bottom: 32px;
+}
+
+ul#menu>li>a {
+    font-size: 1.5rem;
+}
+
+/* From here on, it is fine to modify the code */
+
+a#github-banner>img {
+    position: absolute;
+    top: 0;
+    right: 0;
+    border: 0;
+}
+
+h1 {
+    font-size: 2rem;
+    letter-spacing: 2px;
+    text-align: center;
+    margin-bottom: 16px;
+    border-bottom: 1px solid black;
+}
+
+h2 {
+    margin-bottom: 8px;
+}
+
+h3 {
+    margin-bottom: 8px;
+}
+
+p {
+    margin-bottom: 16px;
+}
+
+/* general link styling */
+a {
+    text-decoration: none;
+    color: #58f;
+}
+
+a:hover {
+    color: #568;
+}
+
+#content ul {
+    list-style-type: initial;
+    margin-top: -8px;
+    margin-left: 1em;
+    margin-bottom: 16px;
+}
+
+#content ol {
+    margin-top: -8px;
+    margin-left: 1em;
+    margin-bottom: 16px;
+}
+
+code {
+    font-family: monospace;
+}
+
+/* Download buttons */
+.button {
+    background-color: #58f;
+    color: white;
+    padding: 1em;
+    border-radius: 1em;
+    display: inline-block;
+    text-align: center;
+    font-size: 1.2rem;
+}
+.button:hover {
+    color: #ddd;
+}
+.buttonborder {
+    padding-left: 1em;
+    display: inline-block;
+    float: right;
+}
+.filedate {
+    font-size: 0.8rem;
+    padding: 0em;
+    margin: 0em;
+}
+
+table, th, td {
+    border: 1px solid black;
+    padding: 0.2em;
+    margin-bottom: 0.7em;
+}
+table {
+    border-collapse: collapse;
+}

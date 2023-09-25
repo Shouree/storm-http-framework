@@ -3,14 +3,14 @@ use markdown;
 
 // Main entry-point for generating documentation. Generates documentation for the directory tree att
 // 'root', outputs the resulting HTML files into 'output'.
-void generate(Str title, Url root, Url output) {
+void generate(Str title, Str theme, Url root, Url output) {
 	print("Loading documentation from ${root}...");
 	Tree tree(title, root);
-	print(tree.toS);
 	tree.load();
 
 	print("Generating output into ${output}...");
-
+	print("TODO: Clean up the output directory first?");
+	tree.output(loadTheme(theme), output);
 }
 
 
@@ -19,6 +19,6 @@ void generate() {
 	var root = core:lang:rootPkg;
 	if (url = root.url) {
 		var docRoot = url / "..";
-		generate("Storm", docRoot / "doc", docRoot / "html");
+		generate("Storm", "storm", docRoot / "doc", docRoot / "html");
 	}
 }

@@ -197,9 +197,7 @@ class List extends Element {
 	// To string.
 	protected void toS(StrBuf to) : override {
 		if (ordered) {
-			Nat width = 0;
-			for (x in items.count.toS)
-				width++;
+			Nat width = items.count.toS.count;
 
 			to.indentBy(" "*(width + 2));
 			for (i, e in items) {
@@ -292,5 +290,39 @@ class CodeBlock extends Element {
 		}
 		to.restoreIndent();
 		to.html("</pre></code>");
+	}
+}
+
+
+/**
+ * Custom HTML element.
+ *
+ * Used to make it convenient for other tools to generate custom HTML in the document. Not currently
+ * created by the parser when parsing markdown.
+ */
+class CustomHtml extends Element {
+	// HTML code.
+	Str code;
+
+	// Create.
+	init(Str code) {
+		init { code = code; }
+	}
+
+	// Visit.
+	Element visit(Visitor v) : override {
+		return v.visit(this);
+	}
+
+	// To string.
+	protected void toS(StrBuf to) : override {
+		to << "!! begin custom html !!\n";
+		to << code;
+		to << "\n!! end custom html !!";
+	}
+
+	// Output HTML.
+	void toHtml(Html to) : override {
+		to.html(code);
 	}
 }

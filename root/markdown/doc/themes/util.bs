@@ -1,0 +1,57 @@
+use core:io;
+use core:lang;
+use lang:bs:macro;
+use parser;
+
+// Get the Url for a named sub-package of this package.
+Url resUrl(Str name) : on Compiler {
+	unless (pkg = named{}.find(SimplePart(name), Scope()) as Package)
+		throw InternalError("Failed to find the package ${name}");
+
+	unless (url = pkg.url)
+		throw InternalError("Failed to extract the path to the package ${pkg}.");
+
+	return url;
+}
+
+// Helper to copy a list of files or directories.
+void copyFiles(Url from, Url to, Str[] names) {
+	for (name in names) {
+		Url f = (from / name).updated();
+		Url t = to / name;
+
+		if (f.dir) {
+			copyAllFiles(f, t);
+		} else {
+			copyFile(from / name, to / name);
+		}
+	}
+}
+
+// Copy all files in a directory to another directory.
+void copyAllFiles(Url from, Url to) {
+	to.createDir();
+	for (c in from.children) {
+		if (c.dir) {
+			copyAllFiles(c, to / c.name);
+		} else {
+			copyFile(c, to / c.name);
+		}
+	}
+}
+
+// Helper to copy a single file.
+void copyFile(Url from, Url to) {
+	var src = from.read;
+	var dst = to.write;
+
+	Buffer tmp = buffer(4096);
+	do {
+		tmp.filled = 0;
+		tmp = src.fill(tmp);
+		dst.write(tmp);
+	} while (tmp.full());
+
+	src.close();
+	dst.close();
+}

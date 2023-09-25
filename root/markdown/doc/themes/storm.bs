@@ -1,0 +1,98 @@
+use core:io;
+use markdown;
+use markdown:doc;
+
+/**
+ * The theme itself.
+ */
+class StormTheme extends Theme {
+	// Header.
+	private Str header;
+
+	// Footer.
+	private Str footer;
+
+	// Url where resources are stored.
+	private Url resUrl;
+
+	// Files to copy.
+	private Str[] files = ["style.css", "desktop.css", "mobile.css", "Raleway_ext.woff2", "Raleway.woff2", "images"];
+
+	// Current version.
+	Str version;
+
+	// Current date.
+	Str date;
+
+	// Create.
+	init() {
+		init {
+			resUrl = resUrl("storm_res");
+			version = "0.0.0";
+			date = "2023-01-01";
+		}
+
+		Str file = (resUrl / "template.html").readAllText;
+		var divider = "<?content?>";
+
+		var split = file.find(divider);
+		header = file.cut(file.begin, split);
+		footer = file.cut(split + divider.count);
+	}
+
+	// Initialization.
+	void initialize(Tree tree) {}
+
+	// Output data.
+	Str toHtml(Document document, Url treePath) {
+		document.visit(StormVisitor(this));
+
+		StrBuf out;
+		out << header;
+		out << document.toHtml().toS;
+		out << footer;
+		out.toS;
+	}
+
+	// Copy files.
+	void copyFiles(Url root) {
+		copyFiles(resUrl, root, files);
+	}
+}
+
+/**
+ * Custom traversal of some elements.
+ */
+class StormVisitor extends markdown:Visitor {
+
+	StormTheme theme;
+
+	init(StormTheme theme) {
+		init { theme = theme; }
+	}
+
+	TextSpan visit(TextSpan elem) : override {
+		if (elem as CustomText) {
+			if (elem.text.startsWith("downloadbutton:"))
+				return createDownload();
+		}
+		return elem;
+	}
+
+	TextSpan createDownload() {
+		StrBuf html;
+		html << "<div class=\"buttonborder\">";
+		html << "<a class=\"button\" href=\"#\">";
+		html << "Download Storm<br/>";
+		html << "<span class=\"filedate\">Latest version: " << theme.version << " (" << theme.date << ")</span>";
+		html << "</a></div>";
+
+		CustomInlineHtml(html.toS);
+	}
+}
+
+
+// Entry point.
+Theme storm() {
+	StormTheme();
+}

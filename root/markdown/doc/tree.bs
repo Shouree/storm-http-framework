@@ -63,6 +63,29 @@ class Node {
 			x.load(tree, treePath / x.name);
 	}
 
+	// Output to disk.
+	void output(Theme theme, Url root, Url treePath) {
+		unless (content)
+			throw InternalError("'load' needs to be called before 'output'.");
+
+		Url abs = root / treePath;
+		if (dirNode) {
+			abs.createDir();
+			abs = abs / "index.html";
+		} else {
+			abs = abs.withExt("html");
+		}
+
+		// Output this document.
+		Str html = theme.toHtml(content, treePath);
+		var out = Utf8Output(abs.write(), unixTextInfo());
+		out.write(html);
+		out.close();
+
+		for (x in children)
+			x.output(theme, root, treePath / x.name);
+	}
+
 	// Compute the title of this node.
 	Str title() {
 		StrBuf out;
@@ -107,6 +130,16 @@ class Tree {
 	// Load all documents.
 	void load() {
 		root.load(this, Url());
+	}
+
+	// Output to disk.
+	void output(Theme theme, Url rootPath) {
+		theme.initialize(this);
+
+		rootPath.createDir();
+		root.output(theme, rootPath, Url());
+
+		theme.copyFiles(rootPath);
 	}
 
 	// Output.
