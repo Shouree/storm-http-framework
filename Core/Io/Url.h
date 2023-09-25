@@ -61,15 +61,18 @@ namespace storm {
 		virtual Nat STORM_FN hash() const;
 
 		// Append another path to this one. The other one has to be a relative path.
-		Url *STORM_FN push(Url *url);
-		Url *STORM_FN operator /(Url *url);
+		Url *STORM_FN push(Url *url) const;
+		Url *STORM_FN operator /(Url *url) const;
 
 		// Append another part to this one.
-		Url *STORM_FN push(Str *part);
-		Url *STORM_FN operator /(Str *url);
+		Url *STORM_FN push(Str *part) const;
+		Url *STORM_FN operator /(Str *url) const;
 
 		// Append another part to this one, making the resulting Url into a directory.
-		Url *STORM_FN pushDir(Str *part);
+		Url *STORM_FN pushDir(Str *part) const;
+
+		// Make into a directory.
+		Url *STORM_FN makeDir() const;
 
 		// Get all parts.
 		Array<Str *> *STORM_FN getParts() const;

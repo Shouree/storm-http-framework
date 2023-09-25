@@ -182,7 +182,7 @@ namespace storm {
 		return c;
 	}
 
-	Url *Url::push(Str *p) {
+	Url *Url::push(Str *p) const {
 		validate(p);
 
 		Url *c = copy();
@@ -195,11 +195,11 @@ namespace storm {
 		return c;
 	}
 
-	Url *Url::operator /(Str *p) {
+	Url *Url::operator /(Str *p) const {
 		return push(p);
 	}
 
-	Url *Url::pushDir(Str *p) {
+	Url *Url::pushDir(Str *p) const {
 		validate(p);
 
 		Url *c = copy();
@@ -212,7 +212,11 @@ namespace storm {
 		return c;
 	}
 
-	Url *Url::push(Url *url) {
+	Url *Url::makeDir() const {
+		return new (this) Url(protocol, parts, isDir);
+	}
+
+	Url *Url::push(Url *url) const {
 		if (url->absolute())
 			throw new (this) InvalidName(url->toS());
 
@@ -225,7 +229,7 @@ namespace storm {
 		return c;
 	}
 
-	Url *Url::operator /(Url *p) {
+	Url *Url::operator /(Url *p) const {
 		return push(p);
 	}
 
