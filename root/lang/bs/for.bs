@@ -135,6 +135,9 @@ private:
 		if (createRangeCode(getCont))
 			return;
 
+		if (createCountCode(getCont))
+			return;
+
 		// Note: May not use fancy strings, their implementation depend on us!
 		throw SyntaxError(pos, container.toS + " is not iterable.");
 	}
@@ -204,6 +207,52 @@ private:
 		ExprBlock eBody(pos, body);
 		body.set(eBody);
 		loopBlock = eBody;
+
+		true;
+	}
+
+	Bool createCountCode(LocalVarAccess container) {
+		Expr countExpr = namedExpr(this, SStr("count", pos), container, Actuals());
+		if (countExpr as UnresolvedName)
+			return false;
+
+		SimplePart accessName("[]");
+		accessName.params.push(container.result.type);
+		accessName.params.push(countExpr.result.type);
+		unless (containerType = container.result.type.type)
+			return false;
+		unless (accessFn = containerType.find(accessName, scope) as Function)
+			return false;
+
+		Var countDecl(this, SStr(" count", pos), countExpr);
+		LocalVarAccess getCount(pos, countDecl.var);
+		initExprs.push(countDecl);
+
+		Str indexName = " id";
+		if (keyName)
+			indexName = keyName;
+
+		Var indexDecl(this, countDecl.result.type, SStr(indexName, pos), Actuals());
+		LocalVarAccess getIndex(pos, indexDecl.var);
+		initExprs.push(indexDecl);
+
+		For loop(pos, this);
+		this.loop = loop;
+
+		ExprBlock body(pos, loop);
+		loop.test(namedExpr(loop, SStr("<", pos), getIndex, Actuals(getCount)));
+		loop.update(namedExpr(loop, SStr("++*", pos), getIndex));
+		loop.body(body);
+
+		Actuals getValActuals;
+		getValActuals.add(container);
+		getValActuals.add(getIndex);
+		body.add(Var(body, SStr(valName), FnCall(pos, scope, accessFn, getValActuals)));
+
+		loopBlock = body;
+
+		// Don't change the intex variable outside the loop.
+		indexDecl.var.constant = true;
 
 		true;
 	}
