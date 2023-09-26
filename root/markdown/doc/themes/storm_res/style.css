@@ -175,6 +175,14 @@ a:hover {
     margin-bottom: 16px;
 }
 
+/* Fix nested lists */
+#content li>ul:first-child, #content li>ol:first-child {
+    margin-top: 4px;
+}
+#content li>ul:last-child, #content li>ol:last-child {
+    margin-bottom: 4px;
+}
+
 /* Download buttons */
 .button {
     background-color: #58f;
@@ -230,4 +238,3 @@ pre>.keyword { color: #a020f0; }
 pre>.fn-name { color: #0000ff; }
 pre>.var-name { color: #a0522d; }
 pre>.type-name { color: #228b26; }
-
