@@ -195,8 +195,8 @@ namespace storm {
 	class EXCEPTION_EXPORT InvalidName : public Exception {
 		STORM_EXCEPTION;
 	public:
-		STORM_CTOR InvalidName() { name = null; }
-		STORM_CTOR InvalidName(Str *name) { this->name = name; }
+		STORM_CTOR InvalidName() : name(null) {}
+		STORM_CTOR InvalidName(Str *name) : name(name) {}
 
 		virtual void STORM_FN message(StrBuf *to) const {
 			if (!name)
@@ -208,4 +208,16 @@ namespace storm {
 		MAYBE(Str *) name;
 	};
 
+	class EXCEPTION_EXPORT UrlError : public Exception {
+		STORM_EXCEPTION;
+	public:
+		STORM_CTOR UrlError(Str *name) : name(name) {}
+
+		virtual void STORM_FN message(StrBuf *to) const {
+			*to << S("Url error: ") << name;
+		}
+
+	private:
+		Str *name;
+	};
 }

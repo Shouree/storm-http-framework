@@ -297,8 +297,8 @@ namespace storm {
 	}
 
 	Url *Url::relative(Url *to) {
-		if (!absolute() || !to->absolute())
-			throw new (this) InvalidName(new (this) Str(S("Both paths to 'relative' must be absolute.")));
+		if (absolute() != to->absolute())
+			throw new (this) UrlError(new (this) Str(S("Both paths to 'relative' must be either absolute or relative.")));
 
 		// Different protocols, not possible...
 		if (*protocol != *to->protocol)
@@ -327,8 +327,8 @@ namespace storm {
 	}
 
 	Url *Url::relativeIfBelow(Url *to) {
-		if (!absolute() || !to->absolute())
-			throw new (this) InvalidName(new (this) Str(S("Both paths to 'relativeIfBelow' must be absolute.")));
+		if (absolute() != to->absolute())
+			throw new (this) UrlError(new (this) Str(S("Both paths to 'relativeIfBelow' must be either absolute or relative.")));
 
 		// Different protocols?
 		if (*protocol != *to->protocol)
