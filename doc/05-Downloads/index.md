@@ -12,7 +12,7 @@ Storm is licensed under the 2-clause BSD license from version 0.6.19 and onwards
 `fullLicenses` in the Storm prompt for more details.
 
 
-Binary releases for ?StormVersion? (?StormDate?)
+Binary releases for [storm:version] \([storm:date]\)
 --------------------------
 
 - [Windows (32-bit, X86)](storm_mps_win32.zip)

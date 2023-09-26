@@ -65,7 +65,9 @@ class DocVisitor extends markdown:Visitor {
 		if (link.startsWith("md:")) {
 			Url url = parseMdUrl(link.cut(link.begin + 3));
 			unless (target = node.resolveLink(url)) {
-				throw DocError(file, "Unable to resolve the markdown link: ${link}");
+				print("WARNING: ${file}: Broken markdown link: ${link}");
+				return link;
+				// throw DocError(file, "Unable to resolve the markdown link: ${link}");
 			}
 			return target.relativeOutputPath(node).format();
 		}

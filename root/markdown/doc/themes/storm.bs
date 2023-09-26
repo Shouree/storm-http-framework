@@ -80,7 +80,7 @@ class StormTheme extends Theme {
 
 	// Output data.
 	Str toHtml(Node node, Document document) : override {
-		document.visit(StormVisitor(this));
+		document.visit(StormVisitor(this, node));
 
 		Nat relLevels = node.depth;
 		if (!node.dirNode)
@@ -165,27 +165,60 @@ class StormVisitor extends markdown:Visitor {
 
 	StormTheme theme;
 
-	init(StormTheme theme) {
-		init { theme = theme; }
+	Node node;
+
+	init(StormTheme theme, Node node) {
+		init { theme = theme; node = node; }
 	}
 
 	TextSpan visit(TextSpan elem) : override {
 		if (elem as CustomText) {
-			if (elem.text.startsWith("downloadbutton:"))
-				return createDownload();
+			var colon = elem.text.find(':');
+			if (colon == elem.text.end)
+				return elem;
+
+			Str name = elem.text.cut(elem.text.begin, colon);
+			Str param = elem.text.cut(colon + 1);
+
+			if (name == "downloadbutton")
+				return createDownload(param);
+			if (name == "storm")
+				return createStormInfo(param);
 		}
 		return elem;
 	}
 
-	TextSpan createDownload() {
-		StrBuf html;
-		html << "<div class=\"buttonborder\">";
-		html << "<a class=\"button\" href=\"#\">";
-		html << "Download Storm<br/>";
-		html << "<span class=\"filedate\">Latest version: " << theme.version << " (" << theme.date << ")</span>";
-		html << "</a></div>";
+	TextSpan createDownload(Str link) {
+		Html html;
+		html.html("<div class=\"buttonborder\">");
+		html.html("<a class=\"button\" href=\"");
+		if (link.startsWith("md:")) {
+			if (target = node.resolveLink(parseMdUrl(link.cut(link.begin + 3))))
+				html.text(target.relativeOutputPath(node).format());
+			else
+				print("WARNING: In ${node.name}: Broken markdown link in download button: ${link}");
+		} else {
+			html.text(link);
+		}
+		html.html("\">");
+		html.html("Download Storm<br/>");
+		html.html("<span class=\"filedate\">Latest version: ");
+		html.text(theme.version);
+		html.html(" (");
+		html.text(theme.date);
+		html.html(")</span></a></div>");
 
 		CustomInlineHtml(html.toS);
+	}
+
+	TextSpan createStormInfo(Str param) {
+		Str text = "";
+		if (param == "version")
+			text = theme.version;
+		else if (param == "date")
+			text = theme.date;
+
+		return TextSpan(text);
 	}
 }
 
