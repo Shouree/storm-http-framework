@@ -209,8 +209,8 @@ table {
 }
 
 /* Code blocks */
-code, pre {
-    font-family: monospace; /* "Consolas", "Courier New", "Courier", monospace; */
+code, code *, pre, pre * {
+    font-family: "Consolas", "Courier New", "Courier", monospace;
 }
 
 /* Syntax highlighting */
