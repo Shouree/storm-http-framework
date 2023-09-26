@@ -175,10 +175,6 @@ a:hover {
     margin-bottom: 16px;
 }
 
-code {
-    font-family: monospace;
-}
-
 /* Download buttons */
 .button {
     background-color: #58f;
@@ -211,3 +207,27 @@ table, th, td {
 table {
     border-collapse: collapse;
 }
+
+/* Code blocks */
+code, pre {
+    font-family: monospace; /* "Consolas", "Courier New", "Courier", monospace; */
+}
+
+/* Syntax highlighting */
+pre {
+    padding-top: 0.2em;
+    padding-bottom: 0.2em;
+    padding-left: 0.6em;
+    padding-right: 0.6em;
+    margin-bottom: 0.7em;
+    background-color: #f7f7f7;
+}
+
+pre>.comment { color: #b22222; }
+pre>.delimiter { color: #000000; }
+pre>.string { color: #8b2252; }
+pre>.keyword { color: #a020f0; }
+pre>.fn-name { color: #0000ff; }
+pre>.var-name { color: #a0522d; }
+pre>.type-name { color: #228b26; }
+

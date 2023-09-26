@@ -83,25 +83,25 @@ Str replaceMarkers(Str in, Str->Str replace) {
 			continue;
 
 		// If nothing is before the marker on the line, indent it accordingly.
-		var indentStart = in.findLast('\n', start);
-		Bool useIndent = true;
-		for (var i = indentStart + 1; i != start; i++) {
-			if (i.v != ' ' & i.v != '\t') {
-				useIndent = false;
-				break;
-			}
-		}
+		// var indentStart = in.findLast('\n', start);
+		// Bool useIndent = true;
+		// for (var i = indentStart + 1; i != start; i++) {
+		// 	if (i.v != ' ' & i.v != '\t') {
+		// 		useIndent = false;
+		// 		break;
+		// 	}
+		// }
 
-		if (useIndent) {
-			out.indentBy(in.cut(indentStart + 1, start));
-			out.indent();
-		}
+		// if (useIndent) {
+		// 	out.indentBy(in.cut(indentStart + 1, start));
+		// 	out.indent();
+		// }
 
 		out << replace.get(title);
 
-		if (useIndent) {
-			out.dedent();
-		}
+		// if (useIndent) {
+		// 	out.dedent();
+		// }
 		lastOut = end + markerEnd.count;
 	}
 

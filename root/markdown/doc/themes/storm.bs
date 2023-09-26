@@ -171,6 +171,21 @@ class StormVisitor extends markdown:Visitor {
 		init { theme = theme; node = node; }
 	}
 
+	Element visit(Element elem) : override {
+		if (elem as CodeBlock) {
+			Str language = elem.language;
+			if (language.any) {
+				Bool partial = language.startsWith("partial:");
+				if (partial)
+					language = language.cut(language.begin + 8);
+
+				if (highlighted = highlightSource(node.source, language, partial, elem.code.join("\n").toS))
+					return highlighted;
+			}
+		}
+		elem;
+	}
+
 	TextSpan visit(TextSpan elem) : override {
 		if (elem as CustomText) {
 			var colon = elem.text.find(':');
@@ -196,7 +211,7 @@ class StormVisitor extends markdown:Visitor {
 			if (target = node.resolveLink(parseMdUrl(link.cut(link.begin + 3))))
 				html.text(target.relativeOutputPath(node).format());
 			else
-				print("WARNING: In ${node.name}: Broken markdown link in download button: ${link}");
+				print("WARNING: In ${node.source}: Broken markdown link in download button: ${link}");
 		} else {
 			html.text(link);
 		}

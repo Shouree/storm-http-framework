@@ -149,7 +149,7 @@ graphs, including graphs with cycles and shared objects. It is implemented using
 compiler-generated `clone` function in the package `core`. The function performs the following
 operations (using Basic Storm-like syntax):
 
-```
+```bs
 T clone(T v) {
     T copy(v);
     CloneEnv env;
@@ -165,7 +165,7 @@ Storm, and this function makes sure to either clone or call `deepCopy` on any me
 that type.
 
 The `deepCopy` functions are implemented like this:
-```
+```bs
 void deepCopy(CloneEnv env) {
     super.deepCopy(env);
     a = clone(a, env);

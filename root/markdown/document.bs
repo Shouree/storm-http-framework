@@ -281,7 +281,7 @@ class CodeBlock extends Element {
 
 	// To HTML.
 	void toHtml(Html to) : override {
-		to.html("<code><pre>");
+		to.html("<pre>");
 		to.pauseIndent();
 		for (i, l in code) {
 			if (i > 0)
@@ -289,7 +289,7 @@ class CodeBlock extends Element {
 			to.text(l);
 		}
 		to.restoreIndent();
-		to.html("</pre></code>");
+		to.html("</pre>");
 	}
 }
 
@@ -304,9 +304,17 @@ class CustomHtml extends Element {
 	// HTML code.
 	Str code;
 
+	// Skip indentation?
+	Bool skipIndent;
+
 	// Create.
 	init(Str code) {
 		init { code = code; }
+	}
+
+	// Create, specify skip indent.
+	init(Str code, Bool skipIndent) {
+		init { code = code; skipIndent = skipIndent; }
 	}
 
 	// Visit.
@@ -323,6 +331,10 @@ class CustomHtml extends Element {
 
 	// Output HTML.
 	void toHtml(Html to) : override {
+		if (skipIndent)
+			to.pauseIndent();
 		to.html(code);
+		if (skipIndent)
+			to.restoreIndent();
 	}
 }
