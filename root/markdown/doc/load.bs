@@ -3,17 +3,22 @@ use markdown;
 
 // Load a markdown document and add post-processing as required.
 // The tree is used to resolve links, 'treePath' is a relative path inside the tree.
-Document loadDocument(Tree tree, Url treePath, Url file) {
-	Document doc = try {
-		parse(file.readAllText());
-	} catch (MarkdownError error) {
+Document loadDocument(Tree tree, Node node, Url file) {
+	try {
+		Document doc = parse(file.readAllText());
+
+		// Add post-processing.
+		doc.visit(DocVisitor(tree, node, file));
+
+		return doc;
+	} catch (core:lang:CompilerError error) {
+		// Don't wrap compiler errors.
+		throw error;
+	} catch (DocError error) {
+		throw error;
+	} catch (Exception error) {
 		throw DocError(file, error.message);
-	};
-
-	// Add post-processing.
-	doc.visit(DocVisitor(tree, treePath));
-
-	return doc;
+	}
 }
 
 
@@ -25,11 +30,14 @@ class DocVisitor extends markdown:Visitor {
 	Tree tree;
 
 	// Path inside the tree.
-	Url treePath;
+	Node node;
+
+	// File.
+	Url file;
 
 	// Create.
-	init(Tree tree, Url treePath) {
-		init { tree = tree; treePath = treePath; }
+	init(Tree tree, Node node, Url file) {
+		init { tree = tree; node = node; file = file; }
 	}
 
 	// Transform elements:
@@ -43,5 +51,24 @@ class DocVisitor extends markdown:Visitor {
 		}
 
 		element;
+	}
+
+	// Find and resolve markdown links:
+	TextSpan visit(TextSpan span) {
+		if (span as Link)
+			span.target = resolveLink(span.target);
+		span;
+	}
+
+	// Resolve a link.
+	Str resolveLink(Str link) {
+		if (link.startsWith("md:")) {
+			Url url = parseMdUrl(link.cut(link.begin + 3));
+			unless (target = node.resolveLink(url)) {
+				throw DocError(file, "Unable to resolve the markdown link: ${link}");
+			}
+			return target.relativeOutputPath(node).format();
+		}
+		link;
 	}
 }

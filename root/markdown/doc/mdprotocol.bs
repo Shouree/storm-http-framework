@@ -1,0 +1,43 @@
+use core:io;
+use util:serialize;
+
+/**
+ * Custom protocol to represent "md" links.
+ */
+class MdProtocol : extends Protocol, serializable {
+	// Create.
+	init() {
+		init {}
+	}
+
+	// Output.
+	void toS(StrBuf to) : override {
+		to << "md:/";
+	}
+}
+
+/**
+ * Parse a MD link.
+ */
+Url parseMdUrl(Str input) {
+	Bool absolute = false;
+	Bool first = true;
+	Str[] parts;
+	var pos = input.begin;
+	while (pos != input.end) {
+		var next = input.find('/', pos);
+		Str part = input.cut(pos, next);
+		if (first & part == "")
+			absolute = true;
+		else
+			parts << part;
+
+		pos = next + 1;
+		first = false;
+	}
+
+	if (absolute)
+		return Url(MdProtocol(), parts);
+	else
+		return Url(parts);
+}

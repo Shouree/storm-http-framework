@@ -116,8 +116,6 @@ class StormTheme extends Theme {
 	private Str createNavigation(Node node) {
 		Html out;
 
-		print("From ${node.name}");
-
 		// Find the previous node:
 		navigationDiv(out, "nav-prev", "Previous:", node, node.previous);
 

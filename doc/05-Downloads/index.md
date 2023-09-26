@@ -5,7 +5,7 @@ Binary releases for Storm are provided below. Only the latest version is provide
 Earlier versions need to be compiled from source. All reseases are marked by a tag with the name
 `release/<version>` in the Git repository.
 
-Release notes for each version can be found [here](md://Downloads/Release_Notes), or in the
+Release notes for each version can be found [here](md:/Downloads/Release_Notes), or in the
 annotated tags in the Git repository.
 
 Storm is licensed under the 2-clause BSD license from version 0.6.19 and onwards. Type `licenses` or
@@ -33,7 +33,7 @@ Ui library, Gtk+ 3.10 or later is required. If you wish to connect to MariaDB or
 you also need to install the MariaDB client library (`libmariadb.so.3`).
 
 A detailed tutorial for installation in different scenarios is available in
-[the tutorial](md://Getting_Started/Installing_Storm).
+[the tutorial](md:/Getting_Started/Installing_Storm).
 
 
 Alternative versions
@@ -63,7 +63,7 @@ submodules as well:
 
 `git submodule update`
 
-Instructions on compiling Storm from source are available in [the getting started section](md://Getting_Started/Installing_Storm).
+Instructions on compiling Storm from source are available in [the getting started section](md:/Getting_Started/Installing_Storm).
 
 
 License

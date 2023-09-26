@@ -20,13 +20,13 @@ are designed to closely match the underlying concepts from Storm.
 
 This section covers the following topics:
 
-- [Threading Model](md://./Threading_Model) covers the way Storm handles threads. The type system is
+- [Threading Model](md:Threading_Model) covers the way Storm handles threads. The type system is
   aware of the threads in the system, and aims to ensure that data races are not possible.
 
-- [Type System](md://./Type_System) covers the type system in Storm. The type system is used to
+- [Type System](md:Type_System) covers the type system in Storm. The type system is used to
   define all other interfaces in Storm, and is thus a central part of Storm.
 
-- [The Name Tree](md://./Name_Tree) introduces how types, functions, and other entities are
+- [The Name Tree](md:Name_Tree) introduces how types, functions, and other entities are
   organized into namespaces to uniquely name things in Storm. This section also describes how the
   name tree can be traversed and extended by language implementations.
 

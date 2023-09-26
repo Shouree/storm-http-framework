@@ -38,7 +38,7 @@ to parameter passing and threading:
 
 
 Classes and actors might initially appear similar. The difference between the two lies in how they
-interact with the [threading model](md://./Threading_Model). Since different OS threads are not
+interact with the [threading model](md:Threading_Model). Since different OS threads are not
 allowed to share data, classes need to be copied whenever a message from one thread to another is
 posted. This is not the case with actors, since actors require that their members are accessed from
 the proper OS thread (i.e. sending messages if not accessed by the proper OS thread already).

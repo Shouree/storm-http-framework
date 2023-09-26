@@ -7,5 +7,5 @@ of.
 
 Currently, the following programs are included in the distribution:
 
-- [Progvis](md://Programs/Progvis) is a program visualization tool aimed at concurrent programs.
+- [Progvis](md:/Programs/Progvis) is a program visualization tool aimed at concurrent programs.
 

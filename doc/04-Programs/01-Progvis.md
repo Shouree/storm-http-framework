@@ -20,7 +20,7 @@ the data structure in order to highlight basic race conditions in addition to de
 Starting Progvis
 ----------------
 
-To start the tool, [download Storm](md://Introduction/Downloads), and click the `Progvis` file
+To start the tool, [download Storm](md:/Introduction/Downloads), and click the `Progvis` file
 (either `Progvis.bat` or `Progvis.sh` depending on your system). The main window of Progvis should
 appear shortly thereafter. You can also start Progvis from the interactive Storm prompt by typing
 `progvis:main`, or from the command line by typing `Storm -f progvis.main`.

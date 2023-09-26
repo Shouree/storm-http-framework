@@ -99,6 +99,49 @@ class Node {
 		absOutputPath().relative(current.absOutputPath().parent());
 	}
 
+	// Find and resolve a link relative to this node. Fuzzy matching is supported.
+	Node? resolveLink(Url url) {
+		Node current = this;
+
+		if (url.absolute) {
+			unless (url.protocol as MdProtocol)
+				throw InternalError("Only relative Urls and Urls with the md:// protocol are supported!");
+
+			current = findRoot();
+		}
+
+		for (part in url) {
+			unless (matching = current.findMatching(part))
+				return null;
+
+			current = matching;
+		}
+
+		return current;
+	}
+
+	// Find a child that matches the string.
+	private Node? findMatching(Str name) {
+		for (c in children) {
+			if (c.name == name)
+				return c;
+			var dash = c.name.find('-');
+			if (dash != c.name.end) {
+				if (c.name.cut(dash + 1) == name)
+					return c;
+			}
+		}
+		return null;
+	}
+
+	// Find the root node.
+	private Node findRoot() {
+		if (parent)
+			parent.findRoot();
+		else
+			this;
+	}
+
 	// Find the next node in the pre-order traversal.
 	Node? next() {
 		// If we have at least one child, continue there.
@@ -147,12 +190,12 @@ class Node {
 	}
 
 	// Load this node and all children. 'treePath' is the relative path in the tree.
-	void load(Tree tree, Url treePath) {
+	void load(Tree tree) {
 		if (content.empty)
-			content = loadDocument(tree, treePath, source);
+			content = loadDocument(tree, this, source);
 
 		for (x in children)
-			x.load(tree, treePath / x.name);
+			x.load(tree);
 	}
 
 	// Output to disk.
@@ -217,7 +260,7 @@ class Tree {
 
 	// Load all documents.
 	void load() {
-		root.load(this, Url());
+		root.load(this);
 	}
 
 	// Output to disk.
