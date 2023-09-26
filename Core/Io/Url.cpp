@@ -75,33 +75,33 @@ namespace storm {
 
 	Url::Url() : flags(nothing) {
 		parts = new (this) Array<Str *>();
-		protocol = new (this) RelativeProtocol();
+		proto = new (this) RelativeProtocol();
 	}
 
-	Url::Url(Protocol *p, Array<Str *> *parts) : protocol(p), parts(parts), flags(nothing) {
+	Url::Url(Protocol *p, Array<Str *> *parts) : proto(p), parts(parts), flags(nothing) {
 		dbg_assert(p, L"Need a protocol!");
 		validate(this->parts);
 		simplifyInplace(this->parts);
 	}
 
-	Url::Url(Array<Str *> *parts) : protocol(new (engine()) RelativeProtocol()), parts(parts), flags(nothing) {
+	Url::Url(Array<Str *> *parts) : proto(new (engine()) RelativeProtocol()), parts(parts), flags(nothing) {
 		validate(this->parts);
 		simplifyInplace(this->parts);
 	}
 
-	Url::Url(Protocol *p, Array<Str *> *parts, UrlFlags flags) : protocol(p), parts(parts), flags(flags) {
+	Url::Url(Protocol *p, Array<Str *> *parts, UrlFlags flags) : proto(p), parts(parts), flags(flags) {
 		dbg_assert(p, L"Need a protocol!");
 		validate(this->parts);
 		simplifyInplace(this->parts);
 	}
 
-	Url::Url(Array<Str *> *parts, UrlFlags flags) : protocol(new (engine()) RelativeProtocol()), parts(parts), flags(flags) {
+	Url::Url(Array<Str *> *parts, UrlFlags flags) : proto(new (engine()) RelativeProtocol()), parts(parts), flags(flags) {
 		validate(this->parts);
 		simplifyInplace(this->parts);
 	}
 
 	void Url::toS(StrBuf *to) const {
-		*to << protocol;
+		*to << proto;
 
 		if (parts->count() > 0)
 			*to << parts->at(0);
@@ -115,7 +115,7 @@ namespace storm {
 
 	Url::Url(ObjIStream *from) {
 		// Read data here so that we can initialize Url later.
-		protocol = (Protocol *)Protocol::read(from);
+		proto = (Protocol *)Protocol::read(from);
 		parts = Serialize<Array<Str *> *>::read(from);
 		flags = UrlFlags(Serialize<Nat>::read(from));
 		from->end();
@@ -135,7 +135,7 @@ namespace storm {
 
 	void Url::write(ObjOStream *to) const {
 		if (to->startClass(this)) {
-			protocol->write(to);
+			proto->write(to);
 			Serialize<Array<Str *> *>::write(parts, to);
 			Serialize<Nat>::write(Nat(flags), to);
 			to->end();
@@ -150,14 +150,14 @@ namespace storm {
 		if (!sameType(this, &o))
 			return false;
 
-		if (*protocol != *o.protocol)
+		if (*proto != *o.proto)
 			return false;
 
 		if (parts->count() != o.parts->count())
 			return false;
 
 		for (Nat i = 0; i < parts->count(); i++) {
-			if (!protocol->partEq(parts->at(i), o.parts->at(i)))
+			if (!proto->partEq(parts->at(i), o.parts->at(i)))
 				return false;
 		}
 
@@ -167,7 +167,7 @@ namespace storm {
 	Nat Url::hash() const {
 		Nat r = 5381;
 		for (Nat i = 0; i < parts->count(); i++) {
-			r = ((r << 5) + r) + protocol->partHash(parts->at(i));
+			r = ((r << 5) + r) + proto->partHash(parts->at(i));
 		}
 		return r;
 	}
@@ -213,7 +213,7 @@ namespace storm {
 	}
 
 	Url *Url::makeDir() const {
-		return new (this) Url(protocol, parts, isDir);
+		return new (this) Url(proto, parts, isDir);
 	}
 
 	Url *Url::push(Url *url) const {
@@ -240,7 +240,7 @@ namespace storm {
 			for (Nat i = 0; i < parts->count() - 1; i++)
 				p->push(parts->at(i));
 
-		return new (this) Url(protocol, p, flags | isDir);
+		return new (this) Url(proto, p, flags | isDir);
 	}
 
 	Bool Url::dir() const {
@@ -248,7 +248,7 @@ namespace storm {
 	}
 
 	Bool Url::absolute() const {
-		return protocol->absolute();
+		return proto->absolute();
 	}
 
 	Str *Url::name() const {
@@ -301,7 +301,7 @@ namespace storm {
 			throw new (this) UrlError(new (this) Str(S("Both paths to 'relative' must be either absolute or relative.")));
 
 		// Different protocols, not possible...
-		if (*protocol != *to->protocol)
+		if (*proto != *to->proto)
 			return this;
 
 		Array<Str *> *rel = new (this) Array<Str *>();
@@ -311,7 +311,7 @@ namespace storm {
 		for (Nat i = 0; i < to->parts->count(); i++) {
 			if (equalTo == i) {
 				if (i >= parts->count()) {
-				} else if (protocol->partEq(to->parts->at(i), parts->at(i))) {
+				} else if (proto->partEq(to->parts->at(i), parts->at(i))) {
 					equalTo = i + 1;
 				}
 			}
@@ -331,7 +331,7 @@ namespace storm {
 			throw new (this) UrlError(new (this) Str(S("Both paths to 'relativeIfBelow' must be either absolute or relative.")));
 
 		// Different protocols?
-		if (*protocol != *to->protocol)
+		if (*proto != *to->proto)
 			return this;
 
 		// Check so that "to" is equal to "this" for all elements in "to".
@@ -339,7 +339,7 @@ namespace storm {
 			return this;
 
 		for (Nat i = 0; i < to->parts->count(); i++) {
-			if (!protocol->partEq(to->parts->at(i), parts->at(i)))
+			if (!proto->partEq(to->parts->at(i), parts->at(i)))
 				return this;
 		}
 
@@ -352,7 +352,7 @@ namespace storm {
 
 	Url *Url::updated() {
 		UrlFlags f = flags;
-		switch (protocol->stat(this)) {
+		switch (proto->stat(this)) {
 		case sNotFound:
 			return this;
 		case sDirectory:
@@ -364,7 +364,7 @@ namespace storm {
 		}
 
 		if (f != flags)
-			return new (this) Url(protocol, parts, f);
+			return new (this) Url(proto, parts, f);
 		else
 			return this;
 	}
@@ -375,32 +375,32 @@ namespace storm {
 
 	// Find all children URL:s.
 	Array<Url *> *Url::children() {
-		return protocol->children(this);
+		return proto->children(this);
 	}
 
 	// Open this Url for reading.
 	IStream *Url::read() {
-		return protocol->read(this);
+		return proto->read(this);
 	}
 
 	// Open this Url for writing.
 	OStream *Url::write() {
-		return protocol->write(this);
+		return proto->write(this);
 	}
 
 	// Does this Url exist?
 	Bool Url::exists() {
-		return protocol->stat(this) != sNotFound;
+		return proto->stat(this) != sNotFound;
 	}
 
 	// Create a directory.
 	Bool Url::createDir() {
-		return protocol->createDir(this);
+		return proto->createDir(this);
 	}
 
 	// Format.
 	Str *Url::format() {
-		return protocol->format(this);
+		return proto->format(this);
 	}
 
 

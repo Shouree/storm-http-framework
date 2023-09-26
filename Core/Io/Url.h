@@ -146,6 +146,11 @@ namespace storm {
 		// Format for other C-api:s. May not work for all kind of URL:s.
 		Str *STORM_FN format();
 
+		// Get the protocol used.
+		Protocol *STORM_FN protocol() const {
+			return proto;
+		}
+
 		// Output.
 		virtual void STORM_FN toS(StrBuf *to) const;
 
@@ -156,8 +161,8 @@ namespace storm {
 		void STORM_FN write(ObjOStream *to) const;
 
 	private:
-		// Protocol. If null, we're a relative path!
-		Protocol *protocol;
+		// Protocol.
+		Protocol *proto;
 
 		// Parts of the path.
 		Array<Str *> *parts;
