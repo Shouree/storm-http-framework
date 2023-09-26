@@ -116,6 +116,23 @@ namespace storm {
 		*to << S("./");
 	}
 
+	Str *RelativeProtocol::format(Url *url) {
+		StrBuf *to = new (this) StrBuf();
+
+		Array<Str *> *parts = url->getParts();
+		if (parts->count() == 0)
+			return to->toS();
+
+		*to << parts->at(0);
+		for (Nat i = 1; i < parts->count(); i++)
+			*to << S("/") << parts->at(i);
+
+		if (url->dir())
+			*to << L"/";
+
+		return to->toS();
+	}
+
 	SerializedType *RelativeProtocol::serializedType(EnginePtr e) {
 		SerializedStdType *type = serializedStdType<RelativeProtocol, Protocol>(e.v);
 		// No data.

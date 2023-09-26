@@ -124,6 +124,9 @@ namespace storm {
 		// Output.
 		virtual void STORM_FN toS(StrBuf *to) const;
 
+		// Formatting.
+		virtual Str *STORM_FN format(Url *url);
+
 		// Serialization:
 		static SerializedType *STORM_FN serializedType(EnginePtr e);
 		static RelativeProtocol *STORM_FN read(ObjIStream *from);
