@@ -14,9 +14,8 @@ class Theme {
 	// any auxiliary data structures that might be necessary for table of contents, etc.
 	void initialize(Tree tree) {}
 
-	// Called once for each document to generate the HTML code for a document. The supplied
-	// 'treePath' specifies the relative path of the document inside the tree.
-	Str toHtml(Node node, Document document, Url treePath) {
+	// Called once for each document to generate the HTML code for a document.
+	Str toHtml(Node node, Document document) {
 		document.toHtml().toS();
 	}
 

@@ -15,6 +15,9 @@ class Node {
 	// Is this node a directory? (i.e. should this file be named "index" in the output?).
 	Bool dirNode;
 
+	// Depth of this node in the tree. I.e. how many parent nodes exist.
+	Nat depth;
+
 	// Parent node, if any.
 	Node? parent;
 
@@ -30,7 +33,11 @@ class Node {
 			source = file;
 			name = file.title;
 			parent = parent;
+			depth = 0;
 		}
+
+		if (parent)
+			depth = parent.depth + 1;
 
 		if (file.dir()) {
 			dirNode = true;
@@ -58,12 +65,85 @@ class Node {
 		children.sort((a, b) => a.name < b.name);
 	}
 
-	// Find the ID of a child. Returns a value larger than child.count if not found.
-	Nat findChild(Node child) {
+	// Find the ID of a child.
+	Nat? findChild(Node child) {
 		for (i, c in children)
 			if (c is child)
 				return i;
-		return children.count;
+		return null;
+	}
+
+	// Find a path relative the root of the tree.
+	Url absOutputPath() {
+		Url path = absOutputPathI();
+
+		if (dirNode)
+			path = path / "index.html";
+		else
+			path = path.withExt("html");
+
+		return path;
+	}
+
+	// Helper to find the path.
+	private Url absOutputPathI() {
+		if (parent) {
+			parent.absOutputPathI / name;
+		} else {
+			Url();
+		}
+	}
+
+	// Find a relative path to another node.
+	Url relativeOutputPath(Node current) {
+		absOutputPath().relative(current.absOutputPath().parent());
+	}
+
+	// Find the next node in the pre-order traversal.
+	Node? next() {
+		// If we have at least one child, continue there.
+		if (children.any)
+			return children[0];
+
+		// Look at parents until we find a next element.
+		Node current = this;
+		while (parent = current.parent) {
+			// Find the current node in the parent.
+			unless (currentId = parent.findChild(current))
+				return null;
+
+			// Is there a next child?
+			if (currentId + 1 < parent.children.count)
+				return parent.children[currentId + 1];
+
+			// No, go to the parent and try again.
+			current = parent;
+		}
+
+		return null;
+	}
+
+	// Find the previous node in the pre-order traversal.
+	Node? previous() {
+		// Find the previous node:
+		unless (parent)
+			return null;
+		unless (parentId = parent.findChild(this))
+			return null;
+
+		// Go to the last node in that tree.
+		if (parentId > 0)
+			return parent.children[parentId - 1].last();
+
+		// If we were the first, return the previous of our parent.
+		return parent.previous();
+	}
+
+	// Find the last node the in-order traversal of this hierarchy.
+	private Node last() {
+		if (children.any)
+			return children.last.last;
+		return this;
 	}
 
 	// Load this node and all children. 'treePath' is the relative path in the tree.
@@ -76,27 +156,22 @@ class Node {
 	}
 
 	// Output to disk.
-	void output(Theme theme, Url root, Url treePath) {
+	void output(Theme theme, Url root) {
 		unless (content)
 			throw InternalError("'load' needs to be called before 'output'.");
 
-		Url abs = root / treePath;
-		if (dirNode) {
-			treePath = treePath.makeDir;
-			abs.createDir();
-			abs = abs / "index.html";
-		} else {
-			abs = abs.withExt("html");
-		}
+		Url outUrl = (root / absOutputPath());
+		if (dirNode)
+			outUrl.parent.createDir();
 
 		// Output this document.
-		Str html = theme.toHtml(this, content, treePath);
-		var out = Utf8Output(abs.write(), unixTextInfo());
+		Str html = theme.toHtml(this, content);
+		var out = Utf8Output(outUrl.write(), unixTextInfo());
 		out.write(html);
 		out.close();
 
 		for (x in children)
-			x.output(theme, root, treePath / x.name);
+			x.output(theme, root);
 	}
 
 	// Compute the title of this node.
@@ -150,7 +225,7 @@ class Tree {
 		theme.initialize(this);
 
 		rootPath.createDir();
-		root.output(theme, rootPath, Url());
+		root.output(theme, rootPath);
 
 		theme.copyFiles(rootPath);
 	}

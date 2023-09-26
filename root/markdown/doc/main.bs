@@ -11,6 +11,8 @@ void generate(Str title, Str theme, Url root, Url output) {
 	print("Generating output into ${output}...");
 	print("TODO: Clean up the output directory first?");
 	tree.output(loadTheme(theme), output);
+
+	print("Done!");
 }
 
 

@@ -79,10 +79,10 @@ class StormTheme extends Theme {
 	}
 
 	// Output data.
-	Str toHtml(Node node, Document document, Url treePath) : override {
+	Str toHtml(Node node, Document document) : override {
 		document.visit(StormVisitor(this));
 
-		Nat relLevels = treePath.count;
+		Nat relLevels = node.depth;
 		if (!node.dirNode)
 			relLevels--;
 		Str relPath = "../" * relLevels;
@@ -116,103 +116,35 @@ class StormTheme extends Theme {
 	private Str createNavigation(Node node) {
 		Html out;
 
-		Str startRel = "";
-		if (node.dirNode)
-			startRel = "../";
+		print("From ${node.name}");
 
-		// Find "prev".
-		createPrevNav(out, node, startRel);
+		// Find the previous node:
+		navigationDiv(out, "nav-prev", "Previous:", node, node.previous);
 
-		// Find "next".
-		createNextNav(out, node, startRel);
+		// Find the next node:
+		navigationDiv(out, "nav-next", "Next:", node, node.next);
 
-		// Find "up".
-		if (parent = node.parent) {
-			Str link = if (node.dirNode) { "../index.html"; } else { "index.html"; };
-			navigationDiv(out, "nav-up", "Up:", link, parent.title);
-		}
+		// Find the parent node:
+		navigationDiv(out, "nav-up", "Up:", node, node.parent);
 
 		out.toS;
 	}
 
 	// Output a navigation div.
-	private void navigationDiv(Html out, Str type, Str text, Str link, Str title) {
+	private void navigationDiv(Html out, Str type, Str text, Node current, Node? linkTo) {
+		unless (linkTo)
+			return;
+
+		Url rel = linkTo.relativeOutputPath(current);
+		Str link = rel.format();
+
 		out.html("<div id=\"" + type + "\">");
 		out.text(text);
 		out.html(" <a href=\"");
 		out.text(link);
 		out.html("\">");
-		out.text(title);
+		out.text(linkTo.title);
 		out.html("</a></div>\n");
-	}
-
-	// Create a previous navigation link.
-	private void createPrevNav(Html out, Node current, Str relPath) {
-		unless (parent = current.parent)
-			return;
-
-		Nat childId = parent.findChild(current);
-		if (childId >= parent.children.count)
-			return;
-
-		if (childId == 0) {
-			// Pick our parent.
-			Str link = relPath + if (current.dirNode) { "../index.html"; } else { "index.html"; };
-			navigationDiv(out, "nav-prev", "Previous:", link, parent.title);
-		} else {
-			// Pick the last element in the previous.
-			var child = parent.children[childId - 1];
-			findLastNode(out, child, relPath);
-		}
-	}
-
-	// Find the last element in the specified node, and place a prev nav there.
-	private void findLastNode(Html out, Node current, Str relPath) {
-		if (current.children.any) {
-			var last = current.children.last;
-			findLastNode(out, last, relPath + last.name + "/");
-		} else {
-			Str link = relPath + current.name;
-			if (current.dirNode)
-				link += "/index.html";
-			else
-				link += ".html";
-			navigationDiv(out, "nav-prev", "Previous:", link, current.title);
-		}
-	}
-
-	// Create a next navigation link.
-	private void createNextNav(Html out, Node current, Str relPath) {
-		if (current.children.any) {
-			var child = current.children.first;
-			Str link = relPath + child.name;
-			if (child.dirNode)
-				link += "/index.html";
-			else
-				link += ".html";
-			navigationDiv(out, "nav-next", "Next:", link, child.title);
-			return;
-		}
-
-		unless (parent = current.parent)
-			return;
-
-		Nat childId = parent.findChild(current);
-		if (childId >= parent.children.count)
-			return;
-
-		if (childId == parent.children.count - 1) {
-			// Proceed upwards in the directory tree, pick the first one that has a next element.
-			createNextNav(out, parent, relPath + "../");
-		} else {
-			var child = parent.children[childId + 1];
-			Str link = relPath + child.name;
-			if (child.dirNode)
-				link += "/index.html";
-			else
-				link += ".html";
-			navigationDiv(out, "nav-next", "Next:", link, child.title);
-		}
 	}
 
 	// Copy files.
