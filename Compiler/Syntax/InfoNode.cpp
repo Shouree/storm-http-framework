@@ -219,10 +219,8 @@ namespace storm {
 		}
 
 		Nat InfoLeaf::computeLength() {
-			Nat len = 0;
-			for (Str::Iter i = v->begin(), e = v->end(); i != e; ++i)
-				len++;
-			return len;
+			// This is in codepoints!
+			return v->count();
 		}
 
 		void InfoLeaf::set(Str *v) {
