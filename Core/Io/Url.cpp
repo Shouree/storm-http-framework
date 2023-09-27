@@ -398,6 +398,11 @@ namespace storm {
 		return proto->createDir(this);
 	}
 
+	// Delete.
+	Bool Url::unlink() {
+		return proto->unlink(this);
+	}
+
 	// Format.
 	Str *Url::format() {
 		return proto->format(this);

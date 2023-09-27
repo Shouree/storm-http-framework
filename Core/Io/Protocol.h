@@ -87,6 +87,9 @@ namespace storm {
 		// Create a directory.
 		virtual Bool STORM_FN createDir(Url *url);
 
+		// Delete a file or directory.
+		virtual Bool STORM_FN STORM_NAME(unlink,delete)(Url *url);
+
 		// Convert to a string suitable for other C-api:s
 		virtual Str *STORM_FN format(Url *url);
 
@@ -164,6 +167,9 @@ namespace storm {
 
 		// Create a directory.
 		virtual Bool STORM_FN createDir(Url *url);
+
+		// Delete a file or directory.
+		virtual Bool STORM_FN STORM_NAME(unlink,delete)(Url *url);
 
 		// Convert an Url to a string suitable for other C-api:s.
 		virtual Str *STORM_FN format(Url *url);

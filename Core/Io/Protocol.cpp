@@ -65,6 +65,10 @@ namespace storm {
 		throw new (this) ProtocolNotSupported(S("createDir"), toS());
 	}
 
+	Bool Protocol::unlink(Url *url) {
+		throw new (this) ProtocolNotSupported(S("delete"), toS());
+	}
+
 	Str *Protocol::format(Url *url) {
 		throw new (this) ProtocolNotSupported(S("format"), toS());
 	}
@@ -274,6 +278,18 @@ namespace storm {
 		return CreateDirectory(format(url)->c_str(), NULL) == TRUE;
 	}
 
+	Bool FileProtocol::unlink(Url *url) {
+		Str *file = format(url);
+		DWORD attrs = GetFileAttributes(file->c_str());
+		if (attrs == INVALID_FILE_ATTRIBUTES)
+			return false;
+
+		if (result & FILE_ATTRIBUTE_DIRECTORY)
+			return RemoveDirectory(file->c_str()) != FALSE;
+		else
+			return DeleteFile(file->c_str()) != FALSE;
+	}
+
 #elif defined(POSIX)
 
 	Bool FileProtocol::partEq(Str *a, Str *b) {
@@ -348,6 +364,19 @@ namespace storm {
 
 	Bool FileProtocol::createDir(Url *url) {
 		return mkdir(format(url)->utf8_str(), 0777) == 0;
+	}
+
+	Bool FileProtocol::unlink(Url *url) {
+		const char *name = format(url)->utf8_str();
+
+		struct stat s;
+		if (::stat(name, &s) != 0)
+			return false;
+
+		if (S_ISDIR(s.st_mode))
+			return ::rmdir(name) == 0;
+		else
+			return ::unlink(name) == 0;
 	}
 
 #else

@@ -140,8 +140,11 @@ namespace storm {
 		// Does this Url exist?
 		Bool STORM_FN exists();
 
-		// Create this path as a directory.
+		// Create this path as a directory. Does not attempt to create parent directories.
 		Bool STORM_FN createDir();
+
+		// Delete this path. Directories need to be empty.
+		Bool STORM_FN STORM_NAME(unlink,delete)();
 
 		// Format for other C-api:s. May not work for all kind of URL:s.
 		Str *STORM_FN format();
