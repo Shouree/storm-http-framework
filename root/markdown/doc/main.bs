@@ -52,7 +52,7 @@ class Options {
 		} else if (key == "-q" | key == "--quiet") {
 			noProgress = true;
 		} else if (key.startsWith("--")) {
-			themeOptions.put(key.cut(key.start + 2), val);
+			themeOptions.put(key.cut(key.begin + 2), val);
 		}
 	}
 
@@ -68,18 +68,18 @@ class Options {
 	}
 }
 
-// Remove a tree.
-private void deleteTree(Url root) {
-	for (child in root.children) {
-		deleteTree(child);
-	}
-
-	root.delete();
-}
-
 // Generate documentation programmatically.
 void generate(Options options) {
 	Theme theme = loadTheme(options.theme);
+
+	{
+		Str->Str themeOptions = options.themeOptions.clone;
+		theme.options(themeOptions);
+		for (k, v in themeOptions) {
+			print("WARNING: Unknown option: --${k}");
+		}
+	}
+
 
 	if (!options.noProgress)
 		print("Loading documentation from ${options.root}...");
@@ -96,7 +96,7 @@ void generate(Options options) {
 	if (!options.noProgress)
 		print("Generating output to ${options.output}...");
 
-	tree.output(theme, output);
+	tree.output(theme, options.output);
 
 	if (!options.noProgress)
 		print("Done!");
@@ -127,28 +127,28 @@ Int generate() {
 		return 1;
 	}
 	options.title = args[pos++];
+
 	pos = options.applyOptions(args, pos);
 	if (pos >= args.count) {
 		printHelp();
 		return 1;
 	}
 	options.theme = args[pos++];
+
 	pos = options.applyOptions(args, pos);
 	if (pos >= args.count) {
 		printHelp();
 		return 1;
 	}
-	options.root = parsePath(args[pos++]);
-	if (options.root.relative)
-		options.root = cwdUrl / options.root;
+	options.root = parsePath(args[pos++]).makeAbsolute(cwdUrl);
+
 	pos = options.applyOptions(args, pos);
 	if (pos >= args.count) {
 		printHelp();
 		return 1;
 	}
-	options.output = parsePath(args[pos++]);
-	if (options.output.relative)
-		options.output = cwdUrl / options.output;
+	options.output = parsePath(args[pos++]).makeAbsolute(cwdUrl);
+
 	pos = options.applyOptions(args, pos);
 
 	if (pos != args.count) {
@@ -167,22 +167,21 @@ Int generateStormDoc() {
 		var docRoot = url / ".." / "doc";
 		Options options("Storm", "storm", docRoot, Url());
 
-		var args = argc;
+		var args = argv;
 		Nat pos = options.applyOptions(args, 0);
 		if (pos >= args.count) {
 			print("Error: Expected an output path!");
 			return 1;
 		}
-		options.output = parsePath(args[pos++]);
-		if (options.output.relative)
-			options.output = cwdUrl / options.output;
+		options.output = parsePath(args[pos++]).makeAbsolute(cwdUrl);
+
 		pos = options.applyOptions(args, pos);
-		if (pos != args.end) {
+		if (pos != args.count) {
 			print("Error: Too many parameters!");
 			return 1;
 		}
 
-		generate("Storm", "storm", docRoot, docRoot / "html");
+		generate(options);
 		return 0;
 	}
 	return 2;

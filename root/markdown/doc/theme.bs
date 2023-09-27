@@ -10,6 +10,11 @@ use lang:bs:macro;
  * navigation, and if any additional files are necessary.
  */
 class Theme {
+	// Called once at startup to initialize the theme with any additional parameters supplied. The
+	// theme is expected to remove any keys that it utilizes, this allows error reporting to work
+	// properly.
+	void options(Str->Str options) {}
+
 	// Called once for each tree before generation of HTML begins. This allows the theme to generate
 	// any auxiliary data structures that might be necessary for table of contents, etc.
 	void initialize(Tree tree) {}

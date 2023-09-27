@@ -267,7 +267,7 @@ class Tree {
 	void output(Theme theme, Url rootPath) {
 		theme.initialize(this);
 
-		rootPath.createDir();
+		rootPath.createDirTree();
 		root.output(theme, rootPath);
 
 		theme.copyFiles(rootPath);

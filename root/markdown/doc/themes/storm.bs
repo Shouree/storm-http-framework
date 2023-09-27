@@ -1,6 +1,7 @@
 use core:io;
 use markdown;
 use markdown:doc;
+use lang:bs:macro;
 
 /**
  * The theme itself.
@@ -32,7 +33,25 @@ class StormTheme extends Theme {
 			template = (url / "template.html").readAllText;
 			resUrl = url;
 			version = "0.0.0";
-			date = "2023-01-01";
+			date = "0000-00-00";
+		}
+	}
+
+	// Consume parameters.
+	void options(Str->Str options) {
+		if (options.has("version")) {
+			version = options.get("version");
+			options.remove("version");
+		} else {
+			version = named{core:info:COMPILER}.version.toS;
+			print("WARNING: Missing --version. Using current compiler version: ${version}");
+		}
+
+		if (options.has("date")) {
+			version = options.get("date");
+			options.remove("date");
+		} else {
+			print("WARNING: Missing --date. Using ${date}.");
 		}
 	}
 
