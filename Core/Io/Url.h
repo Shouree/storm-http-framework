@@ -74,6 +74,9 @@ namespace storm {
 		// Make into a directory.
 		Url *STORM_FN makeDir() const;
 
+		// Make the Url absolute if it is not already absolute.
+		Url *STORM_FN makeAbsolute(Url *base);
+
 		// Get all parts.
 		Array<Str *> *STORM_FN getParts() const;
 
@@ -144,8 +147,14 @@ namespace storm {
 		// Create this path as a directory. Does not attempt to create parent directories.
 		Bool STORM_FN createDir();
 
+		// Recursively create the directories for this path.
+		Bool STORM_FN createDirTree();
+
 		// Delete this path. Directories need to be empty.
 		Bool STORM_FN STORM_NAME(unlink,delete)();
+
+		// Delete this path. Recurses into sub-folders if necessary.
+		Bool STORM_FN deleteTree();
 
 		// Format for other C-api:s. May not work for all kind of URL:s.
 		Str *STORM_FN format();

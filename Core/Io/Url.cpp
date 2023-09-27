@@ -216,6 +216,12 @@ namespace storm {
 		return new (this) Url(proto, parts, isDir);
 	}
 
+	Url *Url::makeAbsolute(Url *base) {
+		if (absolute())
+			return this;
+		return base->push(this);
+	}
+
 	Url *Url::push(Url *url) const {
 		if (url->absolute())
 			throw new (this) InvalidName(url->toS());
@@ -398,9 +404,36 @@ namespace storm {
 		return proto->createDir(this);
 	}
 
+	// Create a directory, recursive.
+	Bool Url::createDirTree() {
+		if (!exists()) {
+			if (!parent()->createDirTree())
+				return false;
+
+			return createDir();
+		} else {
+			return true;
+		}
+	}
+
 	// Delete.
 	Bool Url::unlink() {
 		return proto->unlink(this);
+	}
+
+	// Recursive delete.
+	Bool Url::deleteTree() {
+		Bool ok = true;
+		Array<Url *> *children = this->children();
+		for (Nat i = 0; i < children->count(); i++) {
+			ok &= children->at(i)->deleteTree();
+		}
+
+		if (ok) {
+			ok &= unlink();
+		}
+
+		return ok;
 	}
 
 	// Format.

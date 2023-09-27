@@ -284,7 +284,7 @@ namespace storm {
 		if (attrs == INVALID_FILE_ATTRIBUTES)
 			return false;
 
-		if (result & FILE_ATTRIBUTE_DIRECTORY)
+		if (attrs & FILE_ATTRIBUTE_DIRECTORY)
 			return RemoveDirectory(file->c_str()) != FALSE;
 		else
 			return DeleteFile(file->c_str()) != FALSE;
