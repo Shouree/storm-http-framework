@@ -297,6 +297,15 @@ void showVersion(Engine &e) {
 	wcout << best->version << std::endl;
 }
 
+void createArgv(Engine &e, const vector<const wchar_t *> &argv) {
+	Array<Str *> *out = new (e) Array<Str *>();
+	out->reserve(argv.size());
+	for (size_t i = 0; i < argv.size(); i++) {
+		*out << new (e) Str(argv[i]);
+	}
+	e.argv(out);
+}
+
 int stormMain(int argc, const wchar_t *argv[]) {
 	Params p(argc, argv);
 
@@ -330,6 +339,9 @@ int stormMain(int argc, const wchar_t *argv[]) {
 
 	Engine e(root, Engine::reuseMain, &argv);
 	Moment end;
+
+	if (!p.argv.empty())
+		createArgv(e, p.argv);
 
 	Array<Package *> *runPkgs = importPkgs(e, p);
 

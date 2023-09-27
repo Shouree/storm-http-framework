@@ -49,6 +49,9 @@ public:
 
 	// Import additional packages.
 	vector<Import> import;
+
+	// Parameters to the program.
+	vector<const wchar_t *> argv;
 };
 
 void help(const wchar_t *cmd);

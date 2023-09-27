@@ -21,5 +21,17 @@ namespace storm {
 			return e.v.stdError();
 		}
 
+		void stdIn(EnginePtr e, TextInput *s) {
+			e.v.stdIn(s);
+		}
+
+		void stdOut(EnginePtr e, TextOutput *s) {
+			e.v.stdOut(s);
+		}
+
+		void stdError(EnginePtr e, TextOutput *s) {
+			e.v.stdError(s);
+		}
+
 	}
 }

@@ -570,6 +570,14 @@ namespace storm {
 		o.stdError = to;
 	}
 
+	Array<Str *> *Engine::argv() {
+		return atomicRead(o.argv);
+	}
+
+	void Engine::argv(Array<Str *> *val) {
+		atomicWrite(o.argv, val);
+	}
+
 	code::TypeDesc *Engine::ptrDesc() {
 		if (!o.ptrDesc)
 			o.ptrDesc = code::ptrDesc(*this);

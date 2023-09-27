@@ -87,6 +87,14 @@ static StatePtr replLang(const wchar_t *arg, Params &result) {
 	return &start;
 }
 
+static StatePtr consumeArgv(const wchar_t *arg, Params &result) {
+	if (arg == null)
+		return StatePtr();
+
+	result.argv.push_back(arg);
+	return &consumeArgv;
+}
+
 static StatePtr start(const wchar_t *arg, Params &result) {
 	if (arg == null) {
 		return StatePtr();
@@ -119,6 +127,8 @@ static StatePtr start(const wchar_t *arg, Params &result) {
 	} else if (wcscmp(arg, L"--server") == 0) {
 		result.mode = Params::modeServer;
 		return StatePtr();
+	} else if (wcscmp(arg, L"--") == 0) {
+		return &consumeArgv;
 	} else {
 		// This is the same as -i
 		Import i = {
@@ -171,4 +181,5 @@ void help(const wchar_t *cmd) {
 	wcout << cmd << L" -r <path>        - use <path> as the root path." << endl;
 	wcout << cmd << L" --version        - print the current version and exit." << endl;
 	wcout << cmd << L" --server         - start the language server." << endl;
+	wcout << cmd << L" -- <arguments>   - interpret remaining arguments as parameters to the program." << endl;
 }

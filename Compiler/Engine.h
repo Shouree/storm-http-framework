@@ -104,6 +104,7 @@ namespace storm {
 		// A regular util::Lock is used since it needs to be recursive when threads are reused.
 		util::Lock threadLock;
 
+
 		/**
 		 * Packages.
 		 *
@@ -179,7 +180,7 @@ namespace storm {
 		// Get the StdIo object.
 		StdIo *stdIo();
 
-		// Get stdin, stdout and stderr.
+		// Get stdin, stdout and stderr. Note: get/set from Storm using interface in Lib/Io.h.
 		TextInput *stdIn();
 		TextOutput *stdOut();
 		TextOutput *stdError();
@@ -188,6 +189,11 @@ namespace storm {
 		void stdIn(TextInput *to);
 		void stdOut(TextOutput *to);
 		void stdError(TextOutput *to);
+
+		// Get/set argv array. Interface for accessing it is in Lib/Argv.h
+		// These functions are atomic. The getter might return null.
+		Array<Str *> *argv();
+		void argv(Array<Str *> *val);
 
 		// Get 'TypeDesc' objects that are frequently used in the system.
 		code::TypeDesc *ptrDesc();
@@ -263,6 +269,9 @@ namespace storm {
 			TextInput *stdIn;
 			TextOutput *stdOut;
 			TextOutput *stdError;
+
+			// Argv visible to the system.
+			Array<Str *> *argv;
 		};
 
 		GcRoot o;
