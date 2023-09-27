@@ -82,6 +82,7 @@ namespace storm {
 
 		// Absolute path?
 		Bool STORM_FN absolute() const;
+		Bool STORM_FN relative() const { return !absolute(); }
 
 		// Parent directory.
 		Url *STORM_FN parent() const;

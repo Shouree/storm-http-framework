@@ -1,26 +1,189 @@
 use core:io;
 use markdown;
 
-// Main entry-point for generating documentation. Generates documentation for the directory tree att
-// 'root', outputs the resulting HTML files into 'output'.
-void generate(Str title, Str theme, Url root, Url output) {
-	print("Loading documentation from ${root}...");
-	Tree tree(title, root);
-	tree.load();
+// Options when generating documentation.
+class Options {
+	// Title of the documentation as a whole.
+	Str title;
 
-	print("Generating output into ${output}...");
-	print("TODO: Clean up the output directory first?");
-	tree.output(loadTheme(theme), output);
+	// Theme to use for the generated HTML.
+	Str theme;
 
-	print("Done!");
+	// Root of the input markdown tree.
+	Url root;
+
+	// Output location of the generated HTML.
+	Url output;
+
+	// Remove the output directory before generating documentation?
+	Bool clearOutput;
+
+	// No progress output?
+	Bool noProgress;
+
+	// Additional options passed to the theme.
+	Str->Str themeOptions;
+
+	// Create an empty options-set, indented to be filled in later.
+	init() {
+		init {}
+	}
+
+	// Create, specify the most common parameters.
+	init(Str title, Str theme, Url root, Url output) {
+		init {
+			title = title;
+			theme = theme;
+			root = root;
+			output = output;
+			clearOutput = false;
+			noProgress = false;
+		}
+	}
+
+	// Apply an option from the command-line.
+	void applyOption(Str option) {
+		var eq = option.find('=');
+		Str key = option.cut(option.begin, eq);
+		Str val = option.cut(eq + 1);
+
+		if (key == "--clear") {
+			clearOutput = true;
+		} else if (key == "-q" | key == "--quiet") {
+			noProgress = true;
+		} else if (key.startsWith("--")) {
+			themeOptions.put(key.cut(key.start + 2), val);
+		}
+	}
+
+	// Apply options from the array. Returns the first non-processed index.
+	Nat applyOptions(Str[] options, Nat start) {
+		while (start < options.count) {
+			if (!options[start].startsWith("-"))
+				break;
+			applyOption(options[start]);
+			start++;
+		}
+		return start;
+	}
 }
 
+// Remove a tree.
+private void deleteTree(Url root) {
+	for (child in root.children) {
+		deleteTree(child);
+	}
+
+	root.delete();
+}
+
+// Generate documentation programmatically.
+void generate(Options options) {
+	Theme theme = loadTheme(options.theme);
+
+	if (!options.noProgress)
+		print("Loading documentation from ${options.root}...");
+
+	Tree tree(options.title, options.root);
+	tree.load();
+
+	if (options.clearOutput) {
+		if (!options.noProgress)
+			print("Removing contents of ${options.output}...");
+		deleteTree(options.output);
+	}
+
+	if (!options.noProgress)
+		print("Generating output to ${options.output}...");
+
+	tree.output(theme, output);
+
+	if (!options.noProgress)
+		print("Done!");
+}
+
+// Main entry-point for generating documentation from programs.
+// Generates documentation for the directory tree at 'root', and places it in 'output'.
+// 'title' specifies the title of the documentation as a whole.
+// 'theme' specifies what theme to use for the output.
+void generate(Str title, Str theme, Url root, Url output) {
+	generate(Options(title, theme, root, output));
+}
+
+// Print help.
+private void printHelp() {
+	print("Usage: <title> <theme> <input> <output>");
+	print("--quiet, -q - no output");
+	print("--clear     - clear <output> before generating new documentation");
+}
+
+// Main entry point from the command-line.
+Int generate() {
+	Options options;
+	var args = argv;
+	Nat pos = options.applyOptions(args, 0);
+	if (pos >= args.count) {
+		printHelp();
+		return 1;
+	}
+	options.title = args[pos++];
+	pos = options.applyOptions(args, pos);
+	if (pos >= args.count) {
+		printHelp();
+		return 1;
+	}
+	options.theme = args[pos++];
+	pos = options.applyOptions(args, pos);
+	if (pos >= args.count) {
+		printHelp();
+		return 1;
+	}
+	options.root = parsePath(args[pos++]);
+	if (options.root.relative)
+		options.root = cwdUrl / options.root;
+	pos = options.applyOptions(args, pos);
+	if (pos >= args.count) {
+		printHelp();
+		return 1;
+	}
+	options.output = parsePath(args[pos++]);
+	if (options.output.relative)
+		options.output = cwdUrl / options.output;
+	pos = options.applyOptions(args, pos);
+
+	if (pos != args.count) {
+		printHelp();
+		return 1;
+	}
+
+	generate(options);
+	return 0;
+}
 
 // Convenience function to generate the Storm documentation.
-void generate() {
+Int generateStormDoc() {
 	var root = core:lang:rootPkg;
 	if (url = root.url) {
-		var docRoot = url / "..";
-		generate("Storm", "storm", docRoot / "doc", docRoot / "html");
+		var docRoot = url / ".." / "doc";
+		Options options("Storm", "storm", docRoot, Url());
+
+		var args = argc;
+		Nat pos = options.applyOptions(args, 0);
+		if (pos >= args.count) {
+			print("Error: Expected an output path!");
+			return 1;
+		}
+		options.output = parsePath(args[pos++]);
+		if (options.output.relative)
+			options.output = cwdUrl / options.output;
+		pos = options.applyOptions(args, pos);
+		if (pos != args.end) {
+			print("Error: Too many parameters!");
+			return 1;
+		}
+
+		generate("Storm", "storm", docRoot, docRoot / "html");
+		return 0;
 	}
+	return 2;
 }
