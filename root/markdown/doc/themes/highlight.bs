@@ -77,10 +77,20 @@ private TextColor[] findColors(Url srcFile, Str language, Bool partial, Str code
 
 	do {
 		var parser = fileReader.createParser();
-		parser.parseApprox(fileReader.info.contents, fileReader.info.url, fileReader.info.start);
+		if (partial) {
+			parser.parseApprox(fileReader.info.contents, fileReader.info.url, fileReader.info.start);
+		} else {
+			parser.parse(fileReader.info.contents, fileReader.info.url, fileReader.info.start);
+			if (parser.hasError) {
+				print("WARNING: ${srcFile}: Failed to parse the code listing in ${language}:");
+				print(parser.errorMsg);
+				// Recover using error recovery.
+				parser.parseApprox(fileReader.info.contents, fileReader.info.url, fileReader.info.start);
+			}
+		}
 
 		if (parser.hasError) {
-			print("WARNING: ${srcFile}: Failed to parse code listing in ${language}:");
+			print("ERROR: ${srcFile}: Failed to parse code listing in ${language}:");
 			print(parser.errorMsg);
 		}
 

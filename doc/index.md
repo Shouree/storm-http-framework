@@ -24,8 +24,8 @@ More information on the language server can be found
 
 The following example illustrates some of the possibilities of Storm:
 
-```
-?Include:root/presentation/test/simple.bs?
+```bs
+<?include:presentation/test/simple.bs?>
 ```
 
 In this example, we use a language extension that allows creating presentation slides in a

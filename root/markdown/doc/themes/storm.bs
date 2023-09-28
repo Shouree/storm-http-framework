@@ -196,16 +196,22 @@ private Str? findVersion() on Compiler {
  */
 class StormVisitor extends markdown:Visitor {
 
+	// Theme.
 	StormTheme theme;
 
+	// Current node.
 	Node node;
 
+	// Create.
 	init(StormTheme theme, Node node) {
 		init { theme = theme; node = node; }
 	}
 
+	// Visit elements, highligt source blocks.
 	Element visit(Element elem) : override {
 		if (elem as CodeBlock) {
+			resolveIncludes(elem);
+
 			Str language = elem.language;
 			if (language.any) {
 				Bool partial = language.startsWith("partial:");
@@ -219,6 +225,7 @@ class StormVisitor extends markdown:Visitor {
 		elem;
 	}
 
+	// Visit text, add custom info and code.
 	TextSpan visit(TextSpan elem) : override {
 		if (elem as CustomText) {
 			var colon = elem.text.find(':');
@@ -236,6 +243,7 @@ class StormVisitor extends markdown:Visitor {
 		return elem;
 	}
 
+	// Create download button.
 	TextSpan createDownload(Str link) {
 		Html html;
 		html.html("<div class=\"buttonborder\">");
@@ -259,6 +267,7 @@ class StormVisitor extends markdown:Visitor {
 		CustomInlineHtml(html.toS);
 	}
 
+	// Create info node.
 	TextSpan createStormInfo(Str param) {
 		Str text = "";
 		if (param == "version")
@@ -267,6 +276,34 @@ class StormVisitor extends markdown:Visitor {
 			text = theme.date;
 
 		return TextSpan(text);
+	}
+
+	// Resolve includes in source listings.
+	void resolveIncludes(CodeBlock code) {
+		unless (code.code.count == 1)
+			return;
+
+		Str line = code.code[0];
+		unless (line.startsWith("<?include:"))
+			return;
+
+		var end = line.find("?>");
+		unless (end != line.end)
+			return;
+
+		unless (rootPath = lang:rootPkg.url)
+			return;
+
+		Str path = line.cut(line.begin + 10, end);
+		Url file = parsePath(path).makeAbsolute(rootPath);
+		if (!file.exists) {
+			print("WARNING: ${node.source}: File ${file} does not exist.");
+			return;
+		}
+
+		Str text = file.readAllText;
+		code.code.clear();
+		code.code << text;
 	}
 }
 
