@@ -176,11 +176,11 @@ a:hover {
 }
 
 /* Fix nested lists */
-#content li>ul:first-child, #content li>ol:first-child {
-    margin-top: 4px;
+#content li>ul, #content li>ol {
+    margin-top: 0px;
 }
 #content li>ul:last-child, #content li>ol:last-child {
-    margin-bottom: 4px;
+    margin-bottom: 0px;
 }
 
 /* Download buttons */
