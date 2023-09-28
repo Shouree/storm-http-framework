@@ -34,7 +34,7 @@
 
 # Generate documentation
 #Main -a -t markdown.tests
-Main -- -f markdown.doc.generateStormDoc -- --clear html
+Main -a -f markdown.doc.generateStormDoc -- --clear html
 
 # SSL
 #Main -a -f tests.ssl.main

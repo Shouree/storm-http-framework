@@ -80,3 +80,4 @@ root/doc
 
 # Database files (sqlite)
 *.db
+html/

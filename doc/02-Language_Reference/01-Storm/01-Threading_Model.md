@@ -7,7 +7,7 @@ There are two kinds of threads in Storm:
   parallel by different physical CPU cores. It is therefore generally not safe to share data between
   different OS threads without synchronization.
 
-- **User threads**(`UThread`s): Threads implemented in userspace by the Storm runtime. Each UThread
+- **User threads** (`UThread`s): Threads implemented in userspace by the Storm runtime. Each UThread
   belong to an OS thread, and may only be executed by that particular OS thread. User threads are
   cooperatively scheduled, which means that it is often safe to share data between UThreads that are
   belong to the same OS thread. However, some care needs to be taken to ensure that operations that
