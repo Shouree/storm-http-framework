@@ -77,21 +77,23 @@ private TextColor[] findColors(Url srcFile, Str language, Bool partial, Str code
 
 	do {
 		var parser = fileReader.createParser();
-		if (partial) {
-			parser.parseApprox(fileReader.info.contents, fileReader.info.url, fileReader.info.start);
-		} else {
-			parser.parse(fileReader.info.contents, fileReader.info.url, fileReader.info.start);
-			if (parser.hasError) {
+		Bool exact = !partial;
+
+		if (exact) {
+			if (!parser.parse(fileReader.info.contents, fileReader.info.url, fileReader.info.start)) {
 				print("WARNING: ${srcFile}: Failed to parse the code listing in ${language}:");
 				print(parser.errorMsg);
 				// Recover using error recovery.
-				parser.parseApprox(fileReader.info.contents, fileReader.info.url, fileReader.info.start);
+				exact = false;
 			}
 		}
 
-		if (parser.hasError) {
-			print("ERROR: ${srcFile}: Failed to parse code listing in ${language}:");
-			print(parser.errorMsg);
+		if (!exact) {
+			parser.parseApprox(fileReader.info.contents, fileReader.info.url, fileReader.info.start);
+			if (parser.hasError) {
+				print("ERROR: ${srcFile}: Failed to parse code listing in ${language}:");
+				print(parser.errorMsg);
+			}
 		}
 
 		Str:Iter end = fileReader.info.contents.end;

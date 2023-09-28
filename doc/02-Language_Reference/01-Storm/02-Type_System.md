@@ -75,14 +75,29 @@ The semantics are summarized in the table below:
 </table>
 ```
 
+Inheritance
+-----------
+
+Storm supports single inheritance by default. It is possible to create derived types from either of
+the three value types mentioned above. Derived classes have the same value type as the parent. For
+example, a type that inherits from a value has to be a value itself.
+
+While inheritance is supported for all three value types, its usefulness is often limited for value
+types. Since values are copied when they are passed to functions, and in assignments, their dynamic
+type is always equal to the static type. As such, if a derived value type is passed as a parameter
+to a function that accepts an instance of the base type, the copy constructor of the base type will
+be invoked, which effectively only copies that portion of the object. As such, virtual dispatch is
+not meaningful for value types.
+
 
 Virtual Functions
 ------------------
 
 Storm supports virtual functions for classes and actors. When a function in a sub-class overrides a
-function in a base class, Storm utilizes vtable-based virtual dispatch automatically. This will only
-be done for functions that are overridden, so no additional costs are incurred unless the feature is
-used.
+function in a base class, Storm automatically uses vtable-based virtual dispatch. This only happens
+for functions that are overridden, so no additional costs are incurred for other functions in types.
+Furthermore, the switch to dynamic dispatch may happen dynamically, as new types and functions are
+introduced in the system.
 
 A function in a derived class does not have to match a function in a parent class exactly. It is
 possible to accept less specific types in the derived function. However, this means that a single
@@ -92,9 +107,13 @@ contains the function `add(Object)`. However, if the parent class would also con
 (`add(Object)` in this case), the exact match is preferred over inexact matches. This restrictive
 behavior aims to reduce unintentional surprises in the overriding behavior.
 
+As mentioned above, virtual dispatch is not used for value types, since their static type is known
+to match their dynamic type. Therefore, Storm is always able to statically determine which version
+of an overridden function that should be called.
 
-Functions, Types, and Threads
------------------------------
+
+Interaction Between Threads and the Type System
+-----------------------------------------------
 
 For each type and each function in the system, the type system keeps track of which threads are
 allowed to use the function or type. There are three different options:
