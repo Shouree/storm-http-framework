@@ -43,8 +43,13 @@ class StormTheme extends Theme {
 			version = options.get("version");
 			options.remove("version");
 		} else {
-			version = named{core:info:COMPILER}.version.toS;
-			print("WARNING: Missing --version. Using current compiler version: ${version}");
+			if (version = findVersion()) {
+				this.version = version;
+				print("WARNING: Missing --version. Using current compiler version: ${version}");
+			} else {
+				this.version = "0.0.0";
+				print("WARNING: Missing --version. Using version 0.0.0.");
+			}
 		}
 
 		if (options.has("date")) {
@@ -175,6 +180,15 @@ class StormTheme extends Theme {
 		date.cut(date.begin, sep);
 	}
 
+}
+
+// Find the current compiler version. Robust for development builds where the version file does not
+// exist.
+private Str? findVersion() on Compiler {
+	var infoPkg = named{core:info};
+	if (ver = infoPkg.find(lang:SimplePart("COMPILER"), lang:Scope()) as core:info:VersionTag)
+		return ver.version.toS;
+	return null;
 }
 
 /**
