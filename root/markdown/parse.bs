@@ -137,7 +137,7 @@ private parser : parser(backtracking recursive descent) {
 	TextSpan SFmtSpanCommon();
 	SFmtSpanCommon[90] => BoldText(text) : "\*\*" - "[^\n*]+" text - "\*\*";
 	SFmtSpanCommon[80] => ItalicText(text) : "\*" - "[^\n*]+" text - "\*";
-	SFmtSpanCommon[70] => InlineCode(text) : "`" - "[^\n`]+" text - "`";
+	SFmtSpanCommon[70] => InlineCode(text) : "`" - "[^`]+" text - "`";
 	SFmtSpanCommon[60] => Link(text, target) : "\[" - "[^\]]+" text - "\] *(" - "[^\n)]*" target - ")";
 	SFmtSpanCommon[50] => CustomText(text) : "\[" - "[^\]]+" text - "\]";
 	// Escape special characters:
