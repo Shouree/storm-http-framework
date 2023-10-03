@@ -103,6 +103,11 @@ class Node {
 	Node? resolveLink(Url url) {
 		Node current = this;
 
+		// If we're not a directory node, treat the url as relative to our parent.
+		if (!dirNode)
+			if (parent)
+				current = parent;
+
 		if (url.absolute) {
 			unless (url.protocol as MdProtocol)
 				throw InternalError("Only relative Urls and Urls with the md:// protocol are supported!");
@@ -122,6 +127,13 @@ class Node {
 
 	// Find a child that matches the string.
 	private Node? findMatching(Str name) {
+		if (name == "..") {
+			if (p = parent)
+				return p;
+			else
+				return null;
+		}
+
 		for (c in children) {
 			if (c.name == name)
 				return c;
