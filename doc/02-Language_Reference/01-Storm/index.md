@@ -30,7 +30,24 @@ This section covers the following topics:
   organized into namespaces to uniquely name things in Storm. This section also describes how the
   name tree can be traversed and extended by language implementations.
 
-- *Syntax*: General syntax.
+- [Exceptions](md:Exceptions) introduces how exceptions work in Storm in general. It also lists some
+  of the most important parts of the exception hierarchy in Storm.
+
+- [Compilation Model](md:Compilation_Model) describes how code is compiled in Storm. Since Storm is
+  fairly unique in utilizing *lazy compilation*, this can lead to surprises for developers that are
+  familiar with both languages that are compiled ahead of time and dynamic languages, since Storm
+  behaves as if it were somewhere between the two.
+
+- [Packages and Files](md:Packages_and_Files) describes the relation between packages and the
+  filesystem. Of particular importance is the process for determining which language to use when
+  reading different filetypes in the file system.
+
+- [Top Loop](md:Top_Loop) introduces how top loops (REPLs) work in Storm, and how to implement one
+  for a new language.
+
+- [Language Server](md:Language_Server) introduces the language server in Storm. The language server
+  is able to provide syntax highlighting of Storm programs to editors, and to further integrate
+  Storm into your favourite text editor or IDE.
 
 
 This part of the manual aims to provide an overview of high-level concepts. As such, the

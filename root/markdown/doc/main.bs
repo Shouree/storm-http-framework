@@ -1,5 +1,6 @@
 use core:io;
 use markdown;
+use lang:bs:macro;
 
 // Options when generating documentation.
 class Options {
@@ -84,8 +85,12 @@ void generate(Options options) {
 	if (!options.noProgress)
 		print("Loading documentation from ${options.root}...");
 
+	Moment loadStart;
+
 	Tree tree(options.title, options.root);
 	tree.load();
+
+	Moment loadEnd;
 
 	if (options.clearOutput) {
 		if (!options.noProgress)
@@ -96,10 +101,15 @@ void generate(Options options) {
 	if (!options.noProgress)
 		print("Generating output to ${options.output}...");
 
+	Moment outStart;
+
 	tree.output(theme, options.output);
 
-	if (!options.noProgress)
-		print("Done!");
+	Moment outEnd;
+
+	if (!options.noProgress) {
+		print("Done! Loaded sources in: ${loadEnd - loadStart}, outputted HTML in: ${outEnd - outStart}");
+	}
 }
 
 // Main entry-point for generating documentation from programs.
