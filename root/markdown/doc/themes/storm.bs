@@ -218,7 +218,7 @@ class StormVisitor extends markdown:Visitor {
 				if (partial)
 					language = language.cut(language.begin + 8);
 
-				if (highlighted = highlightSource(node.source, language, partial, elem.code.join("\n").toS))
+				if (highlighted = highlightSource(node.source, language, partial, elem.code.join("\n").toS.replaceTabs))
 					return highlighted;
 			}
 		}
@@ -301,12 +301,23 @@ class StormVisitor extends markdown:Visitor {
 			return;
 		}
 
-		Str text = file.readAllText;
+		Str text = file.readAllText.replaceTabs;
 		code.code.clear();
 		code.code << text;
 	}
 }
 
+// Replace tabs with spaces.
+package Str replaceTabs(Str input) {
+	StrBuf out;
+	for (x in input) {
+		if (x == '\t')
+			out << "    ";
+		else
+			out << x;
+	}
+	out.toS;
+}
 
 // Entry point.
 Theme storm() {

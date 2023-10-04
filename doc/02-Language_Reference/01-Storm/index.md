@@ -31,3 +31,10 @@ This section covers the following topics:
   name tree can be traversed and extended by language implementations.
 
 - *Syntax*: General syntax.
+
+
+This part of the manual aims to provide an overview of high-level concepts. As such, the
+documentation typically mentions types that are responsible for certain actions, but does not
+provide details on their exact usage or interface. For details on particular interfaces, the reader
+is referred to the [built-in documentation](md:/Getting_Started/Running_Storm/Help) that is
+available by typing `help <type name>` at the interactive top loop.

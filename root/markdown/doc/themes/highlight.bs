@@ -76,13 +76,27 @@ private TextColor[] findColors(Url srcFile, Str language, Bool partial, Str code
 		return result;
 
 	do {
+		Str:Iter end = fileReader.info.contents.end;
+		var next = fileReader.next(ReaderQuery:parser);
+		if (next)
+			end = next.info.start;
+
 		var parser = fileReader.createParser();
 		Bool exact = !partial;
 
 		if (exact) {
-			if (!parser.parse(fileReader.info.contents, fileReader.info.url, fileReader.info.start)) {
+			Bool ok = parser.parse(fileReader.info.contents, fileReader.info.url, fileReader.info.start);
+			if (ok)
+				ok &= parser.matchEnd >= end;
+
+			if (!ok & parser.hasError) {
+				var error = parser.error;
 				print("WARNING: ${srcFile}: Failed to parse the code listing in ${language}:");
 				print(parser.errorMsg);
+
+				print("Error location is indicated by |> in the text below:");
+				print((fileReader.info.contents.begin + error.pos.start).toS);
+
 				// Recover using error recovery.
 				exact = false;
 			}
@@ -91,23 +105,24 @@ private TextColor[] findColors(Url srcFile, Str language, Bool partial, Str code
 		if (!exact) {
 			parser.parseApprox(fileReader.info.contents, fileReader.info.url, fileReader.info.start);
 			if (parser.hasError) {
+				var error = parser.error;
+
 				print("ERROR: ${srcFile}: Failed to parse code listing in ${language}:");
 				print(parser.errorMsg);
+
+				print("Error location is indicated by |> in the text below:");
+				print((fileReader.info.contents.begin + error.pos.start).toS);
 			}
 		}
-
-		Str:Iter end = fileReader.info.contents.end;
-		var next = fileReader.next(ReaderQuery:parser);
-		if (next)
-			end = next.info.start;
 
 		var tree = parser.infoTree();
 		findColors(result, fileReader.info.start, end, tree);
 
-		if (next)
+		if (next) {
 			fileReader = next;
-		else
+		} else {
 			break;
+		}
 	}
 
 	result;

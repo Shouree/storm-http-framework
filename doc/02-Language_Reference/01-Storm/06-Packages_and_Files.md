@@ -26,7 +26,7 @@ directory. This is done as follows:
    since they have the same extension. If a file `syntax.bnf` also exists, it will be in its own
    group since the extension differs.
 
-2. Create a `Reader` for each group.
+2. Create a `lang.PkgReader` for each group.
 
    The `Package` then creates an instance of the `core.lang.PkgReader` class for each group of
    files. The `PkgReader` class is an abstract class that each language is expected to subclass in
@@ -125,7 +125,22 @@ These are as follows:
 Utilities
 ---------
 
-The `PkgReader` interface is designed to allow for maximum flexibility for languages. As such, it
-makes no assumptions about the content of the files, nor if any files have special meaning.
+The `lang.PkgReader` interface is designed to allow for maximum flexibility for languages. As such,
+it makes no assumptions about the content of the files, nor if any files have special meaning. Due
+to the flexibility, Storm is able to use the standard `PkgReader` interface to load dynamic
+libraries (i.e. `.so` or `.dll`), which are binary files.
 
-**TODO**
+Since many languages consist of text files that can be treated individually, Storm also provides a
+`FilePkgReader` to make this use case more convenient. The `lang.FilePkgReader` class inherits from
+`lang.PkgReader`, so a `FilePkgReader` can be used anywhere Storm expects a plain `PkgReader`.
+
+A `FilePkgReader` treats each file individually, and assumes that all files consist of text that
+will eventually be parsed by some grammar using the system parser. As such, the `FilePkgReader`
+takes care of reading the contents of the files, and creates one `FileReader` that corresponds to
+each file. To support languages where the syntax may change midway through a file (e.g. importing
+new syntax in Basic Storm), each `FileReader` may choose to treat the file as a sequence of
+different *parts*. Each part may have their own syntax, and each part may affect the grammar
+available any parts that follows the current one.
+
+While Storm does not require that the `FilePkgReader` is used, languages that wish to provide syntax
+highlighting in [the language server](md:Language_Server) need to use the `FilePkgReader` interface.

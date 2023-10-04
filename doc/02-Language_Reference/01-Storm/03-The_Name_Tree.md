@@ -82,7 +82,7 @@ Some of these Storm-provided named entities that are of particular importance ar
   packages. In Storm, each package corresponds to a directory in the file system. The root of the
   name tree is a package that corresponds to the `root/` directory in the file system. The `Package`
   class is then responsible for creating `Package` entities for all subdirectories, and loading
-  source code as appropriate. How source files are loaded is described [here](md:Files_and_Packages).
+  source code as appropriate. How source files are loaded is described [here](md:Packages_and_Files).
 
 - `core.lang.Function`:
 
