@@ -180,7 +180,7 @@ SClass => createValue(pos, env, name, body) : "value" #keyword ~ SName name #typ
 
 // Named thread declaration.
 NamedThread SNamedThread();
-SNamedThread => NamedThread(name) : "thread" #keyword ~ SName name, ";";
+SNamedThread => NamedThread(name) : "thread" #keyword ~ SName name #typeName, ";";
 
 // Global variable declaration.
 GlobalVarDecl SGlobalVar(Scope env);
