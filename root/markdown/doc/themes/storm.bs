@@ -275,7 +275,7 @@ class StormVisitor extends markdown:Visitor {
 		else if (param == "date")
 			text = theme.date;
 
-		return TextSpan(text);
+		return PlainTextSpan(text);
 	}
 
 	// Resolve includes in source listings.

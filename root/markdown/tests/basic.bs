@@ -150,3 +150,18 @@ suite MarkdownCode {
 
 	// print(result.toHtml.toS);
 }
+
+suite MarkdownCodeNoSpace {
+	var code = str {
+		Paragraph
+		```c++
+		inline code
+		```
+		END
+	};
+
+	Document result = parse(code);
+	test result.countType(named{CodeBlock}) == 1;
+	test result.countType(named{Paragraph}) == 2;
+}
+

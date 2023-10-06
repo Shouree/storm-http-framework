@@ -99,10 +99,11 @@ private parser : parser(backtracking recursive descent) {
 	SText[90] => heading : SFmtText text - "\n" - parser.special.MinIndent(indent) - SUnderline(text) heading;
 	SText[80] => Paragraph(text) : SParText(indent) text;
 
-	// Match a paragraph.
+	// Match a paragraph. Note: This is recursive since the backtracking parser
+	// does not backtrack multiple iterations in a repetition. That would require
+	// the parser to keep a list of possible backtracking points internally.
 	FormattedText SParText(Nat indent);
-	SParText => FormattedText() :
-		SFmtText -> add - ("\n" -> add - SFmtTextLine(indent) -> add)* - "\n";
+	SParText => FormattedText() : SFmtText -> add - ("\n" -> add - SFmtTextLine(indent))* - "\n";
 
 	// Match the underlined part of a heading.
 	Heading SUnderline(FormattedText text);
@@ -128,20 +129,20 @@ private parser : parser(backtracking recursive descent) {
 
 	TextSpan SFmtSpanFirst();
 	SFmtSpanFirst[10] => x : SFmtSpanCommon x;
-	SFmtSpanFirst[20] => TextSpan(text) : "[^*`\n\[\-+\\][^\n*\[`\\]*" text; // May not start with list characters.
+	SFmtSpanFirst[20] => PlainTextSpan(text) : "[^*`\n\[\]\-+\\][^\n*\[\]`\\]*" text; // May not start with list characters.
 
 	TextSpan SFmtSpan();
 	SFmtSpan[10] => x : SFmtSpanCommon x;
-	SFmtSpan[20] => TextSpan(text) : "[^\n*\[`\\]+" text;
+	SFmtSpan[20] => PlainTextSpan(text) : "[^\n*\[\]`\\]+" text;
 
 	TextSpan SFmtSpanCommon();
-	SFmtSpanCommon[90] => BoldText(text) : "\*\*" - "[^\n*]+" text - "\*\*";
-	SFmtSpanCommon[80] => ItalicText(text) : "\*" - "[^\n*]+" text - "\*";
-	SFmtSpanCommon[70] => InlineCode(text) : "`" - "[^`]+" text - "`";
-	SFmtSpanCommon[60] => Link(text, target) : "\[" - "[^\]]+" text - "\] *(" - "[^\n)]*" target - ")";
-	SFmtSpanCommon[50] => CustomText(text) : "\[" - "[^\]]+" text - "\]";
+	SFmtSpanCommon[90] => BoldText(text) : "\*\*" - SFmtText text - "\*\*";
+	SFmtSpanCommon[80] => ItalicText(text) : "\*" - SFmtText text - "\*";
+	SFmtSpanCommon[70] => InlineCode(text) : "`" - "[^`\n]*" text - "`";
+	SFmtSpanCommon[60] => Link(text, target) : "\[" - SFmtText text - "\] *(" - "[^\n)]*" target - ")";
+	SFmtSpanCommon[50] => CustomText(text) : "\[" - "[^\n\]]+" text - "\]";
 	// Escape special characters:
-	SFmtSpanCommon[40] => TextSpan(text) : "\\" - "." text;
+	SFmtSpanCommon[40] => PlainTextSpan(text) : "\\" - "." text;
 
 	// Extra indentation.
 	Nat SExtraIndent(Nat original);
