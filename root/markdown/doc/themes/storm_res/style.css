@@ -226,6 +226,7 @@ code, code *, pre, pre * {
 
 /* Syntax highlighting */
 pre {
+    margin-top: 8px;
     padding-top: 0.2em;
     padding-bottom: 0.2em;
     padding-left: 0.6em;

@@ -54,6 +54,7 @@ type of the stored element, followed by the actual data. The supported types are
 
 For example, the message `(a 10 a "b")`, or equivalently `(a . (10 . (a . ("b" . nil))))`
 would be encoded as follows:
+
 ```
 0x00                     //       // Start of message.
 0x00 0x00 0x00 0x1F      //       // Length of the message, 31 bytes.

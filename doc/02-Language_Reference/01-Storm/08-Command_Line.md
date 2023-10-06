@@ -115,8 +115,8 @@ packages from the file system. They are as follows:
   distributed with Storm. For example, if you wish to modify the implementation of Basic Storm but
   do not wish to edit files installed in central locations of your system.
 
-  **Note:** Certain parts of [Basic Storm](md:/Language_Reference/Basic_Storm) and [the Syntax
-  Language](md:/Language_Reference/The_Syntax_Language) are implemented outside of the Storm binary.
+  **Note:** Certain parts of [Basic Storm](md:/Language_Reference/Basic_Storm) and
+  [the Syntax Language](md:/Language_Reference/The_Syntax_Language) are implemented outside of the Storm binary.
   As such, specifying an alternate root directory without the appropriate files from the
   distribution will cause them to not function properly. As such, make sure the `lang` directory is
   present in whichever directory you specify with `-r`!

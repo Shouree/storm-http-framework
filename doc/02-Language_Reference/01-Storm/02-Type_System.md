@@ -184,6 +184,7 @@ Storm, and this function makes sure to either clone or call `deepCopy` on any me
 that type.
 
 The `deepCopy` functions are implemented like this:
+
 ```bs
 void deepCopy(CloneEnv env) {
     super.deepCopy(env);

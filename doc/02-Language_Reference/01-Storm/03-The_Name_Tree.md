@@ -145,8 +145,8 @@ which parts of the system is allowed to access a particular `Named`. This mechan
 implement access controls, such as `public` and `private`, but allows more flexibility if desired.
 
 The visibility of a `Named` object is represented by instances of subclasses to the `Visibility`
-class. This class is not much more than a predicate function, `visible(Named check, NameLookup
-source)` that determines if the entity `check` is visible from the `source`. This function is called
+class. This class is not much more than a predicate function, `visible(Named check, NameLookup source)`
+that determines if the entity `check` is visible from the `source`. This function is called
 from the function `Named.visibleFrom` during name lookup to determine visibility. There are a couple
 of default implementations for common keywords provided by Storm. For example, the classes `Public`,
 `TypePrivate`, `TypeProtected`, `PackagePrivate`, etc.

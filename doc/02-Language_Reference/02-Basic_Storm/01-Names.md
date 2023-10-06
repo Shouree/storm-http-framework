@@ -61,8 +61,16 @@ Name Lookup
 
 A name in Basic Storm may appear in two contexts. The first, and simplest, is when a name appears in
 a location where a type name appears. In this case, the name is resolved as-is after any short-hand
-names have been expanded. A name may also appear in an expression, possibly with parameters and in
-conjunction with the member access operator. In general, such a name may have the following form:
+names have been expanded.
+
+A name may also appear in an expression, possibly with parameters and in conjunction with the member
+access operator. To understand the motivation behind the name lookup rules for this case, it is
+important to note that Basic Storm uses *uniform function call syntax*. This means that it is
+possible to call the member `f` of the variable `x` by writing either `f.x()` or `x(f)`. These two
+expressions are almost exactly equivalent. They only differ in which `x` takes priority if there are
+multiple overloads of `x` available.
+
+In general, names that appear in an expression may have the following form:
 
 ```
 a.N<T, U, ...>(b, c, ...)
@@ -80,8 +88,8 @@ optional except for `N`. This means that the following forms are also valid: `N`
 Name lookup then consists of two steps. First, the system decides on one or two names that should be
 resolved in the name tree as follows:
 
-1. If the last part of `N` contain any parameters (i.e. `<T, U, ...>` above), then the name `N<T, U,
-   ...>` has to refer to a type. Any parameters in parentheses are then parameters to the
+1. If the last part of `N` contain any parameters (i.e. `<T, U, ...>` above), then the name `N<T, U, ...>`
+   has to refer to a type. Any parameters in parentheses are then parameters to the
    constructor of the type. For example, the name `core:Array<Int>(1, 0)` refers to the constructor
    of the type `core:Array<core:Int>`. *Note*: The constructor is named `__init` with suitable
    parameters. It is, however, not possible to explicitly call the constructor by name from Basic

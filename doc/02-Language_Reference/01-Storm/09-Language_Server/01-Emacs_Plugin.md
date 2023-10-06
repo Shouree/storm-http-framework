@@ -6,8 +6,8 @@ higher. To use it, simply load it from your `.emacs`-file, using `(load "~/path/
 The plugin is also able to compile Storm using mymake. For this, the file `mm-compile.el` from the
 mymake repository is needed. Aside from loading the plugin, you need to set two variables which tell
 the plugin where to find Storm, and where the directory containing the standard library are located
-(the root directory included in the download). This is done using by adding `(setq
-storm-mode-compiler "~/path/to/Storm.exe")` and `(setq storm-mode-root "~/path/to/root/")` in your
+(the root directory included in the download). This is done using by adding `(setq storm-mode-compiler "~/path/to/Storm.exe")`
+and `(setq storm-mode-root "~/path/to/root/")` in your
 `.emacs`-file after the `load` statement.
 
 After the set up, you can test the plugin by doing `M-x storm-start`, which starts Storm in the

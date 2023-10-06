@@ -60,8 +60,8 @@ If you are interested in Storm and want to learn more, check out some of these s
   syntax extensions to other languages.
 
 * [Libraries](md:/Libraries/) describes some of the libraries included with Storm. For example, a
-  library for creating [GUI applications](md:/Libraries/Gui), for [sound
-  playback](md:/Libraries/Sound), and for making [presentations](md:/Libraries/Presentation).
+  library for creating [GUI applications](md:/Libraries/Gui), for [sound playback](md:/Libraries/Sound),
+  and for making [presentations](md:/Libraries/Presentation).
 
 * [Programs](md:/Programs/) contains documentation on a number of programs written in Storm and
   included in the download. These show what is possible to do in Storm.
