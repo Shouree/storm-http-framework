@@ -72,7 +72,8 @@ package class RegexValue extends Expr {
 			var v = result.location(state);
 			state.l << mov(ptrA, objPtr(data));
 			state.l << add(ptrA, ptrConst(offset));
-			state.l << fnParam(ptrDesc, v);
+			state.l << lea(ptrB, v);
+			state.l << fnParam(ptrDesc, ptrB);
 			state.l << fnParam(ptrDesc, ptrA);
 			state.l << fnCall(result.type.copyCtor, false);
 		}
