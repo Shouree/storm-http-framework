@@ -165,3 +165,23 @@ suite MarkdownCodeNoSpace {
 	test result.countType(named{Paragraph}) == 2;
 }
 
+suite MarkdownMultilineMarkup {
+	var code = str {
+		test *multiline
+		bold* text and `multiline
+		code` in paragraphs
+
+		- list item
+
+		  test [multiline
+		  link text](linktarget)
+		  in the paragraph and `multiline
+		  code` in a list paragraph
+	};
+
+	Document result = parse(code);
+	test result.countType(named{Paragraph}) == 3;
+	test result.countType(named{ItalicText}) == 1;
+	test result.countType(named{InlineCode}) == 2;
+	test result.countType(named{Link}) == 1;
+}

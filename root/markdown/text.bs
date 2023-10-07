@@ -168,6 +168,11 @@ class InlineCode extends TextSpan {
 		init { text = text; }
 	}
 
+	// Create from string buffer.
+	init(StrBuf text) {
+		init { text = text.toS; }
+	}
+
 	// To string.
 	void toS(StrBuf to) : override {
 		to << "`" << text << "`";

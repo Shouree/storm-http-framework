@@ -56,7 +56,7 @@ private parser : parser(backtracking recursive descent) {
 
 	// Match the part after all (possibly additional) indentation has been consumed.
 	Element SElementNoIndent(Nat indent);
-	SElementNoIndent[90] => x : SHashHeading x;
+	SElementNoIndent[90] => x : SHashHeading(indent) x;
 	SElementNoIndent[80] => x : SUList(indent) x;
 	SElementNoIndent[70] => x : SOList(indent) x;
 	SElementNoIndent[60] => x : SCode(indent) x;
@@ -96,12 +96,12 @@ private parser : parser(backtracking recursive descent) {
 
 	// Match a part of text, after indentation. Then figure out what it is.
 	Element SText(Nat indent);
-	SText[90] => heading : SFmtText text - "\n" - parser.special.MinIndent(indent) - SUnderline(text) heading;
+	SText[90] => heading : SFmtText(indent) text - "\n" - parser.special.MinIndent(indent) - SUnderline(text) heading;
 	SText[80] => Paragraph(text) : SParText(indent) text;
 
 	// Match a paragraph.
 	FormattedText SParText(Nat indent);
-	SParText => FormattedText() : SFmtText -> add - "\n" -> add - (SFmtTextLine(indent) -> addLine)*;
+	SParText => FormattedText() : SFmtText(indent) -> add - "\n" - (SFmtTextLine(indent) -> addLine)*;
 
 	// Match the underlined part of a heading.
 	Heading SUnderline(FormattedText text);
@@ -109,8 +109,8 @@ private parser : parser(backtracking recursive descent) {
 	SUnderline => Heading(2, text) : "-+\n";
 
 	// Match a bracket heading (# heading)
-	Element SHashHeading();
-	SHashHeading => Heading(depth, text) : SHashDepth depth - " *" - SFmtText text - "\n";
+	Element SHashHeading(Nat indent);
+	SHashHeading => Heading(depth, text) : SHashDepth depth - " *" - SFmtText(indent) text - "\n";
 
 	Nat SHashDepth();
 	SHashDepth => countChars(text) : "#+" text;
@@ -118,29 +118,39 @@ private parser : parser(backtracking recursive descent) {
 	// Match text, ending in a newline. Assumes that this is an entire line, and does not match new
 	// lists etc.
 	FormattedText SFmtTextLine(Nat indent);
-	SFmtTextLine => FormattedText() : parser.special.MinIndent(indent) - SFmtSpanFirst -> add - (SFmtSpan -> add)* - "\n";
+	SFmtTextLine => FormattedText() : parser.special.MinIndent(indent) - SFmtSpanFirst(indent) -> add - (SFmtSpan(indent) -> add)* - "\n";
 
 	// Match text, ending in a newline. Assumes this is in the middle of the line somewhere, and
 	// does not account for special formatting etc.
-	FormattedText SFmtText();
-	SFmtText => FormattedText() : (SFmtSpan -> add)+;
+	FormattedText SFmtText(Nat indent);
+	SFmtText => FormattedText() : (SFmtSpan(indent) -> add)+;
 
-	TextSpan SFmtSpanFirst();
-	SFmtSpanFirst[10] => x : SFmtSpanCommon x;
+	TextSpan SFmtSpanFirst(Nat indent);
+	SFmtSpanFirst[10] => x : SFmtSpanCommon(indent) x;
 	SFmtSpanFirst[20] => PlainTextSpan(text) : "[^*`\n\[\]\-+\\][^\n*\[\]`\\]*" text; // May not start with list characters.
 
-	TextSpan SFmtSpan();
-	SFmtSpan[10] => x : SFmtSpanCommon x;
+	TextSpan SFmtSpan(Nat indent);
+	SFmtSpan[10] => x : SFmtSpanCommon(indent) x;
 	SFmtSpan[20] => PlainTextSpan(text) : "[^\n*\[\]`\\]+" text;
 
-	TextSpan SFmtSpanCommon();
-	SFmtSpanCommon[90] => BoldText(text) : "\*\*" - SFmtText text - "\*\*";
-	SFmtSpanCommon[80] => ItalicText(text) : "\*" - SFmtText text - "\*";
-	SFmtSpanCommon[70] => InlineCode(text) : "`" - "[^`\n]*" text - "`";
-	SFmtSpanCommon[60] => Link(text, target) : "\[" - SFmtText text - "\] *(" - "[^\n)]*" target - ")";
+	TextSpan SFmtSpanCommon(Nat indent);
+	SFmtSpanCommon[90] => BoldText(text) : "\*\*" - SNestedText(indent) text - "\*\*";
+	SFmtSpanCommon[80] => ItalicText(text) : "\*" - SNestedText(indent) text - "\*";
+	SFmtSpanCommon[70] => InlineCode(text) : "`" - SInlineCode(indent) text - "`";
+	SFmtSpanCommon[60] => Link(text, target) : "\[" - SNestedText(indent) text - "\] *(" - "[^\n)]*" target - ")";
 	SFmtSpanCommon[50] => CustomText(text) : "\[" - "[^\n\]]+" text - "\]";
 	// Escape special characters:
 	SFmtSpanCommon[40] => PlainTextSpan(text) : "\\" - "." text;
+
+	// Nested text that may contain a newline.
+	FormattedText SNestedText(Nat indent);
+	SNestedText[10] => FormattedText() : SFmtText(indent) -> add;
+	SNestedText[50] => FormattedText() : SFmtText(indent) -> add - "\n" - parser.special.MinIndent(indent) - SNestedText(indent) -> addLine;
+
+	// Nested inline code that may contain a newline, but no other spans. Also required to contain
+	// at least one character, otherwise it will be mis-interpreted as a code block.
+	StrBuf SInlineCode(Nat indent);
+	SInlineCode => StrBuf() : "[^`\n]+" -> add - ("\n" -> add - parser.special.MinIndent(indent) - "[^`\n]*" -> add)*;
 
 	// Extra indentation.
 	Nat SExtraIndent(Nat original);
