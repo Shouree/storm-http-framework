@@ -27,6 +27,13 @@ class FormattedText {
 		spans.append(other.spans);
 	}
 
+	// Add another FormattedText object as a line of text.
+	void addLine(FormattedText other) {
+		if (spans.any)
+			add("\n");
+		add(other);
+	}
+
 	// Visit the entire structure.
 	FormattedText visit(Visitor v) {
 		for (i, x in spans)

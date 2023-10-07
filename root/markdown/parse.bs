@@ -99,11 +99,9 @@ private parser : parser(backtracking recursive descent) {
 	SText[90] => heading : SFmtText text - "\n" - parser.special.MinIndent(indent) - SUnderline(text) heading;
 	SText[80] => Paragraph(text) : SParText(indent) text;
 
-	// Match a paragraph. Note: This is recursive since the backtracking parser
-	// does not backtrack multiple iterations in a repetition. That would require
-	// the parser to keep a list of possible backtracking points internally.
+	// Match a paragraph.
 	FormattedText SParText(Nat indent);
-	SParText => FormattedText() : SFmtText -> add - ("\n" -> add - SFmtTextLine(indent))* - "\n";
+	SParText => FormattedText() : SFmtText -> add - "\n" -> add - (SFmtTextLine(indent) -> addLine)*;
 
 	// Match the underlined part of a heading.
 	Heading SUnderline(FormattedText text);
@@ -120,7 +118,7 @@ private parser : parser(backtracking recursive descent) {
 	// Match text, ending in a newline. Assumes that this is an entire line, and does not match new
 	// lists etc.
 	FormattedText SFmtTextLine(Nat indent);
-	SFmtTextLine => FormattedText() : parser.special.MinIndent(indent) - SFmtSpanFirst -> add - (SFmtSpan -> add)*;
+	SFmtTextLine => FormattedText() : parser.special.MinIndent(indent) - SFmtSpanFirst -> add - (SFmtSpan -> add)* - "\n";
 
 	// Match text, ending in a newline. Assumes this is in the middle of the line somewhere, and
 	// does not account for special formatting etc.
