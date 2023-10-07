@@ -190,8 +190,8 @@ class Node {
 		if (parentId > 0)
 			return parent.children[parentId - 1].last();
 
-		// If we were the first, return the previous of our parent.
-		return parent.previous();
+		// If we were the first, return our parent.
+		return parent;
 	}
 
 	// Find the last node the in-order traversal of this hierarchy.
