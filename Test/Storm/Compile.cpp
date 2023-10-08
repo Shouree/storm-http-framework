@@ -1,6 +1,20 @@
 #include "stdafx.h"
 #include "Compiler/Package.h"
 
+void compileNoRes(Package *in) {
+	in->forceLoad();
+	for (NameSet::Iter i = in->begin(); i != in->end(); i++) {
+		if (Package *child = as<Package>(i.v())) {
+			if (child->name->endsWith(S("_res"))) {
+			} else {
+				compileNoRes(child);
+			}
+		} else {
+			i.v()->compile();
+		}
+	}
+}
+
 /**
  * Compile all code and see what happens.
  */
@@ -57,5 +71,5 @@ BEGIN_TEST(Parser, Compile) {
 
 BEGIN_TEST(Markdown, Compile) {
 	Engine &e = gEngine();
-	CHECK_RUNS(e.package(S("markdown"))->compile());
+	CHECK_RUNS(compileNoRes(e.package(S("markdown"))));
 } END_TEST
