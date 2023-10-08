@@ -556,7 +556,7 @@ namespace storm {
 		if (wcscmp(Type::CTOR, fn.name) == 0 || wcscmp(Type::DTOR, fn.name) == 0) {
 			// Check if the type was declared as a simple type.
 			Type *owner = params->at(0).type;
-			if (owner->typeFlags & typeCppSimple)
+			if (owner->typeFlags() & typeCppSimple)
 				// If so, it has a pure constructor.
 				f->makePure();
 		}

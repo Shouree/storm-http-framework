@@ -184,7 +184,10 @@ namespace storm {
 		virtual void STORM_FN toS(StrBuf *to) const;
 
 		// Flags for this type.
-		const TypeFlags typeFlags;
+		TypeFlags STORM_FN typeFlags() const { return myTypeFlags; }
+
+		// Add a flag to the set of type flags.
+		void STORM_FN addTypeFlag(TypeFlags flags);
 
 		// Get a compact description of this type, used to know how this type shall be passed to
 		// functions in the system.
@@ -232,6 +235,10 @@ namespace storm {
 	private:
 		// Special constructor for creating the first type.
 		Type(Engine &e, TypeFlags flags, Size size, GcType *gcType);
+
+		// Type flags. Private copy to prevent arbitrary modifications but allow a limited set of
+		// modifications.
+		TypeFlags myTypeFlags;
 
 		// The description of the type we maintain for the GC. If we're a value type,
 		// this will have 'kind' set to 'tArray'.
@@ -299,7 +306,7 @@ namespace storm {
 		void init(const void *vtable);
 
 		// Is this a value type?
-		inline bool value() const { return (typeFlags & typeValue) == typeValue; }
+		inline bool value() const { return (myTypeFlags & typeValue) == typeValue; }
 
 		// Generate a handle for this type.
 		void buildHandle();

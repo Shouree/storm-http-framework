@@ -508,7 +508,7 @@ namespace storm {
 			*s->l << end(varBlock);
 
 			// Set our VTable.
-			if (type->typeFlags & typeClass) {
+			if (type->typeFlags() & typeClass) {
 				type->vtable()->insert(s->l, dest);
 			}
 

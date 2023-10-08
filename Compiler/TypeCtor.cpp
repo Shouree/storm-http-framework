@@ -18,7 +18,7 @@ namespace storm {
 
 	Bool TypeDefaultCtor::pure() const {
 		// Not a value: not pure!
-		if ((owner->typeFlags & typeValue) != typeValue)
+		if ((owner->typeFlags() & typeValue) != typeValue)
 			return false;
 
 		Array<MemberVar *> *v = owner->variables();
@@ -133,7 +133,7 @@ namespace storm {
 			}
 		}
 
-		if (owner->typeFlags & typeClass) {
+		if (owner->typeFlags() & typeClass) {
 			// Set the VTable.
 			owner->vtable()->insert(l, me);
 		}
@@ -153,7 +153,7 @@ namespace storm {
 
 	Bool TypeCopyCtor::pure() const {
 		// Not a value: not pure!
-		if ((owner->typeFlags & typeValue) != typeValue)
+		if ((owner->typeFlags() & typeValue) != typeValue)
 			return false;
 
 		Array<MemberVar *> *v = owner->variables();
@@ -228,7 +228,7 @@ namespace storm {
 			}
 		}
 
-		if (owner->typeFlags & typeClass) {
+		if (owner->typeFlags() & typeClass) {
 			// Set the VTable.
 			owner->vtable()->insert(l, me);
 		}
@@ -248,7 +248,7 @@ namespace storm {
 
 	Bool TypeAssign::pure() const {
 		// Not a value: not pure!
-		if ((owner->typeFlags & typeValue) != typeValue)
+		if ((owner->typeFlags() & typeValue) != typeValue)
 			return false;
 
 		Array<MemberVar *> *v = owner->variables();

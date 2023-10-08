@@ -44,6 +44,9 @@ namespace storm {
 			// Add a decorator.
 			void STORM_FN decorate(SrcName *decorator);
 
+			// Make the class final.
+			void STORM_FN makeFinal();
+
 		protected:
 			// Load the body lazily.
 			virtual Bool STORM_FN loadAll();

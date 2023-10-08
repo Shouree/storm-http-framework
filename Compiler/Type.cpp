@@ -44,7 +44,7 @@ namespace storm {
 		engine(RootObject::engine()),
 		myGcType(null),
 		tHandle(null),
-		typeFlags(flags & ~typeCpp) {
+		myTypeFlags(flags & ~typeCpp) {
 
 		init(null);
 	}
@@ -54,7 +54,7 @@ namespace storm {
 		engine(RootObject::engine()),
 		myGcType(null),
 		tHandle(null),
-		typeFlags(flags & ~typeCpp) {
+		myTypeFlags(flags & ~typeCpp) {
 
 		init(null);
 	}
@@ -64,7 +64,7 @@ namespace storm {
 		engine(RootObject::engine()),
 		myGcType(null),
 		tHandle(null),
-		typeFlags(flags & ~typeCpp) {
+		myTypeFlags(flags & ~typeCpp) {
 
 		this->pos = pos;
 		init(null);
@@ -75,7 +75,7 @@ namespace storm {
 		engine(RootObject::engine()),
 		myGcType(null),
 		tHandle(null),
-		typeFlags(flags & ~typeCpp) {
+		myTypeFlags(flags & ~typeCpp) {
 
 		this->pos = pos;
 		init(null);
@@ -86,7 +86,7 @@ namespace storm {
 		engine(RootObject::engine()),
 		myGcType(null),
 		tHandle(null),
-		typeFlags(flags | typeCpp),
+		myTypeFlags(flags | typeCpp),
 		mySize(size) {
 
 		if ((flags & typeValue) == 0)
@@ -99,7 +99,7 @@ namespace storm {
 		engine(RootObject::engine()),
 		myGcType(gcType),
 		tHandle(null),
-		typeFlags(flags | typeCpp),
+		myTypeFlags(flags | typeCpp),
 		mySize(size) {
 
 		myGcType->type = this;
@@ -111,7 +111,7 @@ namespace storm {
 		engine(RootObject::engine()),
 		myGcType(gcType),
 		tHandle(null),
-		typeFlags(flags | typeCpp),
+		myTypeFlags(flags | typeCpp),
 		mySize(size) {
 
 		myGcType->type = this;
@@ -121,7 +121,7 @@ namespace storm {
 	// We need to set myGcType->type first, therefore we call setMyType!
 	Type::Type(Engine &e, TypeFlags flags, Size size, GcType *gcType) :
 		NameSet(setMyType(null, this, gcType, e)), engine(e), myGcType(gcType),
-		tHandle(null), typeFlags(typeClass | typeCpp), mySize(size) {
+		tHandle(null), myTypeFlags(typeClass | typeCpp), mySize(size) {
 
 		init(null);
 	}
@@ -138,7 +138,7 @@ namespace storm {
 	}
 
 	void Type::init(const void *vtable) {
-		assert((typeFlags & typeValue) == typeValue || (typeFlags & typeClass) == typeClass, L"Invalid type flags!");
+		assert((myTypeFlags & typeValue) == typeValue || (myTypeFlags & typeClass) == typeClass, L"Invalid type flags!");
 
 		// Generally, we want this on types.
 		flags |= namedMatchNoInheritance;
@@ -162,7 +162,7 @@ namespace storm {
 			return;
 
 		myVTable = new (engine) VTable(this);
-		if (typeFlags & typeCpp) {
+		if (myTypeFlags & typeCpp) {
 			myVTable->createCpp(vtab);
 		} else if (Type *t = super()) {
 			myVTable->createStorm(t->myVTable);
@@ -185,6 +185,20 @@ namespace storm {
 
 		if (myVTable)
 			myVTable->lateInit();
+	}
+
+	void Type::addTypeFlag(TypeFlags flags) {
+		// Mask out `typeClass` and `typeValue`. Can't change them after creation!
+		flags &= ~typeClass;
+		flags &= ~typeValue;
+
+		// Also, information from C++ can not be added after the fact.
+		flags &= ~typeCpp;
+		flags &= ~typeCppPOD;
+		flags &= ~typeCppSimple;
+
+		// Finally, it is safe to update our flags.
+		myTypeFlags |= flags;
 	}
 
 	// Our finalizer.
@@ -261,7 +275,13 @@ namespace storm {
 			return Object::stormType(engine);
 	}
 
-	void Type::setSuper(Type *to) {
+	void Type::setSuper(MAYBE(Type *) to) {
+		if (to && (to->typeFlags() & typeFinal)) {
+			StrBuf *msg = new (engine) StrBuf();
+			*msg << S("Can not inherit from the final type ") << to->identifier() << S(".");
+			throw new (engine) TypedefError(pos, msg->toS());
+		}
+
 		// If 'to' is null: figure out what to inherit from.
 		if (!to)
 			to = defaultSuper();
@@ -308,7 +328,7 @@ namespace storm {
 		}
 
 		// Invalidate the GcType for this type.
-		if (typeFlags & typeCpp) {
+		if (myTypeFlags & typeCpp) {
 			// Type from C++. Nothing to do.
 		} else if (myGcType != null) {
 			// We're not a type from C++.
@@ -320,7 +340,7 @@ namespace storm {
 		// TODO: Invalidate the Layout as well.
 		// TODO: Invalidate the handle as well.
 
-		if ((typeFlags & typeCpp) != typeCpp && !value()) {
+		if ((myTypeFlags & typeCpp) != typeCpp && !value()) {
 			// Re-initialize the vtable.
 			myVTable->createStorm(to->myVTable);
 		}
@@ -427,7 +447,7 @@ namespace storm {
 				updateHandle(f);
 		}
 
-		if ((typeFlags & typeCpp) != typeCpp) {
+		if ((myTypeFlags & typeCpp) != typeCpp) {
 			// Tell the layout we found a new variable!
 			if (!layout)
 				layout = new (engine) Layout();
@@ -919,7 +939,7 @@ namespace storm {
 		}
 
 		// We're on the correct thread. Compute the type!
-		assert(value() || (typeFlags & typeCpp) != typeCpp, L"C++ types should be given a GcType on creation!");
+		assert(value() || (myTypeFlags & typeCpp) != typeCpp, L"C++ types should be given a GcType on creation!");
 
 
 		// Make sure everything is loaded.

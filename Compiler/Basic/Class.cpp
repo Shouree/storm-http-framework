@@ -122,6 +122,10 @@ namespace storm {
 			decorators->push(decorator);
 		}
 
+		void Class::makeFinal() {
+			addTypeFlag(typeFinal);
+		}
+
 		Class::AddState::AddState() : ctor(false), copyCtor(false), deepCopy(false), assign(false) {}
 
 		bool Class::loadAll() {
@@ -165,7 +169,7 @@ namespace storm {
 			if (!added.deepCopy && runOn().state == RunOn::any)
 				add(new (engine) TypeDeepCopy(this));
 
-			if ((typeFlags & typeValue) && !added.assign)
+			if ((typeFlags() & typeValue) && !added.assign)
 				add(new (engine) TypeAssign(this));
 
 			// TODO: Add a default toS for values somehow.

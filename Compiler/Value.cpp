@@ -60,7 +60,7 @@ namespace storm {
 			return false;
 		// Only check inheritance for objects. We don't have to make sure that both are objects,
 		// since 'isA' will fail if one is an object and another is a value.
-		if ((type->typeFlags & typeClass) == typeClass)
+		if ((type->typeFlags() & typeClass) == typeClass)
 			return o->isA(type);
 		return false;
 	}
@@ -98,7 +98,7 @@ namespace storm {
 	}
 
 	Value thisPtr(Type *t) {
-		if ((t->typeFlags & typeValue) == typeValue)
+		if ((t->typeFlags() & typeValue) == typeValue)
 			return Value(t, true);
 		else
 			return Value(t, false);
@@ -180,13 +180,13 @@ namespace storm {
 	Bool Value::isValue() const {
 		if (!type)
 			return false;
-		return (type->typeFlags & typeValue) == typeValue;
+		return (type->typeFlags() & typeValue) == typeValue;
 	}
 
 	Bool Value::isObject() const {
 		if (!type)
 			return false;
-		return (type->typeFlags & typeClass) == typeClass;
+		return (type->typeFlags() & typeClass) == typeClass;
 	}
 
 	Bool Value::isClass() const {
@@ -205,7 +205,7 @@ namespace storm {
 		if (!type)
 			return false;
 
-		if (type->typeFlags & typeClass)
+		if (type->typeFlags() & typeClass)
 			return false;
 
 		// Check if it is a primitive.
@@ -234,7 +234,7 @@ namespace storm {
 	Bool Value::isPtr() const {
 		if (!type)
 			return false;
-		if ((type->typeFlags & typeClass) == typeClass)
+		if ((type->typeFlags() & typeClass) == typeClass)
 			return true;
 		if (code::PrimitiveDesc *desc = as<code::PrimitiveDesc>(type->typeDesc()))
 			return desc->v.kind() == code::primitive::pointer;

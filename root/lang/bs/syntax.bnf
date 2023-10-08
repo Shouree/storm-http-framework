@@ -148,13 +148,16 @@ SFnDeclName => name : ("\*" - SPrePostOp)@ name;
 // A decorator is either defined by custom grammar rules (as for "extends" and "on"), or by creating a function
 // somewhere that accepts a Class (or Type) instance as a parameter. This function will then get the opportunity
 // to modify the class during creation, perhaps injecting and/or modifying members.
-void SClassOption(Class me);
+void SClassOption(Class cls);
 
-// A function.
-SClassOption : SType -> decorate #keyword;
+// Normal options:
+SClassOption => makeFinal(cls) : "final" #keyword;
+
+// A function, last resort if there are no syntax options present:
+SClassOption[-10] => cls : SType -> decorate #keyword;
 
 // Special options.
-SClassOption : SClassSpecialOption(me);
+SClassOption : SClassSpecialOption(cls);
 
 
 // A special option?

@@ -197,6 +197,11 @@ following options are provided by Basic Storm. Extensions may add more options b
   runtime. The thread is specified as the first parameter to all constructors (a `Thread` needs to
   be specified explicitly, and it may not have a name).
 
+- `final`
+
+  Marks the type as *final*, which means that it is not possible for other classes to inherit from
+  the type.
+
 - `serializable`
 
   Requires including `util:serialize`. Adds members required for serialization and deserialization
