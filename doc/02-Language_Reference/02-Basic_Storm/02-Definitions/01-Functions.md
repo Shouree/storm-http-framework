@@ -64,6 +64,40 @@ prioritized if it is called as `set(MyInt(), 5)`. The second difference is that 
 `set` is not able to access any private or protected members of `MyInt`.
 
 
+Assign Functions
+----------------
+
+In Basic Storm, it is possible to mark functions as *assign functions* by specifying the return type
+as `assign`. This causes the return type to be void, and allows the function to appear in the left
+hand side of an assignment. If this happens, Basic Storm transforms the assignment into a call of
+the function instead. Since Basic Storm does not require parentheses when calling functions with
+empty parameter lists, this allows emulating a public member using a plain function as a getter, and
+an assign function as a setter. This can be done for both member functions and free functions. To
+illustrate this, consider the code below:
+
+```bs
+class MyClass {
+    private Nat myValue;
+
+    // Getter function.
+    Nat value() { return myValue; }
+
+    // Setter assignment function.
+    assign value(Nat v) { myValue = v; }
+}
+
+// Usage of assign functions:
+void use() {
+    MyClass x;
+
+    // Calls MyClass:value().
+    Nat tmp = x.value;
+    // Calls MyClass:value(Nat)
+    x.value = tmp;
+}
+```
+
+
 
 Options
 -------
