@@ -58,6 +58,18 @@ link in the list.
   }
   ```
 
+- **[Generators](md:Generators)**
+
+  ```bs
+  use lang:bs:macro;
+
+  generatedType : generate(params) {
+      if (params.count != 1)
+          return null;
+      return Type("generatedType", params, TypeFlags:typeClass);
+  }
+  ```
+
 Syntax extensions may add other types of definitions by adding productions to the `SPlainFileItem`
 for the top-level, or for `SClassWrapItem` for types.
 
