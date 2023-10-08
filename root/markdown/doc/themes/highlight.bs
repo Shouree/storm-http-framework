@@ -48,7 +48,7 @@ private Str? toClass(TokenColor color) {
 	} else if (color == TokenColor:tString) {
 		"string";
 	} else if (color == TokenColor:tConstant) {
-		return null;
+		"constant";
 	} else if (color == TokenColor:tKeyword) {
 		"keyword";
 	} else if (color == TokenColor:tFnName) {

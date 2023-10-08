@@ -75,6 +75,12 @@ The semantics are summarized in the table below:
 </table>
 ```
 
+Finally, a note on references and nullability: Even though classes and actors are handled by
+reference, Storm assumes that references are not `null`. The concept of `null` is instead
+implemented by the type `Maybe<T>`, where `T` may be either a value, a class, or an actor. For
+classes and actors, `Maybe<T>` simply contains a reference that may be `null`, so there is no memory
+overhead for this abstraction.
+
 Inheritance
 -----------
 

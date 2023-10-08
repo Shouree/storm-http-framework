@@ -61,8 +61,9 @@ used if it exists.
 Constructors
 ------------
 
-Basic Storm attempts to ensure that it is not possible to access uninitialized variables. Because of
-this, constructors are treated specially in Basic Storm. They are defined using a special syntax as
+Basic Storm attempts to ensure that it is not possible to access uninitialized variables, and
+thereby accidentally accessing non-nullable types that have the value null. Because of this,
+constructors are treated specially in Basic Storm. They are defined using a special syntax as
 follows:
 
 ```
