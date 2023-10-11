@@ -134,7 +134,7 @@ in general.
 ```bs
 void useClass() {
     MyClass c;
-   c.v = 20; // equivalent to foo.v(20)
-   print(foo.v.toS);
+    c.v = 20; // equivalent to foo.v(20)
+    print(foo.v.toS);
 }
 ```
