@@ -316,8 +316,8 @@ For SForInner(Block block);
 SForInner => For(pos, block) : SExpr(me) -> test, ";", SExpr(me) -> update, ")" [, SStmt(me) -> body]?;
 
 // Range-based for loop.
-SLoop => RangeFor(pos, block, var, in) : "for" #keyword, "(", SName var #varName, "in" #keyword, SExpr(block) in, ")", SStmt(me) -> body;
-SLoop => RangeFor(pos, block, k, v, in) : "for" #keyword, "(", SName k #varName, ",", SName v #varName, "in" #keyword, SExpr(block) in, ")", SStmt(me) -> body;
+SLoop => RangeFor(pos, block, var, in) : "for" #keyword, "(", SName var #varName ~ "in" #keyword ~ SExpr(block) in, ")", SStmt(me) -> body;
+SLoop => RangeFor(pos, block, k, v, in) : "for" #keyword, "(", SName k #varName, ",", SName v #varName ~ "in" #keyword ~ SExpr(block) in, ")", SStmt(me) -> body;
 
 // Unless block.
 Unless SUnless(Block block);
