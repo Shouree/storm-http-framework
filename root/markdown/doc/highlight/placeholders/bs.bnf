@@ -1,4 +1,4 @@
 use lang.bs;
 
 // Placeholders in basic storm.
-SExpr => Expr(pos) : "<[A-Za-z ]+>" #comment;
+SName => x : "<[A-Za-z ]+>" @x;
