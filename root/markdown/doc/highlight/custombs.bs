@@ -1,0 +1,41 @@
+use core:lang;
+use lang:bs:macro;
+
+// Custom highlighting for Basic Storm. Allows specifying what production the language starts at.
+// Additional parameters may be "use=<package>" for additional syntax includes.
+InfoParser? highlight_bsfragment(Str[] parts) on Compiler {
+	Str rule = parts[0];
+	parts.remove(0);
+	highlightBS(rule, parts);
+}
+
+// Custom highlighting for a single segment.
+InfoParser? highlight_bsstmt(Str[] parts) on Compiler {
+	highlightBS("SStmt", parts);
+}
+
+
+// The main logic:
+InfoParser? highlightBS(Str rootRule, Str[] parts) on Compiler {
+	// Find the root rule:
+	Scope root = rootScope();
+	Scope scope = root.child(named{lang:bs});
+	unless (rule = scope.find(parseSimpleName(rootRule)) as lang:bnf:Rule)
+		return null;
+
+	InfoParser parser(rule);
+
+	for (part in parts) {
+		if (part.startsWith("use=")) {
+			if (nameSet = root.find(parseSimpleName(part.cut(part.begin + 4))) as core:lang:Package) {
+				parser.addSyntax(nameSet);
+			} else {
+				print("WARNING: Could not find package for ${part}");
+			}
+		} else if (part == "placeholders") {
+			parser.addSyntax(named{placeholders});
+		}
+	}
+
+	return parser;
+}

@@ -116,7 +116,7 @@ The For Loop
 
 The for loop looks like in C++ and Java:
 
-```
+```bsstmt:placeholders
 for (<initializer>; <condition>; <update>) {
 }
 ```

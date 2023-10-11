@@ -214,11 +214,7 @@ class StormVisitor extends markdown:Visitor {
 
 			Str language = elem.language;
 			if (language.any) {
-				Bool partial = language.startsWith("partial:");
-				if (partial)
-					language = language.cut(language.begin + 8);
-
-				if (highlighted = highlightSource(node.source, language, partial, elem.code.join("\n").toS.replaceTabs))
+				if (highlighted = highlight:highlightSource(node.source, language, elem.code.join("\n").toS.replaceTabs))
 					return highlighted;
 			}
 		}

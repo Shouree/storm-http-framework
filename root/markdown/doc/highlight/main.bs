@@ -1,0 +1,235 @@
+use core:io;
+use core:lang;
+use lang;
+use lang:bnf;
+use lang:bs:macro;
+use markdown;
+
+// Highlight code using the Storm syntax engines. languageSpec is the language specification
+// provided. It is a list of colon-separated tags. The first is assumed to be the name of the
+// language. The remaining ones are passed to the highlighting engine for the language. Languages
+// may be "real" Storm languages, or things that have a function defined in the "highlight" package.
+Element? highlightSource(Url srcFile, Str languageSpec, Str code) on Compiler {
+	TextColor[] colors = findColors(srcFile, languageSpec, code);
+
+	// Something failed...
+	if (colors.empty & code.any)
+		return null;
+
+	Html out;
+	out.html("<pre>");
+	var lastEnd = code.begin;
+	for (x in colors) {
+		if (lastEnd < x.begin)
+			out.text(code.cut(lastEnd, x.begin));
+		lastEnd = x.end;
+
+		Str text = code.cut(x.begin, x.end);
+		if (tokenClass = toClass(x.color)) {
+			out.html("<span class=\"");
+			out.html(tokenClass);
+			out.html("\">");
+			out.text(text);
+			out.html("</span>");
+		} else {
+			out.text(text);
+		}
+	}
+	if (lastEnd < code.end)
+		out.text(code.cut(lastEnd, code.end));
+
+	out.html("</pre>");
+	return CustomHtml(out.toS, true);
+}
+
+// Compute the class of a token.
+private Str? toClass(TokenColor color) {
+	if (color == TokenColor:tComment) {
+		"comment";
+	} else if (color == TokenColor:tDelimiter) {
+		"delimiter";
+	} else if (color == TokenColor:tString) {
+		"string";
+	} else if (color == TokenColor:tConstant) {
+		"constant";
+	} else if (color == TokenColor:tKeyword) {
+		"keyword";
+	} else if (color == TokenColor:tFnName) {
+		"fn-name";
+	} else if (color == TokenColor:tVarName) {
+		"var-name";
+	} else if (color == TokenColor:tTypeName) {
+		"type-name";
+	} else {
+		return null;
+	}
+}
+
+private Str[] splitSpec(Str languageSpec) {
+	Str[] result;
+	var at = languageSpec.begin;
+	while (at != languageSpec.end) {
+		var colon = languageSpec.find(':', at);
+		result << languageSpec.cut(at, colon);
+		at = colon + 1;
+	}
+	return result;
+}
+
+// Find syntax highlighting.
+private TextColor[] findColors(Url srcFile, Str languageSpec, Str code) on Compiler {
+	Str[] parts = splitSpec(languageSpec);
+
+	Bool partial = false;
+	for (i, x in parts) {
+		if (x == "partial") {
+			partial = true;
+			parts.remove(i);
+			break;
+		}
+	}
+
+	TextColor[] output;
+
+	if (parser = findCustomParser(parts)) {
+		output = findColors(srcFile, languageSpec, parser, partial, code);
+	} else if (findColors(output, srcFile, parts[0], partial, code)) {
+		// OK
+	} else {
+		print("WARNING: ${srcFile}: Failed to find syntax highlighting for language: ${parts[0]}");
+	}
+
+	output;
+}
+
+// Find a custom parser implementation, if able.
+private InfoParser? findCustomParser(Str[] parts) on Compiler {
+	SimplePart name("highlight_" + parts[0], Value(named{Str[]}));
+
+	unless (fn = named{}.find(name, Scope()) as Function)
+		return null;
+
+	unless (ptr = fn.pointer as Fn<InfoParser?, Str[]>)
+		return null;
+
+	Str[] copy(parts);
+	copy.remove(0);
+	return ptr.call(copy);
+}
+
+// Find colors of code, using custom parser.
+private TextColor[] findColors(Url srcFile, Str language, InfoParser parser, Bool partial, Str code) on Compiler {
+	TextColor[] out;
+	findColors(out, srcFile, language, parser, partial, code, code.begin, code.end);
+	out;
+}
+
+// Find colors of code, using standard mechanisms.
+private Bool findColors(TextColor[] result, Url srcFile, Str language, Bool partial, Str code) on Compiler {
+	// Create a reader.
+	Url file(["tmp." + language]);
+	unless (name = readerName(language))
+		return false;
+	unless (reader = createReader(name, [file], rootPkg))
+		return false;
+	unless (fileReader = reader.readFile(file, code))
+		return false;
+
+	do {
+		Str:Iter end = fileReader.info.contents.end;
+		var next = fileReader.next(ReaderQuery:parser);
+		if (next)
+			end = next.info.start;
+
+		var parser = fileReader.createParser();
+		findColors(result, srcFile, language, parser, partial, fileReader.info.contents, fileReader.info.start, end);
+
+		if (next) {
+			fileReader = next;
+		} else {
+			break;
+		}
+	}
+
+	return true;
+}
+
+
+// Helper to parse things and generate colors.
+private void findColors(TextColor[] out,
+						Url srcFile, Str language, InfoParser parser, Bool partial,
+						Str code, Str:Iter begin, Str:Iter end) on Compiler {
+	Bool exact = !partial;
+	if (exact) {
+		Bool ok = parser.parse(code, Url(), begin);
+		if (ok)
+			ok &= parser.matchEnd >= end;
+
+		if (!ok & parser.hasError) {
+			var error = parser.error;
+			print("WARNING: ${srcFile}: Failed to parse the code in language: ${language}");
+			print(parser.errorMsg);
+
+			print("Error location is indicated by |> in the text below:");
+			print((code.begin + error.pos.start).toS);
+
+			// Turn on error recovery.
+			exact = false;
+		}
+	}
+
+	if (!exact) {
+		parser.parseApprox(code, Url(), begin);
+		if (parser.hasError) {
+			var error = parser.error;
+
+			print("ERROR: ${srcFile}: Failed to parse code in language: ${language}");
+			print(parser.errorMsg);
+
+			print("Error location is indicated by |> in the text below:");
+			print((code.begin + error.pos.start).toS);
+		}
+	}
+
+	var tree = parser.infoTree();
+	findColors(out, begin, end, tree);
+}
+
+// Find all the colors of the code.
+private Str:Iter findColors(TextColor[] to, Str:Iter start, Str:Iter end, InfoNode node) on Compiler {
+	if (start >= end)
+		return end;
+
+	// We don't need to traverse more than the first color.
+	if (node.color != TokenColor:tNone) {
+		var end = start + node.length();
+		to << TextColor(start, end, node.color);
+		return end;
+	}
+
+	if (node as InfoInternal) {
+		for (Nat i = 0; i < node.count; i++)
+			start = findColors(to, start, end, node[i]);
+		return start;
+	} else {
+		// Skip this node. It is a leaf without color.
+		return start + node.length();
+	}
+}
+
+/**
+ * Color of a range of text.
+ */
+private value TextColor {
+	init(Str:Iter begin, Str:Iter end, TokenColor color) {
+		init {
+			begin = begin;
+			end = end;
+			color = color;
+		}
+	}
+
+	Str:Iter begin;
+	Str:Iter end;
+	TokenColor color;
+}
