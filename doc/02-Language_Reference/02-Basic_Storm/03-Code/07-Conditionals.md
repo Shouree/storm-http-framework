@@ -7,7 +7,7 @@ are used as statements.
 
 This section focuses on the control structures themselves, and therefore only covers simple
 conditions. A condition may also be a *weak cast*, which is described in the section on [type
-casting](md:Type_Casting).
+casting](md:Type_Conversions).
 
 If Statements
 -------------

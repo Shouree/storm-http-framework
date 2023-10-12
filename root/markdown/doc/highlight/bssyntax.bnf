@@ -1,0 +1,11 @@
+use lang.bs;
+
+optional delimiter = SDelimiter;
+required delimiter = SRequiredDelimiter;
+
+// Additional rules for common tasks:
+
+
+// A rule that matches a sequence of statements, with spaces around:
+void BSStmtList();
+BSStmtList : , (SStmt, )*;

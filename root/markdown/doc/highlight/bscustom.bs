@@ -11,23 +11,31 @@ InfoParser? highlight_bsfragment(Str[] parts) on Compiler {
 
 // Custom highlighting for a single segment.
 InfoParser? highlight_bsstmt(Str[] parts) on Compiler {
-	highlightBS("SStmt", parts);
+	highlightBS(named{BSStmtList}, parts);
 }
 
 
 // The main logic:
 InfoParser? highlightBS(Str rootRule, Str[] parts) on Compiler {
 	// Find the root rule:
-	Scope root = rootScope();
-	Scope scope = root.child(named{lang:bs});
+	Scope scope = rootScope.child(named{lang:bs});
 	unless (rule = scope.find(parseSimpleName(rootRule)) as lang:bnf:Rule)
 		return null;
 
-	InfoParser parser(rule);
+	highlightBS(rule, parts);
+}
 
+// Supply a pre-resolved Rule:
+InfoParser highlightBS(lang:bnf:Rule rootRule, Str[] parts) on Compiler {
+	InfoParser parser(rootRule);
+
+	// Add the default syntax in case the root rule is not already in the proper package.
+	parser.addSyntax(named{lang:bs});
+
+	// Add any other syntax we were asked to add.
 	for (part in parts) {
 		if (part.startsWith("use=")) {
-			if (nameSet = root.find(parseSimpleName(part.cut(part.begin + 4))) as core:lang:Package) {
+			if (nameSet = rootScope.find(parseSimpleName(part.cut(part.begin + 4))) as core:lang:Package) {
 				parser.addSyntax(nameSet);
 			} else {
 				print("WARNING: Could not find package for ${part}");

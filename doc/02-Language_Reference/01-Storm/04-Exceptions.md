@@ -8,10 +8,14 @@ function, which is to provide a custom message for the exception when printed.
 Exceptions do not record a stack trace by default since this is a fairly expensive operation. The
 `core.Exception` class contains a `saveTrace` function that records a stack trace into the exception
 that will be printed by the default `toS` implementation. Many of the built-in exceptions in Storm
-represent events that are fatal, and are thereby not expected to be caught and recovered from and
-therefore collect stack-traces by default to aid debugging (in these cases the performance impact is
-less important compared to debuggability). Therefore, classes inheriting from these classes do not
+represent events that are fatal. They are therefore expected to occur rarely, and therefore they
+collect the stack trace by default. Therefore, classes inheriting from these classes do not
 need to call `saveTrace` again.
+
+The class `core.Exception` separates its string representation from the message in the exception.
+Calling `toS` on an exception will include the message and the stack trace if it was captured. It is
+also possible to call `message` to only retrieve the message. As with `toS`, subclasses are expected
+to override the `message(StrBuf)` function to generate the message.
 
 Storm defines the following generic exception classes:
 - `RuntimeError`: Generic runtime errors originating from the runtime system

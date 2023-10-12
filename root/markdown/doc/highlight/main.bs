@@ -5,6 +5,19 @@ use lang:bnf;
 use lang:bs:macro;
 use markdown;
 
+// Highlight code from a Code element.
+Element? highlightSource(Url srcFile, CodeBlock code) on Compiler {
+	if (code.language.empty)
+		return code;
+
+	Str lines = code.code.join("\n").toS.replaceTabs;
+	if (!lines.endsWith("\n")) {
+		// Good idea to end with newlines for comments, etc.
+		lines += "\n";
+	}
+	return highlightSource(srcFile, code.language, lines);
+}
+
 // Highlight code using the Storm syntax engines. languageSpec is the language specification
 // provided. It is a list of colon-separated tags. The first is assumed to be the name of the
 // language. The remaining ones are passed to the highlighting engine for the language. Languages
@@ -232,4 +245,16 @@ private value TextColor {
 	Str:Iter begin;
 	Str:Iter end;
 	TokenColor color;
+}
+
+// Replace tabs with spaces.
+private Str replaceTabs(Str input) {
+	StrBuf out;
+	for (x in input) {
+		if (x == '\t')
+			out << "    ";
+		else
+			out << x;
+	}
+	out.toS;
 }

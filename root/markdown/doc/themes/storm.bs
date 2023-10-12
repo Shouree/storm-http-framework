@@ -212,11 +212,8 @@ class StormVisitor extends markdown:Visitor {
 		if (elem as CodeBlock) {
 			resolveIncludes(elem);
 
-			Str language = elem.language;
-			if (language.any) {
-				if (highlighted = highlight:highlightSource(node.source, language, elem.code.join("\n").toS.replaceTabs))
-					return highlighted;
-			}
+			if (highlighted = highlight:highlightSource(node.source, elem))
+				return highlighted;
 		}
 		elem;
 	}
@@ -297,22 +294,10 @@ class StormVisitor extends markdown:Visitor {
 			return;
 		}
 
-		Str text = file.readAllText.replaceTabs;
+		Str text = file.readAllText;
 		code.code.clear();
 		code.code << text;
 	}
-}
-
-// Replace tabs with spaces.
-package Str replaceTabs(Str input) {
-	StrBuf out;
-	for (x in input) {
-		if (x == '\t')
-			out << "    ";
-		else
-			out << x;
-	}
-	out.toS;
 }
 
 // Entry point.
