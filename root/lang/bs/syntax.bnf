@@ -50,13 +50,13 @@ SName => s : "[A-Za-z_][A-Za-z0-9_]*"@ s;
 
 // Part in a type name.
 NamePart STypePart();
-STypePart => SimplePart(name) : SName name;
-STypePart => SimplePart(name) : SName name, "<", ">";
-STypePart => RecPart(name) : SName name, "<", SType -> add, (",", SType -> add, )* ">";
+STypePart => SimplePart(name) : SName name #typeName;
+STypePart => SimplePart(name) : SName name #typeName, "<", ">";
+STypePart => RecPart(name) : SName name #typeName, "<", SType -> add, (",", SType -> add, )* ">";
 
 // Type.
 SrcName SType();
-SType => SrcName(pos) : STypePart -> add #typeName, (":", STypePart -> add #typeName, )*;
+SType => SrcName(pos) : STypePart -> add, (":", STypePart -> add, )*;
 
 // Array type.
 SType => arrayType(t) : SType t, "\[\]";
