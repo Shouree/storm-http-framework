@@ -127,40 +127,6 @@ class ReferNamed extends Expr {
 	}
 }
 
-Expr exploreType(SrcPos pos, Block block, SrcName typeName) on Compiler {
-	Expr type = createType(pos, block, typeName);
-
-	Expr rootScope = namedExpr(block, name{core:lang:rootScope}, Actuals());
-	Actuals params;
-	params.add(rootScope);
-	params.add(type);
-	Expr named = namedExpr(block, name{core:lang:Scope:find}, params);
-	namedExpr(block, name{lang:bs:macro:exploreType}, Actuals(named));
-}
-
-void exploreType(Maybe<Named> named) on Compiler {
-	if (named) {
-		print("Contents of " # named.identifier() # ":\n");
-		print(explore(named));
-	} else {
-		print("Unknown name");
-	}
-}
-
-Str explore(Named named) on Compiler {
-	if (named as NameSet) {
-		named.forceLoad();
-
-		StrBuf out;
-		for (o in named) {
-			out << o.toS() << "\n";
-		}
-		out.toS();
-	} else {
-		named.toS();
-	}
-}
-
 Expr reloadName(Block block, SrcName typeName) on Compiler {
 	Expr type = createType(typeName.pos, block, typeName);
 	Expr callIt = namedExpr(block, name{lang:bs:macro:reload}, Actuals(type));

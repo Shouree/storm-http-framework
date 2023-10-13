@@ -35,8 +35,8 @@ InfoParser highlightBS(lang:bnf:Rule rootRule, Str[] parts) on Compiler {
 	// Add any other syntax we were asked to add.
 	for (part in parts) {
 		if (part.startsWith("use=")) {
-			if (nameSet = rootScope.find(parseSimpleName(part.cut(part.begin + 4))) as core:lang:Package) {
-				parser.addSyntax(nameSet);
+			if (pkg = rootScope.find(parseSimpleName(part.cut(part.begin + 4))) as core:lang:Package) {
+				parser.addSyntax(pkg);
 			} else {
 				print("WARNING: Could not find package for ${part}");
 			}

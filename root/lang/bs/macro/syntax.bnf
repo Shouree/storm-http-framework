@@ -17,9 +17,6 @@ SAtom => referNamed(pos, block) : "named" #keyword, "{", "}";
 // Special case for absolute "paths".
 SAtom => referNamedAbs(pos, block, name) : "named" #keyword, "{", ":", SType name, "}";
 
-// Output a type.
-SExpr => exploreType(pos, block, type) : "explore" #keyword, "{", SType type, "}";
-
 // Reload a package (TODO: Nicer syntax!)
 SExpr => reloadName(block, type) : "reload" #keyword, "{", SType type, "}";
 
