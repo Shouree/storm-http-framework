@@ -71,20 +71,17 @@ class StormTheme extends Theme {
 		Html out;
 		out.html("<ul id=\"menu\">\n");
 		out.indent();
-		createMenu(out, tree.root, "");
+		createMenu(out, tree.root);
 		out.dedent();
 		out.html("</ul>");
 		out.toS;
 	}
 
 	// Create menu, recursive helper.
-	private void createMenu(Html out, Node current, Str path) {
+	private void createMenu(Html out, Node current) {
 		for (child in current.children) {
 			out.html("<li><a href=\"<?path?>");
-			if (child.dirNode)
-				out.text("${path}${child.name}/index.html");
-			else
-				out.text("${path}${child.name}.html");
+			out.text(child.absOutputPath.format());
 			out.html("\">");
 			out.text(child.title);
 			out.html("</a>");
@@ -93,7 +90,7 @@ class StormTheme extends Theme {
 				out.indent();
 				out.html("\n<ul>\n");
 				out.indent();
-				createMenu(out, child, "${path}${child.name}/");
+				createMenu(out, child);
 				out.dedent();
 				out.html("\n</ul>\n");
 				out.dedent();

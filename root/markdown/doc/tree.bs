@@ -15,6 +15,9 @@ class Node {
 	// Is this node a directory? (i.e. should this file be named "index" in the output?).
 	Bool dirNode;
 
+	// Strip numbers in the output?
+	Bool stripNumbers;
+
 	// Depth of this node in the tree. I.e. how many parent nodes exist.
 	Nat depth;
 
@@ -88,7 +91,7 @@ class Node {
 	// Helper to find the path.
 	private Url absOutputPathI() {
 		if (parent) {
-			parent.absOutputPathI / name;
+			parent.absOutputPathI / if (stripNumbers) { title; } else { name; };
 		} else {
 			Url();
 		}
@@ -203,6 +206,8 @@ class Node {
 
 	// Load this node and all children. 'treePath' is the relative path in the tree.
 	void load(Tree tree) {
+		stripNumbers = tree.stripNumbers;
+
 		if (content.empty)
 			content = loadDocument(tree, this, source);
 
@@ -261,10 +266,14 @@ class Tree {
 	// Root node of the tree.
 	Node root;
 
+	// Strip numbers from md-files in the output?
+	Bool stripNumbers;
+
 	// Create the tree.
-	init(Str title, Url rootDir) {
+	init(Str title, Url rootDir, Bool stripNumbers) {
 		init {
 			root(rootDir.updated(), null);
+			stripNumbers = stripNumbers;
 		}
 
 		root.name = title;
