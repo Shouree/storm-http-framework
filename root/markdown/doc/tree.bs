@@ -91,7 +91,14 @@ class Node {
 	// Helper to find the path.
 	private Url absOutputPathI() {
 		if (parent) {
-			parent.absOutputPathI / if (stripNumbers) { title; } else { name; };
+			Str fileTitle = name;
+			if (stripNumbers) {
+				var dash = fileTitle.find('-');
+				if (dash != fileTitle.end)
+					fileTitle = fileTitle.cut(dash + 1);
+			}
+
+			parent.absOutputPathI / fileTitle;
 		} else {
 			Url();
 		}

@@ -130,7 +130,7 @@ class StormTheme extends Theme {
 		}
 
 		titles.reverse();
-		join(titles, " -> ").toS();
+		join(titles, " → ").toS();
 	}
 
 	// Create navigation.
