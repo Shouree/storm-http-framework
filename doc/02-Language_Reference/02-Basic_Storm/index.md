@@ -8,7 +8,10 @@ illustrate how Storm works in general, and to explore Storm itself.
 
 Basic Storm itself is an imperative language, with syntax that resembles C++ and Java. As such,
 developers that are familiar with these languages are likely to be able to pick up Basic Storm
-quickly.
+quickly. Furthermore, Basic Storm aims to be a memory-safe language. References may not be null by
+default, and any references that may contain null need to be explicitly checked for null before they
+can be accessed. To achieve this, Basic Storm guarantees that variables are properly initialized
+before they can be accessed (especially in constructors).
 
 Apart from closely matching the capabilities of Storm itself, Basic Storm have two additional
 qualities that illustrate the possibilities of the platform. First, Basic Storm is extensible. This

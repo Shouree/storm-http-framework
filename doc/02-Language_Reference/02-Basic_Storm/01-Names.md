@@ -39,7 +39,6 @@ Basic Storm provides a number of short-hand names for common types as follows:
 - `T?` is short for `Maybe<T>` (either `T` or `null`)
 - `K->V` is short for `Map<K, V>` (a hash map from `K` to `V`)
 - `fn(...)->T` is short for `Fn<T, ...>` (a function with parameters `...` and return value `T`).
-  Both of `...` and `->T` may be omitted.
 
 Additional type aliases can be added by providing additional productions for the rule
 `lang.bs.SType`.
