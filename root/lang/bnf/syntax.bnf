@@ -33,15 +33,15 @@ SIdent => v : "[A-Za-z_][A-Za-z0-9_]*" v;
 
 // Type names.
 NamePart SNamePart();
-SNamePart => SimplePart(name) : SIdent name;
-SNamePart => SimplePart(name) : SIdent name, "<", ">";
-SNamePart => RecPart(name) : SIdent name, "<", SName -> add, (",", SName -> add, )* ">";
+SNamePart => SimplePart(name) : SIdent name #typeName;
+SNamePart => SimplePart(name) : SIdent name #typeName, "<", ">";
+SNamePart => RecPart(name) : SIdent name #typeName, "<", SName -> add #typeName, (",", SName -> add #typeName, )* ">";
 
 SrcName SName();
-SName => SrcName(pos) : SNamePart -> add #typeName - (, "\.", SNamePart -> add #typeName)*;
+SName => SrcName(pos) : SNamePart -> add - (, "\.", SNamePart -> add)*;
 
 Array<SrcName> SUse();
-SUse => Array<SrcName>() : (, "extend" #keyword, SName -> push #typeName, ";")*;
+SUse => Array<SrcName>() : (, "extend" #keyword, SName -> push, ";")*;
 
 FileContents SRoot();
 SRoot => FileContents() : (SDocFileItem -> push, ";")* - SDelim;
@@ -51,11 +51,11 @@ SDocFileItem[0] => f : SDelim - SFileItem f;
 SDocFileItem[5] => applyDoc(d, f) : SFindDoc d - SFileItem f;
 
 FileItem SFileItem();
-SFileItem => UseDecl(pkg) : "use" #keyword ~ SName pkg #typeName;
-SFileItem => allDecl(token) : "delimiter" #keyword, "=", SName token #typeName;
-SFileItem => requiredDecl(token) : "required" #keyword ~ "delimiter" #keyword, "=", SName token #typeName;
-SFileItem => optionalDecl(token) : "optional" #keyword ~ "delimiter" #keyword, "=", SName token #typeName;
-SFileItem => RuleDecl(pos, name, result) : SName result #typeName, SIdent name #fnName, SFormals -> push - (, SColorName -> pushColor)?;
+SFileItem => UseDecl(pkg) : "use" #keyword ~ SName pkg;
+SFileItem => allDecl(token) : "delimiter" #keyword, "=", SName token;
+SFileItem => requiredDecl(token) : "required" #keyword ~ "delimiter" #keyword, "=", SName token;
+SFileItem => optionalDecl(token) : "optional" #keyword ~ "delimiter" #keyword, "=", SName token;
+SFileItem => RuleDecl(pos, name, result) : SName result, SIdent name #fnName, SFormals -> push - (, SColorName -> pushColor)?;
 SFileItem => ProductionDecl(pos, member, parent) : SParentReq parent, SName member, SPriority -> pushPrio [, ("=>", SExpr(me),)? ":", SRepIndentTokens(me) - SProdName(me)]+;
 
 Maybe<SrcName> SParentReq();
@@ -66,8 +66,8 @@ SFormals => Array<ParamDecl>() : "(", ")";
 SFormals => Array<ParamDecl>() : "(", SFormal -> push, (",", SFormal -> push,)* ")";
 
 ParamDecl SFormal();
-SFormal[0] => ParamDecl(type, name) : SName type #typeName, SIdent name #varName;
-SFormal[1] => ParamDecl(type, name) : SName type #typeName, "me" name #keyword;
+SFormal[0] => ParamDecl(type, name) : SName type, SIdent name #varName;
+SFormal[1] => ParamDecl(type, name) : SName type, "me" name #keyword;
 
 Int SPriority();
 SPriority => 0 : ;
