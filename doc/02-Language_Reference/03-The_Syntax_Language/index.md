@@ -1,9 +1,10 @@
 The Syntax Lanugage
 ===================
 
-The Syntax Language is one of the two languages that are built into Storm by default. In contrast to
-Basic Storm, the Syntax Language is not a general purpose language. Rather, it is a domain specific
-language for declaring BNF grammar and transforms that specifies how to interpret the grammar.
+The Syntax Language is one of the two languages that are built into Storm by default. It is stored
+in files with the extension `bnf`. In contrast to Basic Storm, the Syntax Language is not a general
+purpose language. Rather, it is a domain specific language for declaring BNF grammar and transforms
+that specifies how to interpret the grammar.
 
 As with Basic Storm, the Syntax Language is designed to be extensible. For example, it is possible
 to create syntax extensions to the Syntax Language in itself and Basic Storm. Furthermore, the

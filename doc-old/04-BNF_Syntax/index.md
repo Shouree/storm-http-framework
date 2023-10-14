@@ -28,61 +28,10 @@ have the form 'x.y.z' and allow accessing members (such as member variables and 
 addition to plain variables. The only type of literals currently implemented are numeric literals
 and booleans, which are expanded to `core.Int` and `core.Bool` respectively.
 
-Comments
----------
-
-Comments can be included anywhere. Comments start with `//` like in C++, and continues to the end of
-the line. C-style comments are not supported in the syntax language.
-
-
-Rules
-------
-
-Rules need to be declared. Declaring a rule takes the form:
-
-`<result> <name>(<params>);`
-
-Where `<params>` is a parameter list as it would be expressed in C. `<result>` is the return type of
-the rule. The rule always lives in the package where the syntax file is located.
-
-The result and the parameters are important for the [Syntax Transforms](md://BNF_Syntax/Syntax_Transforms)
-later on.
-
 
 Productions
 ------------
 
-Productions (possible matches for a rule) are declared using the following syntax:
-
-`<name> => <result> : <tokens>;`
-
-__or__
-
-`<name>[<priority>] => <result> : <tokens>;`
-
-__or__
-
-`<name> : <tokens>;`
-
-__or__
-
-`<name>[<priority>] : <tokens>;`
-
-
-Where `<name>` is the name of the rule this production is a part of (fully qualified if
-required), `<result>` is a function call or a variable name that contains the value that should be
-returned from this production when matched. It can be omitted if the rule is declared to return
-`void`. `<tokens>` is the sequence of tokens the production contains. The optional `<priority>` is a
-number indicating the priority of this production. If it is left out, the production is given priority 0.
-Higher priority is executed before rules with a lower priority, so rules with higher priority are
-more greedy than ones with lower priority.
-
-The tokens for the rule is a list of tokens separated with one out of three supported delimiters
-(`-`, `,` or `~`, see *Delimiters* below). Each token is either:
-
-* `<name>` - the name of another rule.
-* `<name>(<params>)` - the name of another rule, giving parameters to the rule.
-* `"regex"` - a regular expression.
 
 Each token is optionally followed by an indication of what to do with the match. This is either just
 a name, which means that the parser should bind the match to that variable, or an arrow (`->`)
@@ -97,78 +46,6 @@ because of this, it is useless to specify parameters along with `@`. When a `@` 
 regex, the resulting type is `SStr` instead of `Str`. See [Syntax Transforms](md://BNF_Syntax/Syntax_Transforms)
 for more details on syntax transforms.
 
-
-Delimiters
-----------
-
-Each token is separated by one of three possible delimiters. These delimiters behave differently,
-and are shorthands for different behaviors that are commonly used when writing grammars.
-
-The dash (`-`) is the simplest of the separator. It is simply used to separate different tokens in
-the grammar, and does not otherwise impact what is matched by the grammar. For example, in the
-example below, the rules `A` and `B` are equivalent, and both match the string `ab`.
-
-```
-void A();
-A : "a" - "b";
-
-void B();
-B : "ab";
-```
-
-The other two separators match a pre-defined rule whenever they appear in a production. The comma
-(`,`) is intended for cases where whitespace is allowed, but not required. It is therefore called
-the `optional delimiter`. In order to use it, it is necessary to specify which rule is to be used to
-match whitespace in this particular language. This is done in a file-by-file basis using the
-following syntax:
-
-`optional delimiter = <rule name>;`
-
-For example, the rules `A` and `B` below are equivalent, and both are equivalent to the regex `a[ \t]*b`:
-
-```
-optional delimiter = Whitespace;
-
-void Whitespace();
-Whitespace : "[ \t]";
-
-void A();
-A : "a", "b";
-
-void B();
-B : "a" - Whitespace - "b";
-```
-
-Finally, the tilde (`~`) works similar to the comma mentioned previously, but is instead intended
-for cases where some amount of whitespace is required, and is called the `required delimiter`. It is
-used in a similar fashion to the comma separator, as illustrated below. This example also attempts
-to illustrate why it is useful to have the two separators by declaring the grammar for a simple
-class declaration. Here, we want to allow `class A{}`, `class  A { }`, but not `classA{}`.
-
-```
-optional delimiter = Optional;
-required delimiter = Required;
-
-void Optional();
-Optional : " *";
-
-void Required();
-Required : " +";
-
-void ClassDecl();
-ClassDecl : "class" ~ "[A-Za-z]+", "{", "}";
-```
-
-When writing syntax for a language, it is often convenient to include the comment syntax as a part
-of the delimiter rules, which makes it possible to insert comments at any point in the grammar where
-whitespace is allowed.
-
-It is also possible to set both delimiters to the same rule in one go, by writing:
-
-`delimiter = <rule name>;'
-
-This is mostly intended for backwards compatibility with syntax written before the required
-delimiter was introduced.
 
 
 Repitition

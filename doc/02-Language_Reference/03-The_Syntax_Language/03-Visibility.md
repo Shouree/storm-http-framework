@@ -32,4 +32,4 @@ Content : "content";
 
 If a parser is created that parses the rule `Start`, then it will not match any strings since the
 rule `Content` has no productions that are visible. For the production in package `b` to be usable,
-it is necessary to include package `b` in the parser also.
+it is necessary to also include package `b` in the parser.
