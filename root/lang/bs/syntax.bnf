@@ -142,7 +142,7 @@ SFnDeclName => name : (SOperator)@ name;
 SFnDeclName => name : (SPreOp)@ name;
 SFnDeclName => name : (SPrePostOp - "\*")@ name;
 SFnDeclName => name : ("\*" - SPrePostOp)@ name;
-
+SFnDeclName => name : "\[\]"@ name;
 
 // A decorator that can be applied to a class.
 // A decorator is either defined by custom grammar rules (as for "extends" and "on"), or by creating a function

@@ -138,3 +138,13 @@ void useClass() {
     print(foo.v.toS);
 }
 ```
+
+Array Access
+------------
+
+The array access operator (`[]`) is special in that it is not an inline operator, but rather it
+works similarly like function calls. It is typically used to access elements in array-like types as
+follows: `array[3]`. It is possible to overload it using the name `[]`.
+
+
+
