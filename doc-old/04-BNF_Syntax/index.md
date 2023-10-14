@@ -1,40 +1,6 @@
 BNF Syntax
 ============
 
-This is the syntax language that is implemented in the compiler itself. It is used to implement the
-syntax of [Basic Storm](md://Basic_Storm), and can also be used to extend it or implement new
-languages. Please refer to [Syntax](md://Storm/Syntax) for an explanation of the syntax system in
-the compiler and its semantics. This section will only discuss how syntax is represented using this
-language.
-
-Input
--------
-
-To use the BNF Syntax language, create a text file with the extension `bnf`. BNF Syntax is read
-using the standard text input in Storm, and therefore supports everything that is described
-[here](md://Storm/Text_IO).
-
-Name lookup and types
-----------------------
-
-The syntax language uses a `.` for separating names in types (in contrast to Basic Storm) and `<>`
-to indicate parameters to a name part. When writing function calls `()` are used, just as in C. Note
-that due to the implementation of names in Storm, it is not possible to combine `<>` with `()` like
-this: `foo<Int>(a, b)`. There is an exception to this rule in constructor calls. Constructor calls
-are written like: `Type(a, b)`. This really means `Type.__ctor(a, b)`, so in this special case,
-`Type<Int>(a, b)` is perfectly legal, as it means `Type<Int>.__ctor(a, b)`.
-
-Types are looked up in the following order in the BNF language:
-1. the current package
-2. any `use`d packages
-3. the core package
-4. the root package
-
-The type `SStr` is always visible, even if the package `core.lang` is not visible.
-
-Also note that, compared to Basic Storm, it is not possible to omit the parenthesis in a function
-call in the syntax language. That makes the syntax language think you are referring to a variable
-instead.
 
 Extensibility
 --------------
@@ -68,12 +34,6 @@ Comments
 Comments can be included anywhere. Comments start with `//` like in C++, and continues to the end of
 the line. C-style comments are not supported in the syntax language.
 
-Visibility
------------
-
-All productions that can be resolved from the `use`d packages (in Basic Storm, any use statements in the
-`.bs`-file are included) are visible and considered during the parsing process. Currently everything
-declared in the syntax language is considered `public`.
 
 Rules
 ------

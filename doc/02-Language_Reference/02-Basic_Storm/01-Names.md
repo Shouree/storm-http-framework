@@ -1,7 +1,7 @@
 Names in Basic Storm
 ====================
 
-Names in Basic Storm are similar to the [generic syntax](md:../Storm/Names) of Storm. The syntax of
+Names in Basic Storm are similar to the [generic syntax](md:../Storm/Names) in Storm. The syntax of
 names are, however, altered slightly to allow using the dot `.` operator for member access, like C++
 and Java. The difference from the generic Storm syntax is as follows:
 
@@ -30,7 +30,7 @@ To illustrate the syntax, consider the following examples:
 - `core:Array<core:Int>` is the name of the `Array` type for the `Int` type.
 
 
-Short-hand Names
+Short-Hand Names
 ----------------
 
 Basic Storm provides a number of short-hand names for common types as follows:
