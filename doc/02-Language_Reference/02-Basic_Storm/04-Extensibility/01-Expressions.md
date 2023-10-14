@@ -1,13 +1,18 @@
-Extensibility
-=============
+Expressions
+===========
 
 Basic Storm is an extensible language, and it is thus possible to develop language extensions for
 it. This is done by creating a production that extends a suitable rule of the Basic Storm syntax. To
 create new expressions, extend the rule `lang:bs:SExpr`. To create new statements (i.e. expressions
 that do not need to end with a semicolon), extend the rule `lang:bs:SStmt`. Both of these rules are
 expected to return a value of type `lang:bs:Expr`, which is the central class that represents an
-expression in Basic Storm. The `Expr` class have the following members that are relevant when
-developing an extension:
+expression in Basic Storm. As such, an extension may either create an abstract syntax tree that
+consists of existing classes in Basic Storm, or create a new abstract syntax tree node that
+implements the desired behavior. The latter is done by simply inheriting from the `Expr` class (or
+any of its subclasses).
+
+The `Expr` class have the following members that are relevant when developing an extension. Both
+when implementing new expression classes, and when inspecting the abstract syntax tree:
 
 - `result`
 

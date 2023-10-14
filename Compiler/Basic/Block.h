@@ -12,7 +12,7 @@ namespace storm {
 		class BlockLookup;
 
 		/**
-		 * A basic block. This block only acts as a new scope for variables. It
+		 * A fundamental block. This block only acts as a new scope for variables. It
 		 * is abstract to let other types of expressions act as some kind of block
 		 * for variables.
 		 */
@@ -106,7 +106,7 @@ namespace storm {
 			virtual void STORM_FN toS(StrBuf *to) const;
 
 			// Expressions here.
-			Array<Expr *>*exprs;
+			Array<Expr *> *exprs;
 		};
 
 
