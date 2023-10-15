@@ -80,7 +80,9 @@ return value. It is specified as follows:
 The return value is not an arbitrary expression. It is limited to one of the following forms:
 
 - A single identifier. The name should refer to either a formal parameter in the rule, or a captured
-  token in the production.
+  token in the production. Note that the variable `pos` is always available. It is a member of
+  `lang:bnf:Node`, from which all nodes in the parse tree inherit. It represents the position in the
+  source text where the entire production matched.
 
 - A literal. Integer and boolean literals are supported.
 
@@ -116,6 +118,22 @@ data structure that is passed as a parameter), the final step of the transform f
 execute the transform functions of any captured rule tokens that were given parameters. To be able
 to access these tokens, they are also captured in the parse tree, but with a name that is generally
 not accessible to languages.
+
+Finally, a few words on evaluation order of the transforms in a production. Since rule tokens might
+require parameters when transformed, and since the Syntax Language allows arbitrary parameters to
+the transform functions, it is not possible to specify one particular evaluation order. Rather, the
+Syntax Language takes what can be thought of as a lazy approach. As stated above, it first attempts
+to create the return value. If the return value is a function call or refers to a captured token,
+this might involve transforming some captured rule tokens. If this is the case, they are evaluated
+before the return value is created. Similarly, this evaluation might require other tokens to be
+evaluated, etc. As such, the system transforms the tokens necessary to create the return value
+first. Afterwards, the system transforms any remaining captured tokens that need to be transformed
+from left to right. To summarize, the order is generally left-to-right, but dependencies between
+parameters in the return value or in parameters to transform functions might cause tokens to be
+evaluated earlier. The avid reader might have noticed that it is possible to create dependency
+cycles in the syntax transforms. The system will detect these and report an error, but due to the
+lazy nature of Storm, this might not happen until the transform function is executed for the first
+time.
 
 
 ### Example 1 - Matching substrings
@@ -310,12 +328,143 @@ class Base extends RemoveImpl {
 ```
 
 
-
-
 Capturing the Raw Parse Tree
 ----------------------------
 
+By default, the transform functions always transform any captured syntax trees before using them. In
+some situations, especially when working with lazy compilation, it is desirable to delay
+transformation of a part of the parse tree until a later time. For example, this is used to delay
+transformation of function bodies in Basic Storm, and to implement
+[patterns](md:../Basic_Storm/Extensibility/Metaprogramming) in Basic Storm.
+
+The raw syntax tree can be captured by prepending an `@` character to the name associated with a
+captured token, or with the name of the member called. This causes the generated transform function
+to not transform the captured syntax tree, and instead uses the parse tree directly. As such, it is
+not relevant to pass any parameters to such a transform function.
+
+For example, it is possible to capture and print the parse tree of a Basic Storm expression as follows:
+
+```bnf
+optional delimiter = lang.bs.SDelimiter;
+
+lang.bs.SExpr => printExpr(block, expr) : "print", "{", lang.bs.SExpr @expr, "}";
+```
+
+And in Basic Storm, we can print the expression and then transform it manually. Note that the
+`printExpr` function receives a `SExpr` (i.e. the parse tree) rather than `Expr` (the transformed
+AST node).
+
+```bs
+use lang:bs;
+
+Expr printExpr(Block block, SExpr parseTree) on Compiler {
+    print(parseTree.toS);
+    return parseTree.transform(block);
+}
+```
 
 
-Extending the Parse Tree
-------------------------
+Modifying and Extending the Parse Tree
+--------------------------------------
+
+Since nodes in the parse tree appear as classes in the name tree, it is possible to inspect and
+extend them from other parts of the system. For example, this is utilized in Basic Storm's
+implementation of patterns.
+
+To illustrate the idea, consider the following example:
+
+```bnf
+optional delimiter = SDelimiter;
+
+void SDelimiter();
+SDelimiter : " *";
+
+Int SNumbers();
+SNumbers => x : SNumber x = SSingleNumber;
+SNumbers => +(a, b) : SNumber a, "\+", SNumbers b = SNumberSum;
+
+Int SNumber();
+SNumber => toInt(match) : "[0-9]+" match = SIntNumber;
+```
+
+As shown before, we can parse a string in Basic Storm and get the parse tree. Since `SIntNumber`
+appears as a type in Basic Storm, we can also inspect the match:
+
+```bs
+use core:lang;
+use core:io;
+
+on Compiler:
+
+// Parse a string:
+SNumbers parseNumbers(Str numbers) {
+    Parser<SNumbers> parser;
+    parser.parse(numbers, Url());
+    if (parser.hasError)
+        parser.throwError();
+    parser.tree();
+}
+
+// Entry point.
+void main() {
+    SNumber tree = parseNumbers("100");
+
+    // We can check what was matched:
+    if (tree as SSingleNumber) {
+        if (num = tree.x as SIntNumber) {
+            // It was an integer number. Modify it!
+            num.match.v = "-1";
+        }
+    }
+
+    // Now transform it. Will result in "-1".
+    print(tree.transform().toS());
+}
+```
+
+In addition to modifying the parse tree, we can also extend it by creating our own subclasses and
+placing them in the parse tree. For example, we can replace a `SIntNumber` node with our own version
+that returns a different number every time:
+
+```bs
+// Our own subclass to SNumber. It will never be created by the
+// parser, since it has no associated production. We can, however,
+// create it ourselves and insert it into the parse tree.
+class SIncNumber extends SNumber {
+    Int number;
+
+    init(Int initial) {
+        init { number = initial; }
+    }
+
+    Int transform() : override {
+        return number++;
+    }
+}
+
+// Entry point.
+void main() {
+    SNumber tree = parseNumbers("5 + 10");
+
+    // Find a number node:
+    if (tree as SNumberSum) {
+        if (num = tree.a as SIntNumber) {
+            // Replace it:
+            tree.a = SIncNumber(num.transform());
+        }
+    }
+
+    // Now transform it. Will result in "15":
+    print(tree.transform().toS());
+    // If we transform it again, it will give us "16":
+    print(tree.transform().toS());
+}
+```
+
+Finally, when modifying the parse tree in this way it is useful to be aware that all parse tree
+nodes have the following members that makes it more convenient to search the parse tree for nodes of
+a particular type:
+
+- `children`: returns an array of all direct children of the node.
+- `allChildren`: returns an array of all children in the entire subtree. There is also a version
+  that accepts a `core:lang:Type`. This overload returns all children of a particular type.

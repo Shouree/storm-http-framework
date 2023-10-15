@@ -30,6 +30,29 @@ The Syntax Language supports single-line comments. These start with `//` and end
 line. Multi-line comments are not supported.
 
 
+Use Statements
+--------------
+
+Use statements have the form: `use <name>;`. The name is expected to refer to a package. The use
+statement has the effect that the package `<name>` will be searched for any rules, types, or
+functions that are referred in the file. For example, if the type `lang.bs.SExpr` will be used
+frequently, including `use lang.bs;` at the top of the file makes it possible to refer to the rule
+by simply writing `SExpr` instead of the fully qualified name.
+
+Extend Statements
+-----------------
+
+Extend statements have the form: `extend <name>;`, where `<name>` refers to a package. This
+statement has the effect that the *syntax* in the package `<name>` will be used when parsing the
+remainder of the file. As such, the `extend` statement is used to load *syntax extensions* to the
+Syntax Language itself.
+
+Since the Syntax Language is parsed to extract syntax from a package, some care need to be taken
+with syntax extensions to the Syntax Language in order to avoid circular dependencies. For this
+reason it is best to always place syntax extensions to the Syntax Language in a separate package
+from where it is used.
+
+
 Rules
 -----
 
