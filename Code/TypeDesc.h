@@ -111,6 +111,12 @@ namespace code {
 		virtual Size STORM_FN size() const;
 	};
 
+
+	/**
+	 * A primitive type:
+	 *
+	 * This is a type that the CPU can handle directly, and that can be stored in a register.
+	 */
 	class PrimitiveDesc : public TypeDesc {
 		STORM_CLASS;
 	public:
@@ -122,6 +128,13 @@ namespace code {
 		void STORM_FN toS(StrBuf *to) const;
 	};
 
+
+	/**
+	 * A complex type:
+	 *
+	 * This is a type that needs to reside in memory, and that needs to be manipulated through
+	 * copy-constructors and destructors.
+	 */
 	class ComplexDesc : public TypeDesc {
 		STORM_CLASS;
 	public:
@@ -135,6 +148,14 @@ namespace code {
 		void STORM_FN toS(StrBuf *to) const;
 	};
 
+
+	/**
+	 * A simple type:
+	 *
+	 * This is a type that consists of a set of primitive types. While it may not be possible to
+	 * store the type in a register, it is possible to decompose the type into multiple registers
+	 * and manipulate it in that way.
+	 */
 	class SimpleDesc : public TypeDesc {
 		STORM_CLASS;
 	public:
