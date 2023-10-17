@@ -1,0 +1,4 @@
+Geometry Library
+================
+
+`core.geometry`
