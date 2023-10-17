@@ -36,6 +36,16 @@ The remainder of this part of the manual consists of the following sections:
   As such, the listing keeps track of which local variables, when they are visible, and similar
   things.
 
+- **[Sizes and Offsets](md:Sizes_and_Offsets)**
+
+  Describes the types `Size` and `Offsets` that are used to represent sizes of objects in memory and
+  offsets into them in a platform-independent manner.
+
+- **[References](md:References)**
+
+  Describes how the Intermediate Language creates and maintain references between different pieces
+  of code, and supports cheap dynamic re-linking of code.
+
 - **[Operands](md:Operands)**
 
   Lists all operand types in the intermediate language.

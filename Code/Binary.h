@@ -13,7 +13,7 @@ namespace code {
 	 * A Binary represents a Listing that has been translated into machine code, along with any
 	 * extra information needed (such as descriptions of exception handlers or similar).
 	 *
-	 * Note: The Binary class expects backends to create a table of data starting in the meta()
+	 * Note: The Binary class expects backends to create a table of data starting at the meta() label
 	 * where each element looks like this:
 	 *   size_t freeFn; - a pointer to the function to be executed when this variable is to be freed.
 	 *   size_t offset; - a signed offset to the variable relative to the stack frame provided by the backend.

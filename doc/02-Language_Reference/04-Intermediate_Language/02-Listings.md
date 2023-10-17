@@ -120,7 +120,7 @@ size of the variable, and a reference to a destructor to call whenever the varia
 destroyed. For parameters, the system also records the type description in order to follow the
 system's calling convention properly. Each variable may also be associated with additional metadata
 in the form of a `core.asm.Listing.VarInfo` object. This object stores higher-level data that can be
-used by debuggers (for example, Progvis).
+used by debuggers (for example, [Progvis](md:/Programs/Progvis)).
 
 When a block begins, all contained variables are initialized to zero. Similarly, all variables are
 automatically destroyed whenever the block ends, or when an exception occurs. The destruction

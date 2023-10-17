@@ -149,7 +149,7 @@ h2 {
 
 h3 {
     margin-top: 8px;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
 }
 
 p {
@@ -212,7 +212,10 @@ a:hover {
 
 table, th, td {
     border: 1px solid black;
-    padding: 0.2em;
+    padding-top: 0.2em;
+    padding-left: 0.5em;
+    padding-right: 0.5em;
+    padding-bottom: 0.2em;
     margin-bottom: 0.7em;
 }
 table {
