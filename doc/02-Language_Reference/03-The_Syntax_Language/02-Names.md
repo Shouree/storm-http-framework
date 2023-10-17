@@ -1,9 +1,9 @@
 Names in the Syntax Language
 ============================
 
-Names in the Syntax Language are similar to the [generic syntax](md:../Storm/Names) in Storm. The
-only difference is that angle brackets (`<>`) are used to specify parameters to name parts instead
-of parentheses (`()`). Parentheses are only used for function (or rule) calls.
+Names in the Syntax Language are similar to the [generic syntax](md:../Storm/The_Name_Tree) in
+Storm. The only difference is that angle brackets (`<>`) are used to specify parameters to name
+parts instead of parentheses (`()`). Parentheses are only used for function (or rule) calls.
 
 As such, names in the Syntax Language are written as:
 

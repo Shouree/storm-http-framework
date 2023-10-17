@@ -16,13 +16,13 @@ before they can be accessed (especially in constructors).
 Apart from closely matching the capabilities of Storm itself, Basic Storm have two additional
 qualities that illustrate the possibilities of the platform. First, Basic Storm is extensible. This
 means that it is possible to create syntax extensions for Basic Storm as libraries. The section on
-[libraries](md:/Libraries) contain a few examples of such libraries. Secondly, it can be used as a
-compilation target for other languages. Since all components of the language Basic Storm are exposed
-in the name tree, they are accessible from other languages in the system. Therefore, there are
-multiple options when developing a new language in the system. The new language may either chose to
-generate code in the intermediate representation directly. This is what Basic Storm does. It might
-also chose to emit an abstract syntax tree that can be understood by Basic Storm, and utilize the
-code generation abilities of Basic Storm to do the actual code generation.
+[libraries](md:/Library_Reference) contain a few examples of such libraries. Secondly, it can be
+used as a compilation target for other languages. Since all components of the language Basic Storm
+are exposed in the name tree, they are accessible from other languages in the system. Therefore,
+there are multiple options when developing a new language in the system. The new language may either
+chose to generate code in the intermediate representation directly. This is what Basic Storm does.
+It might also chose to emit an abstract syntax tree that can be understood by Basic Storm, and
+utilize the code generation abilities of Basic Storm to do the actual code generation.
 
 Finally, it is worth mentioning that Basic Storm is not special to Storm itself in any way except
 that it is included with Storm by default. This means that it is possible to implement an equaly

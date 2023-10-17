@@ -40,7 +40,7 @@ The goal of syntax transforms is to generate a member function called `transform
 all nodes of the parse tree. The `transform` function can then be called to transform the parse tree
 into an abstract syntax tree according to the annotations in the grammar.
 
-The [rule definition](md:Syntax) specifies the signature of the `transform` function generated in
+The [rule definition](md:Grammar) specifies the signature of the `transform` function generated in
 the type generated for the rule itself, and for the types of any productions that extend the rule.
 For example, consider the rule below:
 

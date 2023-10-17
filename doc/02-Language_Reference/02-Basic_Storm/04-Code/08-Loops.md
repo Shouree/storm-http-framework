@@ -148,8 +148,8 @@ The Range Loop
 
 The final loop (which is actually implemented entirely in Basic Storm itself) is the range loop. It
 is dedicated to iterating through a container using any of the
-[iterators](md:Language_Reference/Iterators) available in the standard library. It has the following
-form:
+[iterators](md:/Library_Reference/Standard_Library/Iterators) available in the standard library. It
+has the following form:
 
 ```bsstmt:placeholders
 for (<key>, <value> in <container>) {

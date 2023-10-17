@@ -54,11 +54,10 @@ The remainder of this part of the manual consists of the following sections:
 
   Lists all instructions in the intermediate language, and their semantics.
 
-- **[Usage in Basic Storm](md:Usage_in_Basic_Storm)**
-
-  Describes how to emit code in the intermediate language from Basic Storm.
-
 - **[Binary_Objects](md:Binary_Objects)**
 
   Describes how a `Listing` object can be compiled into machine code using a `Binary` object.
 
+- **[Example](md:Example)**
+
+  Illustrates how to use the Intermediate Language in Basic Storm, and how to run compiled code.

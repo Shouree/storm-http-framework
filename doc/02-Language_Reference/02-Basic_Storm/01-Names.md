@@ -1,9 +1,9 @@
 Names in Basic Storm
 ====================
 
-Names in Basic Storm are similar to the [generic syntax](md:../Storm/Names) in Storm. The syntax of
-names are, however, altered slightly to allow using the dot `.` operator for member access, like C++
-and Java. The difference from the generic Storm syntax is as follows:
+Names in Basic Storm are similar to the [generic syntax](md:../Storm/The_Name_Tree) in Storm. The
+syntax of names are, however, altered slightly to allow using the dot `.` operator for member
+access, like C++ and Java. The difference from the generic Storm syntax is as follows:
 
 - The dot `.` has been replaced by a colon `:` (inspired by the `::` operator in C++).
 - Parentheses `()` have been replaced by angle brackets `<>`.

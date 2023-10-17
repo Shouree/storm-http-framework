@@ -14,7 +14,7 @@ There is no way to access the element inside the `Maybe` type.
 
 Instead, elements in a `Maybe<T>`-type must first be casted into a non-maybe type, `T`, by using a
 *weak cast*. Weak casts are described in full in the section on [type
-conversions](md:Type_Conversion), but a brief example is provided below for completeness.
+conversions](md:Type_Conversions), but a brief example is provided below for completeness.
 
 To check whether a `Maybe` type contains an object, one can simply use the `any` or `empty` members
 of the `Maybe` type as follows:

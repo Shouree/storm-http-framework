@@ -85,8 +85,8 @@ void withUnless(Bool condition) {
 As can be seen from the examples above, the `unless` statement is designed to be useful when using
 *early returns* or *guard clauses* to avoid deeply nested if statements. In many languages it would
 be unnecessary to have a special construct for this concept. However, since Basic Storm supports
-[weak casts](md:Type_Casting) that may fail, the language needs to be aware of what variables should
-be accessible.
+[weak casts](md:Type_Conversions) that may fail, the language needs to be aware of what variables
+should be accessible.
 
 To illustrate this design, consider the function `getDefault` below. It takes a `Maybe<Int>` as a
 parameter. Since `Maybe<Int>` represents a value that might be `null`, it is necessary to convert it
