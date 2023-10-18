@@ -33,9 +33,9 @@ class SavedGlobals on Compiler {
 
 	void restore(GlobalVar[] globals) {
 		for (x in globals) {
-			if (!data.has(x.name))
+			unless (v = data.at(x.name))
 				continue;
-			Variant v = data.get(x.name);
+
 			v.deepCopy(CloneEnv());
 
 			var ptr = unsafe:RawPtr:fromGlobal(x);

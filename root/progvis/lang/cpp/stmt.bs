@@ -92,10 +92,7 @@ class Block extends Stmt {
 
 	// Get a variable.
 	Named? variable(Str name) {
-		if (vars.has(name))
-			return vars.get(name);
-		else
-			return null;
+		return vars.at(name);
 	}
 }
 

@@ -212,8 +212,7 @@ class InitStmt extends Stmt {
 
 	// Create a variable.
 	private void initVar(CodeGen gen, Str name, Type type, Offset offset, FnRoot root) {
-		if (init.has(name)) {
-			var elem = init.get(name);
+		if (elem = init.at(name)) {
 			gen.l << location(elem.pos);
 
 			if (!initVar(gen, type, offset, root, elem.expr.transform(root)))

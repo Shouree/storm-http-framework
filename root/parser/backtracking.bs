@@ -212,8 +212,8 @@ class BacktrackingParser extends Parser {
 
 		// Get a function. Does not populate it.
 		Function get(Rule r) {
-			if (ruleFns.has(r))
-				return ruleFns.get(r);
+			if (fn = ruleFns.at(r))
+				return fn;
 
 			var params = r.params.clone;
 			params.insert(0, ValParam(stateType(binary), "@state"));

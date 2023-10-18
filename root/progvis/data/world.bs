@@ -239,8 +239,8 @@ class World on Render {
 			}
 
 			// Check if it is a stack allocation, or some other hidden allocation.
-			if (dataMap.has(object))
-				return dataMap.get(object);
+			if (alloc = dataMap.at(object))
+				return alloc;
 
 			// Else, we fail.
 			return null;

@@ -39,8 +39,8 @@ class StormTheme extends Theme {
 
 	// Consume parameters.
 	void options(Str->Str options) {
-		if (options.has("version")) {
-			version = options.get("version");
+		if (ver = options.at("version")) {
+			version = ver;
 			options.remove("version");
 		} else {
 			if (version = findVersion()) {
@@ -52,8 +52,8 @@ class StormTheme extends Theme {
 			}
 		}
 
-		if (options.has("date")) {
-			version = options.get("date");
+		if (d = options.at("date")) {
+			date = d;
 			options.remove("date");
 		} else {
 			print("WARNING: Missing --date. Using ${date}.");

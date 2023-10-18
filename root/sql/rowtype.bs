@@ -372,8 +372,8 @@ private Str typeKey(TypedCol[] types) on Compiler {
 // Get a TypedRow instance.
 TypedRow getTypedRow(TypedCol[] types) on Compiler {
 	Str key = typeKey(types);
-	if (createdRowTypes.has(key))
-		return createdRowTypes.get(key);
+	if (rt = createdRowTypes.at(key))
+		return rt;
 
 	TypedRow created(types);
 	createdRowTypes.put(key, created);
@@ -383,8 +383,8 @@ TypedRow getTypedRow(TypedCol[] types) on Compiler {
 // Get a TypedIter instance.
 TypedIter getTypedIter(TypedCol[] types) on Compiler {
 	Str key = typeKey(types);
-	if (createdIterTypes.has(key))
-		return createdIterTypes.get(key);
+	if (it = createdIterTypes.at(key))
+		return it;
 
 	TypedIter created(types);
 	createdIterTypes.put(key, created);

@@ -42,8 +42,8 @@ class Data on Render {
 
 	// Copy this data element, uses 'copies' to keep track of cycles.
 	Data copy(Data->Data copies) : final {
-		if (copies.has(this)) {
-			copies.get(this);
+		if (copy = copies.at(this)) {
+			return copy;
 		} else {
 			var result = copyObject();
 			copies.put(this, result);

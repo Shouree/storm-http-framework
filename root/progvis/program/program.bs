@@ -223,10 +223,7 @@ class Program on Render {
 
 	// Get source for a file.
 	public Text? source(Url file) {
-		if (code.has(file))
-			return code.get(file);
-		else
-			return null;
+		code.at(file);
 	}
 
 	// Find and return all global variables in the program managed by this instance.
@@ -317,8 +314,8 @@ class Program on Render {
 	// called, and that we shall open a new scope.
 	package MemTracker functionEntered(Str name, SrcPosWrap pos, progvis:data:ViewHints hints, StackVar[] vars) {
 		Word id = currentUThread();
-		ProgThread t = if (threads.has(id)) {
-			threads.get(id);
+		ProgThread t = if (t = threads.at(id)) {
+			t;
 		} else {
 			ProgThread t(this, ++usedThreadId);
 			addThread(id, t);
@@ -333,8 +330,8 @@ class Program on Render {
 	// exists.
 	package MemTracker anonFunctionEntered() {
 		Word id = currentUThread();
-		ProgThread t = if (threads.has(id)) {
-			threads.get(id);
+		ProgThread t = if (t = threads.at(id)) {
+			t;
 		} else {
 			ProgThread t(this, ++usedThreadId);
 			addThread(id, t);
@@ -348,10 +345,9 @@ class Program on Render {
 	// to exit.
 	package void functionExited() {
 		Word id = currentUThread();
-		if (!threads.has(id))
+		unless (t = threads.at(id))
 			return;
 
-		ProgThread t = threads.get(id);
 		var notify = t.onFunctionExited();
 		if (!t.alive) {
 			removeThread(id, t);
@@ -369,10 +365,9 @@ class Program on Render {
 	// about to exit.
 	package void anonFunctionExited() {
 		Word id = currentUThread();
-		if (!threads.has(id))
+		unless (t = threads.at(id))
 			return;
 
-		ProgThread t = threads.get(id);
 		var notify = t.onAnonFunctionExited();
 		if (!t.alive) {
 			removeThread(id, t);
@@ -593,8 +588,8 @@ public Program? findProgram() {
 // Find a particular thread.
 public ProgThread? findThread(Word threadId) on Render {
 	for (i in programInstances) {
-		if (i.threads.has(threadId))
-			return i.threads.get(threadId);
+		if (t = i.threads.at(threadId))
+			return t;
 	}
 	return null;
 }

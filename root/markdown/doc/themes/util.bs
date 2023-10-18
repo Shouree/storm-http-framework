@@ -79,7 +79,7 @@ Str replaceMarkers(Str in, Str->Str replace) {
 			continue;
 
 		Str title = in.cut(start + markerStart.count, end);
-		if (!replace.has(title))
+		unless (r = replace.at(title))
 			continue;
 
 		// If nothing is before the marker on the line, indent it accordingly.
@@ -97,7 +97,7 @@ Str replaceMarkers(Str in, Str->Str replace) {
 		// 	out.indent();
 		// }
 
-		out << replace.get(title);
+		out << r;
 
 		// if (useIndent) {
 		// 	out.dedent();

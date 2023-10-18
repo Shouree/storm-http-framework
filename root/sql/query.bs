@@ -281,9 +281,8 @@ class ResolveContext on Compiler {
 	// Resolve a column.
 	ResolveResult? resolve(SrcPos pos, Str? table, Str column) {
 		if (table) {
-			if (!visible.has(table))
+			unless (t = visible.at(table))
 				return null;
-			Table t = visible.get(table);
 			if (col = t.find(column))
 				return ResolveResult(table, col);
 			return null;

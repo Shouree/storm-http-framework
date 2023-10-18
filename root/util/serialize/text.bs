@@ -210,8 +210,8 @@ private:
 
 	// Find the type 'type'. Read it if necessary.
 	Type findType(Nat type, StrBuf to) {
-		if (types.has(type))
-			return types.get(type);
+		if (t = types.at(type))
+			return t;
 
 		Byte flags = Byte:read(src);
 		Str name = demangleName(Str:read(src));

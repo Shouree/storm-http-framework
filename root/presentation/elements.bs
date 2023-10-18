@@ -421,11 +421,12 @@ class PageNumber extends Element {
 	private Text find(Nat id) {
 		id += offset;
 
-		if (!cache.has(id)) {
-			cache.put(id, Text(id.toS, font));
-		}
+		if (cached = cache.at(id))
+			return cached;
 
-		cache.get(id);
+		Text t(id.toS, font);
+		cache.put(id, t);
+		t;
 	}
 }
 

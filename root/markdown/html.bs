@@ -58,8 +58,8 @@ class Html {
 	// Append text. Escapes HTML characters.
 	Html text(Str text) {
 		for (ch in text) {
-			if (escape.has(ch))
-				out << escape.get(ch);
+			if (replace = escape.at(ch))
+				out << replace;
 			else
 				out << ch;
 		}

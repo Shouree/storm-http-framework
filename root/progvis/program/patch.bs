@@ -74,8 +74,8 @@ private class PatchState on Compiler {
 	// Get a new reference for a function that needs patching. Make sure the function is patched
 	// eventually if that has not been done already.
 	Ref patchFn(Function fn) {
-		if (patched.has(fn))
-			return Ref(patched.get(fn));
+		if (f = patched.at(fn))
+			return Ref(f);
 
 		NamedSource src(fn);
 		patched.put(fn, src);
@@ -126,8 +126,8 @@ private class PatchState on Compiler {
 			return null;
 
 		SimpleName pkgName = contained.path;
-		Package pkg = if (loaded.has(pkgName)) {
-			loaded.get(pkgName);
+		Package pkg = if (p = loaded.at(pkgName)) {
+			p;
 		} else {
 			Package p(url);
 			p.noDiscard();

@@ -42,8 +42,8 @@ class Presenter extends Frame {
 			return false;
 
 		if (modifiers == Modifiers:none) {
-			if (keymap.has(key)) {
-				keymap.get(key).call();
+			if (fn = keymap.at(key)) {
+				fn.call();
 				return true;
 			}
 		}
