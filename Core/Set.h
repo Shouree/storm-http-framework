@@ -80,6 +80,10 @@ namespace storm {
 		// Get the key previously stored which is considered equal to 'key'. Throws if it does not exist.
 		void *CODECALL getRaw(const void *key);
 
+		// Get a value, return a pointer to the value in the data structure. Return null if it did
+		// not exist.
+		void *CODECALL getUnsafeRaw(const void *key);
+
 		// Get a key considered equal to 'key', or insert and return 'key' if none exists.
 		void *CODECALL atRaw(const void *key);
 

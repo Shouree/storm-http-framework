@@ -45,6 +45,9 @@ namespace storm {
 		// Treat keys as references always.
 		Bool refKeys;
 
+		// Has the 'at' operator been added?
+		Bool atAdded;
+
 		// What we're watching for, to know when we can stop watching.
 		enum {
 			watchNone = 0x00,
@@ -58,8 +61,11 @@ namespace storm {
 		};
 		Nat watchFor;
 
-		// Add the 'at' member if applicable.
+		// Add the '[]' member if applicable.
 		void addAccess();
+
+		// Add the 'at' member.
+		void addMaybeAccess();
 
 		// Add serialization.
 		void addSerialization(SerializeInfo *kInfo, SerializeInfo *vInfo);

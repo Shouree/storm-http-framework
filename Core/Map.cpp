@@ -140,16 +140,15 @@ namespace storm {
 	}
 
 	void *MapBase::getRaw(const void *key) {
-		nat hash = (*keyT.hashFn)(key);
-		nat slot = findSlot(key, hash);
-		if (slot == Info::free) {
+		void *result = getUnsafeRaw(key);
+		if (!result) {
 			StrBuf *buf = new (this) StrBuf();
 			*buf << L"The key ";
 			(*keyT.toSFn)(key, buf);
 			*buf << L" is not in the map.";
 			throw new (this) MapError(buf->toS());
 		}
-		return valPtr(slot);
+		return result;
 	}
 
 	void *MapBase::getRawDef(const void *key, const void *def) {
@@ -161,6 +160,15 @@ namespace storm {
 		} else {
 			return valPtr(slot);
 		}
+	}
+
+	void *MapBase::getUnsafeRaw(const void *key) {
+		nat hash = (*keyT.hashFn)(key);
+		nat slot = findSlot(key, hash);
+		if (slot == Info::free)
+			return null;
+		else
+			return valPtr(slot);
 	}
 
 	void *MapBase::atRawValue(const void *key, SimpleCtor fn) {

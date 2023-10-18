@@ -137,16 +137,24 @@ namespace storm {
 	}
 
 	void *SetBase::getRaw(const void *key) {
-		nat hash = (*keyT.hashFn)(key);
-		nat slot = findSlot(key, hash);
-		if (slot == Info::free) {
+		void *result = getUnsafeRaw(key);
+		if (!result) {
 			StrBuf *buf = new (this) StrBuf();
 			*buf << L"The key ";
 			(*keyT.toSFn)(key, buf);
 			*buf << L" is not in the map.";
 			throw new (this) SetError(buf->toS());
 		}
-		return keyPtr(slot);
+		return result;
+	}
+
+	void *SetBase::getUnsafeRaw(const void *key) {
+		nat hash = (*keyT.hashFn)(key);
+		nat slot = findSlot(key, hash);
+		if (slot == Info::free)
+			return null;
+		else
+			return keyPtr(slot);
 	}
 
 	void *SetBase::atRaw(const void *key) {

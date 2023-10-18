@@ -60,6 +60,9 @@ namespace storm {
 		// Insert everything into their packages.
 		loader.loadPackages();
 
+		// Do late initialization again for types that wish to utilize packages.
+		e.forNamed(&lateInit);
+
 		// Load functions and variables.
 		loader.loadVariables();
 		loader.loadFunctions();

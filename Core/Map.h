@@ -81,6 +81,10 @@ namespace storm {
 		// Get a value. Returns 'def' if it does not exist.
 		void *CODECALL getRawDef(const void *key, const void *def);
 
+		// Get a value, return a pointer to the value in the data structure. Return null if it did
+		// not exist.
+		void *CODECALL getUnsafeRaw(const void *key);
+
 		// Get a value. Create using the constructor if it does not exist.
 		template <class CreateCtor>
 		void *atRaw(const void *key, CreateCtor fn) {
@@ -338,6 +342,7 @@ namespace storm {
 		}
 
 		// Get a value, create it if not alredy existing.
+		// Note: Different from the Storm implementation!
 		V &at(const K &k) {
 			return *(V *)atRaw(&k, &CreateFn<V>::fn);
 		}

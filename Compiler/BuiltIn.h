@@ -34,6 +34,10 @@ namespace storm {
 			// Access the 'atRaw' member of Map.
 			mapAtValue,
 			mapAtClass,
+			// Acces to the 'getUnsafeRaw' member of Map.
+			mapGetUnsafe,
+			// Acces to the 'getUnsafeRaw' member of Set.
+			setGetUnsafe,
 			// Acces the generic 'EnumType::toString'.
 			enumToS,
 			// Access to 'postRaw' and 'resultRaw' in Future.

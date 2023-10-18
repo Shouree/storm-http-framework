@@ -102,3 +102,19 @@ Str[] defaultMapArray() {
 	Map<Int, Str[]> m;
 	m[1];
 }
+
+Str mapAtStr(Str->Str map) {
+	if (v = map.at("a")) {
+		v;
+	} else {
+		"nothing";
+	}
+}
+
+Int mapAtInt(Int->Int map) {
+	if (v = map.at(1)) {
+		v;
+	} else {
+		-1;
+	}
+}

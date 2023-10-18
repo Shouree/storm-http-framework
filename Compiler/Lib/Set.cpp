@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Set.h"
+#include "Maybe.h"
 #include "Core/Str.h"
 #include "Core/Set.h"
 #include "Compiler/Type.h"
@@ -82,6 +83,7 @@ namespace storm {
 		add(nativeFunction(e, boolT, S("remove"), thisKey, address(&SetBase::removeRaw)));
 		add(nativeFunction(e, iter, S("begin"), valList(e, 1, t), address(&SetBase::beginRaw)));
 		add(nativeFunction(e, iter, S("end"), valList(e, 1, t), address(&SetBase::endRaw)));
+		addMaybeAccess();
 
 		if (!k->isA(StormInfo<TObject>::type(e))) {
 			if (SerializeInfo *info = serializeInfo(k)) {
@@ -95,6 +97,59 @@ namespace storm {
 			k->watchAdd(this);
 
 		return Type::loadAll();
+	}
+
+	void SetType::addMaybeAccess() {
+		Value maybe = wrapMaybe(Value(k));
+
+		using namespace code;
+		Listing *l = new (this) Listing(true, maybe.desc(engine));
+
+		TypeDesc *ptr = engine.ptrDesc();
+		Var me = l->createParam(ptr);
+		Var key = l->createParam(ptr);
+
+		Var result = l->createVar(l->root(), maybe.desc(engine), freeOnBoth | freeInactive);
+
+		*l << prolog();
+
+		// Call Map::getUnsafeRaw:
+		*l << fnParam(ptr, me);
+		*l << fnParam(ptr, key);
+		*l << fnCall(engine.ref(builtin::setGetUnsafe), true, ptr, ptrA);
+
+		// Check the return value:
+		Label hasValue = l->label();
+
+		*l << cmp(ptrA, ptrConst(0));
+		*l << jmp(hasValue, ifNotEqual);
+
+		// It was null, we can just return it, since it was initialized to null:
+		*l << fnRet(result);
+
+		*l << hasValue;
+		// We had a value:
+		if (Value(k).isObject()) {
+			// If it is an object, we can just copy a pointer.
+			*l << mov(result, ptrRel(ptrA));
+		} else {
+			// It was a class. Call the appropriate constructor in Value.
+			SimplePart *ctorName = new (this) SimplePart(Type::CTOR);
+			ctorName->params->push(maybe.asRef());
+			ctorName->params->push(Value(k).asRef());
+			Function *ctor = as<Function>(maybe.type->find(ctorName, Scope()));
+			if (!ctor)
+				throw new (this) InternalError(S("Failed to find the constructor in Maybe<T>."));
+
+			*l << lea(ptrC, result);
+			*l << fnParam(ptr, ptrC);
+			*l << fnParam(ptr, ptrA);
+			*l << fnCall(ctor->ref(), true);
+		}
+		*l << activate(result);
+		*l << fnRet(result);
+
+		add(dynamicFunction(engine, maybe, S("at"), valList(engine, 2, thisPtr(this), Value(k, true)), l));
 	}
 
 	void SetType::notifyAdded(NameSet *to, Named *added) {

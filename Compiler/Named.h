@@ -107,7 +107,8 @@ namespace storm {
 		// Flags for this named object.
 		NamedFlags flags;
 
-		// Late initialization. Called when the type-system is up enough to initialize templates. Otherwise not needed.
+		// Late initialization. Called twice during startup. Once after the system has advanced far
+		// enough to use templates, and again when it has advanced far enough to use packages.
 		virtual void lateInit();
 
 		// Get a path to this Named.

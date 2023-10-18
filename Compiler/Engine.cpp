@@ -9,6 +9,7 @@
 #include "Core/Thread.h"
 #include "Core/Str.h"
 #include "Core/Map.h"
+#include "Core/Set.h"
 #include "Core/StrBuf.h"
 #include "Core/Handle.h"
 #include "Core/Io/Utf8Text.h"
@@ -462,6 +463,10 @@ namespace storm {
 			return FNREF(MapBase::atRawValue);
 		case builtin::mapAtClass:
 			return FNREF(MapBase::atRawClass);
+		case builtin::mapGetUnsafe:
+			return FNREF(MapBase::getUnsafeRaw);
+		case builtin::setGetUnsafe:
+			return FNREF(SetBase::getUnsafeRaw);
 		case builtin::enumToS:
 			return FNREF(Enum::toString);
 		case builtin::futurePost:

@@ -53,6 +53,9 @@ namespace storm {
 		static void createRefClass(void *mem);
 		static void copyClass(void *mem, SetBase *copy);
 
+		// Add the 'at' member.
+		void addMaybeAccess();
+
 		// Add serialization.
 		void addSerialization(SerializeInfo *info);
 

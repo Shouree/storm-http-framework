@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Map.h"
 #include "Fn.h"
+#include "Maybe.h"
 #include "Core/Map.h"
 #include "Core/Str.h"
 #include "Compiler/Engine.h"
@@ -34,7 +35,7 @@ namespace storm {
 		return new (params) MapType(name, k.type, v.type, true);
 	}
 
-	MapType::MapType(Str *name, Type *k, Type *v, Bool ref) : Type(name, typeClass), k(k), v(v), refKeys(ref) {
+	MapType::MapType(Str *name, Type *k, Type *v, Bool ref) : Type(name, typeClass), k(k), v(v), refKeys(ref), atAdded(false) {
 		if (engine.has(bootTemplates))
 			lateInit();
 
@@ -49,6 +50,10 @@ namespace storm {
 			params->push(Value(k));
 			params->push(Value(v));
 		}
+
+		// Load the 'at' operator if all things have been loaded for us.
+		if (engine.has(bootPackages) && allLoaded())
+			addMaybeAccess();
 	}
 
 	void CODECALL MapType::createClass(void *mem) {
@@ -96,6 +101,9 @@ namespace storm {
 		add(nativeFunction(e, iter, S("begin"), valList(e, 1, t), address(&MapBase::beginRaw))->makePure());
 		add(nativeFunction(e, iter, S("end"), valList(e, 1, t), address(&MapBase::endRaw))->makePure());
 		add(nativeFunction(e, iter, S("find"), thisKey, address(&MapBase::findRaw))->makePure());
+
+		if (engine.has(bootPackages))
+			addMaybeAccess();
 
 		Type *tObj = StormInfo<TObject>::type(e);
 
@@ -159,6 +167,63 @@ namespace storm {
 		*l << fnRet(ptrA);
 
 		add(dynamicFunction(engine, Value(v, true), S("[]"), valList(engine, 2, thisPtr(this), Value(k, true)), l));
+	}
+
+	void MapType::addMaybeAccess() {
+		if (atAdded)
+			return;
+
+		Value maybe = wrapMaybe(Value(v));
+
+		using namespace code;
+		Listing *l = new (this) Listing(true, maybe.desc(engine));
+
+		TypeDesc *ptr = engine.ptrDesc();
+		Var me = l->createParam(ptr);
+		Var key = l->createParam(ptr);
+
+		Var result = l->createVar(l->root(), maybe.desc(engine), freeOnBoth | freeInactive);
+
+		*l << prolog();
+
+		// Call Map::getUnsafeRaw:
+		*l << fnParam(ptr, me);
+		*l << fnParam(ptr, key);
+		*l << fnCall(engine.ref(builtin::mapGetUnsafe), true, ptr, ptrA);
+
+		// Check the return value:
+		Label hasValue = l->label();
+
+		*l << cmp(ptrA, ptrConst(0));
+		*l << jmp(hasValue, ifNotEqual);
+
+		// It was null, we can just return it, since it was initialized to null:
+		*l << fnRet(result);
+
+		*l << hasValue;
+		// We had a value:
+		if (Value(v).isObject()) {
+			// If it is an object, we can just copy a pointer.
+			*l << mov(result, ptrRel(ptrA));
+		} else {
+			// It was a class. Call the appropriate constructor in Value.
+			SimplePart *ctorName = new (this) SimplePart(Type::CTOR);
+			ctorName->params->push(maybe.asRef());
+			ctorName->params->push(Value(v).asRef());
+			Function *ctor = as<Function>(maybe.type->find(ctorName, Scope()));
+			if (!ctor)
+				throw new (this) InternalError(S("Failed to find the constructor in Maybe<T>."));
+
+			*l << lea(ptrC, result);
+			*l << fnParam(ptr, ptrC);
+			*l << fnParam(ptr, ptrA);
+			*l << fnCall(ctor->ref(), true);
+		}
+		*l << activate(result);
+		*l << fnRet(result);
+
+		add(dynamicFunction(engine, maybe, S("at"), valList(engine, 2, thisPtr(this), Value(k, true)), l));
+		atAdded = true;
 	}
 
 	void MapType::notifyAdded(NameSet *to, Named *added) {

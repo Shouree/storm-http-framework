@@ -507,6 +507,25 @@ BEGIN_TEST(BSMapTest, BS) {
 		CHECK_EQ(::toS(map->at(1)), L"");
 	}
 
+	{
+		Map<Str *, Str *> *m = new (e) Map<Str *, Str *>();
+		CHECK_EQ(*runFn<Str *>(S("tests.bs.mapAtStr"), m), S("nothing"));
+
+		Str *v = new (e) Str(S("q"));
+		m->put(new (e) Str(S("a")), v);
+
+		CHECK_EQ(runFn<Str *>(S("tests.bs.mapAtStr"), m), v);
+	}
+
+	{
+		Map<Int, Int> *m = new (e) Map<Int, Int>();
+		CHECK_EQ(runFn<Int>(S("tests.bs.mapAtInt"), m), -1);
+
+		m->put(1, 10);
+
+		CHECK_EQ(runFn<Int>(S("tests.bs.mapAtInt"), m), 10);
+	}
+
 } END_TEST
 
 
