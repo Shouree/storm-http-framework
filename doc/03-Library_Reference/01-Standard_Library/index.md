@@ -7,3 +7,6 @@ languages to use. The types in the standard library also serve as a common langu
 data between languages, since most languages are likely to implment the corresponding concepts in
 the language in terms of the Storm standard library.
 
+Most of these types are likely visible by default in languages in Storm. For example, both [Basic
+Storm](md:/Language_Reference/Basic_Storm) and [the Syntax
+Language](md:/Language_Reference/The_Syntax_Language) searches the `core` package by default.

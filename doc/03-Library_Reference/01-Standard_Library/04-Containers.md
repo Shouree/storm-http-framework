@@ -33,7 +33,7 @@ interfaces due to how the integration between C++ and Storm works.
 
 ## Array
 
-The type `Array<T>` (`T[]` in Basic Storm) is an array of the type `T`. Elements can thus be
+The type `core.Array<T>` (`T[]` in Basic Storm) is an array of the type `T`. Elements can thus be
 accessed by index using the `[]` operator. Dynamically grows to fit the elements, but does not
 automatically shrink.
 
@@ -52,7 +52,7 @@ It has the following members:
 
 ## Queue
 
-The type `Queue<T>` is queue of elements of the type `T`. Dynamically grows to fit the elements, but
+The type `core.Queue<T>` is queue of elements of the type `T`. Dynamically grows to fit the elements, but
 does not automatically shrink.
 
 It has the following members:
@@ -64,7 +64,7 @@ It has the following members:
 
 ## Priority Queue
 
-The type `PQueue<C>` is a priority queue of elements of type `C`. Uses the `<` operator of the type
+The type `core.PQueue<C>` is a priority queue of elements of type `C`. Uses the `<` operator of the type
 to compare elements and extract the largest one. It is also possible to create a `PQueue` with a
 custom predicate function that is used instead of the default `<` operator, or for types without a
 `<` operator. It is implemented as a heap internally, and returns the largest element first.
@@ -80,7 +80,7 @@ It has the following members:
 
 ## Hash Map
 
-The type `Map<H, T>` (`H->T` in Basic Storm) is a hash table with keys of type `H` and values of
+The type `core.Map<H, T>` (`H->T` in Basic Storm) is a hash table with keys of type `H` and values of
 type `T`. As such, elements are not ordered in any particular way when iterating through the
 container. Automatically grows to fit the elements, but does not shrink automatically unless
 cleared.
@@ -103,7 +103,7 @@ types as keys.
 
 ## Hash Set
 
-The type `Set<H>` is a hash table with keys of type `H`. The interface is similar to `Map`, but the
+The type `core.Set<H>` is a hash table with keys of type `H`. The interface is similar to `Map`, but the
 functionaliy is reduced since there are no values associated with the keys. As such, the remaining
 ones are:
 
@@ -120,7 +120,7 @@ identity to identify objects. It can thus not use value types as keys.
 
 ## Weak Hash Set
 
-The type `WeakSet<A>` is a weak set of actors. The actors are compared based on their identity.
+The type `core.WeakSet<A>` is a weak set of actors. The actors are compared based on their identity.
 Since the set is weak, elements that are added to the set are not kept alive unless other parts of
 the system refer to the actors. As such, a `WeakSet` is useful to keep track of registered
 callbacks, but to have them automatically de-registered whenever they are no longer used elsewhere.

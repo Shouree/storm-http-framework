@@ -1,10 +1,10 @@
 Strings
 =======
 
-The standard library contains a type for strings, named `Str`. The classes `Object` and `TObject`
-both contain a member `toS` that creates a string representation of objects. There is also a
-template function `toS` that converts values to strings using the output operator for a string
-buffer. As such, most types can be converted to string by typing `<obj>.toS()`.
+The standard library contains a type for strings, named `core.Str`. The types `core.Object` and
+`core.TObject` both contain a member `toS` that creates a string representation of objects. There is
+also a template function `toS` that converts values to strings using the output operator for a
+string buffer. As such, most types can be converted to string by typing `<obj>.toS()`.
 
 The `Str` type is immutable, meaning that it is not possible to modify a string once it has been
 created. It provides an interface where it is possible to access individual codepoints without

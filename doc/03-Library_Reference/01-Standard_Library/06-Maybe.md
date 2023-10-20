@@ -1,7 +1,7 @@
 Maybe
 =====
 
-The type `Maybe<T>` represents either an instance of type `T`, or the absence of an instance,
+The type `core.Maybe<T>` represents either an instance of type `T`, or the absence of an instance,
 `null`. `T` may be any type in the system.
 
 This type is central to the system, as it allows explicitly marking which variables may contain
