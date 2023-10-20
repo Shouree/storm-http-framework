@@ -295,7 +295,7 @@ namespace gui {
 		os::Future<void, Semaphore> result;
 		Painter *me = this;
 		os::FnCall<void, 2> params = os::fnCall().add(me).add(to);
-		os::UThread::spawn(address(&Painter::attach), true, params, result, &thread->thread());
+		os::UThread::spawn(address(&Painter::attach), true, params, result, &associatedThread()->thread());
 		result.result();
 	}
 
@@ -308,7 +308,7 @@ namespace gui {
 		os::Future<void> result;
 		Painter *me = this;
 		os::FnCall<void, 2> params = os::fnCall().add(me);
-		os::UThread::spawn(address(&Painter::detach), true, params, result, &thread->thread());
+		os::UThread::spawn(address(&Painter::detach), true, params, result, &associatedThread()->thread());
 		result.result();
 	}
 
@@ -316,7 +316,7 @@ namespace gui {
 		os::Future<void> result;
 		Painter *me = this;
 		os::FnCall<void, 3> params = os::fnCall().add(me).add(size).add(scale);
-		os::UThread::spawn(address(&Painter::resize), true, params, result, &thread->thread());
+		os::UThread::spawn(address(&Painter::resize), true, params, result, &associatedThread()->thread());
 		result.result();
 	}
 
@@ -324,7 +324,7 @@ namespace gui {
 		os::Future<void> result;
 		Painter *me = this;
 		os::FnCall<void, 2> params = os::fnCall().add(me).add(par);
-		os::UThread::spawn(address(&Painter::repaintI), true, params, result, &thread->thread());
+		os::UThread::spawn(address(&Painter::repaintI), true, params, result, &associatedThread()->thread());
 		result.result();
 
 		uiAfterRepaint(par);

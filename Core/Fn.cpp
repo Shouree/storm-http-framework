@@ -79,9 +79,9 @@ namespace storm {
 	Thread *FnBase::runOn(const TObject *first) const {
 		const TObject *tObj;
 		if (callMember && (tObj = as<const TObject>(thisPtr)))
-			return tObj->thread;
+			return tObj->associatedThread();
 		else if (callMember && !thread && first)
-			return first->thread;
+			return first->associatedThread();
 		else
 			return thread;
 	}

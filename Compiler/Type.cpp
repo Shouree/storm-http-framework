@@ -501,7 +501,7 @@ namespace storm {
 		}
 
 		// We need to create the description. Switch threads if neccessary.
-		const os::Thread &t = TObject::thread->thread();
+		const os::Thread &t = TObject::associatedThread()->thread();
 		if (t != os::Thread::current()) {
 			// Switch threads...
 			Type *me = this;
@@ -680,7 +680,7 @@ namespace storm {
 			return mySize;
 
 		// We need to compute our size. Switch threads if neccessary...
-		const os::Thread &t = TObject::thread->thread();
+		const os::Thread &t = TObject::associatedThread()->thread();
 		if (t != os::Thread::current()) {
 			// Switch threads...
 			Type *me = this;
@@ -710,7 +710,7 @@ namespace storm {
 			return myVTable;
 
 		// We need to load ourself. Make sure we're running on the proper thread.
-		const os::Thread &t = TObject::thread->thread();
+		const os::Thread &t = TObject::associatedThread()->thread();
 		if (t != os::Thread::current()) {
 			// Switch threads...
 			Type *me = this;
@@ -741,7 +741,7 @@ namespace storm {
 			return *tHandle;
 
 		// We need to create the handle. Switch threads.
-		const os::Thread &t = TObject::thread->thread();
+		const os::Thread &t = TObject::associatedThread()->thread();
 		if (t != os::Thread::current()) {
 			// Switch threads...
 			Type *me = this;
@@ -774,8 +774,9 @@ namespace storm {
 			if (t->isA(TObject::stormType(t->engine))) {
 				// We might need to switch threads...
 				TObject *obj = (TObject *)object;
-				if (obj->thread) {
-					os::Thread desired = obj->thread->thread();
+				Thread *t = obj->associatedThread();
+				if (t) {
+					os::Thread desired = t->thread();
 					if (desired != os::Thread::current()) {
 						// We can't execute it on this thread. Tell the GC we need a different one!
 						*thread = desired;
@@ -850,7 +851,7 @@ namespace storm {
 			return r;
 
 		// Call on proper thread...
-		const os::Thread &t = TObject::thread->thread();
+		const os::Thread &t = TObject::associatedThread()->thread();
 		if (t != os::Thread::current()) {
 			// Wrong thread, switch!
 			Type *me = this;
@@ -928,7 +929,7 @@ namespace storm {
 			return myGcType;
 
 		// We need to create it. Switch threads if neccessary...
-		const os::Thread &t = TObject::thread->thread();
+		const os::Thread &t = TObject::associatedThread()->thread();
 		if (t != os::Thread::current()) {
 			// Wrong thread, switch!
 			Type *me = this;

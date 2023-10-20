@@ -169,7 +169,7 @@ namespace storm {
 			// 'create' will not initialize us again if initialization was done already, so we will
 			// be safe even if two threads happen to call 'dataPtr' for the first time more or less
 			// simultaneously.
-			const os::Thread &t = TObject::thread->thread();
+			const os::Thread &t = TObject::associatedThread()->thread();
 			if (t != os::Thread::current()) {
 				GlobalVar *me = this;
 				os::Future<void, Semaphore> f;

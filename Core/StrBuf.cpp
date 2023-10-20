@@ -279,7 +279,7 @@ namespace storm {
 	StrBuf *StrBuf::add(const TObject *obj) {
 		// We're doing 'toS' to make the formatting predictable.
 		if (obj) {
-			Thread *thread = obj->thread;
+			Thread *thread = obj->associatedThread();
 			if (thread && thread->thread() != os::Thread::current()) {
 				os::Thread t = thread->thread();
 				os::Future<Str *> f;

@@ -12,12 +12,14 @@ namespace storm {
 	 */
 	class TObject : public STORM_HIDDEN(RootObject) {
 		STORM_CLASS;
+
+		friend class storm::Engine;
 	public:
 		// Create an object that should live on 'thread'.
 		STORM_CTOR TObject(Thread *thread);
 
 		// The thread we should be running on.
-		Thread *thread;
+		inline Thread *STORM_FN associatedThread() const { return thread; }
 
 		// Convert to string.
 		virtual Str *STORM_FN toS() const;
@@ -26,6 +28,10 @@ namespace storm {
 		// Dummy deepCopy function which does nothing and is not exposed to Storm. Makes it easier
 		// to write template code in C++.
 		inline void deepCopy(CloneEnv *env) {}
+
+	private:
+		// Thread we should be running on:
+		Thread *thread;
 	};
 
 

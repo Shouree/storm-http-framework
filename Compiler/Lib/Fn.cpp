@@ -337,7 +337,7 @@ namespace storm {
 				throw new (function) UsageError(S("First parameter to actor function is not an actor!"));
 
 			TObject *obj = (TObject *)params->at(0).getObject();
-			switchTo = obj->thread;
+			switchTo = obj->associatedThread();
 		} else if (runOn.state == RunOn::named) {
 			switchTo = runOn.thread->thread();
 			// No switch needed for the compiler thread since we are running on that thread.
