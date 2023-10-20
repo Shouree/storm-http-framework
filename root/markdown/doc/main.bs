@@ -40,7 +40,7 @@ class Options {
 			theme = theme;
 			root = root;
 			output = output;
-			stripNumbers = false;
+			stripNumbers = true;
 			clearOutput = false;
 			noProgress = false;
 		}
@@ -56,8 +56,8 @@ class Options {
 			clearOutput = true;
 		} else if (key == "-q" | key == "--quiet") {
 			noProgress = true;
-		} else if (key == "-n" | key == "--no-numbers") {
-			stripNumbers = true;
+		} else if (key == "-n" | key == "--numbers") {
+			stripNumbers = false;
 		} else if (key.startsWith("--")) {
 			themeOptions.put(key.cut(key.begin + 2), val);
 		}
