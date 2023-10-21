@@ -90,7 +90,7 @@ namespace storm {
 	StrBuf &STORM_FN operator <<(StrBuf &to, Buffer b);
 
 	// Conversion to/from UTF-8 strings. This is possible through the memory streams and text
-	// interface as well, but this is more convenient in some case.
+	// interface as well, but this is more convenient in some cases.
 	Buffer STORM_FN toUtf8(Str *str);
 	Str *STORM_FN fromUtf8(EnginePtr e, Buffer b);
 

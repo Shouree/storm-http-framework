@@ -7,7 +7,7 @@ namespace storm {
 
 	/**
 	 * A stream that lazily loads data from another stream. This is used to make other streams
-	 * seekable. Note that 'length' will be update throughout the lifetime of the stream.
+	 * seekable. Note that 'length' will be updated throughout the lifetime of the stream.
 	 */
 	class LazyMemIStream : public RIStream {
 		STORM_CLASS;

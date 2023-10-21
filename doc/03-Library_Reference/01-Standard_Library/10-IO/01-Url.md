@@ -2,13 +2,18 @@ Url
 ===
 
 The type `core.io.Url` stores a generic url. In the context of Storm, a url consists of a protocol
-followed by a sequence of `/`-separated parts. The `Url` also has the concept of whether it refers
-to a file or a directory. Urls referring to a directory are outputted with a trailing `/`, files do
-not have a trailing `/`.
+followed by a sequence of `/`-separated parts. The `Url` is designed to be a convenient way of
+manipulating urls (such as paths) without resorting to string manipulation. As such, the `Url` class
+typically does not access the file system. It is therefore possible to create `Url`s that refer to
+non-existent or even invalid file names. To aid in differentiating between urls to files and urls to
+paths, the `Url` class has a notion of whether it refers to a file or directory. By convention, urls
+that refer to a directory are printed using a trailing slash `/`.
 
-One of the supported protocols is the `file://` protocol that is used to access local files. Urls
-that use the `file://` protocol are outputted as regular paths. If no protocol is specified, the
-path is a relative path.
+The associated protocol manages access to the underlying file system. As such, there are members of
+the `Url` class that uses the associated protocol to check if a constructed `Url` exists, to open
+it, list the contents of directories, etc. All protocols do not support all operations. For example,
+the `file://` protocol that is used for local files (and pretty-printed as regular paths) supports
+all operations, while the protocol for relative paths supports none of them.
 
 The library contains a few convenience functions that produce `Url`s that serve as a starting point
 for further path traversal:

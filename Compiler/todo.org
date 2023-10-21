@@ -59,7 +59,8 @@
     but the scale of the issue should be assessed first.
   - [ ] Parsing core.lang.syntax.bnf takes about 80 ms, which is a bit on the high end when compiling code...
 
-* Loose ends so far [62/110]
+* Loose ends so far [62/111]
+  - [ ] Add a buffered input stream to match the buffered output stream. Add to stream documentation.
   - [ ] Introduce "negative matches" or "lookahead" in the BNF grammar. This would make it easier
     to write rules for matching "int" that do not match "intx" by having the "int" rule like:
     Primitive : "int" - !"[A-Za-z]"; or
