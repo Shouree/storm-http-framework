@@ -128,6 +128,9 @@ namespace storm {
 			// To string.
 			virtual void STORM_FN toS(StrBuf *to) const;
 
+			// Get the value.
+			Str *STORM_FN v() const { return value; }
+
 		private:
 			// Value.
 			Str *value;

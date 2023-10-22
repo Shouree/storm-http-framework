@@ -224,7 +224,13 @@ Expr interpolateStr(Block parent, Expr first, InterpolatedItem item, Str second)
 		first;
 	} else {
 		ConcatExpr r(first.pos, parent);
-		r.append(first);
+		if (first as StrLiteral) {
+			if (first.v.any) {
+				r.append(first);
+			}
+		} else {
+			r.append(first);
+		}
 		r;
 	};
 
@@ -242,7 +248,8 @@ Expr interpolateStr(Block parent, Expr first, InterpolatedItem item, Str second)
 		r.append(item.insert);
 	}
 
-	r.append(strConstant(first.pos, second));
+	if (second.any)
+		r.append(strConstant(first.pos, second));
 	r;
 }
 
