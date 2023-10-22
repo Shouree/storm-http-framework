@@ -76,6 +76,12 @@ private class StormDocFormat on Compiler {
 			name = name.cut(name.begin + 1);
 		}
 
+		Bool skipFirst = false;
+		if (name.startsWith("!")) {
+			skipFirst = true;
+			name = name.cut(name.begin + 1);
+		}
+
 		Bool updateScope = false;
 		if (name.startsWith(".")) {
 			name = name.cut(name.begin + 1);
@@ -122,12 +128,16 @@ private class StormDocFormat on Compiler {
 		} else if (all) {
 			createAll(named);
 		} else {
-			createSingle(named);
+			createSingle(named, skipFirst);
 		}
 	}
 
 	// Create an entry for a single element:
 	private void createSingle(Named named) {
+		createSingle(named, false);
+	}
+
+	private void createSingle(Named named, Bool skipFirst) {
 		ElementSeq out;
 
 		Doc? doc;
@@ -141,6 +151,8 @@ private class StormDocFormat on Compiler {
 		if (doc) {
 			try {
 				var document = markdown:parse(doc.body);
+				if (skipFirst & document.elements.elements.any)
+					document.elements.elements.remove(0);
 				out.add(document.elements);
 			} catch (Exception e) {
 				print("Caught error when parsing documentation for ${named.identifier}:");

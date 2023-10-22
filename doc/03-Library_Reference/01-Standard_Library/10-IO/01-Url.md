@@ -18,7 +18,7 @@ all operations, while the protocol for relative paths supports none of them.
 The library contains a few convenience functions that produce `Url`s that serve as a starting point
 for further path traversal:
 
-- `core.io.cwdUrl` - Get an `Url` that contains the current working directory.
+- [stormname:core.io.cwdUrl] - Get an `Url` that contains the current working directory.
 
 - `core.io.executableUrl` - Get an `Url` that refers to the path that the Storm executable was
   started from.
