@@ -73,8 +73,8 @@ namespace storm {
 		code::Ref STORM_FN directRef();
 
 		// Is this a member function?
-		// A function is considered a member function if it is located inside a function *and* the
-		// first parameter of the function matches that type.
+		// A function is considered a member function if it is located inside a function, the
+		// first parameter of the function matches that type, *and* it is not static.
 		Bool STORM_FN isMember();
 
 		// Which thread shall we run on?

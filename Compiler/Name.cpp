@@ -72,6 +72,10 @@ namespace storm {
 		return result;
 	}
 
+	MAYBE(SimpleName *) simplify(Name *name, Scope scope) {
+		return name->simplify(scope);
+	}
+
 	void Name::toS(StrBuf *to) const {
 		if (parts->empty()) {
 			*to << L"<root>";
@@ -261,6 +265,9 @@ namespace storm {
 					at++;
 					if (*at == ' ')
 						continue;
+					// Special case: empty parameter list.
+					if (part->params->count() == 0 && *at == ')')
+						break;
 
 					Name *p = parseComplexName(e, at);
 					if (!p)

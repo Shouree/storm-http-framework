@@ -66,6 +66,10 @@ namespace storm {
 		Array<NamePart *> *parts;
 	};
 
+	// Simplify a name into a simple name.
+	MAYBE(SimpleName *) STORM_FN simplify(Name *name, Scope scope) ON(Compiler);
+
+
 	/**
 	 * Name with a SrcPos attached.
 	 */

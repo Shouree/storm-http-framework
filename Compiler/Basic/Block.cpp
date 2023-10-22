@@ -82,14 +82,24 @@ namespace storm {
 			if (part->params->any())
 				return null;
 
-			Str *name = part->name;
-			VarMap::Iter i = variables->find(name);
-			if (i != variables->end())
-				return i.v();
+			if (LocalVar *found = variableHere(part))
+				return found;
 
 			BlockLookup *parent = as<BlockLookup>(lookup->parent());
 			if (parent)
 				return parent->block->variable(part);
+
+			return null;
+		}
+
+		LocalVar *Block::variableHere(SimplePart *part) {
+			if (part->params->any())
+				return null;
+
+			Str *name = part->name;
+			VarMap::Iter i = variables->find(name);
+			if (i != variables->end())
+				return i.v();
 
 			return null;
 		}
@@ -213,7 +223,7 @@ namespace storm {
 
 		Named *BlockLookup::find(SimplePart *part, Scope source) {
 			if (part->params->empty())
-				return block->variable(part);
+				return block->variableHere(part);
 
 			return null;
 		}

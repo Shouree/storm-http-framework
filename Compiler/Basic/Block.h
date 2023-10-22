@@ -40,6 +40,9 @@ namespace storm {
 			// Find a variable. Same semantics as 'find'.
 			virtual MAYBE(LocalVar *) STORM_FN variable(SimplePart *name);
 
+			// Find a variable in this particular block. Does not recurse as "variable" does.
+			virtual MAYBE(LocalVar *) STORM_FN variableHere(SimplePart *name);
+
 			// Add a variable
 			virtual void STORM_FN add(LocalVar *v);
 

@@ -37,23 +37,29 @@ class RangeFor extends Breakable {
 		loopBlock.add(expr);
 	}
 
-	// Hide the fact that we're actually two nested blocks!
-	LocalVar? variable(SimplePart part) {
-		if (part.name == valName) {
-			if (loopBlock) {
-				return loopBlock.variable(part);
-			}
-		}
+	// Hide the fact that we're actually a few nested blocks!
+	LocalVar? variableHere(SimplePart part) {
+		if (loopBlock) {
+			Bool lookup = part.name == valName;
+			if (!lookup)
+				if (keyName)
+					lookup = part.name == keyName;
 
-		if (keyName) {
-			if (part.name == keyName) {
-				if (loopBlock) {
-					return loopBlock.variable(part);
+			if (lookup) {
+				Block at = loopBlock;
+				while (at !is this) {
+					if (found = at.variableHere(part))
+						return found;
+
+					if (nextLookup = at.lookup.parent as BlockLookup)
+						at = nextLookup.block;
+					else
+						break;
 				}
 			}
 		}
 
-		super:variable(part);
+		super:variableHere(part);
 	}
 
 	// Generate code.
