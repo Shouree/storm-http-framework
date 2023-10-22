@@ -207,6 +207,9 @@ class StormVisitor extends markdown:Visitor {
 	// Visit elements, highligt source blocks.
 	Element visit(Element elem) : override {
 		if (elem as CodeBlock) {
+			if (elem.language == "stormdoc")
+				return formatStormDoc(node.source, elem.code);
+
 			resolveIncludes(elem);
 
 			if (highlighted = highlight:highlightSource(node.source, elem))
@@ -229,6 +232,8 @@ class StormVisitor extends markdown:Visitor {
 				return createDownload(param);
 			if (name == "storm")
 				return createStormInfo(param);
+			if (name == "stormname")
+				return PackedText(formatName(node.source, param));
 		}
 		return elem;
 	}

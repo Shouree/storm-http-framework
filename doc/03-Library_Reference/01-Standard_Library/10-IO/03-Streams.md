@@ -21,6 +21,15 @@ streams.
 Output Streams
 --------------
 
+```stormdoc
+core.io.OStream
+- .write(*)
+- .flush()
+- .close()
+```
+
+[stormname:core.Array(core.Int)]
+
 Output streams accept data that is written to some destination. They are implemented as subclasses
 to the class `core.io.OStream`. Output streams are not buffered in general, so it is desirable to
 write data in chunks whenever possible. The class `core.io.BufferedOStream` can be used to wrap an

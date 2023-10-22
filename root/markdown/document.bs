@@ -42,14 +42,30 @@ class ElementSeq {
 
 	// Add an element.
 	void add(Element e) {
-		elements << e;
+		if (e as PackedElements)
+			add(e.elements);
+		else
+			elements << e;
+	}
+
+	// Add many elements.
+	void add(ElementSeq e) {
+		elements.append(e.elements);
 	}
 
 	// Visit the entire structure.
 	ElementSeq visit(Visitor v) {
-		for (i, x in elements) {
-			elements[i] = x.visit(v);
+		Element[] newElems;
+		for (x in elements) {
+			var newElem = x.visit(v);
+			if (newElem as PackedElements) {
+				newElems.append(newElem.elements.elements);
+			} else {
+				newElems << newElem;
+			}
 		}
+
+		elements = newElems;
 
 		return v.visit(this);
 	}
@@ -290,6 +306,47 @@ class CodeBlock extends Element {
 		}
 		to.restoreIndent();
 		to.html("</pre>");
+	}
+}
+
+
+/**
+ * Element that contains a sequence of other elements. Useful when replacing a single element with
+ * multiple elements in a visitor.
+ */
+class PackedElements extends Element {
+	// Elements.
+	ElementSeq elements;
+
+	// Create.
+	init() {
+		init {}
+	}
+
+	// Add an element.
+	void add(Element elem) {
+		elements.add(elem);
+	}
+
+	// Add a sequence of elements.
+	void add(ElementSeq seq) {
+		elements.add(seq);
+	}
+
+	// Visit elements.
+	Element visit(Visitor v) : override {
+		elements = elements.visit(v);
+		return v.visit(this);
+	}
+
+	// To string.
+	protected void toS(StrBuf to) : override {
+		to << elements;
+	}
+
+	// To HTML.
+	void toHtml(Html to) : override {
+		elements.toHtml(to);
 	}
 }
 

@@ -246,3 +246,12 @@ pre>.fn-name { color: #0000ff; }
 pre>.var-name { color: #a0522d; }
 pre>.type-name { color: #228b26; }
 pre>.constant { color: #338b8c; }
+
+code>.comment { color: #b22222; }
+code>.delimiter { color: #000000; }
+code>.string { color: #8b2252; }
+code>.keyword { color: #a020f0; }
+code>.fn-name { color: #0000ff; }
+code>.var-name { color: #a0522d; }
+code>.type-name { color: #228b26; }
+code>.constant { color: #338b8c; }

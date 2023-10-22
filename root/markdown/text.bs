@@ -12,9 +12,24 @@ class FormattedText {
 		init {}
 	}
 
+	// Create from a string.
+	init(Str text) {
+		init {}
+		add(text);
+	}
+
+	// Create from a single span piece.
+	init(TextSpan span) {
+		init {}
+		add(span);
+	}
+
 	// Add a span.
 	void add(TextSpan span) {
-		spans << span;
+		if (span as PackedText)
+			spans.append(span.text.spans);
+		else
+			spans << span;
 	}
 
 	// Add a string as a plain span.
@@ -36,8 +51,18 @@ class FormattedText {
 
 	// Visit the entire structure.
 	FormattedText visit(Visitor v) {
-		for (i, x in spans)
-			spans[i] = x.visit(v);
+		TextSpan[] newSpans;
+		for (x in spans) {
+			var newSpan = x.visit(v);
+			if (newSpan as PackedText) {
+				newSpans.append(newSpan.text.spans);
+			} else {
+				newSpans << newSpan;
+			}
+		}
+
+		spans = newSpans;
+
 		return v.visit(this);
 	}
 
@@ -280,6 +305,48 @@ class CustomInlineHtml extends TextSpan {
 
 	// Visit recursively.
 	TextSpan visit(Visitor v) : override {
+		v.visit(this);
+	}
+}
+
+
+/**
+ * Packed text. Useful to replace a single TextSpan with multiple ones in a transform.
+ */
+class PackedText extends TextSpan {
+	// Formatted text.
+	FormattedText text;
+
+	// Create.
+	init() {
+		init {}
+	}
+
+	// Create.
+	init(FormattedText text) {
+		init { text = text; }
+	}
+
+	// Add.
+	void add(TextSpan span) {
+		text.add(span);
+	}
+
+	// To string.
+	void toS(StrBuf to) : override {
+		for (x in spans)
+			to << x;
+	}
+
+	// To HTML.
+	void toHtml(Html to) : override {
+		for (x in spans)
+			x.toHtml(to);
+	}
+
+	// Visit recursively.
+	TextSpan visit(Visitor v) : override {
+		text = text.visit(v);
 		v.visit(this);
 	}
 }

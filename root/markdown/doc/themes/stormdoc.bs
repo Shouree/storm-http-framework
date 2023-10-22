@@ -1,0 +1,317 @@
+use core:io;
+use core:lang;
+use markdown;
+
+// Create markdown formatting for an element marked as "stormdoc".
+Element formatStormDoc(Url sourceFile, Str[] lines) on Compiler {
+	StormDocFormat format(sourceFile);
+
+	for (line in lines) {
+		if (line.startsWith("- ")) {
+			line = line.cut(line.begin + 2);
+			format.startList();
+		} else {
+			format.stopList();
+		}
+
+		format.create(line, false);
+	}
+
+	format.output;
+}
+
+
+/**
+ * State for formatting documentation.
+ */
+private class StormDocFormat on Compiler {
+	// Current "origin" point in the name tree. For relative names.
+	private Scope currentPos;
+
+	// Source code location.
+	private Url source;
+
+	// Output to.
+	PackedElements output;
+
+	// Currently outputting to a list?
+	private List? inList;
+
+	// Create.
+	init(Url source) {
+		init {
+			currentPos = rootScope;
+			source = source;
+		}
+	}
+
+	// Start outputting to a list.
+	void startList() {
+		if (inList.any)
+			return;
+
+		List l(false);
+		inList = l;
+		output.add(l);
+	}
+
+	// Stop outputting to a list.
+	void stopList() {
+		inList = null;
+	}
+
+	// Output a set of elements.
+	private void emit(ElementSeq elem) {
+		if (inList)
+			inList.add(elem);
+		else
+			output.add(elem);
+	}
+
+	// Create an element for a line in the specification.
+	void create(Str name, Bool list) {
+		Bool noOutput = false;
+		if (name.startsWith("@")) {
+			noOutput = true;
+			name = name.cut(name.begin + 1);
+		}
+
+		Bool updateScope = false;
+		if (name.startsWith(".")) {
+			name = name.cut(name.begin + 1);
+		} else {
+			currentPos = rootScope;
+			updateScope = true;
+		}
+
+		Str? overloads;
+		Bool all = false;
+		if (name.endsWith("(*)")) {
+			name = name.cut(name.begin, name.findLast("(*)"));
+			var dot = name.findLast(".");
+			if (dot == name.end) {
+				overloads = name;
+				name = "";
+			} else {
+				overloads = name.cut(dot + 1);
+				name = name.cut(name.begin, dot);
+			}
+		} else if (name.endsWith(".*")) {
+			name = name.cut(name.begin, name.findLast(".*"));
+			all = true;
+		}
+
+		unless (parsed = parseComplexName(name)) {
+			print("ERROR: ${source}: Failed to parse the name ${name}");
+			return;
+		}
+
+		unless (named = findNamed(parsed, currentPos)) {
+			print("ERROR: ${source}: The name ${parsed} does not refer to anything.");
+			return;
+		}
+
+		if (updateScope)
+			currentPos = currentPos.child(named);
+
+		if (noOutput)
+			return;
+
+		if (overloads) {
+			createOverloads(named, overloads);
+		} else if (all) {
+			createAll(named);
+		} else {
+			createSingle(named);
+		}
+	}
+
+	// Create an entry for a single element:
+	private void createSingle(Named named) {
+		ElementSeq out;
+
+		Doc? doc;
+		if (d = named.documentation)
+			doc = d.get();
+
+		if (inList.any) {
+			out.add(Paragraph(createNamedTitle(named, doc)));
+		}
+
+		if (doc) {
+			try {
+				var document = markdown:parse(doc.body);
+				out.add(document.elements);
+			} catch (Exception e) {
+				print("Caught error when parsing documentation for ${named.identifier}:");
+				print(e.toS);
+				throw e;
+			}
+		}
+
+		emit(out);
+	}
+
+	// Create an entry for all overloads:
+	private void createOverloads(Named named, Str base) {
+		unless (named as NameSet) {
+			print("ERROR: ${source}: No members in the entity ${named.identifier}");
+			return;
+		}
+
+		var overloads = named.findName(base).sorted(&sortPredicate);
+		for (elem in overloads)
+			createSingle(elem);
+	}
+
+	// Create an entry for all members:
+	private void createAll(Named named) {
+		unless (named as NameSet) {
+			print("ERROR: ${source}: No members in the entity ${named.identifier}");
+			return;
+		}
+
+		Named[] elements;
+		for (x in named)
+			elements << x;
+
+		elements.sort(&sortPredicate);
+		for (elem in elements)
+			createSingle(elem);
+	}
+}
+
+private Bool sortPredicate(Named a, Named b) on Compiler {
+	return a.pos.start < b.pos.start;
+}
+
+// Find element, optionally add a this pointer.
+private Named? findNamed(Name name, Scope scope) on Compiler {
+	unless (simplified = name.simplify(scope))
+		return null;
+
+	if (found = scope.find(simplified))
+		return found;
+
+	if (name.count == 0)
+		return null;
+
+	unless (parent = scope.find(simplified.parent) as Type)
+		return null;
+
+	simplified.last.params.insert(0, thisPtr(parent));
+	return scope.find(simplified);
+}
+
+
+
+// Format the name of some entity, look it up first.
+FormattedText formatName(Url source, Str name) on Compiler {
+	unless (name = parseComplexName(name)) {
+		print("ERROR: ${source}: the name ${name} is not valid.");
+		return FormattedText(name);
+	}
+
+	unless (named = findNamed(name, rootScope)) {
+		print("ERROR: ${source}: the name ${name} was not found.");
+		return FormattedText(name.toS);
+	}
+
+	createNamedTitle(named);
+}
+
+
+// Format the name of some entity nicely.
+FormattedText createNamedTitle(Named named) on Compiler {
+	if (d = named.documentation) {
+		createNamedTitle(named, d.get());
+	} else {
+		createNamedTitle(named, null);
+	}
+}
+
+// As above, but assumes that documentation has been loaded.
+FormattedText createNamedTitle(Named named, Doc? doc) on Compiler {
+	Html html;
+	html.html("<code>");
+
+	if (named as Function) {
+		addType(html, named.result);
+		html.text(" ");
+		if (named.name == "__ctor")
+			addSpan(html, "fn-name", "init");
+		else
+			addSpan(html, "fn-name", named.name);
+		html.text("(");
+
+		DocParam[] params;
+		if (doc)
+			params = doc.params;
+		if (params.empty) {
+			for (x in named.params)
+				params << DocParam("", x);
+		}
+
+		if (named.isMember & params.any)
+			params.remove(0);
+
+		for (i, p in params) {
+			if (i > 0)
+				html.text(", ");
+			addType(html, p.type);
+			if (p.name.any) {
+				html.text(" ");
+				addSpan(html, "var-name", p.name);
+			}
+		}
+		html.text(")");
+	} else if (named as Variable) {
+		addType(html, named.type);
+		html.text(" ");
+		addSpan(html, "var-name", named.name);
+	} else {
+		addType(html, named.path());
+	}
+
+	html.html("</code>");
+	FormattedText(CustomInlineHtml(html.toS));
+}
+
+// Helper to create a span of text.
+private void addSpan(Html to, Str class, Str text) on Compiler {
+	to.html("<span class=\"");
+	to.text(class);
+	to.html("\">");
+	to.text(text);
+	to.html("</span>");
+}
+
+// Add a span for a type.
+private void addType(Html to, SimpleName name) on Compiler {
+	for (i, elem in name) {
+		if (i > 0)
+			to.text(".");
+
+		addSpan(to, "type-name", elem.name);
+		if (elem.params.any) {
+			to.text("<");
+			for (i, p in elem.params) {
+				if (i > 0)
+					to.text(", ");
+				addType(to, p);
+			}
+			to.text(">");
+		}
+	}
+}
+
+private void addType(Html to, Value type) on Compiler {
+	if (t = type.type) {
+		addType(to, t.path());
+	} else {
+		addSpan(to, "type-name", "void");
+	}
+
+	if (type.ref)
+		to.text("&");
+}
