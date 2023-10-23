@@ -7,9 +7,6 @@ namespace storm {
 	/**
 	 * Helper class that provides limited buffering to support seeking without a native peek
 	 * operation on the underlying stream.
-	 *
-	 * TODO: If we want to keep the "streams can be copied without issues" policy, this
-	 * implementation needs to be re-done with a shared lookahead buffer.
 	 */
 	class PeekIStream : public IStream {
 		STORM_CLASS;

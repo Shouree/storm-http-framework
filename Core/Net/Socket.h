@@ -8,13 +8,10 @@ namespace storm {
 	STORM_PKG(core.net);
 
 	/**
-	 * A TCP socket.
+	 * A generic socket.
 	 *
-	 * The socket contain two streams: one for reading data and another for writing data. These
-	 * streams may be used simultaneously. As for regular streams, it is not a good idea to share
-	 * these streams between different threads, even if it is possible.
-	 *
-	 * Sockets are created either by calling the 'connect' function, or by a Listener object.
+	 * This socket encapsulates the generic parts of a socket, that is shared by TCP, UDP, and other
+	 * protocols.
 	 */
 	class Socket : public Object {
 		STORM_CLASS;

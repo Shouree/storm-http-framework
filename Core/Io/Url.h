@@ -35,13 +35,14 @@ namespace storm {
 		STORM_CLASS;
 	public:
 
-		// Empty url.
+		// Create a new, empty, relative `Url`. A relative url has to be made absolute before it can
+		// be accessed.
 		STORM_CTOR Url();
 
-		// Create from fundamentals.
+		// Create from a protocol, an array of parts, and a set of flags.
 		STORM_CTOR Url(Protocol* p, Array<Str *> *parts, UrlFlags flags);
 
-		// Relative path creation.
+		// Create a relative `Url` with the specified parts and flags.
 		STORM_CTOR Url(Array<Str *> *parts, UrlFlags flags);
 
 		// Ctor for STORM.
@@ -53,110 +54,120 @@ namespace storm {
 		// Deep copy.
 		virtual void STORM_FN deepCopy(CloneEnv *o);
 
-		// Equals. Note that this is always a bitwise equality, multiple paths may name
-		// the same file!
+		// Compare this url to another url. The comparison depends on the current protocol. For
+		// example, on Windows, paths are compared in a case insensitive manner. The comparison
+		// does, however, never access the file system to resolve links, etc.
 		virtual Bool STORM_FN operator ==(const Url &o) const;
 
 		// Hash of this url.
 		virtual Nat STORM_FN hash() const;
 
-		// Append another path to this one. The other one has to be a relative path.
+		// Append another path to this one. `url` has to be a relative `Url`.
 		Url *STORM_FN push(Url *url) const;
 		Url *STORM_FN operator /(Url *url) const;
 
-		// Append another part to this one.
+		// Append a new part to this url. Returns the updated Url.
 		Url *STORM_FN push(Str *part) const;
 		Url *STORM_FN operator /(Str *url) const;
 
 		// Append another part to this one, making the resulting Url into a directory.
 		Url *STORM_FN pushDir(Str *part) const;
 
-		// Make into a directory.
+		// Return a copy of this `Url` marked as a directory.
 		Url *STORM_FN makeDir() const;
 
-		// Make the Url absolute if it is not already absolute.
+		// Make this `Url` into an absolute url if it is not already absolute. If the url is
+		// relative, assume it is relative to `base`.
 		Url *STORM_FN makeAbsolute(Url *base);
 
 		// Get all parts.
 		Array<Str *> *STORM_FN getParts() const;
 
-		// Is this a directory? Note: This only depends on the pathname.
+		// Check if this url refers to a directory. Note that this only depends on the contents in
+		// the `Url`. The file system will not be queried. Use `updated()` to query the file system.
 		Bool STORM_FN dir() const;
 
-		// Absolute path?
+		// Check if this `Url` is absolute.
 		Bool STORM_FN absolute() const;
+
+		// Check if this `Url` is relative.
 		Bool STORM_FN relative() const { return !absolute(); }
 
 		// Parent directory.
 		Url *STORM_FN parent() const;
 
-		// Get the file title. The title does not contain the file extension.
+		// Get the title of the file or directory. This is the name without the file extension.
 		Str *STORM_FN title() const;
 
-		// Get the file name, this includes the extension.
+		// Get the name of the file or directory. This includes the file extension.
 		Str *STORM_FN name() const;
 
-		// Get the file extension.
+		// Get the file extension, if any.
 		Str *STORM_FN ext() const;
 
-		// Generate an URL with the given extension. Replaces the original one.
+		// Create a copy of this url with the current file extension replaced with `ext`.
 		Url *STORM_FN withExt(Str *ext) const;
 
-		// Generate a relative path (is spiritually const, but may return itself).
+		// Make this url relative to `to`.
 		Url *STORM_FN relative(Url *to);
 
-		// Generate a relative path if the current path is below "to" (i.e. they share a common prefix).
+		// Generate a relative path if the current path is below `to` (i.e. if they share a common prefix).
 		Url *STORM_FN relativeIfBelow(Url *to);
 
-		// Update this Url, that is: check if it is a file or a directory and update the status
-		// accordingly. You typically only need to call this function if you constructed the Url
-		// yourself and are unsure of whether it actually was a file or directory (e.g. because it
-		// was from user input). Does not modify the object, but may return itself.
+		// Return a copy of this `Url` that is updated to reflect the status of the element in the
+		// file system. That is: check if the `Url` refers to a file or a directory, and make `dir`
+		// return the appropriate value.
 		Url *STORM_FN updated();
 
 		/**
 		 * Low-level operations.
 		 */
 
-		// Get the number of parts in this URL.
+		// Get the number of parts in this url.
 		inline Nat STORM_FN count() const { return parts->count(); }
+
+		// Check if there are no parts in this url.
 		inline Bool STORM_FN empty() const { return parts->empty(); }
+
+		// Check if there are any parts in this url.
 		inline Bool STORM_FN any() const { return parts->any(); }
 
-		// Get a specific part.
-		inline Str *at(Nat i) const { return parts->at(i); }
+		// Get the part with index `i`.
 		inline Str *STORM_FN operator[](Nat i) const { return parts->at(i); }
+		inline Str *at(Nat i) const { return parts->at(i); }
 
 		/**
 		 * Find out things about this URL. All operations are not always supported
 		 * by all protocols. Note that these are generally assumed to be run on non-relative urls.
 		 */
 
-		// Find all children URL:s.
+		// Return an array of `Url`s that contain files and directories in the directory referred to
+		// by this `Url`. The returned `Url`s are such that their `dir` member returns whether they
+		// are directories or not.
 		Array<Url *> *STORM_FN children();
 
-		// Open this Url for reading.
+		// Open this `Url` for reading.
 		IStream *STORM_FN read();
 
-		// Open this Url for writing.
+		// Open this `Url` for writing.
 		OStream *STORM_FN write();
 
-		// Does this Url exist?
+		// Check if this `Url` exists.
 		Bool STORM_FN exists();
 
-		// Create this path as a directory. Does not attempt to create parent directories.
+		// Create this url as a directory. Does not attempt to create parent directories.
 		Bool STORM_FN createDir();
 
-		// Recursively create the directories for this path.
+		// Recursively create the directories for this url.
 		Bool STORM_FN createDirTree();
 
-		// Delete this path. Directories need to be empty.
+		// Delete this path. If it refers to a directory, that directory needs to be empty.
 		Bool STORM_FN STORM_NAME(unlink,delete)();
 
-		// Delete this path. Recurses into sub-folders if necessary.
+		// Delete this path and any files and directories inside it.
 		Bool STORM_FN deleteTree();
 
-		// Format for other C-api:s. May not work for all kind of URL:s.
+		// Format for other C-api:s. May not return a sensible representation for all protocols.
 		Str *STORM_FN format();
 
 		// Get the protocol used.

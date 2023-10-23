@@ -7,11 +7,11 @@ namespace storm {
 	/**
 	 * Buffered output stream.
 	 *
-	 * Buffers up to "n" bytes before writing to the output stream. This is useful when writing to
+	 * Buffers up to `n` bytes before writing to the output stream. This is useful when writing to
 	 * network streams and/or SSL streams, where there might be some overhead in writing many small
 	 * chunks.
 	 *
-	 * The buffering means that it is important to call 'flush' at appropriate times to synchronize
+	 * The buffering means that it is important to call `flush` at appropriate times to synchronize
 	 * communication.
 	 */
 	class BufferedOStream : public OStream {

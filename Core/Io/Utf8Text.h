@@ -5,7 +5,7 @@ namespace storm {
 	STORM_PKG(core.io);
 
 	/**
-	 * Reading and decoding of UTF8.
+	 * Reading and decoding UTF-8 text.
 	 */
 	class Utf8Input : public TextInput {
 		STORM_CLASS;
@@ -46,7 +46,7 @@ namespace storm {
 
 
 	/**
-	 * Writing and encoding of UTF8.
+	 * Encoding and writing UTF-8 text.
 	 */
 	class Utf8Output : public TextOutput {
 		STORM_CLASS;

@@ -5,7 +5,8 @@ namespace storm {
 	STORM_PKG(core.io);
 
 	/**
-	 * A stream that meters the number of bytes written to it.
+	 * A stream that meters the number of bytes written to it, so that it is possible to store
+	 * offsets to data structures in the file.
 	 */
 	class MeterOStream : public OStream {
 		STORM_CLASS;

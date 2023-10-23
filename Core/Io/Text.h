@@ -29,27 +29,29 @@ namespace storm {
 	class TextInfo {
 		STORM_VALUE;
 	public:
-		// Default config.
+		// Create the default configuration (all members set to false).
 		STORM_CTOR TextInfo();
 
-		// Use windows-style linefeeds.
+		// Use windows-style line endings.
 		Bool useCrLf;
 
-		// Output a BOM.
+		// Output a byte order mark first.
 		Bool useBom;
 	};
 
-	// System default TextInfo.
+	// Create the default text information for the current system.
 	TextInfo STORM_FN sysTextInfo();
 
-	// Unix line-endings.
+	// Create a text information that produces Unix-style line endings.
 	TextInfo STORM_FN unixTextInfo();
 
-	// Windows line-endings.
+	// Create a text information that procuces Windows-style line endings.
 	TextInfo STORM_FN windowsTextInfo();
 
-	// Specify if you require a BOM.
+	// Create a text information that produces Windows-style line endings, and specify whether a BOM
+	// should be outputted.
 	TextInfo STORM_FN windowsTextInfo(Bool bom);
+
 
 	/**
 	 * Base interface for reading text. Caches one character. When implementing your own version,
@@ -63,25 +65,25 @@ namespace storm {
 		// Create.
 		STORM_CTOR TextInput();
 
-		// Read a single character from the stream. Returns 0 on failure.
+		// Read a single character from the stream. Returns `Char(0)` on failure.
 		Char STORM_FN read();
 
-		// Read a single character from the stream without line-ending conversion. Returns 0 on failure.
+		// Read a single character from the stream without line-ending conversion. Returns `Char(0)` on failure.
 		Char STORM_FN readRaw();
 
-		// Peek a single character. Returns 0 on failure.
+		// Peek a single character. Returns `Char(0)` on failure.
 		Char STORM_FN peek();
 
-		// Read an entire line from the file (does not care about line endings).
+		// Read an entire line from the file. Removes any line endings.
 		Str *STORM_FN readLine();
 
-		// Read the entire file.
+		// Read the entire file into a string.
 		Str *STORM_FN readAll();
 
-		// Read the entire file raw (still ignores any BOM).
+		// Read the entire file without any conversions of line endings (still ignores any BOM).
 		Str *STORM_FN readAllRaw();
 
-		// More data in the file?
+		// Does the file contain any more data?
 		Bool STORM_FN more();
 
 		// Close the underlying stream.
@@ -109,14 +111,16 @@ namespace storm {
 	};
 
 
-	// Create a reader. Identifies the encoding automatically.
+	// Create a text reader. Identifies the encoding automatically and creates an appropriate reader.
 	TextInput *STORM_FN readText(IStream *stream);
+
+	// Create a text reader from an `Url`. Equivalent to calling `readText(file.read())`.
 	TextInput *STORM_FN readText(Url *file);
 
-	// Read a string.
+	// Create a text reader that reads data from a string. Utilizes `StrInput`.
 	TextInput *STORM_FN readStr(Str *from);
 
-	// Read all text from a file.
+	// Read the text from a file into a string. Equivalent to calling `readText(file).readAll()`.
 	Str *STORM_FN readAllText(Url *file);
 
 
@@ -127,7 +131,7 @@ namespace storm {
 	class TextOutput : public Object {
 		STORM_ABSTRACT_CLASS;
 	public:
-		// Create. Output regular unix line endings (TODO: Should this be OS-dependent?)
+		// Create. Outputs plain Unix line endings.
 		STORM_CTOR TextOutput();
 
 		// Create. Specify line endings.
@@ -136,11 +140,13 @@ namespace storm {
 		// Automatic flush on newline? (on by default)
 		Bool autoFlush;
 
-		// Write a string.
+		// Write a character.
 		void STORM_FN write(Char c);
+
+		// Write a string.
 		void STORM_FN write(Str *s);
 
-		// Write a string, add any line ending.
+		// Write a string, add any line endings.
 		void STORM_FN writeLine(Str *s);
 
 		// Write a new-line character.

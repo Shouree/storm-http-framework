@@ -5,7 +5,7 @@ namespace storm {
 	STORM_PKG(core.io);
 
 	/**
-	 * UTF16 reader class.
+	 * Read and decode UTF-16 text. Both little- and big endian are supported.
 	 */
 	class Utf16Input : public TextInput {
 		STORM_CLASS;
@@ -49,7 +49,7 @@ namespace storm {
 	};
 
 	/**
-	 * UTF16 writer class.
+	 * Encode and write UTF-16. Both little- and big endian are supported.
 	 */
 	class Utf16Output : public TextOutput {
 		STORM_CLASS;

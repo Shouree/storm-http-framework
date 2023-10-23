@@ -9,8 +9,8 @@ namespace storm {
 	STORM_PKG(core.net);
 
 	/**
-	 * Abstract representation of an internet address (eg. IPv4 or IPv6). Roughly corresponds to a
-	 * 'struct sockaddr'.
+	 * Abstract representation of an *internet address* (e.g. IPv4 or IPv6). Roughly corresponds to
+	 * a `struct sockaddr` in UNIX.
 	 *
 	 * Port = 0 means 'unspecified port'.
 	 *
@@ -85,7 +85,7 @@ namespace storm {
 		// Access individual parts by index.
 		Byte STORM_FN operator [](Nat id) const;
 
-		// Number of bytes.
+		// Number of bytes. Allows iterating through the individual parts.
 		Nat STORM_FN count() const { return 4; }
 
 		// Fill 'sockaddr'.
@@ -120,10 +120,10 @@ namespace storm {
 		STORM_CTOR Inet6Address(Nat port, Nat addr0, Nat addr1, Nat addr2, Nat addr3);
 		STORM_CTOR Inet6Address(Nat port, Nat addr0, Nat addr1, Nat addr2, Nat addr3, Nat flow, Nat scope);
 
-		// Access individual parts by index.
+		// Access individual parts by index. Each part is 16 bits long.
 		Nat STORM_FN operator [](Nat id) const;
 
-		// Number of bytes.
+		// Number of 16-bit parts. Allows iterating through the individual parts.
 		Nat STORM_FN count() const { return 8; }
 
 		// Get flow info.

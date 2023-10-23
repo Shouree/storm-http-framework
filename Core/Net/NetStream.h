@@ -32,10 +32,10 @@ namespace storm {
 		// Get the output stream.
 		NetOStream *STORM_FN output() const;
 
-		// Get the value of the 'nodelay' socket option.
+		// Get the value of the `nodelay` socket option.
 		Bool STORM_FN nodelay() const;
 
-		// Set the 'nodelay' socket option.
+		// Set the `nodelay` socket option.
 		void STORM_ASSIGN nodelay(Bool v);
 
 		// Get the remote host we're connected to.
@@ -71,8 +71,8 @@ namespace storm {
 	// Create a socket that is connected to a specific address.
 	MAYBE(NetStream *) STORM_FN connect(Address *to);
 
-	// Create a socket that is connected to a specific address, resolving the name first. If 'host'
-	// specifies a port, it overrides the port in 'port'.
+	// Create a socket that is connected to a specific address, resolving the name first. If `host`
+	// specifies a port, it overrides the port in `port`.
 	MAYBE(NetStream *) STORM_FN connect(Str *host, Nat port);
 
 

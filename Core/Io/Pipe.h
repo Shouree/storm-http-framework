@@ -7,7 +7,7 @@ namespace storm {
 	STORM_PKG(core.io);
 
 	/**
-	 * A class that contains two streams, and input and an output, that are connected to each other
+	 * A class that contains two streams, an input and an output, that are connected to each other
 	 * in a manner similar to a POSIX pipe.
 	 *
 	 * The class has a circular buffer of a fixed size (4 KB by default). When a thread attempts to

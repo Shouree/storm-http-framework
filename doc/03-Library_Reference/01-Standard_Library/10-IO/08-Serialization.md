@@ -1,5 +1,5 @@
 Serialization
-==============
+=============
 
 Storm has a library that provides serialization facilities for objects. These facilities are
 implemented by the classes `core.io.ObjIStream` and `core.io.ObjOStream`, which specify the binary
@@ -20,8 +20,8 @@ writes two objects using one instance of `ObjOStream`, but the reader reads the 
 different instances of `ObjIStream`, deserialization will most likely fail.
 
 
-Serializing data
-------------------
+Serializing Data
+----------------
 
 Using the serialization is fairly easy. All serializable types provide a `write` and a `read`
 function that handles serialization and deserialization respectively. They shall have the following
@@ -58,8 +58,8 @@ objects, it produces human readable text. For this stream, just like with `ObjIS
 important to match the number of instances when reading with the number of instances when writing.
 
 
-Limiting impact of untrusted data
------------------------------------
+Limiting Impact of Untrusted Data
+---------------------------------
 
 To provide basic protection against deserialization of untrusted data, it is possible to impose
 various limits on the size of the deserialized data. The `ObjIStream` provides the following
@@ -84,8 +84,8 @@ creating an `ObjIStream`, all of them are set to the maximum `Nat` value, which 
 below 4 GiB.
 
 
-Making classes serializable
-----------------------------
+Making Classes Serializable
+---------------------------
 
 Usually, you don't want to serialize a large amount of primitive types. Usually, it makes more sense
 to create a type that represents the data you want to serialize, and treat it as a whole unit. Of
@@ -98,7 +98,10 @@ correspond to the data in the class. The function is designed to be usable with
 [decorators](md://Basic_Storm/Types) in Basic Storm. As such, in Basic Storm (and other languages
 with similar mechanisms), one can easily make a class serializable as follows:
 
-```
+```bs
+use lang:bs:macro;  // for named{}
+use util:serialize; // for serializable
+
 class MyClass : serializable {
     Int a;
     Str b;
@@ -107,8 +110,8 @@ class MyClass : serializable {
 ```
 
 
-The serialization interface
-----------------------------
+The Serialization Interface
+---------------------------
 
 There might be times when you need to serialize types that consist of non-serializable types, or
 when the standard representation is not suitable for some reason. This is also possible to solve,
@@ -150,7 +153,9 @@ handle shared instances and cyclic hierarchies, `startClass` takes an additional
 reference to the instance being serialized. Except for this difference, serialization of class types
 work the same as for value types. As such, a `write` function usually looks like this:
 
-```
+```bs
+use lang:bs:macro;  // for named{}
+
 class MyClass {
     Int a;
     Str b;
@@ -194,7 +199,9 @@ reference. As such, the `read` function for class types can be implemented as fo
 implementation provided by the `serializable` function is slightly more efficient, as it skips the
 type check required in Basic Storm):
 
-```
+```bs
+use lang:bs:macro;  // for named{}
+
 class MyClass {
     // ...
     MyClass read(ObjIStream from) : static {
@@ -280,7 +287,7 @@ assumed to read the data for the class in the same way data is written (except, 
 a superclass, the superclass is expected to be read before any members of the subclass. As such,
 read constructors are typically implemented as follows in Basic Storm:
 
-```
+```bs
 class MyClass {
     Int a;
     Str b;
@@ -309,7 +316,10 @@ To summarize custom serialization, we provide two examples in Basic Storm. The f
 how one can implement the standard serialization using the custom serialization mechanisms described
 above. Here, we have class with two members, `a` and `b` that are serialized:
 
-```
+```bs
+use lang:bs:macro;  // for named{}
+use util:serialize; // for serializable
+
 class MyClass : serializable /* provides "read", which is difficult to implement in Basic Storm */ {
     Int a;
     Str b;
@@ -344,7 +354,10 @@ produce a serialized stream that does not contain enough information to read wit
 implementation of `MyClass`. Note, that this is unnecessary, as `MyClass` is simple enough to be
 serializable using the standard mechanisms:
 
-```
+```bs
+use lang:bs:macro;  // for named{}
+use util:serialize; // for serializable
+
 class MyClass : serializable /* provides "read" and "serializedType" */ {
     Int a;
     Str b;
@@ -508,8 +521,8 @@ Example
 Consider the code below, found in the file `serialization.bs` in the `demo` package:
 
 
-```
-?Include:root/demo/serialization.bs?
+```bs
+<?include:demo/serialization.bs?>
 ```
 
 The function `serializeExample` serialize an instance of the `Wrap` class and as the first session,
@@ -518,6 +531,7 @@ printed followed by the binary representation. The textual representations illus
 is structured by the serialization mechanism, and should be fairly apparent from the output:
 
 Session 1 (the `Wrap` object):
+
 ```
 demo.Wrap (instance 0) {
     a: demo.Val {
@@ -540,6 +554,7 @@ demo.Wrap (instance 0) {
 ```
 
 Session 2 (the array of `Val` objects):
+
 ```
 core.Array(demo.Val) (instance 0) [
     demo.Val {

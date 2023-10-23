@@ -6,7 +6,7 @@ namespace storm {
 	STORM_PKG(core.io);
 
 	/**
-	 * Simple memory stream.
+	 * A stream that reads from a memory buffer.
 	 */
 	class MemIStream : public RIStream {
 		STORM_CLASS;
@@ -54,8 +54,9 @@ namespace storm {
 		nat pos;
 	};
 
+
 	/**
-	 * Output stream.
+	 * A stream that writes to a memory buffer.
 	 */
 	class MemOStream : public OStream {
 		STORM_CLASS;

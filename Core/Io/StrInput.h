@@ -5,6 +5,9 @@
 namespace storm {
 	STORM_PKG(core.io);
 
+	/**
+	 * Read characters from a string.
+	 */
 	class StrInput : public TextInput {
 		STORM_CLASS;
 	public:
