@@ -10,3 +10,7 @@ the language in terms of the Storm standard library.
 Most of these types are likely visible by default in languages in Storm. For example, both [Basic
 Storm](md:/Language_Reference/Basic_Storm) and [the Syntax
 Language](md:/Language_Reference/The_Syntax_Language) searches the `core` package by default.
+
+As mentioned [before](md:..), this part of the manual aims to provide an overview of the central
+concepts. Due to the importance of the standard library, this overview is fairly complete and
+contains many excerpts from the built-in documentation.

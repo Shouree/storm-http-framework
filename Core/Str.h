@@ -11,6 +11,9 @@ namespace storm {
 	 *
 	 * Strings are immutable sequences of unicode codepoints. The implementation stores strings in
 	 * UTF-16, but hides this fact by disallowing low-level access to the underlying representation.
+	 * Because of this, direct access to the underlying representation is not allowed. Furthermore,
+	 * indexed access is not allowed as it can not be implemented efficiently. Iterators can be used
+	 * to step through codepoints.
 	 *
 	 * Note: We may want to enforce proper normalization of strings to avoid weird results.
 	 */
@@ -38,11 +41,13 @@ namespace storm {
 		STORM_CTOR Str(Char ch);
 		STORM_CTOR Str(Char ch, Nat count);
 
-		// Empty?
+		// Is the string empty?
 		Bool STORM_FN empty() const;
+
+		// Does the string contain any characters?
 		Bool STORM_FN any() const;
 
-		// Concatenation.
+		// Concatenate strings.
 		Str *STORM_FN operator +(Str *o) const;
 		Str *operator +(const wchar *o) const;
 #ifdef POSIX
@@ -52,21 +57,25 @@ namespace storm {
 		// Multiplication.
 		Str *STORM_FN operator *(Nat times) const;
 
-		// Compare.
+		// Equal to another string?
 		virtual Bool STORM_FN operator ==(const Str &o) const;
+
+		// Lexiographically less than another string?
 		virtual Bool STORM_FN operator <(const Str &o) const;
 
 		// Hash.
 		virtual Nat STORM_FN hash() const;
 
-		// Is this an integer? Does not validate size.
+		// Does the string contain a signed integer? Does not validate the size of the number.
 		Bool STORM_FN isInt() const;
+
+		// Does the string contain an unsigned number? Does not validate the size of the number.
 		Bool STORM_FN isNat() const;
 
-		// Is this a floating point value?
+		// Does the string contain a floating point number?
 		Bool STORM_FN isFloat() const;
 
-		// Interpret as numbers.
+		// Convert to a number. Throws `StrError` on error.
 		Int STORM_FN toInt() const;
 		Nat STORM_FN toNat() const;
 		Long STORM_FN toLong() const;
@@ -74,11 +83,16 @@ namespace storm {
 		Float STORM_FN toFloat() const;
 		Double STORM_FN toDouble() const;
 
-		// Interpret as hexadecimal numbers.
+		// Is it a hexadecimal number? Does not validate the size of the number.
+		Bool STORM_FN isHex() const;
+
+		// Interpret as a hexadecimal number. Throws `StrError` on error.
 		Nat STORM_FN hexToNat() const;
 		Word STORM_FN hexToWord() const;
 
-		// Escape/unescape characters. Any unknown escape sequences are kept as they are.
+		// Escape/unescape characters. Any unknown escape sequences are kept as they are. The
+		// parameters `extra` and `extra` are additional characters that should be escaped/unescaped
+		// if present.
 		Str *STORM_FN unescape() const;
 		Str *STORM_FN unescape(Char extra) const;
 		Str *STORM_FN unescape(Char extra, Char extra2) const;
@@ -86,15 +100,17 @@ namespace storm {
 		Str *STORM_FN escape(Char extra) const;
 		Str *STORM_FN escape(Char extra, Char extra2) const;
 
-		// Version of 'unescape' that keeps sequences of '\\' intact. This is useful when using this
-		// 'unescape' as a first pass for other languages (e.g. regex where . and [ also needs to be
+		// Version of `unescape` that keeps sequences of `\\` intact. This is useful when using this
+		// `unescape` as a first pass for other languages (e.g. regex where `.` and `[` also needs to be
 		// escaped at a later stage).
 		Str *STORM_FN unescapeKeepBackslash(Char extra) const;
 
-		// Starts/ends with?
+		// Does the string start with the string `s`?
 		Bool STORM_FN startsWith(const Str *s) const;
-		Bool STORM_FN endsWith(const Str *s) const;
 		Bool startsWith(const wchar *s) const;
+
+		// Does the string end with the string `s`?
+		Bool STORM_FN endsWith(const Str *s) const;
 		Bool endsWith(const wchar *s) const;
 
 		// Deep copy (nothing needs to be done really).
@@ -185,12 +201,14 @@ namespace storm {
 		// Get an iterator to a specific position.
 		Iter posIter(Nat pos) const;
 
-		// Substring. TODO: Rename?
+		// Old name for 'cut'.
 		Str *STORM_FN substr(Iter from) const;
 		Str *STORM_FN substr(Iter from, Iter to) const;
 
-		// Alternative name for substr.
+		// Extract a substring, starting at `from` until the end of the string.
 		Str *STORM_FN cut(Iter from) const;
+
+		// Extract a substring, starting at `from` until, but not including, `to`.
 		Str *STORM_FN cut(Iter from, Iter to) const;
 
 		// Remove characters from the middle of the string.
@@ -208,12 +226,12 @@ namespace storm {
 		Iter STORM_FN find(Str *str) const;
 		Iter STORM_FN find(Str *str, Iter start) const;
 
-		// Find the last occurrence of 'ch' in the string. Note that 'last' is *not* examined.
+		// Find the last occurrence of `ch` in the string. Note that 'last' is *not* examined.
 		Iter STORM_FN findLast(Char ch) const;
 		Iter STORM_FN findLast(Char ch, Iter last) const;
 
-		// Find the last occurrence of 'str' in the string. Note that the match has to end before
-		// 'last' if specified.
+		// Find the last occurrence of `str` in the string. Note that the match has to end before
+		// `last` if specified.
 		Iter STORM_FN findLast(Str *str) const;
 		Iter STORM_FN findLast(Str *str, Iter last) const;
 

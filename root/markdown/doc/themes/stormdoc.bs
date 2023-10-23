@@ -202,16 +202,17 @@ private Named? findNamed(Name name, Scope scope) on Compiler {
 	unless (simplified = name.simplify(scope))
 		return null;
 
-	if (found = scope.find(simplified))
-		return found;
+	// Start by trying to find a member function. Otherwise we have problems with things in core.Object.
+	if (name.count > 0) {
+		if (parent = scope.find(simplified.parent) as Type) {
+			var copy = simplified.clone;
+			copy.last.params.insert(0, thisPtr(parent));
+			if (found = scope.find(copy))
+				return found;
+		}
+	}
 
-	if (name.count == 0)
-		return null;
-
-	unless (parent = scope.find(simplified.parent) as Type)
-		return null;
-
-	simplified.last.params.insert(0, thisPtr(parent));
+	// Otherwise, try to find it as usual:
 	return scope.find(simplified);
 }
 
@@ -248,12 +249,13 @@ FormattedText createNamedTitle(Named named, Doc? doc) on Compiler {
 	html.html("<code>");
 
 	if (named as Function) {
-		addType(html, named.result);
-		html.text(" ");
-		if (named.name == "__ctor")
+		if (named.name == "__init") {
 			addSpan(html, "fn-name", "init");
-		else
+		} else {
+			addType(html, named.result);
+			html.text(" ");
 			addSpan(html, "fn-name", named.name);
+		}
 		html.text("(");
 
 		DocParam[] params;

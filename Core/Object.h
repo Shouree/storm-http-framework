@@ -35,7 +35,7 @@ namespace storm {
 		virtual void STORM_FN toS(StrBuf *to) const;
 	};
 
-	// Are the two objects the same type?
+	// Do the two objects `a` and `b` have the same dynamic type?
 	inline Bool STORM_FN sameType(const Object *a, const Object *b) {
 		return runtime::typeOf(a) == runtime::typeOf(b);
 	}

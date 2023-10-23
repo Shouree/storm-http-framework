@@ -410,6 +410,13 @@ namespace storm {
 		return -1;
 	}
 
+	Bool Str::isHex() const {
+		for (Nat i = 0; i < data->count - 1; i++)
+			if (hexDigit(data->v[i]) < 0)
+				return false;
+		return true;
+	}
+
 	Nat Str::hexToNat() const {
 		return Nat(hexToWord());
 	}

@@ -12,48 +12,49 @@ system's calling convention, to allow seamless calls to and from C++).
 
 The standard library provides the following primitive types:
 
-- `core.Bool`
+- [stormname:core.Bool]
 
   A type that may contain one of the values `true` and `false`.
 
-- `core.Byte`
+- [stormname:core.Byte]
 
   An 8-bit unsigned integer.
 
-- `core.Int`
+- [stormname:core.Int]
 
   A 32-bit signed integer.
 
-- `core.Nat`
+- [stormname:core.Nat]
 
   A 32-bit unsigned integer. `Nat` is short for "natural number".
 
-- `core.Long`
+- [stormname:core.Long]
 
   A 64-bit signed integer.
 
-- `core.Word`
+- [stormname:core.Word]
 
   A 64-bit unsigned integer.
 
-- `core.Float`
+- [stormname:core.Float]
 
   A 32-bit floating point number.
 
-- `core.Double`
+- [stormname:core.Double]
 
   A 64-bit floating point number.
 
 
-All types have members that implement the expected comparison and arithmetic operators. Types are
-converted between each other using members in the types. For example, the numeric types contain a
-member `int` that converts them to an integer.
+All types have members that implement the expected comparison and arithmetic operators. The unsigned
+types also provide bitwise operations as operators. Types are converted between each other using
+members in the types. For example, the numeric types contain a member `int` that converts them to an
+integer.
 
+The system also provides the following operations in addition to regular operators:
 
-The system also provides the following convenience functions:
+- `min(x, y)`, `max(x, y)` - minimum and maximum values
+- `sqrt(x)` - square root of floating point types
+- `pow(base, exp)` - exponential of floating point types
+- `abs(x)` - absolute value
+- `clamp(value, min, max)` - limit a value to a range
 
-- `min`, `max` - minimum and maximum values
-- `sqrt` - square root
-- `pow` - exponential
-- `abs` - absolute value
-- `clamp` - limit in a range

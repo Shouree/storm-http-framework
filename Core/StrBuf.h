@@ -63,25 +63,36 @@ namespace storm {
 		};
 	};
 
-	// Create formats.
-	StrFmt STORM_FN width(Nat w);
+	// Set the width of the next item that is outputted. It is filled with the character set by
+	// `fill` to match the size if it is not already wide enough.
+	StrFmt STORM_FN width(Nat width);
+
+	// Left align the next output.
 	StrFmt STORM_FN left();
+
+	// Left align the next output and specify a width.
 	StrFmt STORM_FN left(Nat width);
+
+	// Right align the next output.
 	StrFmt STORM_FN right();
+
+	// Right align the next output and specify a width.
 	StrFmt STORM_FN right(Nat width);
+
+	// Set the fill character used to pad output.
 	StrFmt STORM_FN fill(Char fill);
 
 	// Set precision of the floating point output without modifying the mode.
 	StrFmt STORM_FN precision(Nat digits);
 
-	// Output floating point numbers with the specified number of significant digits, at
-	// maximum. This is the default.
+	// Output floating point numbers in decimal form with the specified number of significant
+	// digits, at maximum. This is the default.
 	StrFmt STORM_FN significant(Nat digits);
 
-	// Output floating point numbers with this number of decimal places.
+	// Output floating point numbers in decimal form with the specified number of decimal places.
 	StrFmt STORM_FN fixed(Nat decimals);
 
-	// Output floating point numbers in scientific notations with the specified number of decimal
+	// Output floating point numbers in scientific notation with the specified number of decimal
 	// digits.
 	StrFmt STORM_FN scientific(Nat digits);
 

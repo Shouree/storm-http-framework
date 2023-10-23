@@ -187,26 +187,34 @@ namespace storm {
 		Url *copy() const;
 	};
 
-	// Parse a path. (assumed to be on the local file system).
-	// TODO: We need something general!
+	// Parse a path into a Url. The path is assumed to be on the local file system.
 	Url *STORM_FN parsePath(Str *s);
-	Url *STORM_FN parsePathAsDir(Str *s);
 	Url *parsePath(Engine &e, const wchar *str);
+
+	// Parse a path into a Url. The path is assumed to be on the local file system, and refer to a directory.
+	Url *STORM_FN parsePathAsDir(Str *s);
 	Url *parsePathAsDir(Engine &e, const wchar *str);
 
-	// Get some good URL:s.
-	Url *executableFileUrl(Engine &e);
-	Url *executableUrl(Engine &e);
+	// Get an url that points to the current Storm executable.
+	Url *STORM_FN executableFileUrl(EnginePtr e);
+
+	// Get an url that points to the path where the current Storm binary is located.
+	Url *STORM_FN executableUrl(EnginePtr e);
+
+	// Path of the root in debug mode.
 	Url *dbgRootUrl(Engine &e);
 
 	// Get the current working directory.
 	Url *STORM_FN cwdUrl(EnginePtr e);
 
-	// Get the user's config directory for an application. Created if not already present.
+	// Get the user's config directory for an application with the name `appName`. Created if not
+	// already present.
 	Url *STORM_FN userConfigUrl(Str *appName);
 
-	// Create an HTTP/HTTPS url for a domain name.
+	// Create the url `http://` for the specified host.
 	Url *STORM_FN httpUrl(Str *host);
+
+	// Create the url `https://` for the specified host.
 	Url *STORM_FN httpsUrl(Str *host);
 
 	// Some exceptions.

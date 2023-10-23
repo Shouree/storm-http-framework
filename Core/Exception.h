@@ -21,10 +21,10 @@ namespace storm {
 		// Deep copy.
 		virtual void STORM_FN deepCopy(CloneEnv *env);
 
-		// Get the message.
+		// Retrieve the message in the exception. This function simply calls `message(StrBuf)` to generate the message.
 		Str *STORM_FN message() const;
 
-		// Append the message to a string buffer.
+		// Create the message by appending it to the string buffer.
 		virtual void STORM_FN message(StrBuf *to) const ABSTRACT;
 
 		// Collected stack trace, if any.
@@ -33,7 +33,8 @@ namespace storm {
 		// Convenience function to call to collect a stack trace. Intended to be called from the
 		// constructor of derived exceptions who wish to store a stack trace. This is not done by
 		// default, as it is fairly expensive, and not beneficial for all exceptions (e.g. syntax
-		// errors). Returns 'this' to allow chaining it after creation.
+		// errors). Some categories of exceptions do, however, capture stack traces automatically.
+		// Returns `this` to allow chaining it after creation.
 		Exception *STORM_FN saveTrace();
 
 		// For providing a context in exception handlers.

@@ -15,30 +15,70 @@ it, list the contents of directories, etc. All protocols do not support all oper
 the `file://` protocol that is used for local files (and pretty-printed as regular paths) supports
 all operations, while the protocol for relative paths supports none of them.
 
+## Creating Urls
+
 The library contains a few convenience functions that produce `Url`s that serve as a starting point
 for further path traversal:
 
-- [stormname:core.io.cwdUrl] - Get an `Url` that contains the current working directory.
-
-- `core.io.executableUrl` - Get an `Url` that refers to the path that the Storm executable was
-  started from.
-
-- `core.io.userConfigUrl(appName)` - Get an `Url` that refers to a path to a directory where it is
-  suitable to store configuration for a program named `appName`.
-
-- `core.io.httpUrl(host)` - Create an `Url` for a `http://` url for the specified host.
-
-- `core.io.httpsUrl(host)` - Create an `Url` for a `https://` url for the specified host.
-
+```stormdoc
+@core.io
+- .cwdUrl()
+- .executableUrl()
+- .userConfigUrl(*)
+- .httpUrl(*)
+- .httpsUrl(*)
+```
 
 The system also contains the functions `parsePath` and `parsePathAsDir` that parses a string
 containing a path into a `Url` object. These functions have the limitation that they only support
-paths on the local filesystem.
+paths on the local filesystem:
 
+```stormdoc
+@core.io
+- .parsePath(*)
+- .parsePathAsDir(*)
+```
 
 An instance of the `Url` class is immutable. That is, none of the members of the class modify the
 object. Instead, they return a copy of the class with the modifications applied. It has the
 following operations:
+
+
+```stormdoc
+@core.io.Url
+- .__init()
+- .==(*)
+- ./(*)
+- .push(*)
+- .dir()
+- .makeDir()
+- .name()
+- .title()
+- .ext()
+- .withExt(*)
+- .absolute()
+- .relative()
+- .makeAbsolute(*)
+- .relative(*)
+- .relativeIfBelow(*)
+- .count()
+- .[]()
+- .protocol
+- .format()
+```
+
+```stormdoc
+@core.io.Url
+- .updated()
+- .children()
+- .read()
+- .write()
+- .exists()
+- .createDir()
+- .createDirTree()
+- .delete()
+- .deleteTree()
+```
 
 - *constructor*
 
