@@ -56,7 +56,7 @@ STypePart => RecPart(name) : SName name #typeName, "<", SType -> add, (",", STyp
 
 // Type.
 SrcName SType();
-SType => SrcName(pos) : STypePart -> add, (":", STypePart -> add, )*;
+SType => SrcName(pos) : STypePart -> add - (, ":", STypePart -> add)*;
 
 // Array type.
 SType => arrayType(t) : SType t, "\[\]";

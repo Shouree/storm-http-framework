@@ -68,9 +68,8 @@ class FormattedText {
 
 	// To string.
 	protected void toS(StrBuf to) : override {
-		for (span in spans) {
+		for (span in spans)
 			span.toS(to);
-		}
 	}
 
 	// To HTML.
@@ -334,14 +333,12 @@ class PackedText extends TextSpan {
 
 	// To string.
 	void toS(StrBuf to) : override {
-		for (x in spans)
-			to << x;
+		to << text;
 	}
 
 	// To HTML.
 	void toHtml(Html to) : override {
-		for (x in spans)
-			x.toHtml(to);
+		text.toHtml(to);
 	}
 
 	// Visit recursively.
