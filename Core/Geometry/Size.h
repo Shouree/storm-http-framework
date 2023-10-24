@@ -15,9 +15,16 @@ namespace storm {
 		class Size {
 			STORM_VALUE;
 		public:
+			// Create a size of zero.
 			STORM_CTOR Size();
-			STORM_CTOR Size(Float wh); // Do not make 'cast_ctor', since it interferes with * operator.
+
+			// Create a size with width and height set to the same value.
+			STORM_CTOR Size(Float wh);
+
+			// Create a size with separate width and height.
 			STORM_CTOR Size(Float w, Float h);
+
+			// Create a size from a point.
 			STORM_CAST_CTOR Size(Point pt);
 
 			Float w;
@@ -26,8 +33,10 @@ namespace storm {
 			// Check if the components are non-negative.
 			Bool STORM_FN valid() const;
 
-			// Min/max, component wise.
+			// Component-wise minimum of two sizes.
 			Size STORM_FN min(Size o) const;
+
+			// Component-wise maximum of two sizes.
 			Size STORM_FN max(Size o) const;
 		};
 
@@ -40,6 +49,7 @@ namespace storm {
 		inline Bool STORM_FN operator ==(Size a, Size b) { return a.w == b.w && a.h == b.h; }
 		inline Bool STORM_FN operator !=(Size a, Size b) { return !(a == b); }
 
+		// Normalize a size by taking its absolute value.
 		Size STORM_FN abs(Size a);
 
 		using std::min;

@@ -26,19 +26,19 @@ namespace storm {
 			Float x;
 			Float y;
 
-			// Tangent. Always 90 deg cw from the vector in screen-space.
+			// Tangent. Always 90 deg clockwise from the vector in screen-space.
 			Point STORM_FN tangent() const;
 
-			// Length squared.
+			// Compute the length squared of the point. Cheaper than the length.
 			Float STORM_FN lengthSq() const;
 
-			// Length.
+			// Compute the lenght of the point.
 			Float STORM_FN length() const;
 
-			// Normalize.
+			// Return a normalized point (i.e. length 1).
 			Point STORM_FN normalized() const;
 
-			// Taxicab/manhattan length (i.e. dx + dy).
+			// Compute the taxicab/manhattan length (i.e. x + y).
 			Float STORM_FN taxiLength() const;
 		};
 
@@ -69,12 +69,14 @@ namespace storm {
 		// Create an angle based on the point. 0 deg is (0, -1)
 		Point STORM_FN angle(Angle angle);
 
-		// Project a point onto a line. 'dir' does not have to be normalized.
+		// Project the point `pt` onto a line that starts in `origin` and expands in the direction
+		// of `dir`. `dir` does not have to be normalized.
 		Point STORM_FN project(Point pt, Point origin, Point dir);
 
 		// Center point of a size.
 		Point STORM_FN center(Size s);
 
+		// Compute the absolute value of both compontents in the point.
 		Point STORM_FN abs(Point a);
 
 	}
