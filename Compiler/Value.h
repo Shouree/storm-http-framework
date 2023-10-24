@@ -56,7 +56,7 @@ namespace storm {
 		Bool STORM_FN mayReferTo(Value x) const;
 
 		// See if it is possible to store a value of 'x' inside a value of this type without any
-		// conversions. Works like 'generalizes', except that value types use strict equality, and
+		// conversions. Works like 'mayReferTo', except that value types use strict equality, and
 		// 'void' is not considered to be able to store any other types.
 		Bool STORM_FN mayStore(MAYBE(Type *) x) const;
 		Bool STORM_FN mayStore(Value x) const;

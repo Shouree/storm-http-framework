@@ -189,9 +189,12 @@ namespace storm {
 		void STORM_FN asyncLocalCall(CodeGen *to, Array<code::Operand> *params, CodeResult *result, CodeResult *id);
 
 		// Generate code for this function call, assuming we want to run on a different thread,
-		// returning a Future object. If 'thread' is left out, the current thread is used.
+		// returning a Future object. If 'thread' is specified, it is used for functions which have
+		// not been specified to run on a particular thread.
 		void STORM_FN asyncThreadCall(CodeGen *to, Array<code::Operand> *params, CodeResult *result);
+		void STORM_FN asyncThreadCall(CodeGen *to, Array<code::Operand> *params, CodeResult *result, code::Operand thread);
 		void STORM_FN asyncThreadCall(CodeGen *to, Array<code::Operand> *params, CodeResult *future, CodeResult *id);
+		void STORM_FN asyncThreadCall(CodeGen *to, Array<code::Operand> *params, CodeResult *future, code::Operand thread, CodeResult *id);
 
 	private:
 		// Two references. One is for the lookup function, and one is for the actual code to be
@@ -224,8 +227,9 @@ namespace storm {
 		void localCall(CodeGen *to, Array<code::Operand> *params, CodeResult *result, code::Ref ref);
 		void localCallRef(CodeGen *to, Array<code::Operand> *params, code::Operand result, code::Ref ref);
 
-		// Helper for the async function call.
-		void asyncCall(CodeGen *to, Array<code::Operand> *params, CodeResult *future, CodeResult *id, bool copy);
+		// Helper for the async function call. 'thread' is used if we don't have a better opinion of what to use.
+		void asyncCall(CodeGen *to, Array<code::Operand> *params, code::Operand thread,
+					CodeResult *future, CodeResult *id, bool copy);
 
 		// Add parameters for the function call.
 		void addParams(CodeGen *to, Array<code::Operand> *params);

@@ -322,6 +322,17 @@ Int asyncPostSameI() on Other {
 	future.result;
 }
 
+Int asyncPostExplicit() {
+	CloneDerived v;
+	var future = spawn(Other) captureVal(v);
+	future.result;
+}
+
+void asyncPostExplictError() {
+	CloneDerived v;
+	// Should cause an error:
+	spawn(Compiler) captureValO(v);
+}
 
 class ActorVar on Other {
 	// Public value that we will try to get from another thread.

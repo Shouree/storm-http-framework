@@ -429,6 +429,7 @@ SAtom => v : SConst(block) v;
 SAtom => namedExpr(block, name, params) : SType name #varName, SFnActuals(block) params;
 SAtom[10] => namedExpr(block, name, dotExpr, params) : SAtom(block) dotExpr, "\.", SName name #varName, SFnActuals(block) params;
 SAtom[20] => spawnExpr(expr) : "spawn" #keyword ~ SExpr(block) expr;
+SAtom[20] => spawnOnExpr(thread, expr) : "spawn" #keyword, "(", SExpr(block) thread, ")", SExpr(block) expr;
 SAtom[20] => NullExpr(pos) : "null" #constant;
 SAtom => ParenExpr(e) : "(", SExpr(block) e, ")";
 SAtom => e : SBlock(block) e;

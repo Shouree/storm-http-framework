@@ -60,29 +60,20 @@ namespace storm {
 			to->created(s);
 		}
 
-		// Call async function.
-		static void callAsyncFn(Function *fn, CodeGen *s, Array<code::Operand> *actuals, CodeResult *to, bool sameObject) {
-			if (sameObject) {
-				fn->asyncLocalCall(s, actuals, to);
-			} else {
-				fn->asyncAutoCall(s, actuals, to);
-			}
-		}
-
 
 		/**
 		 * Function call.
 		 */
 
 		FnCall::FnCall(SrcPos pos, Scope scope, Function *toExecute, Actuals *params, Bool lookup)
-			: Expr(pos), toExecute(toExecute), params(params), scope(scope), lookup(lookup), async(false) {
+			: Expr(pos), toExecute(toExecute), params(params), scope(scope), lookup(lookup) {
 
 			if (params->expressions->count() != toExecute->params->count())
 				throw new (this) SyntaxError(pos, S("The parameter count does not match!"));
 		}
 
 		FnCall::FnCall(SrcPos pos, Scope scope, Function *toExecute, Actuals *params)
-			: Expr(pos), toExecute(toExecute), params(params), scope(scope), lookup(true), async(false) {
+			: Expr(pos), toExecute(toExecute), params(params), scope(scope), lookup(true) {
 
 			if (params->expressions->count() != toExecute->params->count())
 				throw new (this) SyntaxError(pos, S("The parameter count does not match!"));
@@ -101,15 +92,8 @@ namespace storm {
 			return new (this) UnresolvedName(lookup->block, path, pos, params, false);
 		}
 
-		void FnCall::makeAsync() {
-			async = true;
-		}
-
 		ExprResult FnCall::result() {
-			if (async)
-				return wrapFuture(engine(), toExecute->result);
-			else
-				return toExecute->result;
+			return toExecute->result;
 		}
 
 		void FnCall::code(CodeGen *s, CodeResult *to) {
@@ -130,13 +114,7 @@ namespace storm {
 				vars->at(i) = params->code(i, s, values->at(i), scope);
 
 			// Call!
-			if (async) {
-				if (!lookup)
-					throw new (this) SyntaxError(pos, S("Can not use 'spawn' with super-calls."));
-				callAsyncFn(toExecute, s, vars, to, sameObject);
-			} else {
-				callFn(toExecute, s, vars, to, lookup, sameObject);
-			}
+			callFn(toExecute, s, vars, to, lookup, sameObject);
 		}
 
 		SrcPos FnCall::largePos() {
@@ -151,9 +129,89 @@ namespace storm {
 			SimpleName *p = toExecute->safePath();
 			p->last() = new (p) SimplePart(p->last()->name);
 			*to << p << params;
-			if (async)
-				*to << S("&");
 		}
+
+
+		/**
+		 * Async function call.
+		 */
+
+		AsyncFnCall::AsyncFnCall(FnCall *original) : FnCall(*original) {}
+
+		AsyncFnCall::AsyncFnCall(FnCall *original, Expr *thread) : FnCall(*original), thread(thread) {
+			if (!Value(StormInfo<Thread>::type(engine())).mayStore(thread->result().type().asRef(false))) {
+				throw new (this) SyntaxError(pos, S("The parameter to the spawn keyword must evaluate to a core.Thread!"));
+			}
+
+			RunOn t = toExecute->runOn();
+			if (t.state != RunOn::any) {
+				StrBuf *msg = new (this) StrBuf();
+				*msg << S("Can not specify a thread to spawn the function ")
+					 << toExecute->identifier() << S(" on, since the function ")
+					 << S("has to be run on the thread ") << t << S(".");
+				throw new (this) SyntaxError(pos, msg->toS());
+			}
+		}
+
+		ExprResult AsyncFnCall::result() {
+			return wrapFuture(engine(), FnCall::result().type());
+		}
+
+		// Call async function.
+		static void callAsyncFn(Function *fn, CodeGen *s, Array<code::Operand> *actuals, CodeResult *to, bool sameObject) {
+			if (sameObject) {
+				fn->asyncLocalCall(s, actuals, to);
+			} else {
+				fn->asyncAutoCall(s, actuals, to);
+			}
+		}
+
+		void AsyncFnCall::code(CodeGen *s, CodeResult *to) {
+			using namespace code;
+
+			if (!lookup)
+				throw new (this) SyntaxError(pos, S("Can not use 'spawn' with super-calls."));
+
+			// Note that toExecute->params may not be equal to params->values()
+			// since some actual parameters may report that they can return a
+			// reference to a value. However, we know that toExecute->params.mayReferTo(params->values())
+			// so it is OK to take toExecute->params directly.
+			Array<Value> *values = toExecute->params;
+			Array<code::Operand> *vars = new (this) Array<code::Operand>(values->count());
+
+			// Load parameters.
+			for (nat i = 0; i < values->count(); i++)
+				vars->at(i) = params->code(i, s, values->at(i), scope);
+
+			// Call!
+			if (thread) {
+				// Load the thread as well:
+				Value threadType(StormInfo<Thread>::type(engine()));
+				CodeResult *threadVal = new (this) CodeResult(threadType, s->block);
+				thread->code(s, threadVal);
+
+				// And call the function!
+				toExecute->asyncThreadCall(s, vars, to, threadVal->location(s));
+			} else {
+				// Thread not specified:
+				if (params->hasThisFirst()) {
+					// Same object, no copies needed.
+					toExecute->asyncLocalCall(s, vars, to);
+				} else {
+					toExecute->asyncAutoCall(s, vars, to);
+				}
+			}
+		}
+
+		void AsyncFnCall::toS(StrBuf *to) const {
+			if (thread) {
+				*to << S("spawn(") << thread << S(") ");
+			} else {
+				*to << S("spawn ");
+			}
+			FnCall::toS(to);
+		}
+
 
 		/**
 		 * Execute constructor.
@@ -731,7 +789,7 @@ namespace storm {
 		}
 
 
-		Expr *STORM_FN spawnExpr(Expr *expr) {
+		Expr *spawnExpr(Expr *expr) {
 			// If it is an unresolved name: poke it so that it throws the more appropriate error
 			// rather than us delivering a less informative error.
 			if (as<UnresolvedName>(expr))
@@ -739,14 +797,27 @@ namespace storm {
 
 			FnCall *fnCall = as<FnCall>(expr);
 			if (!fnCall) {
-				Str *msg = TO_S(expr, S("The spawn-syntax is not applicable to anything but functions")
-								S(" at the moment. This is a ") << runtime::typeOf(expr)->identifier());
+				Str *msg = TO_S(expr, S("The spawn-syntax is not applicable to anything but functions.")
+								S(" This is a ") << runtime::typeOf(expr)->identifier());
 				throw new (expr) SyntaxError(expr->pos, msg);
 			}
 
-			fnCall->makeAsync();
+			return new (fnCall) AsyncFnCall(fnCall);
+		}
 
-			return expr;
+		Expr *spawnOnExpr(Expr *thread, Expr *expr) {
+			// If it is an unresolved name, poke it so that it throws its error message now.
+			if (as<UnresolvedName>(expr))
+				expr->result();
+
+			FnCall *fnCall = as<FnCall>(expr);
+			if (!fnCall) {
+				Str *msg = TO_S(expr, S("The spawn-syntax is not applicable to anything but functions.")
+								S(" This is a ") << runtime::typeOf(expr)->identifier());
+				throw new (expr) SyntaxError(expr->pos, msg);
+			}
+
+			return new (fnCall) AsyncFnCall(fnCall, thread);
 		}
 
 

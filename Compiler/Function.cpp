@@ -469,22 +469,32 @@ namespace storm {
 	}
 
 	void Function::asyncLocalCall(CodeGen *to, Array<code::Operand> *params, CodeResult *result, CodeResult *id) {
-		asyncCall(to, params, result, id, false);
+		asyncCall(to, params, code::Operand(), result, id, false);
 	}
 
 	void Function::asyncThreadCall(CodeGen *to, Array<code::Operand> *params, CodeResult *result) {
-		asyncThreadCall(to, params, result, null);
+		asyncThreadCall(to, params, result, code::Operand(), null);
+	}
+
+	void Function::asyncThreadCall(CodeGen *to, Array<code::Operand> *params, CodeResult *result, code::Operand thread) {
+		asyncThreadCall(to, params, result, thread, null);
 	}
 
 	void Function::asyncThreadCall(CodeGen *to, Array<code::Operand> *params, CodeResult *result, CodeResult *id) {
-		asyncCall(to, params, result, id, true);
+		asyncThreadCall(to, params, result, code::Operand(), id);
 	}
 
-	void Function::asyncCall(CodeGen *to, Array<code::Operand> *params, CodeResult *result, CodeResult *id, bool copy) {
+	void Function::asyncThreadCall(CodeGen *to, Array<code::Operand> *params, CodeResult *result, code::Operand thread, CodeResult *id) {
+		asyncCall(to, params, thread, result, id, true);
+	}
+
+	void Function::asyncCall(CodeGen *to, Array<code::Operand> *params, code::Operand thread,
+							CodeResult *result, CodeResult *id, bool copy) {
 		using namespace code;
 
 		// Figure out what thread to pass to the spawn function.
-		code::Operand thread = ptrConst(0);
+		if (thread.empty())
+			thread = ptrConst(0);
 		if (runOn().state != RunOn::any)
 			thread = findThread(to, params);
 

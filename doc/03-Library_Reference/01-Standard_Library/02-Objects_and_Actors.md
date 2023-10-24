@@ -48,3 +48,9 @@ useful to compare types for equivalence in a `==` operator, for example.
 ```stormdoc
 - core.sameType(*)
 ```
+
+The following functions allow inspecting the dynamic type of objects. They are located in `core.lang`:
+
+```stormdoc
+- core.lang.typeOf(*)
+```

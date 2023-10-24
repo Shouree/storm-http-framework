@@ -17,6 +17,7 @@ namespace storm {
 		 */
 		class FnCall : public Expr {
 			STORM_CLASS;
+			friend class AsyncFnCall;
 		public:
 			// if '!lookup', then the lookup functionality (such as vtables) will not be used.
 			STORM_CTOR FnCall(SrcPos pos, Scope scope, Function *toExecute, Actuals *params);
@@ -27,9 +28,6 @@ namespace storm {
 
 			// Get the function we are going to call.
 			inline Function *STORM_FN function() const { return toExecute; }
-
-			// Tell us to return a future instead.
-			void STORM_FN makeAsync();
 
 			// Result type.
 			virtual ExprResult STORM_FN result();
@@ -56,9 +54,34 @@ namespace storm {
 
 			// Use lookup?
 			Bool lookup;
+		};
 
-			// Async function call?
-			Bool async;
+
+		/**
+		 * Explicitly async function call.
+		 */
+		class AsyncFnCall : public FnCall {
+			STORM_CLASS;
+		public:
+			// Create from a FnCall. Make it async without specifying a thread explicitly.
+			STORM_CTOR AsyncFnCall(FnCall *original);
+
+			// Create from a FnCall, the thread was specified explicitly.
+			STORM_CTOR AsyncFnCall(FnCall *original, Expr *thread);
+
+			// Result type.
+			virtual ExprResult STORM_FN result();
+
+			// Generate code.
+			virtual void STORM_FN code(CodeGen *s, CodeResult *to);
+
+		protected:
+			// To string.
+			virtual void STORM_FN toS(StrBuf *to) const;
+
+		private:
+			// The thread specified, if any.
+			Expr *thread;
 		};
 
 
@@ -330,6 +353,10 @@ namespace storm {
 		// Make a regular function call return a future to the result instead of waiting for the result
 		// directly. Syntactically, this is made by adding 'spawn' to it.
 		Expr *STORM_FN spawnExpr(Expr *expr);
+
+		// Make a regular function call return a future to the result instead of waiting for the
+		// result directly. Additionally, attempt to execute it on the specified thread.
+		Expr *STORM_FN spawnOnExpr(Expr *thread, Expr *expr);
 
 	}
 }
