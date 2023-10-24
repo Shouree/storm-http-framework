@@ -100,12 +100,12 @@ namespace storm {
 			fileName = file->toS();
 		}
 
-		wchar *cwd = null;
+		const wchar *cwd = null;
 		if (workingDirectory)
 			cwd = workingDirectory->format()->c_str();
 
-		const wchar *p = strParams(f, params)->c_str();
-		if (!CreateProcess(f->c_str(), (LPWSTR)p, NULL, NULL, FALSE, 0, NULL, cwd, &info, &out)) {
+		const wchar *p = strParams(fileName, params)->c_str();
+		if (!CreateProcess(fileName->c_str(), (LPWSTR)p, NULL, NULL, FALSE, 0, NULL, cwd, &info, &out)) {
 			const wchar *error = S("Unknown error.");
 			switch (GetLastError()) {
 			case ERROR_FILE_NOT_FOUND:
