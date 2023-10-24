@@ -83,15 +83,29 @@ namespace storm {
 	}
 
 	void execute(Url *file, Array<Str *> *params) {
+		execute(file, params, null);
+	}
+
+	void execute(Url *file, Array<Str *> *params, MAYBE(Url *) workingDirectory) {
 		STARTUPINFO info;
 		zeroMem(info);
 		info.cb = sizeof(info);
 
 		PROCESS_INFORMATION out;
 
-		Str *f = file->toS();
+		Str *fileName;
+		if (file->relative() && file->count() == 1) {
+			fileName = file->at(0);
+		} else {
+			fileName = file->toS();
+		}
+
+		wchar *cwd = null;
+		if (workingDirectory)
+			cwd = workingDirectory->format()->c_str();
+
 		const wchar *p = strParams(f, params)->c_str();
-		if (!CreateProcess(f->c_str(), (LPWSTR)p, NULL, NULL, FALSE, 0, NULL, NULL, &info, &out)) {
+		if (!CreateProcess(f->c_str(), (LPWSTR)p, NULL, NULL, FALSE, 0, NULL, cwd, &info, &out)) {
 			const wchar *error = S("Unknown error.");
 			switch (GetLastError()) {
 			case ERROR_FILE_NOT_FOUND:
@@ -127,7 +141,7 @@ namespace storm {
 	// Makes sure we don't have to wait for the child process.
 	// If "monitorExit" is nonzero, then we wait (maximum of that many seconds) until the process was terminated and
 	// return the exit code. Returns - SIGALRM if the timeout expired.
-	static int execute(Engine &e, const char *params[], nat monitorExit = 0) {
+	static int execute(Engine &e, const char *params[], const char *cdTo, nat monitorExit = 0) {
 		// To detect errors in the child, we create a new pipe with the CLOEXEC flag set. As such,
 		// we can wait until the write end is closed. If nothing was written, then we know that
 		// everything went well (at least up to starting the process). Otherwise we write an error
@@ -153,6 +167,16 @@ namespace storm {
 			close(pipeRead);
 
 			// Note: We need to use _exit here, otherwise we might crash in an exit cleanup handler somewhere...
+
+			// CD to the correct directory if we were asked to do so.
+			if (cdTo) {
+				if (chdir(cdTo) < 0) {
+					const char *msg = "Failed to change working directory to: ";
+					(void)!write(pipeWrite, msg, strlen(msg));
+					(void)!write(pipeWrite, cdTo, strlen(cdTo));
+					_exit(1);
+				}
+			}
 
 			// Fork once more to avoid zombies.
 			pid = fork();
@@ -236,7 +260,7 @@ namespace storm {
 			NULL
 		};
 		// Note: xdg-open does not always terminate immediately, so we cannot really look at its exit code.
-		int status = execute(file->engine(), params, 1);
+		int status = execute(file->engine(), params, null, 1);
 		if (status == 2)
 			throw new (file) SystemError(TO_S(file, S("The file ") << file << S(" does not exist.")));
 		if (status == 3)
@@ -246,26 +270,29 @@ namespace storm {
 	}
 
 	void execute(Url *file, Array<Str *> *params) {
+		execute(file, params, null);
+	}
+
+	void execute(Url *file, Array<Str *> *params, Url *workingDir) {
 		const char **cParam = new const char *[params->count() + 2];
 		try {
 			// If "file" is relative and only has a single part, then don't output "./" in front of
 			// it. That would probably inhibit the ability to look in PATH.
-			if (!file->absolute()) {
-				Array<Str *> *parts = file->getParts();
-				if (parts->count() == 1) {
-					cParam[0] = parts->at(0)->utf8_str();
-				} else {
-					cParam[0] = file->toS()->utf8_str();
-				}
+			if (file->relative() && file->count() == 1) {
+				cParam[0] = file->at(0)->utf8_str();
 			} else {
-				cParam[0] = file->toS()->utf8_str();
+				cParam[0] = file->format()->utf8_str();
 			}
 
 			for (Nat i = 0; i < params->count(); i++)
 				cParam[i + 1] = params->at(i)->utf8_str();
 			cParam[params->count() + 1] = NULL;
 
-			execute(file->engine(), cParam);
+			const char *cwd = null;
+			if (workingDir)
+				cwd = workingDir->format()->utf8_str();
+
+			execute(file->engine(), cParam, cwd);
 
 			delete []cParam;
 		} catch (...) {
