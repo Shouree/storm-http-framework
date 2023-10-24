@@ -35,6 +35,12 @@ namespace storm {
 		// Deep copy.
 		virtual void STORM_FN deepCopy(CloneEnv *env);
 
+		// Check for equality.
+		Bool STORM_FN operator ==(const Thread &o) const;
+
+		// Compute a hash.
+		Nat STORM_FN hash() const;
+
 		// Get the thread handle.
 		const os::Thread &thread();
 

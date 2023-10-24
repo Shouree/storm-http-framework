@@ -58,13 +58,13 @@ namespace storm {
 		Str *STORM_FN operator *(Nat times) const;
 
 		// Equal to another string?
-		virtual Bool STORM_FN operator ==(const Str &o) const;
+		Bool STORM_FN operator ==(const Str &o) const;
 
 		// Lexiographically less than another string?
-		virtual Bool STORM_FN operator <(const Str &o) const;
+		Bool STORM_FN operator <(const Str &o) const;
 
 		// Hash.
-		virtual Nat STORM_FN hash() const;
+		Nat STORM_FN hash() const;
 
 		// Does the string contain a signed integer? Does not validate the size of the number.
 		Bool STORM_FN isInt() const;

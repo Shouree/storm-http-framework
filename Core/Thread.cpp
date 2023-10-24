@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Thread.h"
+#include "Hash.h"
 
 namespace storm {
 
@@ -18,6 +19,25 @@ namespace storm {
 
 	void Thread::deepCopy(CloneEnv *env) {
 		// 'osThread' is threadsafe anyway.
+	}
+
+	Bool Thread::operator ==(const Thread &o) const {
+		if (this == &o)
+			return true;
+
+		// If any of this or other is not yet initialized, then we know that we must differ as long
+		// as we are different objects, since copying a thread starts it.
+		if (osThread == os::Thread::invalid)
+			return false;
+		if (o.osThread == os::Thread::invalid)
+			return false;
+
+		return osThread == o.osThread;
+	}
+
+	Nat Thread::hash() const {
+		// Note: This is null-safe!
+		return ptrHash((const void *)osThread.id());
 	}
 
 	const os::Thread &Thread::thread() {
