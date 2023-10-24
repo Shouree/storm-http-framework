@@ -56,7 +56,7 @@ namespace storm {
 					r[i][j] = sum;
 				}
 			}
-			return CREATE(Transform, this, r);
+			return new (this) Transform(r);
 		}
 
 		Vector operator *(Vector o, Transform *tfm) {

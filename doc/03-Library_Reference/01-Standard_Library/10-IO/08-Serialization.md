@@ -95,8 +95,9 @@ can generate the serialization code for you automatically.
 The function `util.serialize.serializalble(Type)` does just that. Call `serializable` and give a
 type, and the function will examine the type and generate `write` and `read` functions that
 correspond to the data in the class. The function is designed to be usable with
-[decorators](md://Basic_Storm/Types) in Basic Storm. As such, in Basic Storm (and other languages
-with similar mechanisms), one can easily make a class serializable as follows:
+[options](md:/Language_Reference/Basic_Storm/Definitions/Types) in Basic Storm. As such, in Basic
+Storm (and other languages with similar mechanisms), one can easily make a class serializable as
+follows:
 
 ```bs
 use lang:bs:macro;  // for named{}

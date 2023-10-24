@@ -167,9 +167,103 @@ geometry package:
 ```
 
 
+Vector
+------
+
+The library also provides a type for 3-dimensional coordinates. This type is name
+[stormname:core.geometry.Vector]. As with points, the type provides arithmetic operations for vector
+addition, subtraction, and multiplication with scalars. It is also possible to implicitly cast a
+`Point` into a `Vector` in order to make it easier to use transforms for both 2D and 3D coordinates.
+
+The 3-dimensional `Vector` uses `*` for dot product, and `/` for cross product.
+
+Apart from that, the interface is similar to that of `Point`, but some operations are missing due to
+them having a different meaning in 3 dimensions:
+
+```stormdoc
+@core.geometry.Vector
+- .lengthSq()
+- .length()
+- .taxiLength()
+- .normalized()
+```
+
+Similarly, there are also a few free functions:
+
+```stormdoc
+@core.geometry
+- .abs(Vector)
+- .project(Vector, Vector, Vector)
+```
+
+
 Transform
 ---------
 
+The library also contains the [stormname:core.geometry.Transform] class, which represents a
+3-dimensional affine transform using a 4 by 4 matrix. This means that the transform can represent
+arbitrary combinations of for example translation, rotation, scaling, skewing, and projections.
 
-Vector
-------
+A transform interprets points or vectors as four-dimensional row-vectors. The fourth element, `w`,
+is set to 1 for the purposes of the transform. The row vector is multiplied with the transform
+matrix from the left, and the resulting four-dimensional vector is reduced to three dimensions by
+dividing the `x`, `y`, and `z` coordinates by `w`. As such, when transforms are multiplied together
+as `a * b * c`, then they will be applied from left to right with respect to the geometry.
+
+The `transform` class itself has few members:
+
+```stormdoc
+@core.geometry.Transform
+- .__init()
+- .*(*)
+- .inverted()
+- .at(Nat, Nat)
+```
+
+There are, however, a number of free functions that allow transforming points and vectors:
+
+```stormdoc
+@core.geometry
+- .*(Vector, Transform)
+- .*(Point, Transform)
+```
+
+There are also a number of functions that create various transforms:
+
+- [stormname:core.geometry.translate(core.geometry.Vector)]
+
+  Creates a transform that translates points by the coordinate `v`. Also accepts `v` as a `Point` or
+  a `Size`.
+
+- [stormname:core.geometry.rotateX(core.geometry.Angle)]
+
+  Creates a transform that rotates points around the X axis. Also available for the Y axis and the
+  Z axis.
+
+- [stormname:core.geometry.rotateX(core.geometry.Angle, core.geometry.Vector)]
+
+  Creates a transform that rotates point around a line that extends from the point `origin` and is
+  parallel to the X axis. As with the other rotate function, there are variants for the Y axis and
+  the Z axis as well.
+
+- [stormname:core.geometry.rotate(core.geometry.Angle)]
+
+  Creates a transform that rotates points around the Z axis. This is the one rotation that is
+  relevant in 2 dimensions, which is why it has a special name.
+
+- [stormname:core.geometry.rotate(core.geometry.Angle, core.geometry.Point)]
+
+  Creates a transform that rotates points around a line that extends from `origin` that is parallel
+  to the the Z axis. This is the one rotation that is relevant in 2 dimensions, which is why it has
+  a special name.
+
+- [stormname:core.geometry.scale(core.geometry.Vector)]
+
+  Creates a transform that scales points according to the dimensions in `scale`. Also available in
+  versions that accepts `scale` as a `Float` (affects all axes), and a `Size` (affects the X and Y
+  axes).
+
+- [stormname:core.geometry.skewX(core.geometry.Angle)]
+
+  Creates a transform that skews points along the X axis by `angle`. Also available in versions that
+  skew along the Y axis and the Z axis.

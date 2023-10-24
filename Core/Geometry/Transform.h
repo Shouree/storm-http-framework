@@ -35,13 +35,14 @@ namespace storm {
 			typedef Float FData[16];
 			Transform(FData data);
 
-			// Operations...
+			// Multiply two transforms, creates a transform that performs both original transforms
+			// in sequence.
 			Transform *STORM_FN operator *(Transform *o);
 
-			// Invert.
+			// Invert the transform.
 			Transform *STORM_FN inverted();
 
-			// Get elements.
+			// Get a single element.
 			inline Float STORM_FN at(Nat row, Nat col) const { return (&v00)[row + 4*col]; }
 
 			// To string.
@@ -77,8 +78,10 @@ namespace storm {
 			friend Point operator *(Point o, Transform *tfm);
 		};
 
-		// Transform vectors and points.
+		// Transform a vector using a transform.
 		Vector STORM_FN operator *(Vector o, Transform *tfm);
+
+		// Transform a point using a transform.
 		Point STORM_FN operator *(Point o, Transform *tfm);
 
 

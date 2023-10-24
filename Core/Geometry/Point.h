@@ -35,7 +35,8 @@ namespace storm {
 			// Compute the lenght of the point.
 			Float STORM_FN length() const;
 
-			// Return a normalized point (i.e. length 1).
+			// Return a normalized point (i.e. length 1). If the point has length zero, then the
+			// original point is returned.
 			Point STORM_FN normalized() const;
 
 			// Compute the taxicab/manhattan length (i.e. x + y).
