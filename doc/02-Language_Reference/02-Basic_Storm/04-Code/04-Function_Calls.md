@@ -190,10 +190,11 @@ execution in the original thread in parallel, and optionally wait for the result
 
 This is achieved by using the keyword `spawn` before a function call. The `spawn` keyword makes two
 changes to the default behavior. First, it always sends a message instead of calling the function,
-even if the function could be called directly in the current context. Secondly, it causes the
-expression to evaluate to `Future<T>` instead of `T`. The `Future` object has a member `result` that
-can be called to wait for, and acquire the result. It is also possible to call `detach` to discard
-the result entirely.
+even if the function could be called directly in the current context (except that parameters are not
+copied if it is known to be spawned on the same thread). Secondly, it causes the expression to
+evaluate to `Future<T>` instead of `T`. The `Future` object has a member `result` that can be called
+to wait for, and acquire the result. It is also possible to call `detach` to discard the result
+entirely.
 
 As such, concurrent execution can be achieved as follows:
 
@@ -201,13 +202,13 @@ As such, concurrent execution can be achieved as follows:
 void fn(Str title) {
     for (Nat i = 0; i < 10; i++) {
         print("${title}: ${i,2}");
-	sleep(1 s);
+        sleep(1 s);
     }
 }
 
 void main() {
-    Future<void> a = spawn fn("A:");
-    Future<void> b = spawn fn("B:");
+    Future<void> a = spawn fn("A");
+    Future<void> b = spawn fn("B");
 
     // Wait for both to terminate:
     a.result();
@@ -215,7 +216,63 @@ void main() {
 }
 ```
 
-**Note:** Remember that Storm utilizes [cooperative scheduling for each OS
+The code above does not execute in parallel since Storm utilizes [cooperative scheduling for each OS
 thread](md:../../Storm/Threading_Model). This means that without the call to `sleep`, the two calls
 to `fn` may execute one after the other. In this case, the call to `print` requires sending a
 message to the `Compiler` thread, which yields the current thread without `sleep`, however.
+
+This potential issue can be addressed by running the threads on different OS threads. This can be
+achieved either by creating an actor that contains `fn`, and specify the thread to be determined at
+runtime:
+
+```bs
+class FnActor on ? {
+	init(Thread) {
+		init() {}
+	}
+
+    void fn(Str title) {
+        for (Nat i = 0; i < 10; i++) {
+            print("${title}: ${i,2}");
+            sleep(1 s);
+        }
+    }
+}
+
+void main() {
+    FnActor a = FnActor(Thread());
+    FnActor b = FnActor(Thread());
+
+    Future<void> fa = spawn a.fn("A");
+    Future<void> fb = spawn b.fn("B");
+
+    // Wait for both to terminate:
+    fa.result();
+    fb.result();
+}
+```
+
+It is also possible to provide a parameter to `spawn` to specify which thread to execute the
+function on. This can only be done for functions that are not a part of an actor, and that have not
+otherwise been marked to run on a particular thread:
+
+```bs
+void fn(Str title) {
+    for (Nat i = 0; i < 10; i++) {
+        print("${title}: ${i,2}");
+        sleep(1 s);
+    }
+}
+
+void main() {
+    Thread a;
+    Thread b;
+
+    Future<void> fa = spawn(a) fn("A");
+    Future<void> fb = spawn(b) fn("B");
+
+    // Wait for both to terminate:
+    fa.result();
+    fb.result();
+}
+```

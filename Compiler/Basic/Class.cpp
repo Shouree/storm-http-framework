@@ -390,9 +390,19 @@ namespace storm {
 
 
 		BSCtor *classDefaultCtor(Class *owner) {
-			Array<NameParam> *params = CREATE(Array<NameParam>, owner);
+			Array<ValParam> *params = new (owner) Array<ValParam>();
 
-			return classCtor(owner, owner->pos, params, null);
+			Bool needsThread = owner->runOn().state == RunOn::runtime;
+			if (needsThread) {
+				params->reserve(2);
+				params->push(thisParam(owner));
+				params->push(ValParam(StormInfo<Thread>::type(owner->engine), new (owner) Str()));
+			} else {
+				params->reserve(1);
+				params->push(thisParam(owner));
+			}
+
+			return new (owner) BSCtor(params, owner->scope, null, owner->pos);
 		}
 
 	}
