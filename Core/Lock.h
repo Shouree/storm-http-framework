@@ -6,16 +6,14 @@ namespace storm {
 	STORM_PKG(core.sync);
 
 	/**
-	 * A recursive lock usable from within Storm. If possible, use a plain os::Lock or os::Sema as
-	 * it does not require any separate allocations.
+	 * A recursive lock usable from within Storm. If possible, use a plain os::Lock or os::Sema from
+	 * C++ as it does not require any separate allocations.
 	 *
 	 * This object slightly breaks the expected semantics of Storm as it does not make sense to copy
-	 * a semaphore. Instead, all copies will refer to the same semaphore.
+	 * a lock. Instead, all copies will refer to the same semaphore.
 	 *
 	 * Note: usually it is not required to use locks within Storm as the threading model takes care
 	 * of most cases where locks would be needed.
-	 *
-	 * TODO: Make into a value?
 	 */
 	class Lock : public Object {
 		STORM_CLASS;

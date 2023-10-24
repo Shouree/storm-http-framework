@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Future.h"
 #include "CloneEnv.h"
+#include "Exception.h"
 #include "Utils/Memory.h"
 
 namespace storm {
@@ -46,6 +47,14 @@ namespace storm {
 			data->future.error();
 		} else {
 			WARNING(L"Trying to re-use a future!");
+		}
+	}
+
+	void FutureBase::error(Exception *exception) {
+		try {
+			exception->throwMe();
+		} catch (...) {
+			error();
 		}
 	}
 

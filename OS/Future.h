@@ -50,8 +50,7 @@ namespace os {
 		void posted();
 
 		// Post an error. This function must be called from within a throw-catch block. Otherwise
-		// the runtime crashes. The 'ptrStorage' pointer shall refer to memory where it is safe to
-		// store pointers to garbage collected objects.
+		// the runtime crashes.
 		void error();
 
 		// Has any result been posted?

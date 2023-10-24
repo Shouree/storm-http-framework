@@ -8,6 +8,8 @@
 namespace storm {
 	STORM_PKG(core);
 
+	class Exception;
+
 	/**
 	 * Future-object exposed to the runtime and built into function calls. By calling
 	 * 'asyncThreadCall' on a function, you will get one of these objects. It also simplifies the
@@ -36,6 +38,9 @@ namespace storm {
 
 		// Post an error (assuming we're inside a catch-block).
 		void error();
+
+		// Post an error.
+		void STORM_FN error(Exception *exception);
 
 		// Wait for the result. 'to' is empty memory where the value will be copied into.
 		void CODECALL resultRaw(void *to);
@@ -88,7 +93,7 @@ namespace storm {
 
 			~Data();
 
-			// The Future object we are playing with.
+			// The Future object we are using.
 			FutureSema future;
 
 			// Handle.

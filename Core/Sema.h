@@ -10,16 +10,14 @@ namespace storm {
 	 *
 	 * This object slightly breaks the expected semantics of Storm as it does not make sense to copy
 	 * a semaphore. Instead, all copies will refer to the same semaphore.
-	 *
-	 * TODO: Make into a value?
 	 */
 	class Sema : public Object {
 		STORM_CLASS;
 	public:
-		// Initialize the semaphore to 1.
+		// Create a semaphore initialized to 1.
 		STORM_CTOR Sema();
 
-		// Initialize the semaphore to 'count'.
+		// Create a semaphore initialized to `count`.
 		STORM_CTOR Sema(Nat count);
 
 		// Copy.
@@ -31,8 +29,11 @@ namespace storm {
 		// Deep copy.
 		void STORM_FN deepCopy(CloneEnv *e);
 
-		// Increase or decrease the semaphore.
+		// Increase the value in the semaphore by 1. May wake any waiting threads.
 		void STORM_FN up();
+
+		// Attempt to decrease the value in the semaphore by 1. Will wait in case the value would
+		// become negative.
 		void STORM_FN down();
 
 	private:
