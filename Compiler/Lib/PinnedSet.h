@@ -9,15 +9,18 @@ namespace storm {
 	/**
 	 * A set of pinned pointers.
 	 *
-	 * These pointers are scanned in the same way objects on the stack are scanned. As such, these
-	 * pointers may point inside objects contrary to all other pointers in the system.
+	 * These pointers are scanned in the same way objects on the stack are scanned. This allows the
+	 * pointers stored in here to refer to any part of any object in the system. This includes
+	 * pointers into the middle of an object, and pointers to values that are located on the stack.
 	 *
-	 * It is then possible to query the set of pointers with a unsafe.RawPtr to see if this object
-	 * contains a pointer to somewhere inside the specified RawPtr, and if so, at which offset. This
-	 * can be done at O(log(n)), except for the first query, which may take O(nlog(n))
+	 * It is then possible to query the set of pointers with a `core.unsafe.RawPtr` to see if this
+	 * object contains a pointer to somewhere inside the specified `RawPtr`, and if so, at which
+	 * offset. This can be done in O(log(n)), except for the first query that may require O(nlog(n))
+	 * time. This is useful when collecting data from a running program to instrument memory
+	 * accesses.
 	 *
-	 * This class is useful when collecting data from a running program in order for later
-	 * instrumentation.
+	 * While it is possible to query the data structure, it is *not* possible to retrieve individual
+	 * pointers later on. This is because the pointers may refer to a stack that is no longer valid.
 	 *
 	 * This class is implemented as a flat array of objects that is sorted on demand.
 	 */
