@@ -100,8 +100,8 @@ Currently, the following two forms are implemented. More can be added by extendi
 
 - `<exression>`: Cast from a `Maybe<T>` into `T`.
 
-- `<expression> as T`: Cast from a super type to a derived type. Also handles cases where
-  `<expression>` is a `Maybe`-type.
+- `<expression> as T`: Cast from a super type to a derived type, or from a `Variant` to the
+  specified type. Also handles cases where `<expression>` is a `Maybe`-type.
 
 For example, they can be used as follows:
 

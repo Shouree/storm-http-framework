@@ -48,14 +48,16 @@ namespace storm {
 		// Deep copy.
 		void STORM_FN deepCopy(CloneEnv *env);
 
-		// Empty/any value?
+		// Is the variant empty?
 		Bool STORM_FN empty() const;
+
+		// Does the variant contain any element?
 		Bool STORM_FN any() const { return !empty(); }
 
-		// Does this variant contain the specified type?
+		// Does this variant contain the type `type`?
 		Bool STORM_FN has(Type *type) const;
 
-		// Get contained type.
+		// Get the type of the value in the variant. Returns `null` if it is empty.
 		MAYBE(Type *) STORM_FN type() const;
 
 	public:
