@@ -56,7 +56,7 @@ namespace storm {
 		for (Nat i = 0; i < trace.count(); i++) {
 			if (i > 0)
 				to << std::endl;
-			to << std::setw(3) << i << L": " << trace[i].ptr();
+			to << L"Frame " << std::setw(3) << i << L": at 0x" << trace[i].ptr();
 		}
 		return to;
 	}
@@ -65,7 +65,7 @@ namespace storm {
 		for (Nat i = 0; i < trace.count(); i++) {
 			if (i > 0)
 				to << S("\n");
-			to << width(3) << i << S(": ") << hex(trace[i].ptr());
+			to << width(3) << i << S(": at 0x") << hex(trace[i].ptr());
 		}
 		return to;
 	}

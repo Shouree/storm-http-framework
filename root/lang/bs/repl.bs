@@ -123,7 +123,7 @@ private:
 
 		if (ptr = evalFn.pointer as Fn<Str, ReplSandbox>) {
 			ReplSandbox sandbox(this);
-			print("=> " # ptr.call(sandbox));
+			printPrompt("=> ", ptr.call(sandbox));
 		}
 
 		// Function replaceFn = named{ReplSandbox:evalFn<ReplSandbox>};
@@ -297,12 +297,11 @@ class ReplCode on Compiler {
 		createStr(g, result, BareVarAccess(SrcPos(), result, resultVar.v), resultStr);
 
 		// Print the result.
-		ConcatExpr concat(SrcPos(), root);
-		concat.append(strConstant(SrcPos(), varName + " = "));
-		concat.append(BareVarAccess(SrcPos(), strType, resultStr.v));
-
-		var print = namedExpr(root, SrcPos(), "print", concat);
-		print.code(g, CodeResult());
+		Actuals printParams;
+		printParams.add(strConstant(SrcPos(), varName + " = "));
+		printParams.add(BareVarAccess(SrcPos(), strType, resultStr.v));
+		FnCall printCall(SrcPos(), root.scope, named{printPrompt<Str, Str>}, printParams);
+		printCall.code(g, CodeResult());
 
 		g.l << fnRet(resultVar.v);
 
@@ -332,7 +331,16 @@ private:
 		Expr constant = strConstant(SrcPos(), s.toS);
 		constant.code(g, CodeResult(strType, result));
 	}
+}
 
+// Helper to print results nicely.
+private void printPrompt(Str prompt, Str contents) on Compiler {
+	StrBuf out;
+	out << prompt;
+	out.indentBy(" " * prompt.count);
+	out.indent();
+	out << contents;
+	print(out.toS);
 }
 
 // Implementation of the 'del' statement in the Repl.
