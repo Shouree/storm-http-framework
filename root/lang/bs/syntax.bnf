@@ -215,26 +215,6 @@ SFile => Content() : (SDocFileItem(env) -> add)* - SDelimiter;
 Array<SrcName> SIncludes();
 SIncludes => p : (, "use" #keyword ~ SPackage p, ";")*;
 
-// Special use-rule in the top loop.
-SrcName SReplUse();
-SReplUse => p : "use" ~ SPackage p, ";?";
-
-// Root rule for the top loop.
-Expr SReplExpr(Block block);
-SReplExpr => p : SExpr(block) p;
-SReplExpr => p : SStmt(block) p;
-SReplExpr => Expr(pos) : "";
-
-// Short-hand variable assignment.
-SReplExpr[10] => Var(block, name, expr) : SName name #varName, "=", SExpr(block) expr;
-
-// Remove variables.
-SReplExpr[10] => delStmt(block, name) : "del " #keyword, SName name #varName;
-
-// Help.
-SReplExpr[10] => helpStmt(block, name) : "help " #keyword, SFnName name;
-
-
 ////////////////////////////////////////////////////////////////////
 // Code!
 ////////////////////////////////////////////////////////////////////
