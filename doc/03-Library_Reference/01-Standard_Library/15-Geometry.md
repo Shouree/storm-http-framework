@@ -1,9 +1,9 @@
 Geometry Library
 ================
 
-Storm provides a number of types for 2D and 3D geometry in its standard library. These are provided
-to make it easier for different graphics libraries to interact with each other, even if parts of
-them are implemented in C++.
+The Storm standard library provides a number of types for 2D and 3D geometry in its standard
+library. These are provided to make it easier for different graphics libraries to interact with each
+other, even if parts of them are implemented in C++.
 
 All of these types and functions are in the `core.geometry` package. All their members treat the
 values as if they were immutable. That is, it is possible to modify the contents of all values

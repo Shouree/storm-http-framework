@@ -1,13 +1,15 @@
-Synchronization
-===============
+Threading and Synchronization
+=============================
 
 Storm is aware of threads by default, and aims to avoid data races. To achieve this, Storm utilizes
 some mechanisms in the standard library. In particular, the classes `core.Thread` and
-`core.Future<T>` are central to making inter-thread communication happen.
+`core.Future<T>` are central to making inter-thread communication happen. This part of the library
+also provides some utility functions to affect thread behavior.
 
 Even though Storm avoids data races by default, it is sometimes necessary to explicitly synchronize
 code. This is particularly true when integrating external libraries in C++. As such, Storm provides
 a number of synchronization primitives that can be used for these purposes.
+
 
 
 Thread
@@ -34,6 +36,12 @@ The `Thread` class has the following members:
 - .hash()
 ```
 
+The following free functions are also useful to modify the behavior of threads:
+
+```stormdoc
+- core.sleep(core.Duration)
+- core.yield()
+```
 
 Future
 ------

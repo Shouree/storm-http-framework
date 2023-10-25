@@ -21,10 +21,10 @@ namespace storm {
 
 	Image::Image() : data(null), w(0), h(0) {}
 
-	Image::Image(Image *o) : data(null), w(o->w), h(o->h) {
+	Image::Image(const Image &o) : data(null), w(o.w), h(o.h) {
 		Nat s = w * h * 4;
 		data = runtime::allocBuffer(engine(), s);
-		memcpy(data->v, o->data->v, s);
+		memcpy(data->v, o.data->v, s);
 	}
 
 	Image::Image(Size size) : data(null), w(Nat(size.w)), h(Nat(size.h)) {

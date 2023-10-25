@@ -17,28 +17,36 @@ namespace storm {
 		STORM_CTOR Image();
 
 		// Copy.
-		Image(Image *o);
+		Image(const Image &o);
 
-		// Specific size (truncated).
+		// Create an image with the specified size. The image is initially entirely transparent
+		// (based on the color black).
 		STORM_CTOR Image(geometry::Size size);
 		STORM_CTOR Image(Nat w, Nat h);
 
-		// Get size.
+		// Get the width of the image.
 		inline Nat STORM_FN width() { return w; }
+
+		// Get the height of the image.
 		inline Nat STORM_FN height() { return h; }
+
+		// Get the size of the image.
 		geometry::Size STORM_FN size();
 
-		// TODO: Replace at least one of these with foo[pt] = color;
-		// Get pixel at point.
+		// Does this image contain any pixels that are transparent or semi-transparent?
+		Bool STORM_FN hasAlpha();
+
+		// Get the pixel at a coordinate.
 		Color STORM_FN get(Nat x, Nat y);
+
+		// Get the pixel at the specified coordinate. Truncates any fractions, does not perform any interpolation.
 		Color STORM_FN get(geometry::Point at);
 
-		// Set pixel.
+		// Set the pixel at the specified coordinate.
 		void STORM_FN set(Nat x, Nat y, Color c);
 		void STORM_FN set(geometry::Point p, Color c);
 
-		// Does this image contain any alpha information?
-		Bool STORM_FN hasAlpha();
+		// TODO: Also provide image[px] = x
 
 		// Raw buffer information:
 

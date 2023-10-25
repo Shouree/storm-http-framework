@@ -15,7 +15,7 @@ namespace storm {
 	class Moment {
 		STORM_VALUE;
 	public:
-		// Create a representation of 'now'
+		// Create a representation of *now*
 		STORM_CTOR Moment();
 
 		// Inernal use, create with specific value.
@@ -40,11 +40,19 @@ namespace storm {
 		// The actual value, in us.
 		Long v;
 
-		// Get the value in various units.
+		// Get the duration in microseconds.
 		inline Long STORM_FN inUs() const { return Long(v); }
+
+		// Get the duration in milliseconds.
 		inline Long STORM_FN inMs() const { return Long(v / 1000); }
+
+		// Get the duration in seconds.
 		inline Long STORM_FN inS() const { return Long(v / 1000000); }
+
+		// Get the duration in minutes.
 		inline Long STORM_FN inMin() const { return inS() / 60; }
+
+		// Get the duration in hours.
 		inline Long STORM_FN inH() const { return inMin() / 60; }
 	};
 
@@ -57,10 +65,12 @@ namespace storm {
 		Duration STORM_FN us(Long v);
 	}
 
-	// Sleep. Do not expect more than ms precision.
+	// Sleep for the specified duration. Do not expect more than ms precision.
 	void STORM_FN sleep(Duration d);
 
-	// Yield.
+	// Yield the current thread. This causes the current UThread to stop running, and the system
+	// will schedule another thread that is ready to run if possible. The current thread is still
+	// marked as ready, and will continue to execute whenever the scheduler schedules it again.
 	void STORM_FN yield();
 
 	// Output.
