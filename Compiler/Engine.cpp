@@ -73,63 +73,14 @@ namespace storm {
 		currentEngine = null;
 	}
 
-	static void findThreads(Array<NamedThread *> *result, Named *root) {
-		if (NamedThread *t = as<NamedThread>(root)) {
-			result->push(t);
-			return;
-		}
-
-		NameSet *search = as<NameSet>(root);
-		if (!search)
-			return;
-
-		for (NameSet::Iter i = search->begin(), e = search->end(); i != e; ++i) {
-			findThreads(result, i.v());
-		}
-	}
-
-	static void outputThread(StrBuf *output, const os::Thread &thread, Array<NamedThread *> *names) {
-		// Find the name of this thread (does not need to be very fast).
-		for (Nat i = 0; i < names->count(); i++) {
-			if (names->at(i)->thread()->sameAs(thread)) {
-				*output << names->at(i)->identifier();
-				return;
-			}
-		}
-
-		*output << S("Thread ") << hex(thread.id());
-	}
-
-	void Engine::threadSummary() {
+	vector<os::Thread> Engine::allThreads() {
 		vector<os::Thread> threads = threadGroup.threads();
 
 		os::Thread compiler = world.threads[0]->thread();
 		if (std::find(threads.begin(), threads.end(), compiler) == threads.end())
 			threads.insert(threads.begin(), compiler);
 
-		vector<vector<::StackTrace>> traces = os::stackTraces(threads);
-
-		Array<NamedThread *> *threadNames = new (*this) Array<NamedThread *>();
-		findThreads(threadNames, package());
-
-		StrBuf *output = new (*this) StrBuf();
-
-		for (size_t t = 0; t < threads.size(); t++) {
-			const os::Thread &thread = threads[t];
-			vector<::StackTrace> &trace = traces[t];
-
-			outputThread(output, thread, threadNames);
-			*output << L":\n";
-
-			Indent z(output);
-
-			for (size_t u = 0; u < trace.size(); u++) {
-				*output << S("UThread ") << u << S(":\n");
-				*output << format(trace[u]).c_str();
-			}
-		}
-
-		stdOut()->writeLine(output->toS());
+		return threads;
 	}
 
 	// Starts at -1 so that the first Engine will get id=0.

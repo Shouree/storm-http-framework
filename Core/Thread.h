@@ -47,6 +47,7 @@ namespace storm {
 		// Check if this is the same thread as the one passed as a parameter. This will not cause
 		// any threads to be created.
 		bool sameAs(const os::Thread &other) const;
+		bool sameAs(size_t id) const;
 
 #ifdef STORM_COMPILER
 		/**

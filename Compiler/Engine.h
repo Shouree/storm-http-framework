@@ -210,8 +210,8 @@ namespace storm {
 		void attachThread();
 		void detachThread();
 
-		// Print a summary of all threads in the system. Accessible from Storm as debug.threadSummary().
-		void threadSummary();
+		// Get all threads in the system. Used to generate stack traces.
+		vector<os::Thread> allThreads();
 
 	private:
 		// The compiler C++ world.

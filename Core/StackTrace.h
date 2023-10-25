@@ -78,6 +78,9 @@ namespace storm {
 	// Collect a stack trace.
 	StackTrace STORM_FN collectStackTrace(EnginePtr e);
 
+	// Collect a stack trace, ignore the topmost `ignore` frames.
+	StackTrace STORM_FN collectStackTrace(EnginePtr e, Nat ignore);
+
 	// Collect a stack trace, passing a pointer to previously collected stack state.
 	StackTrace collectStackTrace(EnginePtr e, void *state);
 

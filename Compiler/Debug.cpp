@@ -8,6 +8,8 @@
 #include "Code/Debug.h"
 #include "Utils/Memory.h"
 #include "Engine.h"
+#include "Lib/MultiStackTrace.h"
+#include "Core/Io/Text.h"
 
 #ifdef POSIX
 #include <signal.h>
@@ -104,7 +106,7 @@ namespace storm {
 		}
 
 		void threadSummary(EnginePtr e) {
-			e.v.threadSummary();
+			e.v.stdOut()->writeLine(collectAllStackTraces(e)->toS());
 		}
 
 		void throwError(EnginePtr e) {

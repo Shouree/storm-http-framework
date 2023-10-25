@@ -61,6 +61,12 @@ namespace storm {
 		return o == osThread;
 	}
 
+	bool Thread::sameAs(size_t id) const {
+		if (osThread == os::Thread::invalid)
+			return false;
+		return osThread.id() == id;
+	}
+
 	STORM_DEFINE_THREAD(Compiler);
 
 }
