@@ -2,13 +2,12 @@ use core:io;
 use markdown;
 
 // Load a markdown document and add post-processing as required.
-// The tree is used to resolve links, 'treePath' is a relative path inside the tree.
-Document loadDocument(Tree tree, Node node, Url file) {
+Document loadDocument(Node node, Url file) {
 	try {
 		Document doc = parse(file.readAllText());
 
 		// Add post-processing.
-		doc.visit(DocVisitor(tree, node, file));
+		doc.visit(DocVisitor(node, file));
 
 		return doc;
 	} catch (core:lang:CompilerError error) {
@@ -26,9 +25,6 @@ Document loadDocument(Tree tree, Node node, Url file) {
  * Visitor to transform the markdown document to be more suitable for documentation.
  */
 class DocVisitor extends markdown:Visitor {
-	// Tree used to resolve links.
-	Tree tree;
-
 	// Path inside the tree.
 	Node node;
 
@@ -36,8 +32,8 @@ class DocVisitor extends markdown:Visitor {
 	Url file;
 
 	// Create.
-	init(Tree tree, Node node, Url file) {
-		init { tree = tree; node = node; file = file; }
+	init(Node node, Url file) {
+		init { node = node; file = file; }
 	}
 
 	// Transform elements:

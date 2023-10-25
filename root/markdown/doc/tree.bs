@@ -15,11 +15,11 @@ class Node {
 	// Is this node a directory? (i.e. should this file be named "index" in the output?).
 	Bool dirNode;
 
-	// Strip numbers in the output?
-	Bool stripNumbers;
-
 	// Depth of this node in the tree. I.e. how many parent nodes exist.
 	Nat depth;
+
+	// Tree configuration.
+	TreeConfig config;
 
 	// Parent node, if any.
 	Node? parent;
@@ -31,10 +31,11 @@ class Node {
 	Document? content;
 
 	// Create.
-	init(Url file, Node? parent) {
+	init(Url file, TreeConfig config, Node? parent) {
 		init {
 			source = file;
 			name = file.title;
+			config = config;
 			parent = parent;
 			depth = 0;
 		}
@@ -59,9 +60,9 @@ class Node {
 				continue;
 
 			if (f.dir) {
-				children << Node(f, this);
+				children << Node(f, config, this);
 			} else if (f.ext == "md") {
-				children << Node(f, this);
+				children << Node(f, config, this);
 			}
 		}
 
@@ -92,7 +93,7 @@ class Node {
 	private Url absOutputPathI() {
 		if (parent) {
 			Str fileTitle = name;
-			if (stripNumbers) {
+			if (config.stripNumbers) {
 				var dash = fileTitle.find('-');
 				if (dash != fileTitle.end)
 					fileTitle = fileTitle.cut(dash + 1);
@@ -212,14 +213,12 @@ class Node {
 	}
 
 	// Load this node and all children. 'treePath' is the relative path in the tree.
-	void load(Tree tree) {
-		stripNumbers = tree.stripNumbers;
-
+	void load() {
 		if (content.empty)
-			content = loadDocument(tree, this, source);
+			content = loadDocument(this, source);
 
 		for (x in children)
-			x.load(tree);
+			x.load();
 	}
 
 	// Output to disk.
@@ -266,6 +265,19 @@ class Node {
 
 
 /**
+ * Configuration for the entire tree.
+ */
+class TreeConfig {
+	// Strip numbers from md-files in the output?
+	Bool stripNumbers;
+
+	init() {
+		init {}
+	}
+}
+
+
+/**
  * Documentation tree. Contains the root node of the tree, and the associate logic to traverse the
  * tree.
  */
@@ -273,14 +285,16 @@ class Tree {
 	// Root node of the tree.
 	Node root;
 
-	// Strip numbers from md-files in the output?
-	Bool stripNumbers;
+	// Configuration.
+	TreeConfig config;
 
 	// Create the tree.
-	init(Str title, Url rootDir, Bool stripNumbers) {
+	init(Str title, Url rootDir) {
+		TreeConfig config;
+
 		init {
-			root(rootDir.updated(), null);
-			stripNumbers = stripNumbers;
+			root(rootDir.updated(), config, null);
+			config = config;
 		}
 
 		root.name = title;
@@ -288,7 +302,7 @@ class Tree {
 
 	// Load all documents.
 	void load() {
-		root.load(this);
+		root.load();
 	}
 
 	// Output to disk.

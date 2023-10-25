@@ -93,7 +93,8 @@ void generate(Options options) {
 
 	Moment loadStart;
 
-	Tree tree(options.title, options.root, options.stripNumbers);
+	Tree tree(options.title, options.root);
+	tree.config.stripNumbers = options.stripNumbers;
 	tree.load();
 
 	Moment loadEnd;

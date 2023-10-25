@@ -199,7 +199,14 @@ private Bool sortPredicate(Named a, Named b) on Compiler {
 
 // Find element, optionally add a this pointer.
 private Named? findNamed(Name name, Scope scope) on Compiler {
-	unless (simplified = name.simplify(scope))
+	var simplified = try {
+		name.simplify(scope);
+	} catch (Exception e) {
+		print("Error: Failed to resolve the name: ${name}: ${e.message}");
+		return null;
+	};
+
+	unless (simplified)
 		return null;
 
 	// Start by trying to find a member function. Otherwise we have problems with things in core.Object.
