@@ -87,7 +87,7 @@ namespace storm {
 	};
 
 	StackTrace collectStackTrace(EnginePtr e) {
-		return collectStackTrace(e, null);
+		return collectStackTrace(e, (void *)null);
 	}
 
 	StackTrace collectStackTrace(EnginePtr e, Nat ignore) {

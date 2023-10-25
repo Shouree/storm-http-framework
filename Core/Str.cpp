@@ -201,7 +201,7 @@ namespace storm {
 	}
 
 	Nat Str::count() const {
-		return data->count - data->filled - 1;
+		return Nat(data->count - data->filled - 1);
 	}
 
 	Str *Str::operator +(Str *o) const {
@@ -841,7 +841,7 @@ namespace storm {
 			trailing = 0;
 		}
 
-		Nat endPos = data->count - 1;
+		Nat endPos = Nat(data->count - 1);
 		if (!last.atEnd())
 			endPos = std::min(endPos, last.pos);
 
@@ -850,7 +850,7 @@ namespace storm {
 			const wchar check = at[-1];
 			if (check == leading) {
 				if (trailing == 0 || trailing == at[0])
-					return Iter(this, at - start - 1);
+					return Iter(this, Nat(at - start - 1));
 			}
 		}
 
@@ -867,7 +867,7 @@ namespace storm {
 		if (last.owner && last.owner != this)
 			return end();
 
-		Nat endPos = data->count;
+		Nat endPos = Nat(data->count);
 		if (!last.atEnd())
 			endPos = std::min(endPos, last.pos);
 
@@ -886,7 +886,7 @@ namespace storm {
 				}
 
 				if (ok)
-					return Iter(this, at - thisStart - (strEnd - strStart));
+					return Iter(this, Nat(at - thisStart - (strEnd - strStart)));
 			}
 		}
 

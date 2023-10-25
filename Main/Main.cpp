@@ -299,7 +299,7 @@ void showVersion(Engine &e) {
 
 void createArgv(Engine &e, const vector<const wchar_t *> &argv) {
 	Array<Str *> *out = new (e) Array<Str *>();
-	out->reserve(argv.size());
+	out->reserve(Nat(argv.size()));
 	for (size_t i = 0; i < argv.size(); i++) {
 		*out << new (e) Str(argv[i]);
 	}

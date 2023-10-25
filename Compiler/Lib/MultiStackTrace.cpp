@@ -22,16 +22,16 @@ namespace storm {
 
 	StackTrace ThreadStackTraces::operator [](Nat elem) const {
 		if (elem >= data->filled)
-			throw new (this) ArrayError(elem, data->filled);
+			throw new (this) ArrayError(elem, Nat(data->filled));
 		else
 			return data->v[elem];
 	}
 
 	Nat ThreadStackTraces::push(StackTrace trace) {
 		if (data->filled >= data->count)
-			return data->count;
+			return Nat(data->count);
 
-		Nat id = data->filled++;
+		Nat id = Nat(data->filled++);
 		new (Place(&data->v[id])) StackTrace(trace);
 		return id;
 	}
@@ -66,7 +66,7 @@ namespace storm {
 
 	ThreadStackTraces *MultiThreadStackTraces::operator [](Nat elem) const {
 		if (elem >= data->filled)
-			throw new (this) ArrayError(elem, data->filled);
+			throw new (this) ArrayError(elem, Nat(data->filled));
 		else
 			return data->v[elem];
 	}
@@ -126,7 +126,7 @@ namespace storm {
 		Nat traceId;
 
 		// Create.
-		ThreadTrace(SharedTrace &shared, Nat id) : shared(shared), traceId(id) {}
+		ThreadTrace(SharedTrace &shared) : shared(shared) {}
 
 		// Main function for the trace.
 		void main() {
@@ -221,10 +221,9 @@ namespace storm {
 
 	static MultiThreadStackTraces *collectTraces(Engine &e, const vector<os::Thread> &threads) {
 		SharedTrace shared(e, Nat(threads.size()));
-		vector<ThreadTrace> data;
-		data.reserve(threads.size());
+		vector<ThreadTrace> data(threads.size(), ThreadTrace(shared));
 		for (size_t i = 0; i < threads.size(); i++)
-			data.push_back(ThreadTrace(shared, Nat(i)));
+			data[i].traceId = Nat(i);
 
 		size_t thisThread = threads.size();
 
