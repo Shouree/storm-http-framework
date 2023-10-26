@@ -50,17 +50,43 @@ namespace ssl {
 		return r;
 	}
 
+	void *loadLib(const char *base, int flags) {
+		// Attempted names to append to the library name. If the "-dev" package is installed, the
+		// symlink from ".so" to the real library is not always present, so we attempt a few known
+		// good names.
+		const char *options[] = {
+			".so",
+			".so.3",
+			".so.1.1",
+		};
+
+		for (size_t i = 0; i < ARRAY_COUNT(options); i++) {
+			std::string name = std::string(base) + options[i];
+			void *result = dlopen(name.c_str(), flags);
+			if (result)
+				return result;
+		}
+
+		return null;
+	}
+
 	void initRuntimeSSL() {
 		util::Lock::L z(initLock);
 		if (initialized)
 			return;
 		initialized = true;
 
-		void *libCrypto = dlopen("libcrypto.so", RTLD_NOW | RTLD_GLOBAL);
-		void *libSSL = dlopen("libssl.so", RTLD_NOW);
+		void *libCrypto = loadLib("libcrypto", RTLD_NOW | RTLD_GLOBAL);
+		if (!libCrypto) {
+			throw new (runtime::someEngine()) SSLError(S("Unable to load libcrypto.so. Make sure it is installed. In some cases you might need to install the -dev package."));
+		}
 
-		if (!libSSL || !libCrypto)
-			throw new (runtime::someEngine()) SSLError(S("Unable to load libssl.so and/or libcrypto.so. Make sure they are installed!"));
+		void *libSSL = loadLib("libssl", RTLD_NOW);
+
+		if (!libSSL) {
+			dlclose(libCrypto);
+			throw new (runtime::someEngine()) SSLError(S("Unable to load libssl.so. Make sure it is installed! In some cases you might need to install the -dev package."));
+		}
 
 #define SSL_FN(lib, ret, name, params, names)			\
 		ptr_ ## name = (ret (*) params)loadFn(lib, #name);
