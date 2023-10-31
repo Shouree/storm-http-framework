@@ -108,7 +108,8 @@ namespace storm {
 	// is outputted as a hex dump. The location of filled is marked with a pipe (`|`). As such,
 	// buffers are a convenient way to output data in hexadecimal form.
 	//
-	// The system provides an overload of `toS` for buffers, so it is possible to call `Buffer().toS()`.
+	// The system provides an overload of `toS` for buffers, so it is possible to call
+	// `Buffer().toS()`.
 	StrBuf &STORM_FN operator <<(StrBuf &to, Buffer b);
 
 	// Output the buffer, like `<<`, but including a second mark at the specified location. This

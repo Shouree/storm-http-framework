@@ -17,37 +17,46 @@ namespace sound {
 	class Player : public ObjectOn<Audio> {
 		STORM_CLASS;
 	public:
-		// Create the player. Does not start playing.
+		// Create a player that plays the specified `sound`. The `Player` takes responsibility for
+		// closing the sound stream eventually, and assumes that the sound stream is not modified
+		// externally. Will not play the sound until `play` is called.
 		STORM_CTOR Player(Sound *sound);
 
 		// Destroy.
 		~Player();
 
-		// Destroy any resources immediatly.
+		// Destroy any resources associated with the `Player`. The destructor automatically calls
+		// `close` eventually, but since this does not always happen promptly, it is a good idea
+		// to manually call `close` whenever possible.
 		void STORM_FN close();
 
-		// Sound volume (0-1).
+		// Set the sound volume (between 0 and 1). Marked as an assign function, so that `volume`
+		// can be treated as a member variable.
 		void STORM_ASSIGN volume(Float level);
+
+		// Get the current volume.
 		Float STORM_FN volume();
 
-		// Play.
+		// Start playing the sound.
 		void STORM_FN play();
 
-		// Pause.
+		// Pause the sound.
 		void STORM_FN pause();
 
-		// Stop. This resets the position to zero.
+		// Stop playing the sound. This also resets the playback position to zero (for seekable
+		// streams).
 		void STORM_FN stop();
 
-		// Playing?
+		// Is the stream currently playing?
 		Bool STORM_FN playing();
 
-		// Wait until playback is done or until playback is stopped.
-		// Do not call from the UThread managing callbacks!
+		// Wait until playback reaches the end of the stream, or until playback is stopped. Do not
+		// call from the UThread that manages callbacks.
 		void STORM_FN wait();
 
-		// Wait until a specific time has passed since start. Returns if the player is stopped as well.
-		// Do not call from the UThread managing callbacks!
+		// Wait until playback reaches or passes the specific duration since start, or if the player
+		// is stopped.
+		// Do not call from the UThread managing callbacks.
 		void STORM_FN waitUntil(Duration t);
 
 		// Get the time of playback.
