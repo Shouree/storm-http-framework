@@ -63,11 +63,13 @@ class TestResult {
 }
 
 
-// Run all tests inside 'pkg'.
+// Run all tests inside of `pkg`. Produce verbose output, but do not recurse.
 TestResult runTests(Package pkg) on Compiler { runTests(pkg, true, false); }
+
+// Run all tests inside of `pkg`. Specify whether verbose output is desired or not.
 TestResult runTests(Package pkg, Bool verbose) on Compiler { runTests(pkg, verbose, false); }
 
-// Run all tests inside 'pkg', possibly recursively.
+// Run all tests inside `pkg`, possibly recursively.
 TestResult runTests(Package pkg, Bool verbose, Bool recurse) on Compiler {
 	TestResult result;
 

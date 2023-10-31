@@ -59,7 +59,7 @@ supported modes are as follows:
 - `-t <name>`
 
   Run the test suite in the package referred to by `<name>` and exit. The test suite is expected to
-  be defined using the [test library](md:/Library_Reference/Tests).
+  be defined using the [test library](md:/Library_Reference/Unit_Tests).
 
 - `-T <name>`
 

@@ -197,6 +197,26 @@ package Expr testExpr(SrcPos pos, Block block, ExprText lhs, OpInfo op, ExprText
 	sub;
 }
 
+package Str reverseName(Str original) {
+	if (original == "==")
+		return "!=";
+	else if (original == "!=")
+		return "==";
+	else if (original == "<")
+		return ">=";
+	else if (original == ">")
+		return "<=";
+	else if (original == "<=")
+		return ">";
+	else if (original == ">=")
+		return "<";
+	else if (original == "is")
+		return "!is";
+	else if (original == "!is")
+		return is;
+	return "!" + original;
+}
+
 package Expr testExpr(SrcPos pos, Block block, Condition cond, Str text) on Compiler {
 	LocalVar resultVar = findResult(block);
 	LocalVarAccess result(pos, resultVar);

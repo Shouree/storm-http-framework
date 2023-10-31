@@ -22,7 +22,7 @@ SExprText => ExprText(expr, text) : (SExpr(block) expr) text;
 // Main test logic, the test-statement.
 SSuiteBody..SStmt[10] => testExpr(pos, block, lhs, op, rhs) : "test" #keyword ~ SExprText(block) lhs, STestOp op, SExprText(block) rhs, ";";
 SSuiteBody..SStmt[00] => testExpr(pos, block, cond, text) : "test" #keyword ~ (SCondition(block) cond) text, ";";
-SSuiteBody..SStmt[00] => testExpr(pos, block, expr, exception) : "test" #keyword ~ SExprText(block) expr ~ "throws" ~ SType exception;
+SSuiteBody..SStmt[00] => testExpr(pos, block, expr, exception) : "test" #keyword ~ SExprText(block) expr ~ "throws" #keyword ~ SType exception;
 
 // Abort the entire test run.
 SSuiteBody..SStmt[100] => abortExpr(pos, block) : "abort" #keyword, ";";
