@@ -1,10 +1,22 @@
 Objects in C++
 ==============
 
-Since Storm uses a garbage collector for memory management, some care needs to be taken when working
-in C++. Namely:
+Since Storm uses a garbage collector to manage memory, some care needs to be taken when working with
+objects in C++. Furthermore, Storm is designed to be useable as an embedded language. Because of
+this, the entire Storm system is represented as an instance of the `storm::Engine` class. Different
+engines are designed to be able to operate separately. Therefore, all heap-allocated objects are
+associated with an `Engine` instance, since they are allocated on a heap associated with a
+particular `Engine`.
 
-- Heap-allocated objects may only contain pointers to the start of objects.
+Both of these things makes object allocation and management needs some additional care:
+
+- The garbage collector needs to be able to scan and update all pointers in all heap-allocated
+  objects. This means that all pointers need to be visible to the garbage collector. In most cases,
+  this is handled by the preprocessor, but some care needs to be taken when working with `void`
+  pointers, for example. Another restriction is that all pointers to heap-allocated objects must
+  refer to the start of the allocation. It is therefore not possible to encode additional
+  information in the unused bits of a pointer, or to store pointers to the middle of objects (such
+  pointers may exist on the stack, however).
 
 - Destructors are not called (not even the default destructor) if it is not declared in the class,
   or if any contained values have destructors. This is typically not a problem, but if the class
