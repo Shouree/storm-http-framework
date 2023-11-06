@@ -8,9 +8,11 @@ namespace storm {
 	STORM_PKG(core.lang);
 
 	/**
-	 * Describes a value inside Storm.
+	 * Represents a variable that contains a value of a particular type.
 	 *
-	 * TODO: Think about thread safety here.
+	 * As such, a value is a pointer to a type alongside whether the variable contains the variable
+	 * directly, or if it is a reference to the variable. This is mostly relevant for function
+	 * parameters, but is often useful for local variables as well.
 	 */
 	class Value {
 		STORM_VALUE;
@@ -27,13 +29,13 @@ namespace storm {
 		// Deep copy.
 		void deepCopy(CloneEnv *env);
 
-		// Type we're referring to.
+		// The type stored. If `null`, the value refers to `void` and the value in `ref` is meaningless.
 		MAYBE(Type*) type;
 
-		// Reference type?
+		// Is this value representing a reference to `type`?
 		Bool ref;
 
-		// Make into a reference.
+		// Return a copy that is a reference.
 		Value STORM_FN asRef() const;
 		Value STORM_FN asRef(Bool ref) const;
 
@@ -41,11 +43,13 @@ namespace storm {
 		Bool STORM_FN operator ==(Value o) const;
 		Bool STORM_FN operator !=(Value o) const;
 
-		// Check if a value of this type may refer to a value of type 'x'. As the name implies, this
+		// Check if a value of this type may refer to a value of type `x`. As the name implies, this
 		// check is performed with references in mind. As such, this is used to determine if formal
 		// parameters of a function matches actual parameters, or when figuring out if a (copy)
 		// assignment should be allowed.
-		// Note: 'void' is considered to be able to refer to all other types.
+		//
+		// Note: `void` is considered to be able to refer to all other types.
+		//
 		// Note: This definition is separate from storage. Since the size of derived value types
 		// differ, it is not possible to store a derived type in a variable sized after the
 		// super type (without slicing), even if the super type may refer to the derived type.
@@ -55,9 +59,9 @@ namespace storm {
 		Bool STORM_FN mayReferTo(MAYBE(Type *) x) const;
 		Bool STORM_FN mayReferTo(Value x) const;
 
-		// See if it is possible to store a value of 'x' inside a value of this type without any
+		// See if it is possible to store a value of `x` inside a value of this type without any
 		// conversions. Works like 'mayReferTo', except that value types use strict equality, and
-		// 'void' is not considered to be able to store any other types.
+		// `void` is not considered to be able to store any other types.
 		Bool STORM_FN mayStore(MAYBE(Type *) x) const;
 		Bool STORM_FN mayStore(Value x) const;
 
@@ -70,21 +74,25 @@ namespace storm {
 		 * Code generation information.
 		 */
 
-		// Return this type in a register? We count 'void' as being returned in a register.
+		// Should this type be returned in a register? Note: we count `void` as being returned in a register.
 		Bool STORM_FN returnInReg() const;
 
-		// Is this a value-type or an object-type (that is heap-allocated)? Either 'isValue' or
-		// 'isObject' returns true, except for 'void', where none returns true.
+		// Does this value refer to a value-type? Either `isValue` or `isObject` returns true for non-void types.
 		Bool STORM_FN isValue() const;
+
+		// Does this value refer to a heap-allocated type (i.e. a class or an actor)? Either
+		// `isValue` or `isObject` returns true for non-void types.
 		Bool STORM_FN isObject() const;
 
-		// Is this a class- or an actor type? One of these return true if 'isObject' returns true.
+		// Is this a class type?
 		Bool STORM_FN isClass() const;
+
+		// Is this an actor type?
 		Bool STORM_FN isActor() const;
 
 		// Is this a primitive type? e.g. int, float, etc. These do not need explicit construction
 		// and can be stored in registers. Note: Object-types and references are not primitives in
-		// this regard, as pointers generally need initialization. 'void' is not considered a
+		// this regard, as pointers generally need initialization. `void` is not considered a
 		// primitive.
 		Bool STORM_FN isPrimitive() const;
 
@@ -93,10 +101,11 @@ namespace storm {
 		// consider references to be AsmTypes, as they are expected to be handled at a different level.
 		Bool STORM_FN isAsmType() const;
 
-		// Is this some kind of pointer that could need garbage collection?
+		// Is this some kind of pointer that may need garbage collection?
 		Bool STORM_FN isPtr() const;
 
-		// The size of this type.
+		// Return the size of this type. Respects by-reference semantics and the `ref` member. As
+		// such, always return a pointer size for classes and actors.
 		Size STORM_FN size() const;
 
 		// Get type info for this type.

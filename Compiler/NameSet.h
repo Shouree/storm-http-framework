@@ -105,7 +105,7 @@ namespace storm {
 		// Force loading this NameSet.
 		void STORM_FN forceLoad();
 
-		// Find something in here.
+		// Find a named entity in the name set. Overloads the `find` function in `NameLookup`.
 		virtual MAYBE(Named *) STORM_FN find(SimplePart *part, Scope source);
 		using Named::find;
 
@@ -176,21 +176,20 @@ namespace storm {
 		 * Lazy-loading callbacks.
 		 */
 
-		// Load a single missing name (#1 above). Assumed to call add() on one or more candidates
-		// for 'part', and then return true. It is acceptable to add no candidates and return true,
-		// which is interpreted as 'no matches can be lazy-loaded'. If there may be candidates, but
-		// none can be loaded from here, return 'false' and 'loadAll' will be executed.
+		// Attempt to load a single missing name. Assumed to call `add()` on one or more candidates
+		// for `part`, and then return true. It is acceptable to add no candidates and return `true`,
+		// which is interpreted as `no matches can be lazy-loaded`. If there may be candidates, but
+		// none can be loaded from here, return `false`. This causes `loadAll` to be called instead.
 		virtual Bool STORM_FN loadName(SimplePart *part);
 
-		// Called when we need to load all content (#2 above). Assumed to call add() on all
-		// content. Returns false or throws an exception on failure. Failure will re-try loading at
-		// a later time.
+		// Called when we need to load all content. Assumed to call `add()` on all entities. Returns
+		// false or throws an exception on failure. Failure will re-try loading at a later time.
 		virtual Bool STORM_FN loadAll();
 
-		// See if this NameSet is loaded fully.
+		// Check if this `NameSet` is loaded fully.
 		inline Bool STORM_FN allLoaded() const { return loaded; }
 
-		// Find a named here without bothering with lazy-loading.
+		// Find a name part in this `NameSet`, but do not perform lazy-loading.
 		MAYBE(Named *) STORM_FN tryFind(SimplePart *part, Scope source);
 
 		// Find a named in the NameSet. Use the SimplePart to determine which one to choose, and how

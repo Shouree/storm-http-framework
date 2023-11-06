@@ -94,7 +94,7 @@ namespace storm {
 		// Get the super-type for this type.
 		inline MAYBE(Type *) STORM_FN super() const { return chain ? chain->super() : null; }
 
-		// Get the declared super-type for this type. This ignores the implicit Object or TObject bases if present.
+		// Get the declared super-type for this type. This ignores the implicit `Object` or `TObject` bases.
 		MAYBE(Type *) STORM_FN declaredSuper() const;
 
 		// Set the thread for this type. This will force the super-type to be TObject.
@@ -123,7 +123,7 @@ namespace storm {
 		// Receive notification of new additions.
 		virtual void STORM_FN notifyAdded(NameSet *to, Named *what);
 
-		// Reference to this object (ie. the type information).
+		// Get a reference to this object that can be used in code generation.
 		virtual code::Ref STORM_FN typeRef();
 
 		/**
@@ -158,10 +158,10 @@ namespace storm {
 		// Force layout of all member variables.
 		void STORM_FN doLayout();
 
-		// Get all variables in here.
+		// Get a list of all variables in the type.
 		Array<MemberVar *> *STORM_FN variables() const;
 
-		// Inheritance chain and membership lookup. TODO: Make private?
+		// Inspect the inheritance chain, and perform quick membership lookups.
 		TypeChain *chain;
 
 		// If the type was initialized during early boot, we need to initialize vtables through here

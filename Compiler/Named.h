@@ -24,12 +24,12 @@ namespace storm {
 		STORM_CTOR NameLookup();
 		STORM_CTOR NameLookup(NameLookup *parent);
 
-		// Find the specified NamePart in here. Returns null if not found. 'source' indicates who is
-		// looking for something, and is used to perform visibility checks. If set to 'null', no
-		// visibility checks are performed.
+		// Find a named entity that corresponds to the specified `SimplePart` in this object.
+		// Returns `null` if it is not found. The parameter `source` indicates in what context the
+		// name lookup is performed, and it is used to determine the visibility of entities.
 		virtual MAYBE(Named *) STORM_FN find(SimplePart *part, Scope source);
 
-		// Convenience overloads for 'find'.
+		// Convenience overloads for `find`.
 		MAYBE(Named *) STORM_FN find(Str *name, Array<Value> *params, Scope source);
 		MAYBE(Named *) STORM_FN find(Str *name, Value param, Scope source);
 		MAYBE(Named *) STORM_FN find(Str *name, Scope source);
@@ -37,16 +37,16 @@ namespace storm {
 		MAYBE(Named *) find(const wchar *name, Value param, Scope source);
 		MAYBE(Named *) find(const wchar *name, Scope source);
 
-		// Check if this entity has a particular parent, either directly or indirectly. If 'parent'
+		// Check if this entity has a particular parent, either directly or indirectly. If `parent`
 		// is null, then false is always returned.
 		Bool STORM_FN hasParent(MAYBE(NameLookup *) parent) const;
 
-		// Get the parent object to this lookup, or null if none.
+		// Get the parent object to this lookup, or `null` if none.
 		virtual MAYBE(NameLookup *) STORM_FN parent() const;
 
-		// Parent name lookup. This should be set by the parent. If it is null, the default 'parent'
-		// implementation asserts. Therefore, root objects need to override 'parent' in order to
-		// return null.
+		// Parent name lookup. This should be set by the parent. If it is `null`, the default
+		// `parent` implementation asserts. Therefore, root objects need to override `parent` in
+		// order to return `null`.
 		MAYBE(NameLookup *) parentLookup;
 	};
 
@@ -111,16 +111,20 @@ namespace storm {
 		// enough to use templates, and again when it has advanced far enough to use packages.
 		virtual void lateInit();
 
-		// Get a path to this Named.
+		// Compute a path to this entity. Utilizes the parent pointers to traverse the name tree.
+		// Will assert if not properly added to the name tree.
 		SimpleName *STORM_FN path() const;
 
-		// Get a path, ignoring any parents that were not found.
+		// Compute a path to this entity. Ignores the case where some parent was not found, and
+		// provides a truncated name in such cases. This is useful for messages, where it is not
+		// important that the name can be used to find the same entity again.
 		SimpleName *safePath() const;
 
-		// Get an unique human-readable identifier for this named object.
+		// Get a human-readable identifier for this named object. May return an incomplete
+		// identifier if the entity is not properly added to the name tree.
 		virtual Str *STORM_FN identifier() const;
 
-		// Get a short version of the identifier. Only the name at this level with parameters.
+		// Get a short version of the identifier. Only includes the name at this level with parameters.
 		virtual Str *STORM_FN shortIdentifier() const;
 
 		// Better asserts for 'parent'.
@@ -132,10 +136,12 @@ namespace storm {
 		// Receive notifications from NameSet objects. (TODO: Move into semarate class?)
 		virtual void STORM_FN notifyRemoved(NameSet *to, Named *removed);
 
-		// Force compilation of this named (and any sub-objects contained in here).
+		// Force compilation of this entity (and any sub-objects contained in here).
 		virtual void STORM_FN compile();
 
-		// Discard any source code for functions in here.
+		// Discard references to source code stored in here. This is used to discard information
+		// required to re-compile the entity from source to save memory. Packages and types do this
+		// automatically unless instructed otherwise.
 		virtual void STORM_FN discardSource();
 
 		// String representation.

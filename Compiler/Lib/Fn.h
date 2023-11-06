@@ -48,10 +48,13 @@ namespace storm {
 	// Find the function type.
 	Type *fnType(Array<Value> *params) ON(Compiler);
 
-	// Create a function pointer pointing to a function in Storm. The second version binds a 'this'
-	// pointer to the first parameter of 'target'.
+	// Create a function pointer to a function.
 	FnBase *STORM_FN pointer(Function *target) ON(Compiler);
+
+	// Create a function pointer to a function. Binds `thisPtr` to the first parameter.
 	FnBase *STORM_FN pointer(Function *target, Object *thisPtr) ON(Compiler);
+
+	// Create a function pointer to a function. Binds `thisPtr` to the first parameter.
 	FnBase *STORM_FN pointer(Function *target, TObject *thisPtr) ON(Compiler);
 
 	// Dynamic calls to functions by using Variants. Checks the types of parameters before

@@ -29,7 +29,8 @@ namespace storm {
 		// Get parent.
 		virtual MAYBE(NameLookup *) STORM_FN parent() const;
 
-		// Get our url.
+		// Get an `Url` that represents the location where this package loads code from. If the
+		// package is virtual, returns `null`.
 		virtual MAYBE(Url *) STORM_FN url() const;
 
 		// Set url. Only done by Engine during startup and is therefore not exposed to storm.

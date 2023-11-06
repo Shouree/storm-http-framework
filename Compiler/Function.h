@@ -58,7 +58,7 @@ namespace storm {
 		STORM_CTOR Function(Value result, Str *name, Array<Value> *params);
 		STORM_CTOR Function(SrcPos pos, Value result, Str *name, Array<Value> *params);
 
-		// Function result.
+		// Return value of the function.
 		const Value result;
 
 		// Get the code for this function. Do not assume this pointer is static! For anything else
@@ -114,7 +114,7 @@ namespace storm {
 		 * Code.
 		 */
 
-		// Set code.
+		// Set the code. Note: this safely updates all existing references to the code.
 		void STORM_FN setCode(Code *code);
 
 		// Get the code in use.

@@ -76,7 +76,7 @@ with those features of the language.
 
 Some of these Storm-provided named entities that are of particular importance are as follows:
 
-- `core.lang.Package`
+- [stormname:core.lang.Package]
 
   This entity inherits from the `NameSet` entity mentioned above and implements the concept of
   packages. In Storm, each package corresponds to a directory in the file system. The root of the
@@ -84,25 +84,25 @@ Some of these Storm-provided named entities that are of particular importance ar
   class is then responsible for creating `Package` entities for all subdirectories, and loading
   source code as appropriate. How source files are loaded is described [here](md:Packages_and_Files).
 
-- `core.lang.Function`:
+- [stormname:core.lang.Function]
 
   This entity inherits from `Named` and represents a callable function. The parameters of the
   `Named` are expected to correspond to the formal parameters of the function. This means that it is
   possible to store multiple functions with the same name, as long as they have different parameter
   lists. This ability is thus used to implement function overloading.
 
-- `core.lang.NamedThread`:
+- [stormname:core.lang.NamedThread]
 
   This entity inherits from `Named` and represents a named thread, as understood by the type system.
   The entity essentially encapsulates a single OS Thread (`core.Thread`).
 
-- `core.lang.Variable`:
+- [stormname:core.lang.Variable]
 
   This entity encapsulates the concept of a variable. By itself it is not very useful, but Storm
   provides two subclasses for interoperability: `GlobalVar`, and `MemberVar`. The former represents
   a global variables, and the latter represents a member variable of a type.
 
-- `core.lang.Type`:
+- [stormname:core.lang.Type]
 
   This entity inherits from the `NameSet` entity mentioned above and implements types in Storm. As
   such, the type system is exposed to languages through this class. Each instance of the entity
