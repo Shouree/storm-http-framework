@@ -278,6 +278,12 @@
 
 ;; Commands.
 
+;; Copy of c-last-command-char, to avoid depending on cc-defs:
+(defun storm-last-command-char ()
+  (if (featurep 'xemaxs)
+      last-command-char
+    last-command-event))
+
 (defun storm-insert-indent (arg)
   "Insert character and update indentation after doing so. Much like electric-indent in Emacs."
   (interactive "*P")
@@ -289,7 +295,7 @@
     (self-insert-command (prefix-numeric-value arg))
     (storm-indent-line)
     ;; Blink paren if applicable.
-    (and (eq (char-syntax (c-last-command-char)) ?\)) ;; is it a close paren character?
+    (and (eq (char-syntax (storm-last-command-char)) ?\)) ;; is it a close paren character?
 	 old-blink-paren ;; something to call?
 	 (save-excursion
 	  (funcall old-blink-paren)))))
