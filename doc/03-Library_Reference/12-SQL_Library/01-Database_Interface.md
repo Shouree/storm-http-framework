@@ -77,6 +77,16 @@ The `DBConnection` class has the following members:
 - .schema(*)
 ```
 
+### Database Types
+
+The following classes can be created to connect to different databases:
+
+- [stormname:sql.SQLite] - SQLite. Supports both in-memory databases and databases in files in the local file system.
+
+- [stormname:sql.MariaDB] - MariaDB. Connects to a database as specified in the `Host` object (supports both TCP and UNIX sockets).
+
+- [stormname:sql.MySQL] - MySQL. Connects to a database as specified in the `Host` object (supports both TCP and UNIX sockets).
+
 
 Statement
 ---------
@@ -143,4 +153,26 @@ sql.Row
 - .getDouble(*)
 - .isNull(*)
 - sql.at(sql.Row, core.Nat)
+```
+
+
+Example
+-------
+
+As an example, one can use the database library to make a simple query to an SQL database as follows:
+
+```bs
+use sql;
+use core:io;
+
+void main() {
+    SQLite db(cwdUrl / "file.db");
+
+    var stmt = db.prepare("SELECT * FROM test WHERE id > ?;");
+    stmt.bind(0, 18);
+
+    for (row in stmt) {
+        print(row.getStr(0));
+    }
+}
 ```

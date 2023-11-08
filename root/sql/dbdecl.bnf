@@ -9,7 +9,7 @@ required delimiter = lang.bs.SRequiredDelimiter;
 // TODO: We should maybe provide "sql name" token to allow for names with spaces in them.
 
 // The top-level table declaration.
-SPlainFileItem => DatabaseDecl(name, env, contents) : "DATABASE" ~ lang.bs.SName name, "{" [, SDatabase contents, ]+ "}";
+SPlainFileItem => DatabaseDecl(name, env, contents) : "DATABASE" #keyword ~ lang.bs.SName name #typeName, "{" [, SDatabase contents, ]+ "}";
 
 
 // Contents of a database.
@@ -24,12 +24,12 @@ SDBItem => to : SIndex -> add;
 
 // Declaration of an index.
 IndexDecl SIndex();
-SIndex => IndexDecl(pos, name, table, cols) : "INDEX" ~ SName name ~ "ON" ~ SName table, "(", SNameList cols, ")", ";";
-SIndex => IndexDecl(pos, table, cols) : "INDEX" ~ "ON" ~ SName table, "(", SNameList cols, ")", ";";
+SIndex => IndexDecl(pos, name, table, cols) : "INDEX" #keyword ~ SName name ~ "ON" #keyword ~ SName table, "(", SNameList cols, ")", ";";
+SIndex => IndexDecl(pos, table, cols) : "INDEX" #keyword ~ "ON" #keyword ~ SName table, "(", SNameList cols, ")", ";";
 
 // Declaration of a single table.
 Table STable();
-STable => Table(name) : "TABLE" ~ SName name, "(" [, STableContent(me), ]+ ")", ";";
+STable => Table(name) : "TABLE" #keyword ~ SName name, "(" [, STableContent(me), ]+ ")", ";";
 
 // Table content.
 void STableContent(Table to);
@@ -42,7 +42,7 @@ STableItem => to : SPKDecl -> add;
 
 // Declaration of a primary key.
 Array<SStr> SPKDecl();
-SPKDecl => cols : "PRIMARY" ~ "KEY", "(", SNameList cols, ")";
+SPKDecl => cols : "PRIMARY" #keyword ~ "KEY" #keyword, "(", SNameList cols, ")";
 
 Column SColumn();
 // Note: Using SModifiers here is wrong due to whitespace.
@@ -54,10 +54,10 @@ SDatatype => x : SBaseType x;
 SDatatype => sized(x, size) : SBaseType x, "(", "[0-9]+" size, ")";
 
 SQLType SBaseType() #typeName;
-SDatatype => sqlInteger() : "INTEGER";
-SDatatype => sqlInteger() : "INT";
-SDatatype => sqlReal() : "REAL";
-SDatatype => sqlText() : "TEXT";
+SBaseType => sqlInteger() : "INTEGER";
+SBaseType => sqlInteger() : "INT";
+SBaseType => sqlReal() : "REAL";
+SBaseType => sqlText() : "TEXT";
 
 // Parse zero or more modifiers.
 void SModifiers(Column c);

@@ -47,7 +47,7 @@ Main -a -f markdown.doc.generateStormDoc -- --clear html
 #Main -a -f tests.sound.play
 #Main -a -f tests.pdf.test
 #Main -a -f test.example.main
-Main -a -t sql.tests
+#Main -a -t sql.tests
 
 #Presentations
 #Main -a -r root/ -i External/present -i External/final -f final.configura

@@ -21,34 +21,34 @@ SWithBlock..lang.bs.SExpr[20] => queryBlockExpr(pos, block, query) : SQuery quer
 Query SQuery();
 
 // Insert:
-SQuery => InsertQuery(pos, table, init) : "INSERT" ~ "INTO" ~ SName table ~ "VALUES", "(", SExprList init, ")";
-SQuery => InsertQuery(pos, table, cols, init) : "INSERT" ~ "INTO" ~ SName table, "(", SNameList cols, ")", "VALUES", "(", SExprList init, ")";
+SQuery => InsertQuery(pos, table, init) : "INSERT" #keyword ~ "INTO" #keyword ~ SName table ~ "VALUES" #keyword, "(", SExprList init, ")";
+SQuery => InsertQuery(pos, table, cols, init) : "INSERT" #keyword ~ "INTO" #keyword ~ SName table, "(", SNameList cols, ")", "VALUES" #keyword, "(", SExprList init, ")";
 
 // Update:
-SQuery => UpdateQuery(pos, table, assign, condition) : "UPDATE" ~ SName table ~ "SET" ~ SAssignExprs assign - SWhere condition;
+SQuery => UpdateQuery(pos, table, assign, condition) : "UPDATE" #keyword ~ SName table ~ "SET" #keyword ~ SAssignExprs assign - SWhere condition;
 
 // Delete:
-SQuery => DeleteQuery(pos, table, condition) : "DELETE" ~ "FROM" ~ SName table - SWhere condition;
+SQuery => DeleteQuery(pos, table, condition) : "DELETE" #keyword ~ "FROM" #keyword ~ SName table - SWhere condition;
 
 // Select:
-SQuery => SelectQuery(pos, table, cols, joins, condition, orderBy) : "SELECT" ~ SSelectCols cols ~ "FROM" ~ STableName table - SJoins joins - SWhere condition - SOrderBy orderBy;
+SQuery => SelectQuery(pos, table, cols, joins, condition, orderBy) : "SELECT" #keyword ~ SSelectCols cols ~ "FROM" #keyword ~ STableName table - SJoins joins - SWhere condition - SOrderBy orderBy;
 
 // Select one row (or zero):
-SQuery[10] => SelectOneQuery(pos, table, cols, joins, condition, orderBy) : "SELECT" ~ "ONE" ~ SSelectCols cols ~ "FROM" ~ STableName table - SJoins joins - SWhere condition - SOrderBy orderBy;
+SQuery[10] => SelectOneQuery(pos, table, cols, joins, condition, orderBy) : "SELECT" #keyword ~ "ONE" #keyword ~ SSelectCols cols ~ "FROM" #keyword ~ STableName table - SJoins joins - SWhere condition - SOrderBy orderBy;
 
 // Count rows:
-SQuery => CountQuery(pos, table, joins, condition) : "COUNT" ~ "FROM" ~ STableName table - SJoins joins - SWhere condition;
+SQuery => CountQuery(pos, table, joins, condition) : "COUNT" #keyword ~ "FROM" #keyword ~ STableName table - SJoins joins - SWhere condition;
 
 // Create table (only untyped)
-SQuery => CreateQuery(pos, false, table) : "CREATE" ~ "TABLE" ~ SCreateTail table;
-SQuery => CreateQuery(pos, true, table) : "CREATE" ~ "TABLE" ~ "IF" ~ "NOT" ~ "EXISTS" ~ SCreateTail table;
+SQuery => CreateQuery(pos, false, table) : "CREATE" #keyword ~ "TABLE" #keyword ~ SCreateTail table;
+SQuery => CreateQuery(pos, true, table) : "CREATE" #keyword ~ "TABLE" #keyword ~ "IF" #keyword ~ "NOT" #keyword ~ "EXISTS" #keyword ~ SCreateTail table;
 
 // Add an index (only untyped)
-SQuery => IndexQuery(pos, name, table, cols) : "CREATE" ~ "INDEX" ~ SName name ~ "ON" ~ SName table, "(", SNameList cols, ")";
-SQuery => IndexQuery(pos, table, cols) : "CREATE" ~ "INDEX" ~ "ON" ~ SName table, "(", SNameList cols, ")";
+SQuery => IndexQuery(pos, name, table, cols) : "CREATE" #keyword ~ "INDEX" #keyword ~ SName name ~ "ON" #keyword ~ SName table, "(", SNameList cols, ")";
+SQuery => IndexQuery(pos, table, cols) : "CREATE" #keyword ~ "INDEX" #keyword ~ "ON" #keyword ~ SName table, "(", SNameList cols, ")";
 
 // Drop table (only untyped)
-SQuery => DropQuery(pos, name) : "DROP" ~ "TABLE" ~ SName name;
+SQuery => DropQuery(pos, name) : "DROP" #keyword ~ "TABLE" #keyword ~ SName name;
 
 // Helper rule for CREATE TABLE.
 Table SCreateTail();
@@ -57,17 +57,17 @@ SCreateTail => Table(name) : SName name, "(", [, STableContent(me), ]+ ")";
 // A WHERE clause that might be missing.
 Maybe<SQLExpr> SWhere();
 SWhere => Maybe<SQLExpr>() : ;
-SWhere => Maybe<SQLExpr>(x) : ~ "WHERE" ~ SExpr x;
+SWhere => Maybe<SQLExpr>(x) : ~ "WHERE" #keyword ~ SExpr x;
 
 // ORDER BY clauses
 Array<SelectQuery.OrderBy> SOrderBy();
 SOrderBy => Array<SelectQuery.OrderBy>() : ;
-SOrderBy => Array<SelectQuery.OrderBy>() : ~ "ORDER" ~ "BY" ~ SOrderByItem -> push - (, ",", SOrderByItem -> push)*;
+SOrderBy => Array<SelectQuery.OrderBy>() : ~ "ORDER" #keyword ~ "BY" #keyword ~ SOrderByItem -> push - (, ",", SOrderByItem -> push)*;
 
 SelectQuery.OrderBy SOrderByItem();
 SOrderByItem => SelectQuery.OrderBy(pos, table, column, asc) : (SName table, "\.",)? - SName column - SAscDesc asc;
 
-Bool SAscDesc();
+Bool SAscDesc() #keyword;
 SAscDesc => true : ;
 SAscDesc => true : ~ "ASC";
 SAscDesc => false : ~ "DESC";
@@ -82,7 +82,7 @@ SSelectCol => x : SSelectColI x;
 // Note: The AS keyword is optional in many dialects. We require it as it easily leads
 // to confusion when one mistypes a later part of a query. E.g. ... FROM foo OUTER JOIN bar
 // would be the same as: ... FROM foo AS OUTER JOIN bar ... which was not intended.
-SSelectCol => x : SSelectColI x ~ "AS" ~ SName -> setAs;
+SSelectCol => x : SSelectColI x ~ "AS" #keyword ~ SName -> setAs;
 
 SelectQuery.Column SSelectColI();
 SSelectColI => SelectQuery.Column(pos, column) : SName column;
@@ -93,10 +93,10 @@ Array<SelectQuery.Join> SJoins();
 SJoins => Array<SelectQuery.Join>() : (~ SJoin -> push)*;
 
 SelectQuery.Join SJoin();
-SJoin => SelectQuery.Join(type, table, condition) : SJoinType type ~ STableName table ~ "ON" ~ SExpr condition;
+SJoin => SelectQuery.Join(type, table, condition) : SJoinType type ~ STableName table ~ "ON" #keyword ~ SExpr condition;
 
 // Types of joins.
-SelectQuery.JoinType SJoinType();
+SelectQuery.JoinType SJoinType() #keyword;
 SJoinType => SelectQuery.JoinType.left() : "LEFT" ~ "JOIN";
 SJoinType => SelectQuery.JoinType.right() : "RIGHT" ~ "JOIN";
 SJoinType => SelectQuery.JoinType.inner() : ("INNER" ~)? - "JOIN";
@@ -114,17 +114,17 @@ SExpr => x : SExpr1 x;
 SQLExpr SExpr1();
 // Operator AND
 SExpr1 => x : SExpr2 x;
-SExpr1 => andOp(lhs, rhs, op) : SExpr1 lhs ~ "AND" @op ~ SExpr2 rhs;
+SExpr1 => andOp(lhs, rhs, op) : SExpr1 lhs ~ "AND" @op #keyword~ SExpr2 rhs;
 
 SQLExpr SExpr2();
 // Operator OR
 SExpr2 => x : SExpr3 x;
-SExpr2 => orOp(lhs, rhs, op) : SExpr2 lhs ~ "OR" @op ~ SExpr3 rhs;
+SExpr2 => orOp(lhs, rhs, op) : SExpr2 lhs ~ "OR" @op #keyword ~ SExpr3 rhs;
 
 SQLExpr SExpr3();
 // Operator NOT
 SExpr3 => x : SExpr4 x;
-SExpr3 => NotOperator(pos, x) : "NOT" ~ SExpr4 x;
+SExpr3 => NotOperator(pos, x) : "NOT" #keyword ~ SExpr4 x;
 
 SQLExpr SExpr4();
 // Comparison operators.
@@ -135,7 +135,7 @@ SExpr4 => Operator(l, r, op) : SExpr5 l, ">" @op, SExpr5 r;
 SExpr4 => Operator(l, r, op) : SExpr5 l, "<=" @op, SExpr5 r;
 SExpr4 => Operator(l, r, op) : SExpr5 l, ">=" @op, SExpr5 r;
 SExpr4 => Operator(l, r, op) : SExpr5 l, "!=" @op, SExpr5 r;
-SExpr4 => LikeOperator(pos, l, r) : SExpr5 l ~ "LIKE" ~ SExpr5 r;
+SExpr4 => LikeOperator(pos, l, r) : SExpr5 l ~ "LIKE" #keyword ~ SExpr5 r;
 
 SQLExpr SExpr5();
 // Addition, subtraction, bitwise operators, etc.
@@ -160,22 +160,22 @@ SExpr7 => x : SAtom x;
 // Atomic expressions.
 SQLExpr SAtom();
 SAtom => x : SLiteral x;
-SAtom => SQLName(pos, name) : lang.bs.SName name; // Identifiers in the surrounding code.
+SAtom => SQLName(pos, name) : lang.bs.SName name #varName; // Identifiers in the surrounding code.
 SAtom => SQLName(pos, name) : SName name; // SQL identifiers, if they allow some other representation.
-SAtom => SQLName(pos, table, column) : SName table, "\.", SName column; // Disambiguation
+SAtom => SQLName(pos, table, column) : SName table #varName, "\.", SName column; // Disambiguation
 SAtom => x : "(", SExpr x, ")";
 
 // Basic Storm expressions.
 SAtom => Escaped(expr) : "$", "{", lang.bs.SExpr @expr, "}";
 
 // Built-in functions.
-SAtom[10] => currentDateTime(pos) : "CURRENT" ~ "DATETIME";
+SAtom[10] => currentDateTime(pos) : "CURRENT" #keyword ~ "DATETIME" #keyword;
 
 // SQL literals.
 SQLLiteral SLiteral();
-SLiteral => SQLInt(pos, v) : "-?[0-9]+" v; // Integer.
-SLiteral => SQLFloat(pos, v) : "-?[0-9]+\.[0-9]+" v; // Float.
-SLiteral => SQLStr(pos, v) : lang.bs.SString v; // String.
+SLiteral => SQLInt(pos, v) : "-?[0-9]+" v #constant; // Integer.
+SLiteral => SQLFloat(pos, v) : "-?[0-9]+\.[0-9]+" v #constant; // Float.
+SLiteral => SQLStr(pos, v) : lang.bs.SString v #string; // String.
 
 // Assigned value in UPDATE statement.
 AssignExpr SAssignExpr();
@@ -190,7 +190,7 @@ STableName => TableName(table) : SName table;
 STableName => TableName(table, as) : SName table ~ ("AS" ~)? SName as;
 
 // SQL name. We might want to extend this eventually.
-SStr SName();
+SStr SName() #varName;
 SName => s : "[A-Za-z_][A-Za-z0-9_]*" @s;
 
 // List of names.
