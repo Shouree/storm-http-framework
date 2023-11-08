@@ -7,12 +7,12 @@ namespace storm {
 	/**
 	 * Result from an expression. A result either returns a Value (which may be void), or a special
 	 * value indicating that the expression will never return for some reason. For example, if a
-	 * return statement has been found in a block (on all paths), that block will return this 'no
-	 * return' value. The same holds true for paths always throwing an exception.
+	 * return statement has been found in a block (on all paths), that block will return this *no
+	 * return* value. The same holds true for paths always throwing an exception.
 	 *
-	 * Note the difference between 'never returns' and 'returns void'. Because it is easy to confuse
-	 * these concepts, this class does not provide the usual 'any' and 'empty' members. Instead,
-	 * 'nothing', 'empty' and 'value' are provided.
+	 * Note the difference between *never returns* and *returns void*. Because it is easy to confuse
+	 * these concepts, this class does not provide the usual `any` and `empty` members. Instead,
+	 * `nothing`, `empty` and `value` are provided.
 	 */
 	class ExprResult {
 		STORM_VALUE;
@@ -23,10 +23,10 @@ namespace storm {
 		// Return a value.
 		STORM_CAST_CTOR ExprResult(Value result);
 
-		// Result type. If equal to 'noReturn', we never return.
+		// Result type. If this is the *no-return* value, then `void` is returned here.
 		Value STORM_FN type() const;
 
-		// Does the expression return a value (ie. not void)?
+		// Does the expression return a value (ie. not `void`)?
 		Bool STORM_FN value() const;
 
 		// Does the expression return void?

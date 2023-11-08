@@ -4,9 +4,9 @@ Sizes and Offsets
 The intermediate language aims to be platform independent. In particular, it supports both 32- and
 64-bit systems. Since the size of a pointer differs on 32- and 64-bit systems, the sizes of data
 structures typically differ between the two. For this reason, the intermediate language provides two
-datatypes, `core.asm.Size` and `core.asm.Offset` to make it easier to work with sizes and offsets in
-a platform-agnostic manner. Both types achieve this by storing both a 32-bit and a 64-bit size and
-offset respectively.
+datatypes, [stormname:core.asm.Size] and [stormname:core.asm.Offset] to make it easier to work with
+sizes and offsets in a platform-agnostic manner. Both types achieve this by storing both a 32-bit
+and a 64-bit size and offset respectively.
 
 
 Size
@@ -26,22 +26,23 @@ size. It is, however, possible to force alignment of the internal size by callin
 member. Similarly, it is possible to remove the internal alignment by calling the `unaligned`
 member.
 
-There are a number of pre-defined constants that create sizes for Storm types:
+There are a number of pre-defined constants in the package [stormname:core.asm] that create sizes
+for Storm types:
 
-- `lang.asm.sPtr` - create a size for a pointer (4/8 bytes)
-- `lang.asm.sByte` - create a size for a `Byte` (1 byte)
-- `lang.asm.sInt` - create a size for a `Int` (4 bytes)
-- `lang.asm.sNat` - create a size for a `Nat` (4 bytes)
-- `lang.asm.sLong` - create a size for a `Long` (8 bytes)
-- `lang.asm.sWord` - create a size for a `Word` (8 bytes)
-- `lang.asm.sFloat` - create a size for a `Float` (4 bytes)
-- `lang.asm.sDouble` - create a size for a `Double` (8 bytes)
+- [stormname:full:core.asm.sPtr] - create a size for a pointer (4/8 bytes)
+- [stormname:full:core.asm.sByte] - create a size for a `Byte` (1 byte)
+- [stormname:full:core.asm.sInt] - create a size for a `Int` (4 bytes)
+- [stormname:full:core.asm.sNat] - create a size for a `Nat` (4 bytes)
+- [stormname:full:core.asm.sLong] - create a size for a `Long` (8 bytes)
+- [stormname:full:core.asm.sWord] - create a size for a `Word` (8 bytes)
+- [stormname:full:core.asm.sFloat] - create a size for a `Float` (4 bytes)
+- [stormname:full:core.asm.sDouble] - create a size for a `Double` (8 bytes)
 
 
 Offset
 ------
 
-The `Offset` type represents an offset into a type. An offset is signed and can thereby be negative.
-Furthermore, the offset does not carry an alignment. It can, however, be manually aligned using the
-`alignAs` member. The stored value can be retrieved using `v32` or `v64` for specific offsets, or
-using the `current` member for the current platform.
+The [stormname:core.asm.Offset] type represents an offset into a type. An offset is signed and can
+thereby be negative. Furthermore, the offset does not carry an alignment. It can, however, be
+manually aligned using the `alignAs` member. The stored value can be retrieved using `v32` or `v64`
+for specific offsets, or using the `current` member for the current platform.

@@ -1,15 +1,15 @@
 Binary Objects
 ==============
 
-A `core.asm.Binary` object represents a `core.asm.Listing` that has been transformed into machine
-code. The Binary itself contains the generated machine code and associated metadata needed for
-exception handling.
+A [stormname:core.asm.Binary] object represents a [stormname:core.asm.Listing] that has been
+transformed into machine code. The Binary itself contains the generated machine code and associated
+metadata needed for exception handling.
 
 A `Binary` object is created from a `Listing` that contains the code that should be compiled into
 machine code, and an `core.asm.Arena` that describes which platform to compile for. As such, it *is*
 possible to compile code for other platforms than the current one. Such code is, however, not
 possible to execute. An `Arena` suitable for the current platform can be retrieved by calling the
-function `core.asm.arena()`.
+function [stormname:full:core.asm.arena()].
 
 Compiling a listing into machine code thus looks as follows in Basic Storm:
 

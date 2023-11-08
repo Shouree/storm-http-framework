@@ -18,7 +18,7 @@ listing is in charge of assigning the names for variables and labels, the listin
 as representing a namespace for these names, since the created names are only meaningful in the
 context of the listing that created them.
 
-Listings are represented by the class `lang.asm.Listing`. In Basic Storm, it is possible to create a
+Listings are represented by the class [stormname:core.asm.Listing]. In Basic Storm, it is possible to create a
 listing as follows:
 
 ```bs
@@ -119,14 +119,14 @@ to the function. Each variable records its data type. In this context, the data 
 size of the variable, and a reference to a destructor to call whenever the variable should be
 destroyed. For parameters, the system also records the type description in order to follow the
 system's calling convention properly. Each variable may also be associated with additional metadata
-in the form of a `core.asm.Listing.VarInfo` object. This object stores higher-level data that can be
-used by debuggers (for example, [Progvis](md:/Programs/Progvis)).
+in the form of a [stormname:core.asm.Listing.VarInfo] object. This object stores higher-level data
+that can be used by debuggers (for example, [Progvis](md:/Programs/Progvis)).
 
 When a block begins, all contained variables are initialized to zero. Similarly, all variables are
 automatically destroyed whenever the block ends, or when an exception occurs. The destruction
-behavior depends on whether a destructor was specified, and the options in the `core.asm.FreeOpt`
-parameter the variable was created. The following options determine when the destructor is called,
-assuming one is specified:
+behavior depends on whether a destructor was specified, and the options in the
+[stormname:core.asm.FreeOpt] parameter the variable was created. The following options determine
+when the destructor is called, assuming one is specified:
 
 - `FreeOpt.none`: Don't call any destructors for this variable.
 

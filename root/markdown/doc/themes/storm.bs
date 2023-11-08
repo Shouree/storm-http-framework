@@ -232,8 +232,12 @@ class StormVisitor extends markdown:Visitor {
 				return createDownload(param);
 			if (name == "storm")
 				return createStormInfo(param);
-			if (name == "stormname")
-				return PackedText(formatName(node.source, param));
+			if (name == "stormname") {
+				Bool full = param.startsWith("full:");
+				if (full)
+					param = param.cut(param.begin + 5);
+				return PackedText(formatName(node.source, param, full));
+			}
 		}
 		return elem;
 	}

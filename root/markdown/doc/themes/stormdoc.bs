@@ -145,7 +145,7 @@ private class StormDocFormat on Compiler {
 			doc = d.get();
 
 		if (inList.any) {
-			out.add(Paragraph(createNamedTitle(named, doc)));
+			out.add(Paragraph(createNamedTitle(named, doc, false)));
 		}
 
 		if (doc) {
@@ -225,8 +225,9 @@ private Named? findNamed(Name name, Scope scope) on Compiler {
 
 
 
-// Format the name of some entity, look it up first.
-FormattedText formatName(Url source, Str name) on Compiler {
+// Format the name of some entity, look it up first. If 'full' is true, then we always print the
+// full name of everything.
+FormattedText formatName(Url source, Str name, Bool full) on Compiler {
 	unless (name = parseComplexName(name)) {
 		print("ERROR: ${source}: the name ${name} is not valid.");
 		return FormattedText(name);
@@ -237,30 +238,47 @@ FormattedText formatName(Url source, Str name) on Compiler {
 		return FormattedText(name.toS);
 	}
 
-	createNamedTitle(named);
+	createNamedTitle(named, full);
+}
+
+FormattedText formatName(Url source, Str name) on Compiler {
+	formatName(source, name, false);
 }
 
 
-// Format the name of some entity nicely.
-FormattedText createNamedTitle(Named named) on Compiler {
+// Format the name of some entity nicely. If 'full' is true, then the full name is always printed.
+FormattedText createNamedTitle(Named named, Bool full) on Compiler {
 	if (d = named.documentation) {
-		createNamedTitle(named, d.get());
+		createNamedTitle(named, d.get(), full);
 	} else {
-		createNamedTitle(named, null);
+		createNamedTitle(named, null, full);
 	}
 }
 
+FormattedText createNamedTitle(Named named) on Compiler {
+	createNamedTitle(named, false);
+}
+
+
 // As above, but assumes that documentation has been loaded.
-FormattedText createNamedTitle(Named named, Doc? doc) on Compiler {
+FormattedText createNamedTitle(Named named, Doc? doc, Bool full) on Compiler {
 	Html html;
 	html.html("<code>");
 
 	if (named as Function) {
 		if (named.name == "__init") {
+			if (full) {
+				addType(html, named.path.parent());
+				html.text(".");
+			}
 			addSpan(html, "fn-name", "init");
 		} else {
 			addType(html, named.result);
 			html.text(" ");
+			if (full) {
+				addType(html, named.path.parent());
+				html.text(".");
+			}
 			addSpan(html, "fn-name", named.name);
 		}
 		html.text("(");

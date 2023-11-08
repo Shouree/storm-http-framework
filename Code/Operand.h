@@ -114,14 +114,16 @@ namespace code {
 		Bool STORM_FN empty() const;
 		Bool STORM_FN any() const;
 
-		// Type.
+		// Get the type of the operand.
 		OpType STORM_FN type() const;
 
-		// Size.
+		// Get the size of the operand.
 		Size STORM_FN size() const;
 
-		// Is this value readable and/or writable?
+		// Is this operand readable?
 		Bool STORM_FN readable() const;
+
+		// Is this operand writable?
 		Bool STORM_FN writable() const;
 
 		// Throw an exception unless the value is readable/writable.
@@ -134,26 +136,51 @@ namespace code {
 		Bool STORM_FN hasRegister() const;
 
 		/**
-		 * Get values. Asserts if you try to get a value we're not representing.
+		 * Get values. Throws an error if used incorrectly.
 		 */
 
-		// Constant (depends on the backend).
+		// Get the constant in the operand. Valid if `type` returns `constant`. If the value stored is
+		// a `Size` or an `Offset`, then the value obtained by calling `current` is returned.
 		Word STORM_FN constant() const;
-		Reg STORM_FN reg() const; // "register" is a reserved word.
-		Offset STORM_FN offset() const;
-		CondFlag STORM_FN condFlag() const;
-		Block STORM_FN block() const;
-		Label STORM_FN label() const;
-		Ref STORM_FN ref() const;
-		RefSource *refSource() const;
-		RootObject *object() const;
-		Var STORM_FN var() const; // NOTE: The size of this variable is equal to the size
-		                          // we want to read, which is not always the size of the
-								  // original variable!
 
+		// Get the content register. Valid if `type` returns `register` or `relative`.
+		Reg STORM_FN reg() const;
+
+		// Get the offset used. Possible to call any time, but only makes sense for `relative`,
+		// `variable`, and `relativeLabel`.
+		Offset STORM_FN offset() const;
+
+		// Get the condition flag. Valid if `type` returns `condFlag`.
+		CondFlag STORM_FN condFlag() const;
+
+		// Get the block. Valid if `type` returns `block`.
+		Block STORM_FN block() const;
+
+		// Get the label. Valid if `type` returns `label`.
+		Label STORM_FN label() const;
+
+		// Get the reference. Valid if `type` returns `reference`.
+		Ref STORM_FN ref() const;
+
+		// Convenient internal access.
+		RefSource *refSource() const;
+
+		// Get the variable accessed. Valid if `type` returns `variable`.
+		//
+		// Note: The size of the returned variable is equal to the size we wish to read. This
+		// may differ from the size of the original variable!
+		Var STORM_FN var() const;
+
+		// Get the source position. Valid if `type` returns `srcPos`.
 		SrcPos STORM_FN srcPos() const;
 
+		// Get the object from C++.
+		RootObject *object() const;
+
+		// Get the referenced object. Valid if `type` returns `objReference`. Returns an `Object`.
 		MAYBE(Object *) STORM_FN obj() const;
+
+		// Get the referenced object. Valid if `type` returns `objReference`. Returns a `TObject`.
 		MAYBE(TObject *) STORM_FN tObj() const;
 
 		// Replace the register in this operand. If no register, this is a no-op.

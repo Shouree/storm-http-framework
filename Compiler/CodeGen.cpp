@@ -42,14 +42,14 @@ namespace storm {
 	VarInfo CodeGen::createVar(Value type, code::Block in) {
 		code::FreeOpt opt = code::freeOnBoth;
 		code::Operand dtor;
-		bool needsPart = !type.isAsmType() && !type.ref;
+		bool needsActivation = !type.isAsmType() && !type.ref;
 
-		if (needsPart) {
+		if (needsActivation) {
 			dtor = type.destructor();
 			opt = opt | code::freePtr | code::freeInactive;
 		}
 
-		return VarInfo(l->createVar(in, type.size(), dtor, opt), needsPart);
+		return VarInfo(l->createVar(in, type.size(), dtor, opt), needsActivation);
 	}
 
 	Value CodeGen::result() const {
@@ -75,16 +75,16 @@ namespace storm {
 	 * VarInfo.
 	 */
 
-	VarInfo::VarInfo() : v(), needsPart(false) {}
+	VarInfo::VarInfo() : v(), needsActivation(false) {}
 
-	VarInfo::VarInfo(code::Var v) : v(v), needsPart(false) {}
+	VarInfo::VarInfo(code::Var v) : v(v), needsActivation(false) {}
 
-	VarInfo::VarInfo(code::Var v, Bool needsPart) : v(v), needsPart(needsPart) {}
+	VarInfo::VarInfo(code::Var v, Bool needsActivation) : v(v), needsActivation(needsActivation) {}
 
 	void VarInfo::created(CodeGen *gen) {
 		using namespace code;
 
-		if (!needsPart)
+		if (!needsActivation)
 			return;
 
 		*gen->l << activate(v);

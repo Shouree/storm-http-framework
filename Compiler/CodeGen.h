@@ -27,13 +27,13 @@ namespace storm {
 		STORM_CTOR VarInfo(code::Var v);
 
 		// Create, set flags.
-		STORM_CTOR VarInfo(code::Var v, Bool needsPart);
+		STORM_CTOR VarInfo(code::Var v, Bool needsActivation);
 
 		// Variable.
 		code::Var v;
 
-		// Needs a specific part after constructed?
-		Bool needsPart;
+		// Does this variable need to be activated after it is created?
+		Bool needsActivation;
 
 		// Do anything needed when the variable has been created.
 		void STORM_FN created(CodeGen *gen);
@@ -71,17 +71,17 @@ namespace storm {
 		 * Create parameters (aware of Storm semantics).
 		 */
 
-		// Add a parameter of 'type'.
+		// Add a parameter with the specified type.
 		code::Var STORM_FN createParam(Value type);
 
 		/**
 		 * Create variables (aware of Storm semantics).
 		 */
 
-		// Add a variable of 'type' in the current block.
+		// Add a variable in the current block.
 		VarInfo STORM_FN createVar(Value type);
 
-		// Add a variable of 'type' in 'block'.
+		// Add a variable in the specified block.
 		VarInfo STORM_FN createVar(Value type, code::Block in);
 
 
@@ -142,32 +142,33 @@ namespace storm {
 		// Get a location to store the variable in. Asserts if the result is not needed.
 		code::Var STORM_FN location(CodeGen *s);
 
-		// Get the location of the result even if the result is not needed.
+		// Get the location of the result even if the result is not needed. Can be used in cases
+		// where it is not suitable to avoid creating a result even if it is not needed.
 		code::Var STORM_FN safeLocation(CodeGen *s, Value type);
 
 		// Call when the variable was initialized to set up any cleanup required. If you are
 		// entirely sure that no cleanup is required for the contained variable, the call to
-		// 'created' may be omitted.
+		// `created` may be omitted.
 		void STORM_FN created(CodeGen *s);
 
 		// Suggest a location for the result. Returns true if the suggestion is acceptable,
-		// otherwise use whatever 'location' returns. If the suggestion was used, we assume
-		// it is already created.
+		// otherwise, it is necessary to use the variable returned by `location`. If the suggestion
+		// is used, we assume it is already created (i.e. `created` will be a no-op).
 		Bool STORM_FN suggest(CodeGen *s, code::Var v);
 		Bool STORM_FN suggest(CodeGen *s, code::Operand v);
 
-		// What type is needed? (void = not needed).
+		// What type was requested? If `void` then no result is required.
 		Value STORM_FN type() const;
 
-		// Result needed?
+		// Does the caller need a result at all?
 		Bool STORM_FN needed() const;
 
 		// Create a copy of this result that is usable when multiple pieces of code may produce the
 		// result represented by this object. Essentially, this means that cleanup will not be set
-		// up until 'created' is called on *this* object. Thus, make sure to call 'created' here!
+		// up until `created` is called on *this* object. Thus, make sure to call `created` here!
 		//
-		// Call 'split' once for each branch that is expected to create a new value, so that each
-		// producer gets its own object. Otherwise, issues will arise when they call 'created'
+		// Call `split` once for each branch that is expected to create a new value, so that each
+		// producer gets its own object. Otherwise, issues will arise when they call `created`
 		// multiple times.
 		CodeResult *STORM_FN split(CodeGen *s);
 
@@ -175,7 +176,7 @@ namespace storm {
 		// Variable (invalid if not created yet).
 		VarInfo variable;
 
-		// Block 'variable' is needed inside.
+		// Block `variable` is needed inside.
 		code::Block block;
 
 		// Type.
@@ -185,13 +186,13 @@ namespace storm {
 	// Allocate space for 'paramCount' parameters to a FnCall object.
 	code::Var STORM_FN createFnCallParams(CodeGen *to, Nat paramCount);
 
-	// Fill in parameter 'n' of a FnCall object. Trashes 'ptrA' register.
+	// Fill in parameter `n` of a FnCall object. Trashes `ptrA` register.
 	void STORM_FN setFnParam(CodeGen *to, code::Var params, Nat paramId, code::Operand param);
 
-	// Allocate and fill a FnCall object, copying arguments depending on 'copy'.
+	// Allocate and fill a `FnCall` object, copying arguments depending on `copy`.
 	code::Var STORM_FN createFnCall(CodeGen *to, Array<Value> *formals, Array<code::Operand> *actuals, Bool copy);
 
-	// Allocate an object on the heap. Store it in variable 'to'.
+	// Allocate an object on the heap. Store it in variable `to`.
 	void STORM_FN allocObject(CodeGen *s, Function *ctor, Array<code::Operand> *params, code::Var to);
 	code::Var STORM_FN allocObject(CodeGen *s, Function *ctor, Array<code::Operand> *params);
 

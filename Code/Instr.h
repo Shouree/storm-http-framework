@@ -27,18 +27,32 @@ namespace code {
 		// Deep copy.
 		virtual void STORM_FN deepCopy(CloneEnv *env);
 
-		// Access to the members:
+		// Get the op-code.
 		op::OpCode STORM_FN op() const;
+
+		// Get the source operand.
 		Operand STORM_FN src() const;
+
+		// Get the destination operand.
 		Operand STORM_FN dest() const;
+
+		// Get the mode of the destination operand. This determines how the instruction uses the
+		// destination (e.g. read/write, read, or write).
 		DestMode STORM_FN mode() const;
 
 		// Get the maximum size of the operands.
 		Size STORM_FN size() const;
 
-		// Create another instruction based off this one. Intended to be used by backends -> no sanity checking.
+		// Create an instruction with a different set of operands. Intended to be used by backends,
+		// so performs no sanity checking.
 		virtual Instr *STORM_FN alter(Operand dest, Operand src);
+
+		// Create an instruction with a different source operand. Intended to be used by backends,
+		// so performs no sanity checking.
 		virtual Instr *STORM_FN alterSrc(Operand src);
+
+		// Create an instruction with a different destination operand. Intended to be used by backends,
+		// so performs no sanity checking.
 		virtual Instr *STORM_FN alterDest(Operand dest);
 
 		// To string.

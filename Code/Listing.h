@@ -122,7 +122,7 @@ namespace code {
 		// Modify instruction (internal use).
 		inline void setInstr(Nat id, Instr *to) { code->at(id).instr = to; }
 
-		// Give 'id = count()' to access any labels after the last instruction.
+		// Give `id = count()` to access any labels after the last instruction.
 		MAYBE(Array<Label> *) STORM_FN labels(Nat id) const;
 
 		// Create a shell, ie. a Listing containing only the scope information from this listing,
@@ -176,7 +176,7 @@ namespace code {
 		// Get the root block.
 		Block STORM_FN root() const;
 
-		// Create a block inside 'parent'. Note that it does not matter if 'parent' is the block or
+		// Create a block inside `parent`. Note that it does not matter if `parent` is the block or
 		// any part inside that block.
 		Block STORM_FN createBlock(Block parent);
 
@@ -186,8 +186,8 @@ namespace code {
 		// Move a variable to the beginning of a block. This impacts memory layout and destruction order.
 		void STORM_FN moveFirst(Var var);
 
-		// Get the variable stored just before 'v' in this stack frame. Within a single block, it
-		// just returns the variable added before 'v'. If 'v' is the first variable in that block,
+		// Get the variable stored just before `v` in this stack frame. Within a single block, it
+		// just returns the variable added before `v`. If `v` is the first variable in that block,
 		// the last variable of the previous block is returned. This will give all variables visible
 		// at the same time as the start variable of the iteration. Parameters are returned lastly.
 		Var STORM_FN prev(Var v) const;
@@ -196,11 +196,11 @@ namespace code {
 		Block STORM_FN parent(Block b) const;
 		Block STORM_FN parent(Var b) const;
 
-		// See if the variable 'v' is accessible in the part 'p'. This is almost equivalent to
-		// checking if any parent blocks of 'p' contains the variable.
+		// See if the variable `v` is accessible in the part `p`. This is almost equivalent to
+		// checking if any parent blocks of `p` contains the variable.
 		Bool STORM_FN accessible(Var v, Block p) const;
 
-		// See if the part 'q' is an indirect parent to 'parent'.
+		// See if the part `q` is an indirect parent to `parent`.
 		Bool STORM_FN isParent(Block parent, Block q) const;
 
 		// Is this a parameter?
@@ -244,7 +244,7 @@ namespace code {
 		class CatchInfo {
 			STORM_VALUE;
 		public:
-			// Create. 'type' is the type to catch, 'resume' is where to resume execution.
+			// Create. `type` is the type to catch, `resume` is where to resume execution.
 			STORM_CTOR CatchInfo(Type *type, Label resume);
 
 			// Type.
@@ -258,6 +258,8 @@ namespace code {
 		// Add a catch handler to a block. Multiple handlers may be added to a single block. If so,
 		// they are evaluated in the order they were added.
 		void STORM_FN addCatch(Block block, CatchInfo add);
+
+		// Convenience function to create a `CatchInfo` value.
 		void STORM_FN addCatch(Block block, Type *type, Label resume);
 
 		// Get all catch clauses for a block.
@@ -269,7 +271,7 @@ namespace code {
 		// Does this block catch exceptions?
 		inline Bool STORM_FN exceptionCaught() const { return ehCatch; }
 
-		// Does this block deal with exceptions at all? I.e. is either 'exceptionCleanup' or 'exceptionCatched' true?
+		// Does this block deal with exceptions at all? I.e. is either `exceptionCleanup` or `exceptionCatched` true?
 		inline Bool STORM_FN exceptionAware() const { return ehCatch | ehClean; }
 
 		/**
