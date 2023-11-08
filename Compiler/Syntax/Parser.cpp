@@ -139,7 +139,8 @@ namespace storm {
 		}
 
 		void ParserBase::throwError() const {
-			throw error();
+			if (hasError())
+				throw error();
 		}
 
 		Node *ParserBase::tree() const {

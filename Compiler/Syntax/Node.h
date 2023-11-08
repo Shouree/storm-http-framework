@@ -27,10 +27,10 @@ namespace storm {
 			 * Introspection:
 			 */
 
-			// Get all children from this node as an array.
+			// Get all direct children in this node as an array.
 			virtual Array<Node *> *STORM_FN children();
 
-			// Get all children as a plain array.
+			// Get all children (both direct and indirect) as a flat array.
 			Array<Node *> *STORM_FN allChildren();
 
 			// Get all children of a specific type as a plain array.

@@ -50,7 +50,8 @@ namespace storm {
 			Bool STORM_FN delimiter() const;
 			void STORM_FN delimiter(Bool v);
 
-			// Find the first leaf node with a non-zero length at position 'pos' relative to this node.
+			// Find the first leaf node with a non-zero length at position `pos` relative to this
+			// node. `pos` is a number of codepoints in the input string.
 			virtual MAYBE(InfoLeaf *) STORM_FN leafAt(Nat pos);
 
 			// Find the indentation of characters at offset 'pos'. This returns either an absolute

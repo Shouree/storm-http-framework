@@ -5,27 +5,32 @@ namespace storm {
 	STORM_PKG(core.lang);
 
 	/**
-	 * Source position.
+	 * A position in a source file.
 	 *
-	 * Describes a range of characters somewhere in the source code.
+	 * Describes a range of characters somewhere in the source code. The positions in the source
+	 * code are codepoint indices, not byte offset. The codepoint indices assume that line-endings
+	 * have been converted into a single codepoint (exactly as would happen when reading the text
+	 * using the standard library in Storm).
 	 */
 	class SrcPos {
 		STORM_VALUE;
 	public:
-		// Create unknown position.
+		// Create an unknown position.
 		STORM_CTOR SrcPos();
 
 		// Create.
 		STORM_CTOR SrcPos(Url *file, Nat start, Nat end);
 
-		// File. If unknown, 'file' is null.
+		// The file. May be `null` in case the file is not known.
 		MAYBE(Url *) file;
 
-		// Start- and end position in the file.
+		// Start position in the file.
 		Nat start;
+
+		// End position in the file.
 		Nat end;
 
-		// Unknown position?
+		// Is this an unknown position?
 		Bool STORM_FN unknown() const;
 
 		// Any data?
@@ -38,8 +43,10 @@ namespace storm {
 		// Merge with another range.
 		SrcPos STORM_FN extend(SrcPos other) const;
 
-		// Get an SrcPos that represents the first or last character.
+		// Get an SrcPos that represents only the first character in the range.
 		SrcPos STORM_FN firstCh() const;
+
+		// Get an SrcPos that represents only the last character in the range.
 		SrcPos STORM_FN lastCh() const;
 
 		// Deep copy.
