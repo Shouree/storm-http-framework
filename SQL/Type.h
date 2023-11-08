@@ -17,14 +17,16 @@ namespace sql {
 		// Create a type representing "void".
 		STORM_CTOR QueryType();
 
-		/**
-		 * Create types:
-		 */
+		// Create the type TEXT.
 		static QueryType STORM_FN text() { return QueryType(1); }
+
+		// Create the type INTEGER.
 		static QueryType STORM_FN integer() { return QueryType(2); }
+
+		// Create the type REAL.
 		static QueryType STORM_FN real() { return QueryType(3); }
 
-		// Parse from string. Returns "void" if the type is unknown. Throws SQLError on malformed
+		// Parse from string. Returns "void" if the type is unknown. Throws `SQLError` on malformed
 		// type specification.
 		static QueryType STORM_FN parse(Str *from);
 
@@ -47,12 +49,14 @@ namespace sql {
 		}
 
 		// Check if we are compatible with the parameter. Compatibility compares the size, but
-		// allows any size of 'o', assuming our size is not specified.
+		// allows any size of `o`, assuming our size is not specified.
 		Bool STORM_FN compatible(const QueryType &o) const;
 
-		// Any type?
-		Bool empty() const { return type == 0; }
-		Bool any() const { return type != 0; }
+		// Is this type empty (i.e. `void`).
+		Bool STORM_FN empty() const { return type == 0; }
+
+		// Is there any type (i.e. not `void`).
+		Bool STORM_FN any() const { return type != 0; }
 
 	private:
 		// Create a custom type.

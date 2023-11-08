@@ -1,2 +1,3 @@
-Parser Library
-==============
+```stormdoc
+parser
+```

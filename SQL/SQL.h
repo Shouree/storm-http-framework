@@ -131,11 +131,11 @@ namespace sql {
 	class DBConnection : public Object {
 		STORM_ABSTRACT_CLASS;
 	public:
-		// Returns a prepared statement.
+		// Create a prepared statement. Throws an error if the statement is invalid.
 		virtual Statement *STORM_FN prepare(Str *query) ABSTRACT;
 		virtual Statement *STORM_FN prepare(QueryStr *query) ABSTRACT;
 
-		// Calls sqlite3_close(db).
+		// Closes the connection to the database.
 		virtual void STORM_FN close() ABSTRACT;
 
 		// Returns all names of tables in SQLite connection in an Array of Str.

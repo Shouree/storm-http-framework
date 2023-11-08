@@ -10,8 +10,11 @@ namespace sql {
 	 *
 	 * Behaves similarly to a read-only array, but that may contain different types. The accessor
 	 * functions that mention specific types throw if the type is incorrect. Type inspection is
-	 * possible through the generic 'at' function that creates a Variant (note: the at function is a
-	 * free function for technical reasons).
+	 * possible through the generic `at` function that creates a `Variant` (note: the at function is
+	 * a free function for technical reasons).
+	 *
+	 * Note: The class automatically casts between `Int` and `Long`, as well as `Float` and `Double`
+	 * as required.
 	 */
 	class Row {
 		STORM_VALUE;

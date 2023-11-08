@@ -1,34 +1,36 @@
-SQLite in Storm:
+SQL
+===
 
-This package provides two parts:
+This package contains a generic SQL library that consists of two parts:
 
-* A generic database interface (the DBConnection and Statement classes with subclasses) with
-  implementations for SQLite.
-* A language extension to Basic Storm that allows inline SQL queries, both with and without typechecking.
+- A generic interface to databases
+- A syntax extension to Basic Storm that allows type-safe interaction with the database
+
+Currently, three databases are supported: SQLite, MariaDB, and MySQL.
 
 
 An SQLite connection can be established in memory or in a file as follows:
- * SQLite db();
- * SQLite db(cwdUrl/"database.db");
+- `SQLite db();`
+- `SQLite db(cwdUrl/"database.db");`
 
 A statement is then prepared and executed as follows:
- * var statement = db.prepare("SQL QUERY ?;");
- * statement.bind(x, "string");
- * statement.execute();
+- `var statement = db.prepare("SQL QUERY ?;");`
+- `statement.bind(x, "string");`
+- `statement.execute();`
 
 There are then a number of methods in the Statement class that allows examining the result. In
 particular it is possible to use the Statement as an iterator for queries that produce table
 results.
 
-
 It is also possible to use the language extension in Basic Storm:
- * Str x = "c";
- * WITH db: INSERT INTO table VALUES ("a", "b", x);
+- `Str x = "c";`
+- `WITH db: INSERT INTO table VALUES ("a", "b", x);`
 
 
 The above does not allow Storm to type-check the queries. For that to work, it is necessary to
 declare a database first:
 
+```
 DATABASE MyDB {
   TABLE test (
     a INTEGER PRIMARY KEY,
@@ -37,13 +39,15 @@ DATABASE MyDB {
 
   INDEX ON test(b);
 }
+```
 
 It is worth noting that columns are NOT NULL by default. Use ALLOW NULL if null are desired.
 
 The table may then be queried as follows:
 
+```
 MyDB connection(db);
 for (row in WITH c: SELECT * FROM test) {
   print(row.a # " " # b);
 }
-
+```

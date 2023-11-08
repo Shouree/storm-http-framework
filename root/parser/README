@@ -1,43 +1,42 @@
-Parser library
+Parser Library
 ==============
 
-This library implements various parsers that are faster (but weaker) than the compiler's parser. In
-general, they do not support all functionality of the compiler's parser, and are not as flexible. On
-the other hand, they are pre-compiled (and have no startup time) and are much faster. They are also
-able to parse text on any thread, and not locked to the Compiler thread as the compiler's parser.
+The parser library (in the `parser` package) implements various parsers that are faster (but weaker)
+than the compiler's parser. In general, they do not support all functionality of the compiler's
+parser, and are not as flexible. On the other hand, they are pre-compiled (and have no startup time)
+and are much faster. They are also able to parse text on any thread, and not locked to the Compiler
+thread as the compiler's parser.
 
 The limitations and characteristics of the parsers are outlined below. If a parser is fed grammar
-that is incompatible with the parser, an error is generated at compile-time unless otherwise
-noted. Another general difference between the compiler's parser and the parsers in this library is
-that these parsers typically start evaluating transform functions before parsing is complete. As
-such, some transform function might be executed, even if the string is not in the language described
-by the grammar.
+that is incompatible with the parser, an error is generated at compile-time unless otherwise noted.
+Another general difference between the compiler's parser and the parsers in this library is that
+these parsers typically start evaluating transform functions before parsing is complete. As such,
+some transform functions might be executed even if the string is not in the language described by
+the grammar.
 
 The following parsers are supported:
 
+- **Recursive Descent** (names: `recursive`, `recursive descent`)
 
-Recursive Descent
------------------
+  The recursive descent parser accepts LL(1) grammars, which essentially means:
+  - No left-recursion is allowed.
+  - Multiple productions for a non-terminal needs to be distinguished by the first token present
+    (either directly or indirectly).
 
-The recursive descent parser accepts LL(1) grammars, which essentially means:
-- No left-recursion is allowed.
-- Multiple productions for a non-terminal needs to be distinguished by the first token present
-  (either directly or indirectly).
-
-This parser transforms the parse tree directly, and as such it is not possible to capture parts of
-the parse tree in the syntax transformations. Due to how the parser works, it is also not possible
-to pass parameters to productions from tokens appearing "later" in the text.
+  This parser transforms the parse tree directly, and as such it is not possible to capture parts of
+  the parse tree in the syntax transformations. Due to how the parser works, it is also not possible
+  to pass parameters to productions from tokens appearing later in the text.
 
 
-Backtracking Recursive Descent
-------------------------------
+- **Backtracking Recursive Descent** (names: `backtracking`, `backtracking recursive`, `backtracking recursive descent`)
 
-This is an extension of the recursive descent parser. It allows parsing grammars that are not LL(1)
-by utilizing backtracking. This means that the backtracking parser is potentially slower than the
-non-backtracking variant. It also means that side-effects from backtracking attempts might be
-visible to the actions specified in the grammar. For example, if the backtracking parser parses a
-production successfully but later determines that it does not match, the side-effects of the
-production will still be visible (e.g. object creation, member function calls).
+  This is an extension of the recursive descent parser. It allows parsing grammars that are not LL(1)
+  by utilizing backtracking. This means that the backtracking parser is potentially slower than the
+  non-backtracking variant. It also means that side-effects from backtracking attempts might be
+  visible to the actions specified in the grammar. For example, if the backtracking parser parses a
+  production successfully but later determines that it does not match, the side-effects of the
+  production will still be visible (e.g. object creation, member function calls).
+
 
 Syntax
 ------
@@ -58,7 +57,8 @@ To generate a parser, use the following syntax:
   `<input>` is a string and `<start>` is an iterator.
 
 - `<type>` is the type of the parser to use. It can be any of the ones mentioned above. For example
-  `recursive` or `recursive descent` uses the recursive descent parser.
+  `recursive` or `recursive descent` uses the recursive descent parser, or `backtracking` uses the
+  backtracking recursive descent parser.
 
 - `[binary]` generates a parser in binary mode if it is included. This means that the parser accepts
   its input as a `Buffer` instead of a `Str`, and iterators are `Nat` values, not `Str:Iter`. As a
@@ -85,4 +85,9 @@ grammars. See the file `syntax.bnf` in the `parser.special` package for more det
 
 One example of rules that fall into this category are the rules `Bytes(Nat)` and `Chars(Nat)`. These
 match a pre-determined number of bytes and codepoints. These are only available in the recursive
-descent parser at the moment.
+descent parsers at the moment.
+
+Another example are the rules `Indent`, `MinIndent`, and `ExactIndent`. They can be used to parse
+indent-sensitive languages (such as markdown). They match the indent specified by the supplied
+parameters.
+
