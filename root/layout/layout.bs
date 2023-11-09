@@ -8,7 +8,7 @@ use core:geometry;
  * 'Info' for that purpose, and 'add' should return an instance associated with the newly added component.
  */
 class Layout extends Component {
-	// Our allotted space.
+	// Our allotted space. Updated in the default implementation of `pos(Rect)`.
 	protected Rect space;
 
 	// Information on a child.
@@ -30,10 +30,11 @@ class Layout extends Component {
 		Size(0, 0);
 	}
 
-	// Re-compute the layout here.
+	// Re-compute the layout here. Called automatically when the position is updated.
 	void layout() : abstract;
 
-	// Add a child to this layout.
+	// Add a child to this layout. Returns a class that contains information about the child added.
+	// The caller is expected to be able to modify this information to alter the layout.
 	Info add(Component child) {
 		Info();
 	}

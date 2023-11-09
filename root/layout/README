@@ -1,0 +1,14 @@
+Layout Library
+==============
+
+This is a library for specifying the layout of a set of rectangles inside a container (for example,
+UI components on the screen). The library itself is generic and requires a small amount of code to
+integrate it in whichever context it should be used.
+
+The library is centered around the `Component` class, which represents a rectangle that should be
+positioned. Components are positioned inside a `Layout`, that is in charge of determining the
+relative position of each component. Each `Layout` is also a `Component`, which means that layout
+rules can be nested to create arbitrarily complex layouts.
+
+The layout system does not introduce additional coordinate systems. Rather, all coordinates produced
+are in the same coordinate system as those specified to the `Layout` that contains the `Component`s.

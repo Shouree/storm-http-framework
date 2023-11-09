@@ -5,22 +5,24 @@ use core:geometry;
  *
  * The grid is automatically sized to fit the constraints dictated by the contained components. Each
  * row and column will have their own size. To fill all available space, specify which rows and
- * columns are allowed to grow using 'expandRow' or 'expandCol'. A weight may additionally be
+ * columns are allowed to grow using `expandRow` or `expandCol`. A weight may additionally be
  * specified to allow different rows/columns to grow at different ratios with respect to each other.
  * There are two modes that can be applied to the expansion. The default is to assign any extra
  * space (according to the weights) to the expandable rows and columns. This means that they will
  * have different sizes based on the minimum size, but the additional space is allocated fairly. The
- * second mode (enabled using 'normalizeRows'/'normalizeCols') is to base the extra assignment based
+ * second mode (enabled using `normalizeRows`/`normalizeCols`) is to base the extra assignment based
  * on the total size of the elements. That way, given equal weights, the layout will keep them at
  * equal size. This means that the minimum size of some components might be enlarged to keep the
  * distribution.
  *
- * Elements may also be positioned at absolute grid coordinates by specifying 'row' and 'col',
+ * Elements may also be positioned at absolute grid coordinates by specifying `row` and `col`,
  * starting at index 0. Additional rows and columns are then created to accomodate all
- * components. Elements may span multiple rows and column, as dictated by 'rowspan' and 'colspan'.
+ * components. Elements may span multiple rows and column, as dictated by `rowspan` and `colspan`.
  *
  * Elements are added row by row, wrapping if a maximum number of columns have been specified using
- * 'wrapCols', or if 'nextLine' is called.
+ * `wrapCols`, or if `nextLine` is called.
+ *
+ * Elements are spaced according to `border`. There is no space around the outer edge of the layout.
  */
 class Grid extends Layout {
 	/**
@@ -33,10 +35,10 @@ class Grid extends Layout {
 		// Location in the grid.
 		Nat col;
 
-		// Span number of rows from 'row'.
+		// Span number of rows from `row`.
 		Nat rowspan;
 
-		// Span number of columns from 'col'.
+		// Span number of columns from `col`.
 		Nat colspan;
 
 		// Initialize values.

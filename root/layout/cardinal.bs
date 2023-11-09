@@ -4,18 +4,18 @@ use core:geometry;
  * Cardinal directions.
  */
 class Cardinal {
-	// Place a rectangle at this edge of the supplied point.
+	// Place a rectangle at the edge of the supplied point represented by this cardinal direction.
 	Rect place(Point pt, Size size) : abstract;
 
-	// Pick this direction from a rectangle.
+	// Pick this cardinal direction from a rectangle.
 	Point pick(Rect r) : abstract;
 
-	// Align a rectangle inside another rectangle at the specified edge.
+	// Align a rectangle inside another rectangle at the specified cardinal direction.
 	Rect align(Rect inside, Size size) {
 		place(pick(inside), size);
 	}
 
-	// Opposite direction.
+	// Get the opposite direction.
 	Cardinal opposite() : abstract;
 
 	// Get a direction vector.

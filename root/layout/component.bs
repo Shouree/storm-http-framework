@@ -7,7 +7,7 @@ use core:geometry;
  * Component class also stores information about the underlying component, such as minimum size and
  * other component-specific information.
  *
- * Provide a function called 'component' to wrap custom types inside the 'Component' class. The
+ * Provide a function called `component` to wrap custom types inside the `Component` class. The
  * system will try to call that function automatically when possible.
  *
  * Generally, all information inside a particular component is assumed to be read-only.
@@ -19,7 +19,7 @@ class Component {
 	// layout syntax add the proper root component.
 	Component? bundleRoot;
 
-	// Get either 'bundleRoot' if it is set, or 'this'.
+	// Get either `bundleRoot` if it is set, or `this`.
 	Component toAdd() {
 		if (bundleRoot)
 			bundleRoot;
