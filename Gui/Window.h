@@ -43,7 +43,7 @@ namespace gui {
 	class Window : public ObjectOn<Ui> {
 		STORM_CLASS;
 	public:
-		// Create with nothing.
+		// Create an empty window.
 		STORM_CTOR Window();
 
 		// Destroy.
@@ -61,10 +61,10 @@ namespace gui {
 		// Are we created?
 		bool created() const { return handle() != invalid; }
 
-		// Parent/owner. Null for frames.
+		// Get the parent window. Null for frames.
 		MAYBE(ContainerBase *) STORM_FN parent();
 
-		// Root frame. Returns ourself for frames, returns null before attached.
+		// Get the frame that is in the root of the hierarchy. Returns ourself for frames, returns `null` before attached.
 		MAYBE(Frame *) STORM_FN rootFrame();
 
 		// Attach to a parent container and creation. To be called from 'container'.
@@ -113,32 +113,43 @@ namespace gui {
 
 #endif
 
-		// Visibility.
+		// Check if the window is visible.
 		Bool STORM_FN visible();
+
+		// Set if the window is visible or not. Assignment function, so `visible` can be used as a member variable.
 		void STORM_ASSIGN visible(Bool show);
 
-		// Enable/disable. Generally only useful to do for leaf windows.
+		// Check if the window is enabled.
 		Bool STORM_FN enabled();
+
+		// Set if the window is enabled. Generally only interesting to do for leaf windows.
+		// Assignment function, so it can be used as a member variable.
 		void STORM_ASSIGN enabled(Bool enable);
 
-		// Window text.
+		// Get the window text. How this text is used depends on the window.
 		virtual Str *STORM_FN text();
+
+		// Set the window text. Assignment function, so it can be used as a member variable.
 		virtual void STORM_ASSIGN text(Str *str);
 
-		// Window position. Always relative to the client area (even in Frames).
+		// Get the window position. Always relative to the client area of the parent (even in Frames).
 		virtual Rect STORM_FN pos();
+
+		// Set the window position.
 		virtual void STORM_ASSIGN pos(Rect r);
 
 		// Get the minimum size for this window. Note: This does not consider the size and position
 		// of any child windows in case this is a container. This function is mostly useful for
-		// determining the preferred size for various widgets.
+		// determining the preferred size for various windows.
 		virtual Size STORM_FN minSize();
 
-		// Font.
+		// Get the current font.
 		Font *STORM_FN font();
+
+		// Set the current font. Assignment function, so it can be used as a member variable.
 		void STORM_ASSIGN font(Font *font);
 
-		// Set focus.
+		// Set focus to this window.
 		virtual void STORM_FN focus();
 
 		// Update the window (ie repaint it) right now.
@@ -153,21 +164,39 @@ namespace gui {
 		// Convenience function to trigger uptade of layouts easily.
 		void STORM_FN resized();
 
-		// Key events. Return 'true' if the message was handled and should not propagate further.
+		// Called when a key is pressed or released (depending on `pressed`). Should return `true`
+		// if the keypress was recognized and should not propagate further.
 		virtual Bool STORM_FN onKey(Bool pressed, key::Key keycode, mod::Modifiers modifiers);
+
+		// Called when a key has been typed. Note that this is sometimes different from a key press
+		// event. A typical example is a dead key. The dead key will produce `onKey` events as
+		// usual, but will not produce a `onChar` event until the next keypress, when it might be
+		// combined with the next character. Another example is when using an IME.
 		virtual Bool STORM_FN onChar(Nat charCode);
 
-		// Mouse events. Return 'true' if the message was handled and should not propagate further.
+		// Called when a mouse button has been pressed or released (depending on `pressed`) at the
+		// location `at` in the window.
 		virtual Bool STORM_FN onClick(Bool pressed, Point at, mouse::MouseButton button);
+
+		// Called when a mouse button has been double-clicked in the window.
 		virtual Bool STORM_FN onDblClick(Point at, mouse::MouseButton button);
+
+		// Called whenever the mouse is moved in the window.
 		virtual Bool STORM_FN onMouseMove(Point at);
+
+		// Called when the mouse has been scrolled in the vertical direction.
 		virtual Bool STORM_FN onMouseVScroll(Point at, Int delta);
+
+		// Called when the mouse has been scrolled in the horizontal direction.
 		virtual Bool STORM_FN onMouseHScroll(Point at, Int delta);
 
-		// Mouse enter/mouse leave. The mouse is considered inside the window only as long as the
-		// mouse is directly on top of this window, i.e. not when the current window is obscured by
-		// a child window.
+		// Called when the mouse entered this window. The mouse is considered to be inside the
+		// window only for as long as the mouse is directly on top of the window. For example, if
+		// the mouse moves over a child window, the mouse is no longer considered to be inside of
+		// this window.
 		virtual void STORM_FN onMouseEnter();
+
+		// Called when the mouse has left this window.
 		virtual void STORM_FN onMouseLeave();
 
 		// Set window contents (custom drawing).
@@ -176,10 +205,10 @@ namespace gui {
 		// Get the current painter.
 		MAYBE(Painter *) STORM_FN painter();
 
-		// Window timer.
+		// Called regularly if the `setTimer` has been called to start the timer.
 		virtual void STORM_FN onTimer();
 
-		// Set timer.
+		// Set the window timer. Causes `onTimer` to be called regularly.
 		void STORM_FN setTimer(Duration interval);
 
 		// Stop timer.

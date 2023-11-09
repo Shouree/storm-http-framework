@@ -81,10 +81,10 @@ namespace gui {
 		// Start a new segment.
 		void STORM_FN start(Point pt);
 
-		// Add a line from the current point to 'to'.
+		// Add a line from the current point to `to`.
 		void STORM_FN line(Point to);
 
-		// Add a point. If the path is not started, this point will start it. Aside from that, works like 'line'.
+		// Add a point. If the path is not started, this point will start it. Aside from that, works like `line`.
 		void STORM_FN point(Point to);
 
 		// Add a bezier segment with one control point and an endpoint.
@@ -93,7 +93,7 @@ namespace gui {
 		// Add a bezier segment with two control points and an endpoint.
 		void STORM_FN bezier(Point c1, Point c2, Point to);
 
-		// Close the previous path.
+		// Close the previous path, adding a line segment to the start of the path.
 		void STORM_FN close();
 
 		// Get the bounding box of this path.

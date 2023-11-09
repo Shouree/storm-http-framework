@@ -21,7 +21,7 @@ language. The different types of operands are described in detail
 
 The `Operand` class has a number of cast constructors that allow implicit conversion from registers
 ([stormname:core.asm.Reg]), variables ([stormname:core.asm.Var]), labels
-([stormname:core.asm.Label]), [references](md:Language_Reference/Intermediate_Language/References)
+([stormname:core.asm.Label]), [references](md:/Language_Reference/Intermediate_Language/References)
 ([stormname:core.asm.Ref]), and source positions ([stormname:core.lang.SrcPos]). There are also a
 number of functions that create operands from various types of literals.
 

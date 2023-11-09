@@ -22,12 +22,12 @@ namespace gui {
 
 		virtual ~Painter();
 
-		// Called to render the window. Before this call, the output is filled with 'bgColor'.
-		// 'size' is the drawing size in device independent units.
-		// Return 'true' if you want to be redrawn the next frame as well!
+		// Called to render the window. Before this call, the output is filled with `bgColor`.
+		// `size` is the drawing size in device independent units.
+		// Return `true` to schedule a repaint for the next frame.
 		virtual Bool STORM_FN render(Size size, Graphics *graphics);
 
-		// Called from Storm to repaint the window.
+		// Called from Storm to schedule a repaint of the window.
 		virtual void STORM_FN repaint();
 
 		// Background color. Updated on next redraw.

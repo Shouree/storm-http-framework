@@ -15,12 +15,12 @@ namespace gui {
 	class Dialog : public Frame {
 		STORM_CLASS;
 	public:
-		// Create. The dialog is not shown until "show" is called.
+		// Create the dialog. As with `Frame`s, the dialog is not shown until `show` is called.
 		STORM_CTOR Dialog(Str *title);
 		STORM_CTOR Dialog(Str *title, Size size);
 
-		// Show the dialog as a modal window. Don't call "create" before calling "show", that is
-		// handled internally. Returns whatever is passed to "close" by the implementation, or "-1"
+		// Show the dialog as a modal window. Don't call `create` before calling `show`, that is
+		// handled internally. Returns whatever is passed to `close` by the implementation, or -1
 		// if the dialog was closed (or cancelled by a default button).
 		Int STORM_FN show(Frame *parent);
 

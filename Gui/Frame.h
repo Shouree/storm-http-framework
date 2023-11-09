@@ -14,8 +14,10 @@ namespace gui {
 	class Frame : public Container {
 		STORM_CLASS;
 	public:
-		// Note: does not create an actual frame. Use 'create' below to do that.
+		// Create a frame, specifying a window title. Note: `create` must be called to create the frame.
 		STORM_CTOR Frame(Str *title);
+
+		// Create a frame, specifying a window title and an initial size. Note: `create` must be called to create the frame.
 		STORM_CTOR Frame(Str *title, Size size);
 
 		// Create the frame and show it.
@@ -26,8 +28,6 @@ namespace gui {
 
 		// Wait until this frame is closed.
 		void STORM_FN waitForClose();
-
-		// TODO: Add a function that implements modal dialogs.
 
 #ifdef GUI_WIN32
 		// Message!
@@ -55,7 +55,7 @@ namespace gui {
 		virtual GtkWidget *drawWidget();
 #endif
 
-		// Set size.
+		// Set the size of the frame.
 		virtual void STORM_ASSIGN size(Size s);
 
 		// Set position.
@@ -67,10 +67,14 @@ namespace gui {
 
 		// Set fullscreen mode.
 		void STORM_ASSIGN fullscreen(Bool f);
+
+		// Get fullscreen mode.
 		Bool STORM_FN fullscreen();
 
-		// Hide cursor on this window.
+		// Set if the cursor is visible when over this frame.
 		void STORM_ASSIGN cursorVisible(Bool v);
+
+		// Get if the cursor is visible when over this frame.
 		Bool STORM_FN cursorVisible();
 
 		// Get the accelerator table for this window.
@@ -78,6 +82,8 @@ namespace gui {
 
 		// Set the menu for this window.
 		void STORM_ASSIGN menu(MAYBE(MenuBar *) menu);
+
+		// Get the menu for this window.
 		MAYBE(MenuBar *) STORM_FN menu();
 
 		// Show a popup menu at the cursor position. This menu may be a part of another menu.

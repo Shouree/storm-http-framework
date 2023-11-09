@@ -77,10 +77,12 @@ namespace gui {
 		// Pop the previous state. Returns false if nothing more to pop.
 		virtual Bool STORM_FN pop() ABSTRACT;
 
-		// Set the transform (in relation to the previous state).
+		// Set the transform (in relation to the previous state). This is an assignment function, so
+		// it can be used as a member variable.
 		virtual void STORM_ASSIGN transform(Transform *tfm) ABSTRACT;
 
-		// Set the line width (in relation to the previous state).
+		// Set the line width (in relation to the previous state). This is an assignment function,
+		// so it can be used as a member variable.
 		virtual void STORM_ASSIGN lineWidth(Float w) ABSTRACT;
 
 		/**
@@ -117,23 +119,39 @@ namespace gui {
 		// Fill an oval.
 		virtual void STORM_FN fillOval(Rect rect, Brush *brush) ABSTRACT;
 
-		// Draw a bitmap.
+		// Draw an entire bitmap at (0, 0).
 		void STORM_FN draw(Bitmap *bitmap);
+
+		// Draw an entire bitmap at `topLeft`.
 		void STORM_FN draw(Bitmap *bitmap, Point topLeft);
+
+		// Draw an entire bitmap at `topLeft` with the specified opacity.
 		void STORM_FN draw(Bitmap *bitmap, Point topLeft, Float opacity);
+
+		// Draw an entire bitmap. Scale it to fit inside `rect`.
 		void STORM_FN draw(Bitmap *bitmap, Rect rect);
+
+		// Draw an entire bitmap. Scale it to fit inside `rect`. Apply the specified opacity.
 		virtual void STORM_FN draw(Bitmap *bitmap, Rect rect, Float opacity) ABSTRACT;
 
-		// Draw a part of a bitmap.
+		// Draw the part of the bitmap indicated in `src` (in pixels). Draw it at `topLeft`.
 		void STORM_FN draw(Bitmap *bitmap, Rect src, Point topLeft);
+
+		// Draw the part of the bitmap indicated in `src` (in pixels). Draw it at
+		// `topLeft` with the specified opactiy.
 		void STORM_FN draw(Bitmap *bitmap, Rect src, Point topLeft, Float opacity);
+
+		// Draw the part of the bitmap indicated in `src` (in pixels). Scale the resulting pixels to fit inside `dest`.
 		void STORM_FN draw(Bitmap *bitmap, Rect src, Rect dest);
+
+		// Draw the part of the bitmap indicated in `src` (in pixels). Scale the resulting pixels to
+		// fit inside `dest`, and apply the specified opacity.
 		virtual void STORM_FN draw(Bitmap *bitmap, Rect src, Rect dest, Float opacity) ABSTRACT;
 
 		// Draw text the easy way. Prefer using a Text object if possible, since they give more
 		// control over the text and yeild better performance. Attempts to fit the given text inside
-		// 'rect'. No attempt is made at clipping anything not fitting inside 'rect', so any text
-		// not fitting inside 'rect' will be drawn outside the rectangle.
+		// `rect`. No attempt is made at clipping anything not fitting inside `rect`, so any text
+		// not fitting inside `rect` will be drawn outside the rectangle.
 		virtual void STORM_FN text(Str *text, Font *font, Brush *brush, Rect rect) ABSTRACT;
 
 		// Draw pre-formatted text.
