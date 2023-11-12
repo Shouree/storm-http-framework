@@ -284,6 +284,16 @@ class PresentPainter extends Painter {
 
 		g.pop();
 
+		// Update pointer.
+		if (pointer != PointerType:highlight)
+			pointer = PointerType:none;
+
+		if (element = p.elementAt(cursor, pointerPos)) {
+			if (interactive = element.interactive()) {
+				pointer = PointerType:arrow;
+			}
+		}
+
 		if (pointer == PointerType:highlight) {
 			g.fillOval(Rect(pointerPos - Size(highlightSize), Size(highlightSize*2)), highlightBrush);
 		} else if (pointer == PointerType:arrow) {
@@ -307,6 +317,7 @@ class PresentPainter extends Painter {
 	// Handle mouse clicks.
 	Bool onClick(Size windowSize, Point pos, Bool pressed, MouseButton button) {
 		pos = fromScreen(windowSize, pos);
+		pointerPos = pos;
 
 		Bool doRepaint = false;
 		if (button == MouseButton:left) {
@@ -314,7 +325,6 @@ class PresentPainter extends Painter {
 			mouseDown = pressed;
 			if (mouseDown) {
 				pointer = PointerType:highlight;
-				pointerPos = pos;
 			} else {
 				pointer = PointerType:none;
 			}
@@ -336,6 +346,7 @@ class PresentPainter extends Painter {
 	// Handle double clicks.
 	Bool onDblClick(Size windowSize, Point pos, MouseButton button) {
 		pos = fromScreen(windowSize, pos);
+		pointerPos = pos;
 
 		if (element = p.elementAt(cursor, pos)) {
 			if (interactive = element.interactive()) {
@@ -350,11 +361,11 @@ class PresentPainter extends Painter {
 	// Mouse movement.
 	Bool onMouseMove(Size windowSize, Point pos) {
 		pos = fromScreen(windowSize, pos);
+		pointerPos = pos;
 
 		Bool needRepaint = pointer != PointerType:none;
 		if (mouseDown) {
 			pointer = PointerType:highlight;
-			pointerPos = pos;
 			needRepaint = true;
 		} else {
 			pointer = PointerType:none;
@@ -364,7 +375,6 @@ class PresentPainter extends Painter {
 			if (interactive = element.interactive()) {
 				needRepaint |= interactive.mouseMoved(pos);
 				pointer = PointerType:arrow;
-				pointerPos = pos;
 				needRepaint = true;
 			}
 		}
@@ -426,6 +436,7 @@ class PresentPainter extends Painter {
 	private void setCursor(Presentation:Cursor c) {
 		lastCursor = cursor;
 		cursor = c;
+
 		animate();
 	}
 
