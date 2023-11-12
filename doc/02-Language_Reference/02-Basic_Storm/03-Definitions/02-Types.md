@@ -163,6 +163,30 @@ class MyDerivedClass extends MyClass {
 }
 ```
 
+
+In certain situations, multiple constructors perform similar actions. In such situations it is
+useful to use another constructor to initialize the object instead of implementing the logic once
+again. This can be achieved using *delegating constructors* using the keyword `self` instead of
+`init` and `super`:
+
+```bs
+class MyClass {
+    Int x;
+
+    // The constructor that performs all the work:
+    init(Int a) {
+        init { x = a; }
+    }
+
+    // Constructor that provides a default value:
+    init() {
+        // Delegate to the constructor above.
+        self(5);
+    }
+}
+```
+
+
 Cast Constructors
 -----------------
 

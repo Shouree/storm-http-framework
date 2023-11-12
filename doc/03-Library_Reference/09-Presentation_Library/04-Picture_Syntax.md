@@ -1,2 +1,0 @@
-Picture Syntax
-==============

@@ -55,9 +55,7 @@ class Element on Render {
 		after(g, step, time);
 	}
 
-	// Draw this element at the location indicated by 'pos'.
-	// TODO: We could add a parameter here that is used to denote the state of some kind
-	// of inherent animation, such as displaying single lines of text.
+	// Draw this element at the location indicated by `pos`.
 	void draw(Graphics g) : abstract;
 
 	// Call if you need to re-implement 'draw'.

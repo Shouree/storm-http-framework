@@ -35,10 +35,10 @@ class Animation on Render {
 			duration = p.animationTime;
 	}
 
-	// Called before drawing the element. May return 'false' to prevent painting the element.
+	// Called before drawing the element. May return `false` to prevent painting the element.
 	Bool before(Element element, Graphics g, Nat cStep, Duration time) : abstract;
 
-	// Called after drawing the element to restore any graphics state set up by 'before'.
+	// Called after drawing the element to restore any graphics state set up by `before`.
 	void after(Element element, Graphics g, Nat cStep, Duration time) : abstract;
 
 	// Convert a time into a float in the range 0..1.
@@ -383,7 +383,7 @@ class ZoomInAnimation extends AnimationIntro {
 
 
 /**
- * Zoom out vertically.
+ * Zoom out.
  */
 class ZoomOutAnimation extends AnimationOutro {
 	// Create.

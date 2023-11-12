@@ -2,14 +2,13 @@ Presentation Library
 ====================
 
 The [stormname presentation] package contains a library for creating presentations (i.e.
-slideshows). It consists of two parts, a library that implements data structures and logic for
-creating presentations, and a domain specific language for Basic Storm that makes it more
-convienient to create presentations. The domain specific language is based on the language provided
+slideshows). To achieve this, the library provides both the necessary data structures to represent
+and render presentations, but also a domain specific language for Basic Storm that makes it
+convenient to create presentations. The domain specific language is based on the language provided
 by the [layout library](md:/Library_Reference/Layout_Library).
 
-The documentation for each of these two parts are split in two. The first part covers how to create
-slides using the basic layout system. The second part details the *picture* subsystem that is
-designed to create more intricate drawings. The picture system is inspired by TikZ in LaTeX.
+In addition to this, the library also provides a separate system for creating drawings (inspired by
+TikZ from LaTeX). This system is referred to as the *picture subsystem*.
 
 
 Creating a Presentation
@@ -25,7 +24,7 @@ Storm <path-to-package>
 
 The `main` function then needs to create a [stormname:presentation.Presentation] object and call the
 `show` function to create a window. Creating a presentation is often done using the [presentation
-syntax](md:Syntax) in Basic Storm.
+language](md:Presentations) in Basic Storm.
 
 The `show` function views the presentation in *release mode*. This means that the library
 pre-compiles all code in the presentation library before the presentation is shown. This has the

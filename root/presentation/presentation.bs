@@ -13,29 +13,37 @@ use graphics;
  * presentation in its entirety, such as background color, page numbering etc.
  */
 class Presentation on Render {
-	// Title of the presentation.
+	// Title of the presentation. Used in the title of the presentation viewer window.
 	Str title;
 
-	// Size of the slides.
+	// Size of the coordinate system in the slides. Defaults to 1024x768, but may be modified
+	// freely, for example by calling `makeWide` to make the presentation into a 16:9 aspect ratio.
 	Size size;
 
-	// Border around slides.
+	// Top and left border around slides.
 	Size topLeftBorder;
+
+	// Bottom and right border around slides.
 	Size bottomRightBorder;
+
+	// Set the entire border at the same time. Assign function, so it is possible to treat `border` as a variable.
 	assign border(Size border) {
 		topLeftBorder = bottomRightBorder = border;
 	}
 
-	// Default text styles.
+	// Default text style for headings.
 	TextStyle headingStyle;
+
+	// Default text style for the content of slides.
 	TextStyle contentStyle;
 
 	// Default heading alignment.
 	Cardinal headingAlign;
 
-	// Left- and right margin of content in the caption layout. This is in addition to the border
-	// around the slide itself.
+	// Left margin of the content in the caption layout. This is in addition to the slide border.
 	Float contentLeftMargin;
+
+	// Right margin of the content in the caption layout. This is in addition to the slide border.
 	Float contentRightMargin;
 
 	// Default animation time.
@@ -142,7 +150,7 @@ class Presentation on Render {
 	// The background slide.
 	Slide background() { myBackground; }
 
-	// Set the background slide.
+	// Set the background slide. Allows treating `background` as a variable.
 	assign background(Slide s) {
 		myBackground = s;
 		s.added(this);

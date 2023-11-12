@@ -24,7 +24,7 @@ class SlideIntro on Render {
 		}
 	}
 
-	// Draw the animation. 'pos' ranges from 0 to 1.
+	// Draw the animation.
 	void draw(Presentation p, Graphics g, Presentation:Cursor pos, Presentation:Cursor? last, Duration time) : abstract;
 
 	// Convert a time into a float in the range 0..1.

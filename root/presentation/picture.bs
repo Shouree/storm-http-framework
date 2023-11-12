@@ -149,6 +149,8 @@ class Node extends PElement {
 
 	// Position.
 	Point at;
+
+	// Convenient way to set position from the syntax.
 	void at(Float x, Float y) { at = Point(x, y); }
 
 	// Anchor point.
@@ -156,20 +158,30 @@ class Node extends PElement {
 
 	// Minimum size.
 	Size minSize;
+
+	// Convenient way to set minimum size from the syntax.
 	void minSize(Float w, Float h) { minSize = Size(w, h); }
 
 	// Margin around the text.
 	Size margin;
+
+	// Set both dimensions of the margin conveniently.
 	void margin(Float x) { margin = Size(x); }
+
+	// Set individual horizontal and vertical margin conveniently.
 	void margin(Float w, Float h) { margin = Size(w, h); }
 
 	// Current font.
 	private Font myFont;
+
+	// Set current font.
 	void font(Font f) {
 		myFont = f;
 		if (myText)
 			text(myText.text);
 	}
+
+	// Set font and text brush.
 	void style(TextStyle t) {
 		font(t.font);
 		textBrush = t.fill;
@@ -177,9 +189,13 @@ class Node extends PElement {
 
 	// Text.
 	private Text? myText;
+
+	// Set text.
 	void text(Str t) {
 		myText = Text(t, myFont);
 	}
+
+	// Set text.
 	void text(FormatStr t) {
 		myText = t.text(myFont);
 	}
@@ -189,14 +205,20 @@ class Node extends PElement {
 
 	// Text color.
 	Brush textBrush;
+
+	// Set text color.
 	void textColor(Color c) { textBrush = SolidBrush(c); }
 
 	// Border color.
 	Brush borderBrush;
+
+	// Set border color.
 	void borderColor(Color c) { borderBrush = SolidBrush(c); }
 
 	// Fill color.
 	Brush? fillBrush;
+
+	// Set fill color.
 	void fillColor(Color c) { fillBrush = SolidBrush(c); }
 
 	// Get the current size.
@@ -236,7 +258,7 @@ class Node extends PElement {
 		place(dir, distance, dir.pick(origin.pos));
 	}
 
-	// Get a point on the edge of this node. The point should be aimed towards 'angle'.
+	// Get a point on the edge of this node. The point should be aimed towards `angle`.
 	Point atEdge(Angle angle) {
 		// Basically the same as for rectangle, but no concern for rounded corners.
 		Rect p = pos;
@@ -451,8 +473,10 @@ class Edge extends PElement {
 	// Path to draw.
 	private Path path;
 
-	// Brush.
+	// Brush used to draw the edge.
 	Brush brush;
+
+	// Set the color.
 	void color(Color c) { brush = SolidBrush(c); }
 
 	// Line width.
@@ -510,11 +534,16 @@ class Edge extends PElement {
 			toPt;
 	}
 
-	// Bend left/right. The amount is expressed as a fraction of the original line length.
+	// Bend the line a bit to the left.
 	void bendLeft() { bendLeft(0.1); }
+
+	// Bend the line to the left. The amount is expressed as a fraction of the original line length.
 	void bendLeft(Float amount) { bendRight(-amount); }
 
+	// Bend the line a bit to the right.
 	void bendRight() { bendRight(0.1); }
+
+	// Bend the line to the right. The amount is expressed as a fraction of the original line length.
 	void bendRight(Float amount) {
 		Point from = fromPos;
 		Point dir = toPos - from;
@@ -523,12 +552,13 @@ class Edge extends PElement {
 		update();
 	}
 
-	// Set arrow tips.
+	// Set the arrow tip in the "from" direction.
 	void fromArrow(Arrow a) {
 		fromArrow = a;
 		update();
 	}
 
+	// Set the arrow tip in the "to" direction.
 	void toArrow(Arrow a) {
 		toArrow = a;
 		update();
