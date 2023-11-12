@@ -80,6 +80,7 @@ ul#menu>li:hover>ul>li {
 
 ul#menu>li ul>li {
     position: relative;
+    min-width: 12rem;
 }
 
 ul#menu>li:not(:last-child) ul>li>ul {
