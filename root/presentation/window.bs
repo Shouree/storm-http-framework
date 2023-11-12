@@ -94,7 +94,7 @@ private:
 		keymap.put(Key:F5, &this.reload());
 		keymap.put(Key:home, &this.first());
 		keymap.put(Key:end, &this.last());
-		keymap.put(Key:F8, &debug:threadSummary());
+		keymap.put(Key:F8, &printThreadSummary());
 
 		var me = this;
 		keymap.put(Key:num0, () => me.numKey(0));
@@ -107,6 +107,11 @@ private:
 		keymap.put(Key:num7, () => me.numKey(7));
 		keymap.put(Key:num8, () => me.numKey(8));
 		keymap.put(Key:num9, () => me.numKey(9));
+	}
+
+	// Print a thread summary.
+	void printThreadSummary() : static {
+		print(collectAllStackTraces().toS());
 	}
 
 	// Add a series of keys for the same action.

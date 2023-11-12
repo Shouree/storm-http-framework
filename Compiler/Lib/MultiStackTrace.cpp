@@ -220,6 +220,18 @@ namespace storm {
 	}
 
 	static MultiThreadStackTraces *collectTraces(Engine &e, const vector<os::Thread> &threads) {
+		// Note: Since we are using detours to pause threads that may be waiting, we must ensure
+		// that all types are created ahead of time. Otherwise, the system will assert if it
+		// requires a thread switch to create the Array<StackTrace::Frame> type for example. (If we
+		// intercept a thread when it is waiting to acquire a lock, and that UThread needs to take
+		// another lock to create a type).
+
+		// This is what we need to be able to do in UThreads. Poking it here is enough. Note that
+		// whatever happens in "main" above is fine, since that always happens on a new UThread.
+		{
+			StackTrace z(e);
+		}
+
 		SharedTrace shared(e, Nat(threads.size()));
 		vector<ThreadTrace> data(threads.size(), ThreadTrace(shared));
 		for (size_t i = 0; i < threads.size(); i++)
