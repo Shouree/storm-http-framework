@@ -1,0 +1,46 @@
+A simple tool for managing trees.
+
+The program has a very minimal (i.e. non-existent UI). The mouse is used to point at nodes. Clicking
+and dragging moves the node under the cursor, or scrolls the entire workspace if the background is
+dragged. Apart from that, the following commands are recognized.
+
+The following commands are recognized:
+
+- <numbers> followed by `i`: Insert a new node where the mouse pointer is currently located.
+
+  Example: type `12i` to insert a node with label 12.
+
+- `d`: Delete the node pointed to by the mouse.
+
+- Shift + `d`: Delete the subtree that starts at the node pointed to by the mouse.
+
+- `c`: Clear both outgoing edges from the node pointed to by the mouse.
+
+- `q`: Clear all edges from all nodes.
+
+- `l` or `j`: Add or replace the left child of the node pointed to by the mouse. Click the node that
+  the edge should be attached to next.
+
+- `r` or `k`: Add or replace the right child of the node pointed to by the mouse. Click the node
+  that the edge should be attached to next.
+
+- *esc*: Cancel the current operation (mainly creating new edges).
+
+- `<` (on Swedish keyboards) or `z`: Insert a `|` node (used to visualize the *current location*
+  when using the tool to visualize sorting algorithms).
+
+- <numbers> followed by `e`: Load an example tree. This removes any nodes currently present.
+
+  For example: `1e` loads the file `1.tree`, `2e` loads the file `2.tree` and so on.
+
+- Shift + `l` or Shift + `j`: Rotate the node pointed to by the mouse with its left child.
+
+- Shift + `r` or Shift + `k`: Rotate the node pointed to by the mouse with its right child.
+
+- Shift + `c`: Clone the tree that starts at the node pointed to by the mouse. Place it below the
+  cloned tree.
+
+- Ctrl + `z`: Undo (node movements are not tracked). Keep in mind that loading a new graph clears
+  the undo stack.
+
+- `a`: Perform automatic layot of the subtree that starts in the node pointed to by the mouse.
