@@ -132,6 +132,7 @@ private void printHelp() {
 	print("Usage: <title> <theme> <input> <output>");
 	print("--quiet, -q - no output");
 	print("--clear     - clear <output> before generating new documentation");
+	print("--numbers   - keep numbers in output file names");
 }
 
 // Main entry point from the command-line.

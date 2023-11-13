@@ -11,20 +11,23 @@ use lang:bs:macro;
  */
 class Theme {
 	// Called once at startup to initialize the theme with any additional parameters supplied. The
-	// theme is expected to remove any keys that it utilizes, this allows error reporting to work
-	// properly.
+	// theme is expected to remove any keys that it utilizes. This allows the system to report an
+	// error for any keys that have been misspelled.
 	void options(Str->Str options) {}
 
 	// Called once for each tree before generation of HTML begins. This allows the theme to generate
-	// any auxiliary data structures that might be necessary for table of contents, etc.
+	// any auxiliary data structures that might be necessary during generation. For example, it
+	// allows the theme to pre-compute a table of contents.
 	void initialize(Tree tree) {}
 
-	// Called once for each document to generate the HTML code for a document.
+	// Called once for each document to generate the HTML code for a node in the tree. The default
+	// implementation simply calls `document.toHtml().toS()`. Themes might wish to modify the
+	// document beforehand, or add headers and footers to the generated HTML.
 	Str toHtml(Node node, Document document) {
 		document.toHtml().toS();
 	}
 
-	// Called to copy any additional files to the output directory.
+	// Called once to copy any additional files to the output directory.
 	void copyFiles(Url outputRoot) {}
 }
 

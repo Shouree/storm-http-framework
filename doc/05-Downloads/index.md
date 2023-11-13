@@ -15,10 +15,10 @@ Storm is licensed under the 2-clause BSD license from version 0.6.19 and onwards
 Binary releases for [storm:version] \([storm:date]\)
 --------------------------
 
-- [Windows (32-bit, X86)](storm_mps_win32.zip)
-- [Windows (64-bit, X86)](storm_mps_win64.zip)
-- [Linux (64-bit, X86)](storm_mps_amd64.tar.gz) (should work for recent Debian-based distributions)
-- [Linux (64-bit, ARM)](storm_mps_arm64.tar.gz) (should work for recent Debian-based distributions)
+- [Windows (32-bit, X86)](/storm_mps_win32.zip)
+- [Windows (64-bit, X86)](/storm_mps_win64.zip)
+- [Linux (64-bit, X86)](/storm_mps_amd64.tar.gz) (should work for recent Debian-based distributions)
+- [Linux (64-bit, ARM)](/storm_mps_arm64.tar.gz) (should work for recent Debian-based distributions)
 
 
 Simply download and unpack the archive somewhere. Then run the `Storm` (`Storm.exe` on Windows) file
@@ -45,8 +45,8 @@ is, however, currently in the experimental stage and is not currently stable. Fo
 crashes when running the full Storm test suite. Below are binary releases for two platforms for
 those that wish to experiment:
 
-- [Windows (32-bit), SMM](storm_smm_win32.zip)
-- [Linux (64-bit), SMM](storm_smm_amd64.tar.gz)
+- [Windows (32-bit), SMM](/storm_smm_win32.zip)
+- [Linux (64-bit), SMM](/storm_smm_amd64.tar.gz)
 
 
 Source Releases

@@ -18,10 +18,12 @@ Element? highlightSource(Url srcFile, CodeBlock code) on Compiler {
 	return highlightSource(srcFile, code.language, lines);
 }
 
-// Highlight code using the Storm syntax engines. languageSpec is the language specification
+// Highlight code using the Storm syntax engines. `languageSpec` is the language specification
 // provided. It is a list of colon-separated tags. The first is assumed to be the name of the
 // language. The remaining ones are passed to the highlighting engine for the language. Languages
-// may be "real" Storm languages, or things that have a function defined in the "highlight" package.
+// may be "real" Storm languages, or things that have a function defined in the `highlight` package
+// with the name `highlight_<languageSpec>`. `languageSpec` may also contain additional options
+// using `:` as a delimiter.
 Element? highlightSource(Url srcFile, Str languageSpec, Str code) on Compiler {
 	TextColor[] colors = findColors(srcFile, languageSpec, code);
 
