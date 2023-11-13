@@ -7,11 +7,11 @@ presentation Simple "My presentation" {
 	Str caption = "Presentation number " + rand(1, 10).toS;
 
 	// Create a slide.
-	slide title caption, "By myself" {}
+	slide title caption, "<author>" {}
 
 	// Another one, with an animation!
 	slide FadeIn => content "Hello!" {
-		list [ "Welcome to " + title, "In Storm!" ] {}
+		list [ "Welcome to " + caption, "In Storm!" ] {}
 	}
 }
 
