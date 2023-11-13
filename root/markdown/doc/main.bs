@@ -75,7 +75,8 @@ class Options {
 	}
 }
 
-// Generate documentation programmatically.
+// Generate documentation programmatically. The `options` object stores all options for the
+// generation.
 void generate(Options options) {
 	Theme theme = loadTheme(options.theme);
 
@@ -119,10 +120,9 @@ void generate(Options options) {
 	}
 }
 
-// Main entry-point for generating documentation from programs.
-// Generates documentation for the directory tree at 'root', and places it in 'output'.
-// 'title' specifies the title of the documentation as a whole.
-// 'theme' specifies what theme to use for the output.
+// Generate documentation programmatically. Wrapper for the overload that accepts an `Options`
+// parameter with explicit parameters. This overload does, however, not allow specifying additional
+// options to the documentation.
 void generate(Str title, Str theme, Url root, Url output) {
 	generate(Options(title, theme, root, output));
 }
