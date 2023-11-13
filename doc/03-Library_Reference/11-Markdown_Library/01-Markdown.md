@@ -12,6 +12,11 @@ backtracking recursive descent parser (even though Markdown is not context-free,
 provided by the parser library allows parsing indentation sensitive languages). As such, the grammar
 used to parse Markdown is available in the file `root/markdown/parse.bs` for the curious reader.
 
+Due to Markdown relying on indentation to delimit structures like lists, it is a good idea to
+consistently use spaces for indentation. If tabs are encountered, the Markdown parser assumes that
+the width of a tab is equal to four spaces at all times (i.e. it works for cases where tabs appear
+at the start of a line, not if there are other spaces before the tab).
+
 
 Headings
 --------
@@ -70,20 +75,133 @@ A line is considered to be blank even if it contains whitespace characters.
 Lists
 -----
 
+Two types of lists are supported: ordered lists and unordered lists. Unordered lists are written
+using `-`, `+` or `*` followed by at least one space to mark each element. Ordered lists are instead
+marked using a number followed by a dot and a space. The content of each element then has to be
+indented according to the first line. A list may contain multiple paragraphs, or even nested lists.
+
+An unordered list may look as follows:
+
+```
+- first element
+
+  second paragraph of first element
+
+- second element
+
+- third element
+- fourth element
+```
+
+As can be seen above, it does not matter if empty lines are present between elements. Rather, the
+auto-fill functionality of some editors work better when there is a blank line between elements. Of
+course, blank lines are required to separate paragraphs, and some elements.
+
+Similarly an ordered list may look as follows:
+
+```
+1. first element
+
+   second paragraph of first element
+
+2. second element
+3. third element
+```
+
+Note, however, that the numbering of elements is not verified nor respected. That is, it is possible
+to number all elements 0 and still get a properly numbered list in HTML, since the syntax simply
+emits `<li>` tags and lets the HTML renderer manage numbering.
+
+
+
 Text Formatting
 ---------------
 
+Text that appears almost anywhere can be formatted using any of the following syntaxes. It is
+generally possible to escape symbols that have other meanings using backspace (`\`), except for in
+the inline code syntax.
 
-Links
------
+- **Bold** text:
+
+  ```
+  **text**
+  ```
+
+- *Italic* text:
+
+  ```
+  *text*
+  ```
+
+  Note: **bold** and *italic* can be combined into ***bold italics***.
+
+- Inline `code`:
+
+  ```
+  `text`
+  ```
+
+- Links:
+
+  ```
+  [text](target)
+  ```
+
+  Here, `target` is a URL that is inserted in the finished HTML page. The text can be formatted
+  using bold, italics, etc.
 
 
 Code Blocks
 ------------
 
+```inlinehtml
+<p>
+  For larger pieces of code, three backticks (<code>`</code>) can be used to indicate the start- and
+  end of a larger code block. It is also possible to indicate the language of the code right after the
+  backticks. The Markdown library itself does not use the language, but it makes it available to
+  users of the document representation for things like syntax highlighting.
+</p>
+```
+
+
+In a context where the code block is indented, the parser will remove any whitespace consumed by the
+indentation from the content of the code block. This means that the code inside the block should be
+indented to at least the same level as the starting and ending backticks.
+
+The code block is best treated as a paragraph. That is, it is best to leave an empty line both
+before and after it.
+
+For example:
+
+```inlinehtml
+<pre>paragraph of regular text
+
+<!-- -->```bs
+void main() {
+    print("Hello!");
+}
+<!-- -->```
+
+another paragraph</pre>
+```
+
+Of course, the text `bs` can be replaced with any string, or entirely omitted.
+
 
 Extension Points
 ----------------
 
-- `[]`
-- code title
+The markdown format provides a few points where the Markdown language can be extended without
+modifying the parser itself. They are as follows:
+
+- The link syntax can be used without an URL (e.g. `[text]`). This has no meaning in regular
+  Markdown, but the dialect in this library parses it into a separate element. This element is
+  available in the document representation for libraries to inspect and modify.
+
+- In the proper link syntax, the URL can also be used to add custom annotations, for example by
+  adding a custom "protocol". Then it is quite easy to find links with certain targets and replace
+  them with something else.
+
+- The language name in code blocks is not interpreted by the parser. This allows libraries to
+  replace it with something else. For example, the documentation library uses the special string
+  `inlinehtml` to allow inserting custom HTML code for things that are not supported by the library.

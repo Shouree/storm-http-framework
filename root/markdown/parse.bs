@@ -18,7 +18,8 @@ class MarkdownError extends Exception {
 	}
 }
 
-// Parse a markdown document. Throw an exception on error.
+// Parse a string containing Markdown text. Returns a symbolic representation of the document.
+// Throws a `MarkdownError` on failure.
 Document parse(Str str) {
 	// We require that the string ends in a newline. Extra newlines do not matter, so just add one
 	// always.

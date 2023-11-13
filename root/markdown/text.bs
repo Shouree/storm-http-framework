@@ -7,12 +7,12 @@ class FormattedText {
 	// Text pieces.
 	TextSpan[] spans;
 
-	// Create.
+	// Create an empty text span.
 	init() {
 		init {}
 	}
 
-	// Create from a string.
+	// Create a text span from a string. It will contain a single span.
 	init(Str text) {
 		init {}
 		add(text);
@@ -83,10 +83,12 @@ class FormattedText {
  * A piece of formatted text.
  */
 class TextSpan {
-	// To HTML.
+	// Create an HTML representation of the text span.
 	void toHtml(Html to) : abstract;
 
-	// Visit recursively.
+	// Visit the element recursively. The function is expected to run `v.visit(this)` as the last
+	// step. The returned value is the element that replaces this span after the visiting
+	// operation. If nothing is changed, then the object itself is returned.
 	TextSpan visit(Visitor v) : abstract;
 }
 

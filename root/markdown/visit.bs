@@ -9,15 +9,15 @@
  * made to children.
  */
 class Visitor {
-	// Called for all sequences of elements.
-	ElementSeq visit(ElementSeq seq) { seq; }
-
 	// Called for all elements.
 	Element visit(Element element) { element; }
 
-	// Called for all formatted text elements.
-	FormattedText visit(FormattedText text) { text; }
+	// Called for all `ElementSeq` objects. Usually it is enough to consider only `Element`s.
+	ElementSeq visit(ElementSeq seq) { seq; }
 
-	// Called for all elements in a text span.
+	// Called for all `TextSpan` objects in the hierarcy.
 	TextSpan visit(TextSpan span) { span; }
+
+	// Called for all `FormattedText` objects in the hierarcy. Usually it is enough to consider only `TextSpan`s.
+	FormattedText visit(FormattedText text) { text; }
 }

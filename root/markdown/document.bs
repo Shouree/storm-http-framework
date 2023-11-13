@@ -10,17 +10,18 @@ class Document {
 	// Elements in the document.
 	ElementSeq elements;
 
-	// Visit the entire structure.
+	// Visit the entire structure using a `Visitor`. The visitor allows modifying the elements as
+	// well.
 	void visit(Visitor v) {
 		elements = elements.visit(v);
 	}
 
-	// To string.
-	protected void toS(StrBuf to) : override {
+	// Create a string representation of the markdown document.
+	void toS(StrBuf to) : override {
 		elements.toS(to);
 	}
 
-	// To HTML.
+	// Create a HTML representation of the document.
 	Html toHtml() {
 		Html out;
 		elements.toHtml(out);
@@ -106,10 +107,13 @@ class ElementSeq {
  * Element in a document.
  */
 class Element {
-	// Visit the element.
+	// Visit the element. The function is expected to run `v.visit(this)` as the last step. The
+	// returned value is the element that replaces this element after the visiting operation. If
+	// nothing is changed, then the object itself is returned.
 	Element visit(Visitor v) : abstract;
 
-	// To HTML.
+	// Create an HTML representation of this object. The `Html` object is essentially a string
+	// stream, but with logic for escaping text in the context of HTML.
 	void toHtml(Html to) : abstract;
 }
 
