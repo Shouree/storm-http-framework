@@ -70,7 +70,7 @@ private parser : parser(backtracking recursive descent) {
 	void SCodeContent(Nat indent, CodeBlock to);
 	SCodeContent[90] : parser.special.ExactIndent(indent) - "``` *\n";
 	SCodeContent[50] => to : parser.special.ExactIndent(indent) - "[^\n]*" -> addLine - "\n" - SCodeContent(indent, to);
-	SCodeContent[10] : "[ \t]*\n" - SCodeContent(indent, to);
+	SCodeContent[10] => to : "[ \t]*\n" - "" -> addLine - SCodeContent(indent, to);
 
 	// Match a list. Note: We don't have to care about empty lines with "too little" indentation
 	// here since the body matches SElement, which consumes them for us.
