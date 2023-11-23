@@ -346,6 +346,7 @@ Expr delStmt(Block block, SStr name) on Compiler {
 	SrcName fnName(name.pos);
 	fnName.add("lang");
 	fnName.add("bs");
+	fnName.add("replimpl");
 	fnName.add("replDel");
 	namedExpr(block, fnName, Actuals(strConstant(name)));
 }
@@ -369,6 +370,7 @@ Expr helpStmt(Block block, SrcName name) on Compiler {
 	SrcName fnName(name.pos);
 	fnName.add("lang");
 	fnName.add("bs");
+	fnName.add("replimpl");
 	fnName.add("replHelp");
 
 	Actuals params;
