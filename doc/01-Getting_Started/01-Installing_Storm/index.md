@@ -7,6 +7,9 @@ Storm. If you intend to develop programs in Storm, you might want to have a look
 [developing in storm](md:/Getting_Started/Developing_in_Storm), which describes how to set up a
 convenient development experience.
 
+If you plan on using Storm from a terminal, you might wish to read
+[this page](md:/Getting_Started/Running_Storm/In_a_Terminal) after installing Storm.
+
 
 Windows
 -------
@@ -16,7 +19,8 @@ Windows 7 or later (Windows 8 or later if you wish to use SSL connections).
 
 The [downloads](md:/Downloads) page provides two archives for Windows, one for 32-bit systems and
 one for 64-bit systems. To install Storm, simply unpack the downloaded archive to a location you
-find convenient, and run `Storm.exe`.
+find convenient, and run `Storm.exe`. For example, one can open the ZIP file in explorer and drag
+and drop the files into another directory.
 
 The first time you start Storm, you may see a dialog with the title "Windows has protected your PC".
 This is shown because Windows stores that the file originates from the Internet, and the file has
@@ -35,66 +39,67 @@ on Linux, and is thus able to run on everything from desktops to small single-bo
 
 To install Storm, you have two options:
 
-- **Installing from the Webpage**
+### Using the Package Manager
 
-  The binaries on the Storm webpage are built using the `oldstable` version of Debian. They are
-  therefore known to work on recent Debian-based systems (e.g. Ubuntu). They have also been tested
-  on other distributions, such as Arch Linux, and may work there as well.
+If you are running a recent Debian-based system, you can install Storm from the system's package
+manager. Note, however, that due to the release cycles of Debian-based systems, the version you
+will get this way is likely a bit older than what is available through this page. This is usually
+not a problem, but something to be aware of in case something on the Storm webpage does not match
+what is available in your installation.
 
-  The binary releases contain everything that is necessary, except for core system libraries that
-  are likely already installed on your system. Therefore, installing Storm is as simple as
-  downloading the appropriate release from the [downloads](md:/Downloads) page, unpacking it, and
-  then running the `Storm` executable.
+To install from the package manager, simply run the following command in a terminal:
 
-  **Note:** Chrome or Chromium has a habit of automatically uncompressing `.tar.gz`-files. This
-  causes some archive managers to be confused. If this happens to you, simply rename the file from
-  `.tar.gz` to `.tar` and try again.
+```
+sudo apt install storm-lang
+```
 
-  On the command-line, this can be done as follows:
+By default, this will install Storm itself, and all libraries that are mentioned on this page. It
+is also possible to install different libraries separately if desired (the packages are named
+`storm-lang-X` where `X` is the name of the library).
 
-  ```
-  # Create a directory where you wish to install Storm:
-  mkdir ~/storm
-  cd ~/storm
-
-  # Download the archive:
-  # For x86-64/amd64:
-  wget https://storm-lang.org/storm_mps_amd64.tar.gz
-  # For ARM:
-  wget https://storm-lang.org/storm_mps_arm64.tar.gz
-
-  # Unpack the archive:
-  tar xf storm_mps_*.tar.gz
-
-  # Launch Storm:
-  ./Storm
-  ```
-
-  The archive also contains `.sh`-files to start the applications described in this manual. For
-  example, to launch Progvis, run `Progvis.sh`.
-
-  If Storm starts, but crashes when you import certain libraries, make sure that you have Gtk3 and
-  OpenSSL installed. If Storm does not start at all, you might need to [compile it from
-  source](md:/Getting_Started/Developing_in_Storm/Compiling_from_Source).
+After this, you can start Storm by typing `storm` in your terminal. Progvis is available either
+through the command `progvis` or through the launcher menu (assumes that the `progvis` package was
+installed).
 
 
-- **Using the Package Manager**
+### Installing from the Webpage
 
-  If you are running a recent Debian-based system, you can install Storm from the system's package
-  manager. Note, however, that due to the release cycles of Debian-based systems, the version you
-  will get this way is likely a bit older than what is available through this page. This is usually
-  not a problem, but something to be aware of in case something on the Storm webpage does not match
-  what is available in your installation.
+The binaries on the Storm webpage are built using the `oldstable` version of Debian. They are
+therefore known to work on recent Debian-based systems (e.g. Ubuntu). They have also been tested
+on other distributions, such as Arch Linux, and may work there as well.
 
-  To install from the package manager, simply run the following command in a terminal:
+The binary releases contain everything that is necessary, except for core system libraries that
+are likely already installed on your system. Therefore, installing Storm is as simple as
+downloading the appropriate release from the [downloads](md:/Downloads) page, unpacking it, and
+then running the `Storm` executable.
 
-  ```
-  sudo apt install storm-lang
-  ```
+**Note:** Chrome or Chromium has a habit of automatically uncompressing `.tar.gz`-files. This
+causes some archive managers to be confused. If this happens to you, simply rename the file from
+`.tar.gz` to `.tar` and try again.
 
-  By default, this will install Storm itself, and all libraries that are mentioned on this page. It
-  is also possible to install different libraries separately if desired (the packages are named
-  `storm-lang-X` where `X` is the name of the library).
+On the command-line, this can be done as follows:
 
-  After this, you can start Storm by typing `storm` in your terminal.
+```
+# Create a directory where you wish to install Storm:
+mkdir ~/storm
+cd ~/storm
 
+# Download the archive:
+# For x86-64/amd64:
+wget https://storm-lang.org/storm_mps_amd64.tar.gz
+# For ARM:
+wget https://storm-lang.org/storm_mps_arm64.tar.gz
+
+# Unpack the archive:
+tar xf storm_mps_*.tar.gz
+
+# Launch Storm:
+./Storm
+```
+
+The archive also contains `.sh`-files to start the applications described in this manual. For
+example, to launch Progvis, run `Progvis.sh`.
+
+If Storm starts, but crashes when you import certain libraries, make sure that you have Gtk3 and
+OpenSSL installed. If Storm does not start at all, you might need to [compile it from
+source](md:/Getting_Started/Developing_in_Storm/Compiling_from_Source).
