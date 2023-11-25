@@ -14,7 +14,7 @@ the one below:
 
 ```
 Welcome to the Storm compiler!
-Root directory: .../root
+Root directory: /home/user/storm/root
 Compiler boot in 64.58 ms
 Type 'licenses' to show licenses for all currently used modules.
 bs>
