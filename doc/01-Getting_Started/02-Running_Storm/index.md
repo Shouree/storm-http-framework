@@ -5,7 +5,7 @@ This section of the manual covers how to start Storm once it is [installed](md:.
 on your system. This part of the manual mainly covers how to launch Storm from the command-line or
 from other systems. As such, if you are only interested in launching one of the
 [programs](md:/Programs) that are distributed alongside Storm, you only need to read the subsection
-[running programs](md:Running_Bundled_Programs).
+[running programs](md:Bundled_Programs).
 
 This section covers is structured as follows:
 
@@ -34,4 +34,4 @@ This section covers is structured as follows:
 
   This page describes how to load and execute larger programs, saved in files on disk. This is
   useful for launching your own programs, programs that are distributed separately from Storm
-  itself, or when [developing programs in Storm](md:../Developing_Programs).
+  itself, or when [developing programs in Storm](md:../Developing_in_Storm).

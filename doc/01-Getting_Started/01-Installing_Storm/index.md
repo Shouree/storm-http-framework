@@ -8,7 +8,7 @@ Storm. If you intend to develop programs in Storm, you might want to have a look
 convenient development experience.
 
 If you plan on using Storm from a terminal, you might wish to read
-[this page](md:/Getting_Started/Running_Storm/In_a_Terminal) after installing Storm.
+[this page](md:/Getting_Started/Running_Storm/In_the_Terminal) after installing Storm.
 
 
 Windows
