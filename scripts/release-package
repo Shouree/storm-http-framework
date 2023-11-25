@@ -41,6 +41,15 @@ then
     gc=_smm
 fi
 
+function fix_name_case {
+    if [[ $arch == *_win* ]]
+    then
+	echo $1
+    then
+	echo ${1^}
+    fi
+}
+
 function launcher {
     fn=${1%%@*}
     envvars=$(expr match "$1" '.*@\(.*\)')
@@ -52,13 +61,13 @@ function launcher {
 	(
 	    echo '#!/bin/bash'
 	    echo 'DIR=$(dirname "$0")'
-	    echo 'chmod +x "$DIR"/Storm'
+	    echo 'chmod +x "$DIR"/storm'
 	    while [ ! "x$envvars" == "x" ]
 	    do
 		echo "export ${envvars%%@*}"
 		envvars=$(expr match "$envvars" '.*@\(.*\)')
 	    done
-	    echo "exec \"\$DIR\"/Storm -f $fn"
+	    echo "exec \"\$DIR\"/storm -f $fn"
 	) > "$2"
 	chmod +x "$2"
     fi
@@ -133,14 +142,14 @@ add_rename Plugin/emacs.el storm-mode.el
 for l in $launchers
 do
     name=${l%%.*}$scr
-    name=${name^} # upcase first letter
+    name=$(fix_name_case $name)
     launcher "$l" "$name"
     eval $add $OUT "$name" > /dev/null
     rm "$name"
 done
 
 # Add the main executable
-add_rename_custom ${OUT} release${namesuffix}/Storm${gc}$exe Storm$exe
+add_rename_custom ${OUT} release${namesuffix}/Storm${gc}$exe $(fix_name_case Storm$exe)
 
 # Make it the proper name.
 mv ${OUT} ${OUT_BASE}_${arch}${OUT_EXT}
