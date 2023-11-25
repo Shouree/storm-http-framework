@@ -22,7 +22,7 @@ Linux
 
 If you installed Storm by downloading an archive from this webpage, the easiest way to start an
 application is to navigate to the directory where you extracted the archive and double-click the
-`.sh` file that corresponds to the program you wish to start. For example, `Progvis.sh` to launch
+`.sh` file that corresponds to the program you wish to start. For example, `progvis.sh` to launch
 Progvis.
 
 If you installed Storm from the system repositories, you can find applications (like Progvis) in the

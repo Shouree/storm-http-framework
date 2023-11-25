@@ -1,11 +1,11 @@
 The Top Loop
 ============
 
-When `Storm` is launched without any parameters, it launches the top loop. In this mode, the system
+When `storm` is launched without any parameters, it launches the top loop. In this mode, the system
 provides an interactive prompt, similar to a shell. This prompt allows evaluating expressions in
 Basic Storm, both to test the language, and to interact with the system as a whole.
 
-Note that the command `Storm` might need to be modified on your system. See [this
+Note that the command `storm` might need to be modified on your system. See [this
 page](md:In_the_Terminal) for more details.
 
 

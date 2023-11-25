@@ -13,7 +13,10 @@ path that corresponds to where you extracted Storm.
 Windows
 -------
 
-On Windows, you have the following options to be able to run Storm in a terminal (e.g. cmd.exe, or PowerShell):
+On Windows, you have the following options to be able to run Storm in a terminal (e.g. cmd.exe, or
+PowerShell). Note that even if the Storm executable is named `Storm.exe` (with an uppercase `S`), it
+is enough to type just `storm` since Windows is case-insensitive, and appends the `.exe` extension
+automatically.
 
 - **Navigate to the directory where you installed Storm**
 
@@ -52,7 +55,7 @@ On Windows, you have the following options to be able to run Storm in a terminal
   shows the environment variables in the system. Find the list entry `Path` in the topmost list, and
   click "Edit". In the new dialog, add `;C:\Path\to\storm` (note: not the name of the `.exe` file)
   and close all dialogs with OK. You may need to restart your terminal for the changes to take
-  effect. After this you should be able to launch Storm just by typing `Storm`.
+  effect. After this you should be able to launch Storm just by typing `storm`.
 
 
 Linux
@@ -71,8 +74,8 @@ If you have installed Storm by extracting an archive from this page, you have th
   systems are configured to require typing `./Storm` rather than just `Storm`. For example:
 
   ```
-  cd ~/Path/to/storm
-  ./Storm
+  cd ~/path/to/storm
+  ./storm
   ```
 
   This has the benefit that it does not require additional configuration, and is therefore great
@@ -86,7 +89,7 @@ If you have installed Storm by extracting an archive from this page, you have th
   name in double quotes (`"`), or escape spaces with a backslash (`\`). For example:
 
   ```
-  ~/path/to/storm/Storm
+  ~/path/to/storm/storm
   ```
 
 - **Add an alias to your shell**
@@ -96,11 +99,11 @@ If you have installed Storm by extracting an archive from this page, you have th
   line to the end of the file `~/.bashrc`:
 
   ```
-  alias Storm=~/path/to/storm/Storm
+  alias storm=~/path/to/storm/storm
   ```
 
   To make the alias visible, either restart your shell, or reload the configuration by typing
-  `source ~/.bashrc`.
+  `source ~/.bashrc`. After that, you can launch Storm by simply typing `storm`.
 
   Note, that aliases often not visible to scripts.
 
@@ -115,4 +118,4 @@ If you have installed Storm by extracting an archive from this page, you have th
   ```
 
   To make the alias visible, either restart your shell, or reload the configuration by typing
-  `source ~/.bashrc`.
+  `source ~/.bashrc`. After that, you can launch Storm by simply typing `storm`.
