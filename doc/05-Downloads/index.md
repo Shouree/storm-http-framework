@@ -52,18 +52,23 @@ those that wish to experiment:
 Source Releases
 ---------------
 
-The source code is freely available through Git at the following URL:
+The source code is freely available through Git at the URL `git://storm-lang.org/storm.git`. The
+repository contains submodules. To clone the entire repository, including submodules, the following
+command can be used:
 
-`git clone git://storm-lang.org/storm.git`
+```
+git clone --recursive git://storm-lang.org/storm.git
+```
 
-The repository contains a few submodules. After cloning the repository, you need to fetch the
-submodules as well:
+If the submodules are missing for some reason, they can be cloned at a later time by running:
 
-`git submodule init`
+```
+git submodule init
+git submodule update
+```
 
-`git submodule update`
-
-Instructions on compiling Storm from source are available in [the getting started section](md:/Getting_Started/Installing_Storm).
+Instructions on compiling Storm from source are available in [the getting started
+section](md:/Getting_Started/Developing_in_Storm/Compile_from_Source).
 
 
 License
