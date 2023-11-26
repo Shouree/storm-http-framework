@@ -1,0 +1,15 @@
+use sql;
+
+void main() {
+	ExampleDB db(SQLite());
+
+	// Add example data:
+	WITH db {
+		INSERT INTO authors(id, name) VALUES (1, "author1");
+		INSERT INTO books(author, title) VALUES (1, "book1");
+		INSERT INTO books(author, title) VALUES (1, "book2");
+	}
+
+	var authors = getBooksBy(db, "author1");
+	print(authors.toS);
+}

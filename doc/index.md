@@ -12,72 +12,71 @@ are implemented in Storm, they allow users to create their own **syntax extensio
 libraries. Furthermore, Storm allows languages to **interact** with each other freely and mostly
 seamlessly.
 
-Aside from extensibility, Storm is implemented as an **interactive compiler**. This means that Storm is
-designed to be executed in the background while programs are being developed. As the compiler is
+Aside from extensibility, Storm is implemented as an **interactive compiler**. This means that Storm
+is designed to be executed in the background while programs are being developed. As the compiler is
 running in the background, it is able to provide information about the program being developed to
-help the developer, much like an IDE. Currently, it is possible to run Storm as a
-[language server](md:/Storm/Language_server) that provides syntax highlighting for all supported
-languages and language extensions to an editor, such as [Emacs](md:/Storm/Language_server/Emacs_plugin).
-In the future, the language server should be able to provide more semantic information as well.
-More information on the language server can be found
-[here](http://urn.kb.se/resolve?urn=urn:nbn:se:liu:diva-138847).
+help the developer, much like an IDE. Currently, it is possible to run Storm as a [language
+server](md:/Getting_Started/Language_server) that provides syntax highlighting for all supported
+languages and language extensions to an editor, such as Emacs. In the future, the language server
+should be able to provide more semantic information as well. More information on the language server
+can be found [here](http://urn.kb.se/resolve?urn=urn:nbn:se:liu:diva-138847).
 
-The following example illustrates some of the possibilities of Storm:
+The example below illustrates the capabilities of Storm:
 
 ```bs
-<?include:presentation/test/simple.bs?>
+<?include:sql/tests/example.bs?>
 ```
 
-In this example, we use a language extension that allows creating presentation slides in a
-declarative manner. This extension is not a part of Basic Storm, it is implemented as a language
-extension that is included with the `use presentation;` statement on the first line. The language
-extension adds a `presentation`-block declares functions that create presentation. This presentation
-is then used inside the `main` function to show the presentation. The example also shows that the
-language extension is able to execute arbitrary Storm code in most locations by creating a random
-caption and storing it in the variable `caption`, which is later used in the slide declarations.
-
-The syntax used to define the syntax language, together with other examples illustrating the
-capabilities of Storm can be found on the [Examples](md:/Introduction/Examples) page.
+The example uses the SQL library, which provides a *syntax extension* to Basic Storm that allows
+treating SQL queries as expressions. Together with the database declaration at the top of the
+example, this allows the SQL library to type-check queries. The type information is also used to
+make it possible to extract the results in a convenient and type-safe way. Furthermore, since the
+extension knows which parameters originate from variables in the code, it is able to automatically
+use prepared statements to avoid problems with SQL injection.
 
 
-Getting started
+Getting Started
 ----------------
 
-If you are interested in Storm and want to learn more, check out some of these sections:
+If you are interested in Storm and want to learn more, the [getting started](md:/Getting_Started)
+page is a good place to start. Apart from the getting started section, this page also contains the
+manual for Storm among other things.
 
-* [Introduction](md:/Introduction/) contains instructions describing how to download and install
-  Storm, and a couple of examples to show what Storm can do.
+- [**Getting Started**](md:/Getting_Started)
 
-* [Storm](md:/Storm/) contains documentation on Storm itself. This information is not tied to any
-  particular language, but applies to all languages in Storm.
+  This part of the manual aims to introduce Storm by providing step-by-step instructions that
+  illustrate how to use the system. These instructions start simple by providing detailed
+  instructions on how to install Storm and run programs in Storm. From there, it gradually builds up
+  to more advanced examples that illustrate the unique features of Storm. These examples are not
+  ment to be complete, but rather to provide a starting point for exploring the system further
+  through the [reference](md:/Language_Reference) [sections](md:/Library_Reference) of the manual
+  and the [built-in documentation](md:/Getting_Started/Running_Storm/Getting_Help).
 
-* [Basic Storm](md:/Basic_Storm/) contains information about the language Basic Storm that is
-  bundled with Storm by default. Refer to this part of the documentation for concrete information
-  about syntax and functionality you will see while using Storm.
+- [**Language Reference**](md:/Language_Reference)
 
-* [BNF Syntax](md:/BNF_Syntax/) contains information on the language used to define syntax in
-  Storm. Refer to this part of the documentation if you are interested in creating new languages or
-  syntax extensions to other languages.
+  The language reference provides a detailed description of the different languages used in Storm.
+  It starts by introducing the ideas behind Storm itself in a language-agnostic setting, and then
+  continues to describe the general purpose language [Basic
+  Storm](md:/Language_Reference/Basic_Storm), [the Syntax
+  Language](md:/Language_Reference/The_Syntax_Language), and the [intermediate
+  representation](md:/Language_Reference/Intermediate_Language) in more detail.
 
-* [Libraries](md:/Libraries/) describes some of the libraries included with Storm. For example, a
-  library for creating [GUI applications](md:/Libraries/Gui), for [sound playback](md:/Libraries/Sound),
-  and for making [presentations](md:/Libraries/Presentation).
+- [**Library Reference**](md:/Library_Reference)
 
-* [Programs](md:/Programs/) contains documentation on a number of programs written in Storm and
-  included in the download. These show what is possible to do in Storm.
+  To complement the language reference, the library reference covers the library functions that are
+  available. This covers both the [standard library](md:/Library_Reference/Standard_Library)
+  provided by Storm, the interfaces provided to aid in [creating
+  languages](md:/Library_Reference/Compiler_Library), and other libraries that are included with the
+  system.
 
-Note that the main goal of the documentation provided here is to get you started in using the
-language and to give an understanding of the language. It will not discuss specific APIs or the
-standard library in depth. For that kind of documentation, please refer to the built-in
-documentation in Storm. In the Basic Storm REPL, type `help <name>` to access documentation for
-entities in the system. For example: `help core:Str` will tell you about the string type and its
-members. `help core:Str:find` will tell you that there are two overloads of `find`.
+- [**Programs**](md:/Programs)
 
-You can also access the documentation in Storm using the
-[Emacs plugin](md:/Storm/Language_server/Emacs_plugin). Run the command `M-x storm-doc`
-and enter the name of the thing you want to see documentation for. The Emacs plugin allows interactive
-browsing of the documentation and provides auto completion for the name entry which makes it easy
-to explore the contents of packages.
+  A number of larger programs have been developed in Storm, and are included with Storm by default.
+  They are documented in this part of the manual.
+
+- [**Downloads**](md:/Downloads)
+
+  This page lists the binary releases of Storm in a way that is easy to access.
 
 
 Contact

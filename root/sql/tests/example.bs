@@ -1,0 +1,31 @@
+use sql;
+
+// Database declaration of a database for storing
+// authors and their books.
+DATABASE ExampleDB {
+	TABLE authors(
+		id INTEGER PRIMARY KEY,
+		name TEXT
+	);
+
+	TABLE books(
+		id INTEGER PRIMARY KEY,
+		author INTEGER,
+		title TEXT
+	);
+}
+
+Str[] getBooksBy(ExampleDB db, Str authorName) {
+	Str[] result;
+	WITH db {
+		// Query the database:
+		var query = SELECT books.title AS title FROM books
+			JOIN authors ON authors.id == books.author
+			WHERE authors.name == authorName;
+		// Extract the result:
+		for (row in query) {
+			result.push(row.title);
+		}
+	}
+	return result;
+}
