@@ -7,17 +7,24 @@ successively integrate different parts of Storm into an editor (currently, Emacs
 development easier. Finally, it covers how to compile Storm from source code, which allows making
 changes to Storm itself, and to develop libraries that interact with native system libraries.
 
+This part of the manual contains the following subsections:
 
-- Source References
+- [**Source References**](md:Source_References)
 
-  Covers how to interpret error messages in Storm, and how to automatically jump to errors in Emacs.
+  Covers how to interpret the source references in error messages produced by Storm.
 
-- Compilation Model
+- [**Compilation Model**](md:Compilation_Model)
 
-  Describes some implications of Storm's lazy compilation.
+  Illustrates some potential surprises about how Storm's compilation model impact when errors are
+  reported. In particular, even though languages in Storm are generally statically typed and
+  compiled ahead of time, errors may be reported later than you may expect in some situations.
 
-- Compiling From Source
+- [**Compile from Source**](md:Compile_from_Source)
 
-- Compilation in Emacs
+  Describes how to compile Storm from source code.
 
-- Syntax Highlighting
+- [**Emacs Integration**](md:Emacs_Integration)
+
+  Describes how to develop in Storm conveniently from Emacs with the help of the Storm plugin. This
+  includes how to set up the language server for syntax highlighting and browsing the built-in
+  documentation.

@@ -333,19 +333,22 @@ Using Mymake to Run Storm
 -------------------------
 
 When developing Storm with Mymake, it is often convenient to let Mymake handle both compilation and
-execution of Storm. This means that it is enough to keep track of a single command line rather than
-separate ones for compiling and running the program.
+execution of Storm. This means that it is enough to keep track of a single command line for building
+and testing the program, rather than keeping track of separate ones.
 
-To do this, it is, however, often necessary to pass parameters to Storm. This can be achieved by
-adding a `--` on the command line, followed by the command line parameters that should be given to
-Storm. For example, to pass the parameters `-f progvis.main` to Storm upon successful compilation,
-one can invoke Mymake as follows:
+To test a specific piece of code in Storm, it is necessary to pass parameters to the compiled Storm
+program. Mymake enables this by passing any parameters specified after the special parameter `--`
+directly to the compiled program. As such, anything that appears after a `--` on the Mymake command
+line will be passed directly to Storm. For example, to pass the parameters `-f progvis.main` to
+Storm upon successful compilation, specify the following parameters to Mymake:
 
 ```
 mm Main -- -f progvis.main
 ```
 
-Integration in Emacs
---------------------
-
-...
+Other parameters, like `-i` or names of files, can be specified as usual as well. Note, however,
+that even though it is possible to execute Mymake in any subdirectory in the Storm repository,
+Mymake will set the current directory to the root of the repository before doing anything. This
+means that any relative paths passed to Storm will be incorrect, and errors will be reported. As
+such, to avoid this kind of surprises, it is a good idea to always run Mymake in the root of the
+Storm repository.

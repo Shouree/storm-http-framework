@@ -473,6 +473,7 @@
     (when (consp entries)
       (sort entries (lambda (a b) (< (car a) (car b)))))))
 
+;; TODO: We can use 'defsubst' instead!
 (defmacro storm-check-edits (pos min-pos max-pos edits)
   "Update 'pos' according to the history in 'edits'. Consumes entries from 'edits'."
   `(while (and (consp ,edits)

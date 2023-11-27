@@ -16,10 +16,10 @@ Aside from extensibility, Storm is implemented as an **interactive compiler**. T
 is designed to be executed in the background while programs are being developed. As the compiler is
 running in the background, it is able to provide information about the program being developed to
 help the developer, much like an IDE. Currently, it is possible to run Storm as a [language
-server](md:/Getting_Started/Language_server) that provides syntax highlighting for all supported
-languages and language extensions to an editor, such as Emacs. In the future, the language server
-should be able to provide more semantic information as well. More information on the language server
-can be found [here](http://urn.kb.se/resolve?urn=urn:nbn:se:liu:diva-138847).
+server](md:/Getting_Started/Developing_in_Storm/Emacs_Integration) that provides syntax highlighting
+for all supported languages and language extensions to an editor, such as Emacs. In the future, the
+language server should be able to provide more semantic information as well. More information on the
+language server can be found [here](http://urn.kb.se/resolve?urn=urn:nbn:se:liu:diva-138847).
 
 The example below illustrates the capabilities of Storm:
 

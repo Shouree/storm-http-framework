@@ -43,39 +43,9 @@ To fix the error, we need to convert `i` to a string by adding `.toS`. That is, 
 should read `print("i = " + i.toS);`.
 
 
-Usage with Emacs
-----------------
+Integration with Emacs
+----------------------
 
-To make it easier to go to the location of error messages in Storm, it is possible to teach Emacs
-about the format of errors in Storm, and use the built-in functionality to jump between errors. To
-do this, load the file `storm-mode.el` that is provided in the Storm release (or as
-`Plugin/emacs.el` in the source repository). If you just want to test the functionality once, you
-can open the file in Emacs, then type `M-x` followed by `eval-buffer` and then Enter. If you wish to
-load it permanently, you can instead add the following line to the end of the file `~/.emacs` and
-then restart Emacs:
-
-```
-(load "~/path/to/storm/storm-mode.el")
-```
-
-This adds functionality to the `compile` command in Emacs, so that it understands the format of
-error messages from Storm. To use it, press `M-x`, type `compile` and press Enter. Emacs will then
-ask you what compilation command you wish to execute. Replace the default with for example `storm
-demo.bs` and press Enter. This opens a new buffer where the command `storm demo.bs` is executed. If
-you use the unmodified version of the program above, the error above will appear. Since Emacs knows
-how to interpret the error, it is now underlined and in a different color. This means that we can
-jump to the error by pressing `M-x`, typing `next-error`, and finally pressing Enter. This opens up
-the buffer if it is not already open, places the cursor at the error location, and briefly
-highlights the characters that contain the error (the `+` in this case). If there are multiple
-errors, it is possible to repeat the process to jump onwards. After fixing the error, use `M-x
-compile` again. Note that Emacs remembers the last command, so it is enough to press Enter twice.
-
-To make the commands above easier to use, it is a good idea to bind them to keys that you find
-convenient. For example, the following code can be added to the end of `~/.emacs` to use `M-p` to
-compile and `M-n` to jump to the next error:
-
-```
-(global-set-key (kbd "M-p") 'compile)
-(global-set-key (kbd "M-n") 'next-error)
-```
-
+To make it easier to jump to the location indicated by error messages, it is possible to teach Emacs
+how errors are formatted by Storm. This is described in the page about [Emacs
+integration](md:Emacs_Integration).

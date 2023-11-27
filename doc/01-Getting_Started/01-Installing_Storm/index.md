@@ -102,4 +102,4 @@ example, to launch Progvis, run `Progvis.sh`.
 
 If Storm starts, but crashes when you import certain libraries, make sure that you have Gtk3 and
 OpenSSL installed. If Storm does not start at all, you might need to [compile it from
-source](md:/Getting_Started/Developing_in_Storm/Compiling_from_Source).
+source](md:/Getting_Started/Developing_in_Storm/Compile_from_Source).
