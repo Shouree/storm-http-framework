@@ -280,7 +280,7 @@
 
 ;; Copy of c-last-command-char, to avoid depending on cc-defs:
 (defun storm-last-command-char ()
-  (if (featurep 'xemaxs)
+  (if (featurep 'xemacs)
       last-command-char
     last-command-event))
 
