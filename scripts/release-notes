@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Release notes"
+echo "Release Notes"
 echo "===="
 echo ""
 

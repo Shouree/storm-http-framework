@@ -21,15 +21,15 @@ function tar_files {
     cd $STORM_ROOT/release
     if [[ -f $notes ]]
     then
-	if [[ $notes != $STORM_ROOT/release/release_notes.md ]]
+	if [[ $notes != $STORM_ROOT/release/release_notes.txt ]]
 	then
-	    cp $notes $STORM_ROOT/release/release_notes.md
+	    cp $notes $STORM_ROOT/release/release_notes.txt
 	fi
     else
-	release-notes > $STORM_ROOT/release/release_notes.md
+	release-notes > $STORM_ROOT/release/release_notes.txt
     fi
     shopt -s nullglob
-    tar cz release_notes.md storm_*.{zip,tar.gz}
+    tar cz release_notes.txt storm_*.{zip,tar.gz}
 }
 
 updateversion=yes

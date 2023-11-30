@@ -19,12 +19,12 @@ Str[] getBooksBy(ExampleDB db, Str authorName) {
 	Str[] result;
 	WITH db {
 		// Query the database:
-		var query = SELECT books.title AS title FROM books
+		var query = SELECT books.title FROM books
 			JOIN authors ON authors.id == books.author
 			WHERE authors.name == authorName;
 		// Extract the result:
 		for (row in query) {
-			result.push(row.title);
+			result.push(row.books.title);
 		}
 	}
 	return result;

@@ -158,7 +158,7 @@ class Node {
 	}
 
 	// Find the root node.
-	private Node findRoot() {
+	Node findRoot() {
 		if (parent)
 			parent.findRoot();
 		else

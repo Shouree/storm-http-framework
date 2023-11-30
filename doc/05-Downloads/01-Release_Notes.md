@@ -1,1 +1,5 @@
-?Include:release_notes.md?
+Release Notes
+=============
+
+```storm:releasenotes
+```

@@ -25,6 +25,9 @@ class StormTheme extends Theme {
 	// Current date.
 	Str date;
 
+	// Release notes to use.
+	Url? releaseNotes;
+
 	// Create.
 	init() {
 		var url = resUrl("storm_res");
@@ -57,6 +60,11 @@ class StormTheme extends Theme {
 			options.remove("date");
 		} else {
 			print("WARNING: Missing --date. Using ${date}.");
+		}
+
+		if (n = options.at("notes")) {
+			releaseNotes = parsePath(n);
+			options.remove("notes");
 		}
 	}
 
@@ -209,6 +217,8 @@ class StormVisitor extends markdown:Visitor {
 		if (elem as CodeBlock) {
 			if (elem.language == "stormdoc")
 				return formatStormDoc(node.source, elem.code);
+			else if (elem.language == "storm:releasenotes")
+				return formatReleaseNotes(node);
 
 			resolveIncludes(elem);
 
@@ -275,6 +285,28 @@ class StormVisitor extends markdown:Visitor {
 			text = theme.date;
 
 		return PlainTextSpan(text);
+	}
+
+	Element formatReleaseNotes(Node node) {
+		Url url = if (n = theme.releaseNotes) {
+			n;
+		} else {
+			Url p = node.findRoot().source().parent() / "release_notes.txt";
+			if (!p.exists()) {
+				print("WARNING: No --notes flag, nor does \"release_notes.txt\" exist. Release notes will be missing.");
+				return Paragraph(FormattedText("No release notes available."));
+			}
+			p;
+		};
+
+		Str data = url.readAllText();
+		var doc = markdown:parse(data);
+
+		PackedElements elements;
+		elements.elements = doc.elements;
+		elements.elements.remove(0);
+
+		elements;
 	}
 
 	// Resolve includes in source listings.

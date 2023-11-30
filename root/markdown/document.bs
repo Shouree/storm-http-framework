@@ -54,6 +54,11 @@ class ElementSeq {
 		elements.append(e.elements);
 	}
 
+	// Remove an element.
+	void remove(Nat id) {
+		elements.remove(id);
+	}
+
 	// Visit the entire structure.
 	ElementSeq visit(Visitor v) {
 		Element[] newElems;

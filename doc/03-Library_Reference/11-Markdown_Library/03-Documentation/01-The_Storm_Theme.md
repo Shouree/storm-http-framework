@@ -11,7 +11,7 @@ options on the command line (or in the `Options` object):
 - `--version=<version>` - the version of Storm the documentation is compiled from. If not specified,
   the version of the current Storm compiler is used.
 - `--date=<date>` - the date which the current version was released on.
-
+- `--notes=<path>` - path to the `release_notes.txt` file. If not specified, attempts to use the file `release_notes.txt` in the root of the documentation tree.
 
 Navigation
 ----------
@@ -79,6 +79,9 @@ requires parameters, they are written after a colon (`:`). The following element
   Resolve `name` and pretty-print the named entity it refers to. If the name starts with `full:`
   then the full package name is used for functions.
 
+- `storm:releasenotes` (as a code listing)
+
+  Inserts the contents of the release notes file.
 
 ### Storm Documentation
 
