@@ -3,14 +3,14 @@ Storm
 
 [downloadbutton:md:/Downloads]
 
-Storm is a **programming language platform** with a strong focus on **extensibility**. Storm itself is
-mostly a framework for creating languages rather than a complete compiler. The framework is designed
-to make easy to implement languages that can be extended with new syntax and semantics. Of course,
-Storm comes bundled with a few languages (mainly [Basic Storm](md:/Language_Reference/Basic_Storm)), but these are
-separate from the core and could be implemented as libraries in the future. Since these languages
-are implemented in Storm, they allow users to create their own **syntax extensions** as separate
-libraries. Furthermore, Storm allows languages to **interact** with each other freely and mostly
-seamlessly.
+Storm is a **programming language platform** with a strong focus on **extensibility**. Storm itself
+is mostly a framework for creating languages rather than a complete compiler. The framework is
+designed to make easy to implement languages that can be extended with new syntax and semantics. Of
+course, Storm comes bundled with a few languages (most importantly [Basic
+Storm](md:/Language_Reference/Basic_Storm)), but these are separate from the core and could be
+implemented as libraries in the future. Since these languages are implemented in Storm, they allow
+users to create their own **syntax extensions** as separate libraries. Furthermore, Storm allows
+languages to **interact** with each other freely and mostly seamlessly.
 
 Aside from extensibility, Storm is implemented as an **interactive compiler**. This means that Storm
 is designed to be executed in the background while programs are being developed. As the compiler is
