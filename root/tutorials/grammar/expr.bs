@@ -1,0 +1,49 @@
+use core:lang;
+use core:io;
+use lang:bs:macro;
+
+class NoVariable extends Exception {
+
+	Str variable;
+
+	init(Str variable) {
+		init { variable = variable; }
+	}
+
+	void message(StrBuf out) : override {
+		out << "No variable named " << variable << " is defined.";
+	}
+}
+
+class VarList {
+	Str->Int values;
+
+	void put(Str name, Int value) {
+		values.put(name, value);
+	}
+
+	Int get(Str name) {
+		if (x = values.at(name)) {
+			x;
+		} else {
+			throw NoVariable(name);
+		}
+	}
+}
+
+void eval(Str expr) {
+	Parser<SStmtList> parser;
+	parser.parse(expr, Url());
+	if (parser.hasError())
+		throw parser.error();
+
+	SStmtList tree = parser.tree();
+
+	VarList variables;
+	Array<Int> results = tree.transform(variables);
+	print("Results: ${results}");
+}
+
+void main() {
+	eval("ans = 42, t = ans * 2 + 1, u = ans + t, ans, t, u");
+}

@@ -1,0 +1,32 @@
+optional delimiter = SOptDelimiter;
+required delimiter = SReqDelimiter;
+
+void SOptDelimiter();
+SOptDelimiter : "[ \n\r\t]*";
+
+void SReqDelimiter();
+SReqDelimiter : "[ \n\r\t]+";
+
+
+Int SExpr(VarList vars);
+SExpr => +(l, r) : SExpr(vars) l, "\+", SProduct(vars) r;
+SExpr => -(l, r) : SExpr(vars) l, "-", SProduct(vars) r;
+SExpr => p : SProduct(vars) p;
+
+Int SProduct(VarList vars);
+SProduct => *(l, r) : SProduct(vars) l, "\*", SAtom(vars) r;
+SProduct => /(l, r) : SProduct(vars) l, "/", SAtom(vars) r;
+SProduct => a : SAtom(vars) a;
+
+Int SAtom(VarList vars);
+SAtom => toInt(nr) : "-?[0-9]+" nr;
+SAtom => e : "(", SExpr(vars) e, ")";
+SAtom => get(vars, name) : "[A-Za-z]+" name;
+
+
+void SStmt(Array<Int> appendTo, VarList vars);
+SStmt => appendTo : SExpr(vars) -> push;
+SStmt => put(vars, name, val) : "[A-Za-z]+" name, "=", SExpr(vars) val;
+
+Array<Int> SStmtList(VarList vars);
+SStmtList => Array<Int>() : SStmt(me, vars) - (, ",", SStmt(me, vars))*;

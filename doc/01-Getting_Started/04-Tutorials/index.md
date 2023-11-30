@@ -32,7 +32,7 @@ good idea to start from the topmost one and work downwards:
   Shows how [serialization](md:/Library_Reference/Standard_Library/IO/Serialization) works in Storm,
   and how it can be used to implement a simple network protocol.
 
-- [**Using Syntax**](md:Using_Syntax)
+- [**Using Grammar**](md:Using_Grammar)
 
   Shows how to use the [syntax language](md:/Language_Reference/The_Syntax_Language) to parse text.
   Transforms are then used to extract the relevant parts of the parse tree and perform simple
