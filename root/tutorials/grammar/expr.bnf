@@ -26,7 +26,7 @@ SAtom => get(vars, name) : "[A-Za-z]+" name;
 
 void SStmt(Array<Int> appendTo, VarList vars);
 SStmt => appendTo : SExpr(vars) -> push;
-SStmt => put(vars, name, val) : "[A-Za-z]+" name, "=", SExpr(vars) val;
+SStmt => put(vars, name, value) : "[A-Za-z]+" name, "=", SExpr(vars) value;
 
 Array<Int> SStmtList(VarList vars);
 SStmtList => Array<Int>() : SStmt(me, vars) - (, ",", SStmt(me, vars))*;

@@ -2,9 +2,14 @@ Using Grammar in Storm
 =====================
 
 This tutorial shows how to use [the Syntax Language](md:/Language_Reference/The_Syntax_Language)
-together with Basic Storm to parse simple strings. As with the other tutorials, the code produced by
-this tutorial is available in `root/tutorials/grammar`. You can run it by typing
-`tutorials:grammar:main` in the Basic Storm interactive top-loop.
+together with Basic Storm to parse simple arithmetic expressions. This tutorial involves
+context-free grammars and regular expressions. It assumes that you have some knowledge of these
+concepts, as the tutorial focuses on how to use context-free grammars and regular expressions in
+Storm.
+
+As with the other tutorials, the code produced by this tutorial is available in
+`root/tutorials/grammar`. You can run it by typing `tutorials:grammar:main` in the Basic Storm
+interactive top-loop.
 
 Setup
 -----
@@ -12,7 +17,14 @@ Setup
 First, we need somewhere to work. Create an empty directory somewhere on your system. The name does
 not matter too much, but it is easier to avoid spaces and numbers in the name since it will be used
 as a package name in Storm. For example, use the name `grammar`. Then, open a terminal and change
-into the directory you just created.
+into the directory you just created. This makes it possible to run the code we will produce by
+typing the following in the terminal:
+
+```
+storm .
+```
+
+Note that it will currently only start the top-loop since we have not yet defined a `main` function.
 
 
 Grammar for Expressions
@@ -434,26 +446,97 @@ In this tutorial, we will not use the grammar to generate an AST, which is often
 languages in Storm. Rather, we will use the syntax transforms to actually *evaluate* the parsed
 expressions directly.
 
-
-Let's use transforms instead! Remove the names and add transforms!
-
+Since we will not need the production names anymore, we remove them an replace them with syntax
+transforms instead. We start by modifying the rule definitions. Since we will use the transforms to
+evaluate expressions, we want to return a value from the transform functions. To simplify the
+semantics, we limit ourselves to integers and thereby replace the return type with `Int`:
 
 ```bnf
 Int SExpr();
-SExpr => p : SProduct p;
-SExpr => +(l, r) : SExpr l, "\+", SProduct r;
-SExpr => -(l, r) : SExpr l, "-", SProduct r;
-
 Int SProduct();
-SProduct => a : SAtom a;
+Int SAtom();
+```
+
+We also need to modify the productions to actually return a value. This is done by adding an arrow
+(`=>`) followed by a simple expression that should be evaluated to create the value. Note that these
+simple expressions in the Syntax Language may only consist of a single function call, a single
+constructor call, or the name of a variable. We start with the productions for `SExpr`. The first
+one (for addition) needs to compute the sum of the left hand side and right hand side of the `+`.
+Since we have declared that both `SExpr` and `SProduct` return an `Int`, both `l` and `r` are
+integers, which means that we can simply call the `+` operator in Storm by adding `=> +(l, r)` as
+follows:
+
+```bnf
+SExpr => +(l, r) : SExpr l, "\+", SProduct r;
+```
+
+This means that whenever the rule is matched, we will first evaluate the left-hand side and bind it
+to `l`, then the right-hand side and bind it to `r`, and finally call `+(l, r)` (which is the same
+as `l + r` in Basic Storm), bind it to `me`, and finally return it to the caller.
+
+We do the same thing for `-`:
+
+```bnf
+SExpr => -(l, r) : SExpr l, "-", SProduct r;
+```
+
+For the last production in `SExpr`, we do not need to perform any computations. We simply need to
+forward the value of the `SProduct` match. We can do that by simply specifying the variable we wish
+to return after the arrow (`=>`) like so:
+
+```bnf
+SExpr => p : SProduct p;
+```
+
+The three productions for `SProduct` are nearly identical to the productions in `SExpr` and can be
+modified in the same way:
+
+```bnf
 SProduct => *(l, r) : SProduct l, "\*", SAtom r;
 SProduct => /(l, r) : SProduct l, "/", SAtom r;
+SProduct => a : SAtom a;
+```
+
+Finally, we need to modify the productions for `SAtom`. The first one matches numbers. However,
+since we bind the text that matched the regular expression to the variable `nr` it will have the
+type `Str`, but we need to return an `Int`. Luckily, the `Str` class has a member called `toInt`
+that performs the conversion for us. To call it, we can add `=> toInt(nr)` to the production as
+follows:
+
+```bnf
+SAtom => toInt(nr) : "-?[0-9]+" nr;
+```
+
+The second and last production for handling parentheses is similar to the ones in `SExpr` and
+`SProduct`. Since this production is only used to enforce the correct order of operations, it is
+enough to simply return the value of `e`:
+
+```bnf
+SAtom => e : "(", SExpr e, ")";
+```
+
+To summarize, the grammar should now look like as follows:
+
+```bnf
+Int SExpr();
+SExpr => +(l, r) : SExpr l, "\+", SProduct r;
+SExpr => -(l, r) : SExpr l, "-", SProduct r;
+SExpr => p : SProduct p;
+
+Int SProduct();
+SProduct => *(l, r) : SProduct l, "\*", SAtom r;
+SProduct => /(l, r) : SProduct l, "/", SAtom r;
+SProduct => a : SAtom a;
 
 Int SAtom();
 SAtom => toInt(nr) : "-?[0-9]+" nr;
 SAtom => e : "(", SExpr e, ")";
 ```
 
+We can now modify the `eval` function in Basic Storm to use the syntax transforms. This is done by
+calling the `transform` member of the root node of the tree. This causes the transforms for the root
+node to be evaluated. Since the root node uses the value of other nodes, this will cause the
+relevant parts of the parse tree to be evaluated. Finally, we simply print the result:
 
 ```bs
 void eval(Str expr) on Compiler {
@@ -465,31 +548,24 @@ void eval(Str expr) on Compiler {
 }
 ```
 
-Try with some different expressions.
+Experiment with a few different expressions to see how the system works. It might also be
+interesting to add other operators to the syntax. For example, it is fairly easy to add `min(x, y)`
+and `max(x, y)` to the grammar by adding new productions to the `SAtom` production.
 
 
 Parameters in the Syntax
 ------------------------
 
-Let's add variables!
+So far, we have not needed to use parameters to productions in the syntax. To illustrate this, let's
+add support for variables to our small language. The goal is to provide the syntax transforms with a
+data structure, `VarList`, that contains a collection of named values that should be usable. This
+allows writing expressions like: `a * 2`, or `x + y * 2`, for example.
 
-First, we add a class for our variables with associated exception:
+First, we define a class that stores our variables:
 
 ```bs
-class NoVariable extends Exception {
-
-    Str variable;
-
-    init(Str variable) {
-        init { variable = variable; }
-    }
-
-    void message(StrBuf out) : override {
-        out << "No variable named " << variable << " is defined.";
-    }
-}
-
 class VarList {
+
     Str->Int values;
 
     void put(Str name, Int value) {
@@ -504,24 +580,62 @@ class VarList {
         }
     }
 }
+```
 
-void eval(Str expr) {
-    Parser<SExpr> parser;
-    parser.parse(expr, Url());
-    SExpr tree = parser.tree();
+As we can see, the class is essentially a thin wrapper around a regular `Map`. It would be
+sufficient for our purposes to just use a `Map`, but creating a wrapper in this manner lets us
+customize the `get` function to throw a nicer error, and makes it easier to extend it in the future
+with custom operations that might be required by the syntax.
 
-    VarList variables;
-    variables.put("ans", 42);
-    Int result = tree.transform(variables);
-    print("${expr} evaluated to ${result}");
-}
+Since we throw a custom exception in the `get` function, we also need to define the exception class:
 
-void main() {
-    eval("1 + ans");
+```bs
+class NoVariable extends Exception {
+
+    Str variable;
+
+    init(Str variable) {
+        init { variable = variable; }
+    }
+
+    void message(StrBuf out) : override {
+        out << "No variable named " << variable << " is defined.";
+    }
 }
 ```
 
-And modify the rules (likely, step-by-step):
+After doing this, we can start extending the grammar. To use variables we add a new production to
+the `SAtom` rule:
+
+```bnf
+SAtom : "[A-Za-z]+" name;
+```
+
+This rule matches a string of one or more letters and binds it to the variable `name`. However, we
+run into problems when trying to implement the transform for it. We wish to call the `get` function
+of a `VarList` object, but we do not have access to such an object. To solve the problem, we can add
+a parameter to the `SAtom` rule as follows:
+
+```bnf
+Int SAtom(VarList vars);
+```
+
+This means that whenever the transform for an `SAtom` is called, the caller needs to supply a list
+of variables. This makes it possible to write the transform function for our new production as
+follows:
+
+```bnf
+SAtom => get(vars, name) : "[A-Za-z]+" name;
+```
+
+This is good so far, but if we try to run the code at this point we will get an error that says:
+"Can not transform a grammar.SAtom with parameters: ()". This means that we have not passed all
+required parameters to the transform function in our grammar. This is indeed true, since we are
+transforming `SAtom` in the productions for `SProduct` for example. To solve this problem, we need
+to update our grammar so that both `SExpr` and `SProduct` accept a `VarList` as a parameter, and
+passes it forward. To do this, add parentheses after the rule names in the productions and add the
+name of the variable that shall be passed as a parameter. This makes the rules look like function
+calls. After doing this modification, the grammar looks like this:
 
 ```bnf
 Int SExpr(VarList vars);
@@ -540,24 +654,166 @@ SAtom => e : "(", SExpr(vars) e, ")";
 SAtom => get(vars, name) : "[A-Za-z]+" name;
 ```
 
+Finally, we need to update the code in the `eval` function to pass a `VarList` object as a
+parameter. To be able to test our implementation, we also add the variable `ans` to the list as
+well:
+
+
+```bs
+void eval(Str expr) {
+    Parser<SExpr> parser;
+    parser.parse(expr, Url());
+    SExpr tree = parser.tree();
+
+    VarList variables;
+    variables.put("ans", 42);
+    Int result = tree.transform(variables);
+    print("${expr} evaluated to ${result}");
+}
+```
+
+Now, we can test the implementation by evaluating an expression like `1 + ans` by modifying `main`:
+
+```bs
+void main() {
+    eval("1 + ans");
+}
+```
+
+
 Transforms with Side-Effects
 ----------------------------
 
-Now, we can add support for assignments!
+So far, we are only able to use pre-defined variables, not define new ones. Lets extend the language
+further to make it possible to create new variables from within the language. The goal is to create
+a language where we can specify one or more *statements* separated by commas. A statement is either
+an assignment (`<variable> = <expression>`) or just an expression. The language evaluates all
+statements in order, and records the value of all statements that were not assignments. For example,
+the string:
+
+```
+a = 20, b = a - 10, a + b, b - a
+```
+
+Produces the result: `30, 10`.
+
+To implement the grammar for this, we start by defining a new rule, `SStmt`, that accepts a variable
+list like before. The rule has two productions, one for an assignment, and one for a plain
+expression:
+
+```bnf
+void SStmt(VarList vars);
+SStmt : SExpr(vars) expr;
+SStmt : "[A-Za-z]+" name, "=", SExpr(vars) value;
+```
+
+We can then create a rule that matches a series of these values: `SStmtList`:
+
+```bnf
+void SStmtList(VarList vars);
+SStmtList : SStmt(vars) - (, ",", SStmt(vars))*;
+```
+
+The production that matches the list might look a bit complex at first since it uses the repetition
+syntax. The goal is to match `SStmt` one or more times, but with a comma between each occurrence.
+First, it matches `SStmt` once, outside the repetition syntax. Then it specifies the `-` separator
+since we do not want to match anything more before the parenthesis. The parenthesis is matched zero
+or more times since it ends with a `*`. Each time it matches an optional whitespace, a comma,
+another optional whitespace, followed by a `SStmt`.
+
+To illustrate the behavior, let's expand the repetiton a number of times to see the pattern clearer:
+
+```bnf
+SStmtList : SStmt(vars);                            // Repeated 0 times
+SStmtList : SStmt(vars), ",", SStmt(vars);                   // 1 time
+SStmtList : SStmt(vars), ",", SStmt(vars), ",", SStmt(vars); // 2 times
+// ...
+```
+
+The problem that remains is to write syntax transforms that implement our desired behavior. The
+production for the assignment is the easiest one, so let's start there. For this production, we can
+simply store the value of the new variable by calling `put` in our `VarList` class:
+
+```bnf
+SStmt => put(vars, name, value) : "[A-Za-z]+" value, "=", SExpr(vars) value;
+```
+
+The other productions are a bit trickier. The goal is to save the value of all non-assignment
+expressions in an array. So let's start by updating the return type of `SStmtList`. Note that it is
+*not* possible to use the shorthand `Int[]` in the Syntax Language:
+
+```bnf
+Array<Int> SStmtList();
+```
+
+Then, we need to write the the syntax transform in the `SStmtList` transform. We can start by simply
+creating an array:
+
+```bnf
+SStmtList => Array<Int>() : SStmt(vars) - (, ",", SStmt(vars))*;
+```
+
+This will work, but the array will always be empty since we never added anything to it. One option
+to do this would be to use the `->` syntax to call the `push` member of the array for each `SStmt`.
+This can be done as follows:
+
+```bnf
+SStmtList => Array<Int>() : SStmt(vars) -> push - (, ",", SStmt(vars) -> push)*;
+```
+
+This does, however **not** work in this situation, as we only wish to add the non-assignment
+statements. The rule above would add *all* statements. It would also require that the `SStmt` rule
+would return an `Int`, which is not currently the case.
+
+Instead, we can pass the array as a parameter to the `SStmt` rule, and let the productions there add
+themselves to the array whenever it is suitable. As such, we modify the rule `SStmt` as follows:
+
+```bnf
+void SStmt(Array<Int> appendTo, VarList vars);
+```
+
+This means that we need to modify the `SStmtList` production to pass the array to the `SStmt` rule.
+For this, we utilize the fact that the expression to be returned is bound as the variable `me` in
+the rule. We can thereby use `me` to pass it to `SStmt`:
+
+```bnf
+SStmtList => Array<Int>() : SStmt(me, vars) - (, ",", SStmt(me, vars))*;
+```
+
+Finally, we need to actually add the result of expressions to the array. There are two ways in which
+we can do this. The first one is to call `push` in the expression after the arrow as follows:
+
+```bnf
+SStmt => push(appendTo, expr) : SExpr(vars) expr;
+```
+
+Another option that abuses the semantics of the Syntax Language slightly is to utilize the fact that
+`SStmt` returns `void`, and we may therefore bind anything to the variable `me` to be able to use
+the `->` syntax. For our current purposes they are equivalent, but this approach has the benefit
+that it is possible to call members multiple times in the same production. For example, this is
+particularly useful when a production contains repetition:
+
+```bnf
+SStmt => appendTo : SExpr(vars) -> push;
+```
+
+In the end, the new grammar we added to the file is the following:
 
 ```bnf
 void SStmt(Array<Int> appendTo, VarList vars);
 SStmt => appendTo : SExpr(vars) -> push;
-SStmt => put(vars, name, val) : "[A-Za-z]+" name, "=", SExpr(vars) val;
+SStmt => put(vars, name, value) : "[A-Za-z]+" name, "=", SExpr(vars) value;
 
 Array<Int> SStmtList(VarList vars);
 SStmtList => Array<Int>() : SStmt(me, vars) - (, ",", SStmt(me, vars))*;
 ```
 
-Changes to the BS file:
+
+With the grammar done, the only remaining thing is to update the `eval` function once more to use
+our revised syntax:
 
 ```bs
-void eval(Str expr) {
+void eval(Str expr) on Compiler {
     Parser<SStmtList> parser;
     parser.parse(expr, Url());
     if (parser.hasError())
@@ -571,4 +827,10 @@ void eval(Str expr) {
 }
 ```
 
-For input `eval("ans = 42, t = ans * 2 + 1, u = ans + t, ans, t, u")` outputs: `42, 85, 127`
+We can then modify `main` to verify that our implementation seems to work:
+
+```bs
+void main() on Compiler {
+    eval("a = 20, b = a - 10, a + b, a - b");
+}
+```

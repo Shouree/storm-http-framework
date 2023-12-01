@@ -47,5 +47,5 @@ This section will introduce some of the central concepts for creating extensions
 this documentation aims to provide a high-level picture of the processes, the curious developer is
 encouraged to explore the source code documentation of the classes in `lang:bs`, particularly
 classes that inherit from `lang:bs:Expr`. There are also
-[tutorials](md:/Getting_Started/Tutorials/Basic_Storm_Extension) for getting started with developing
+[tutorials](md:/Getting_Started/Tutorials/New_Expressions) for getting started with developing
 language extensions.

@@ -16,6 +16,7 @@ class NoVariable extends Exception {
 }
 
 class VarList {
+
 	Str->Int values;
 
 	void put(Str name, Int value) {
@@ -45,5 +46,5 @@ void eval(Str expr) on Compiler {
 }
 
 void main() on Compiler {
-	eval("ans = 42, t = ans * 2 + 1, u = ans + t, ans, t, u");
+	eval("a = 20, b = a - 10, a + b, a - b");
 }
