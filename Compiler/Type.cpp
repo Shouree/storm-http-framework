@@ -290,6 +290,14 @@ namespace storm {
 		if (to == this)
 			return;
 
+		// Check so that values only inherit from values, and classes only from classes.
+		if (to && value() != to->value()) {
+			StrBuf *msg = new (engine) StrBuf();
+			*msg << S("The type ") << identifier() << S(" can not extend the type ")
+				 << to->identifier() << S(" since one is a value, and the other is not.");
+			throw new (engine) TypedefError(pos, msg->toS());
+		}
+
 		if (!chain)
 			chain = new (this) TypeChain(this);
 
