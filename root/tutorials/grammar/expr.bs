@@ -31,7 +31,7 @@ class VarList {
 	}
 }
 
-void eval(Str expr) {
+void eval(Str expr) on Compiler {
 	Parser<SStmtList> parser;
 	parser.parse(expr, Url());
 	if (parser.hasError())
@@ -44,6 +44,6 @@ void eval(Str expr) {
 	print("Results: ${results}");
 }
 
-void main() {
+void main() on Compiler {
 	eval("ans = 42, t = ans * 2 + 1, u = ans + t, ans, t, u");
 }

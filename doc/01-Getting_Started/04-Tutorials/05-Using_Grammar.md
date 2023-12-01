@@ -70,10 +70,10 @@ convenient to prefix the names of things in the Syntax Language with `S` for two
 1. It makes it very clear when we are referring to things in the Syntax Language.
 
 2. It avoids name collisions between types generated for the parse tree, and types for other
-   representations. For example, Basic Storm has a type `Expr` that represents a node in the AST.
-   The syntax also has a rule that corresponds to an expression. This rule is named `SExpr`, since
-   the type generated for the parse tree would otherwise have the same name as the corresponding AST
-   node.
+   representations. For example, Basic Storm has a type `Expr` that represents a node in the
+   Abstract Syntax Tree (AST). The syntax also has a rule that corresponds to an expression. This
+   rule is named `SExpr`, since the type generated for the parse tree would otherwise have the same
+   name as the corresponding AST node.
 
 In this example we do not have other representations, so we could skip the `S` prefix. However, we
 use it here to be consistent with the naming in other parts of Storm.
@@ -134,13 +134,13 @@ use core:lang; // for Parser
 use core:io;   // for Url
 
 void eval(Str expr) on Compiler {
-	Parser<SExpr> parser;
-	parser.parse(expr, Url());
-	print(parser.infoTree().format());
+    Parser<SExpr> parser;
+    parser.parse(expr, Url());
+    print(parser.infoTree().format());
 }
 
 void main() on Compiler {
-	eval("1 + 2");
+    eval("1 + 2");
 }
 ```
 
@@ -173,14 +173,14 @@ differ depending on the order of the productions):
 
 ```
 {
-    production: @ 3 of SExpr
+    production: @ 2 of SExpr
     1 -> {
-        production: @ 2 of SExpr
+        production: @ 4 of SExpr
         1 -> {
-            production: @ 5 of SProduct
+            production: @ 7 of SProduct
             1 -> {
                 production: @ 8 of SAtom
-                1 -> '1' (matches "[0-9]+")
+                1 -> '1' (matches "-?[0-9]+")
             }
         }
     }
@@ -194,10 +194,10 @@ differ depending on the order of the productions):
         1 -> ' ' (matches "[ \n\r\t]*")
     } (delimiter)
     1 -> {
-        production: @ 5 of SProduct
+        production: @ 7 of SProduct
         1 -> {
             production: @ 8 of SAtom
-            1 -> '2' (matches "[0-9]+")
+            1 -> '2' (matches "-?[0-9]+")
         }
     }
 }
@@ -209,7 +209,8 @@ are the anonymous names of the productions in our syntax. If we give them a name
 very easy to read since it contains too many details.
 
 Let's try to improve the readability by asking the parser for a parse tree rather than an info tree.
-We can do this by replacing `print(parser.infoTree().format())` with `print(parser.tree().toS())`. This gives us the following output:
+We can do this by replacing `print(parser.infoTree().format())` with `print(parser.tree().toS())`.
+This gives us the following output:
 
 ```
 { ./(0-5)
@@ -220,6 +221,10 @@ We can do this by replacing `print(parser.infoTree().format())` with `print(pars
 This time the parse tree is too small. It only contains one node that corresponds to the starting
 production. The line `grammar.SExpr -> grammar.@ 3` means that we printed a node that corresponds to
 the production `grammar.@ 3` that extens the rule `grammar.SExpr`.
+
+
+Binding Tokens to Variables
+---------------------------
 
 The reason why only one node appeared is that the Syntax Language only saves subtrees that are bound
 to variables. To bind subtrees to variables, we can simply add a name after the token we wish to
@@ -245,11 +250,11 @@ If we run the program once more (using `storm .`), we get a more reasonable outp
 
 ```
 { ./(0-5)
-    grammar.SExpr -> grammar.@ 3
+    grammar.SExpr -> grammar.@ 2
     l : { ./(0-1)
-        grammar.SExpr -> grammar.@ 2
+        grammar.SExpr -> grammar.@ 4
         p : { ./(0-1)
-            grammar.SProduct -> grammar.@ 5
+            grammar.SProduct -> grammar.@ 7
             a : { ./(0-1)
                 grammar.SAtom -> grammar.@ 8
                 nr : 1@./(0-1)
@@ -257,7 +262,7 @@ If we run the program once more (using `storm .`), we get a more reasonable outp
         }
     }
     r : { ./(4-5)
-        grammar.SProduct -> grammar.@ 5
+        grammar.SProduct -> grammar.@ 7
         a : { ./(4-5)
             grammar.SAtom -> grammar.@ 8
             nr : 2@./(4-5)
@@ -293,49 +298,142 @@ string, and false otherwise. It can be used like below:
 
 ```bs
 void eval(Str expr) on Compiler {
-	Parser<SExpr> parser;
-	parser.parse(expr, Url());
-	if (parser.hasError())
-		throw parser.error();
-	print(parser.infoTree().format);
+    Parser<SExpr> parser;
+    parser.parse(expr, Url());
+    if (parser.hasError())
+        throw parser.error();
+    print(parser.tree().toS());
 }
 ```
+
 
 Interacting with the Parse Tree
 -------------------------------
 
+Just parsing may be fun, but we would also like to *use* the results of the parse for something
+useful. Since rules and productions appear as classes in Basic Storm, let's try to inspect it that
+way.
 
-Next step: let's try to interact with the syntax tree. We name some productions:
+To be able to access individual productions from Basic Storm, we must first give them a name. We do
+this by appending a name to the end of the productions. As a start, we only do this for the
+productions for `SExpr`. We name the first one `Add`, the second one `Subtract`, and the third one
+`Product` as below:
 
 ```bnf
 void SExpr();
-SExpr : SProduct p = Product;
 SExpr : SExpr l, "\+", SProduct r = Add;
 SExpr : SExpr l, "-", SProduct r = Sub;
+SExpr : SProduct p = Product;
 ```
 
-Then, we can inspect them as follows:
+The only difference from before is that the productions have a name that is not anonymous. This is
+reflected in the textual representation of the parse tree. If we run the code we had before, we will
+now see the names appear in the textual representation of the tree. The first line in the root node
+contains `grammar.SExpr -> grammar.Add` instead of `grammar.SExpr -> grammar.@ 2`, which is a bit
+easier to understand.
 
-```bs
-void eval(Str expr) on Compiler {
-	Parser<SExpr> parser;
-	parser.parse(expr, Url());
-	SExpr tree = parser.tree();
-	if (tree as Add) {
-		print("Addition of:\n${tree.l}\nand\n${tree.r}");
-	} else if (tree as Sub) {
-		print("Subtraction of:\n${tree.l}\nand\n${tree.r}");
-	} else if (tree as Product) {
-		print("Just a product: ${tree.p}");
-	}
+```
+{ ./(0-5)
+    grammar.SExpr -> grammar.Add
+    l : { ./(0-1)
+        grammar.SExpr -> grammar.Product
+        p : { ./(0-1)
+            grammar.SProduct -> grammar.@ 4
+            a : { ./(0-1)
+                grammar.SAtom -> grammar.@ 5
+                nr : 1@./(0-1)
+            }
+        }
+    }
+    r : { ./(4-5)
+        grammar.SProduct -> grammar.@ 4
+        a : { ./(4-5)
+            grammar.SAtom -> grammar.@ 5
+            nr : 2@./(4-5)
+        }
+    }
 }
 ```
 
-This is not very convenient...
+These names also means that we can inspect the nodes from Basic Storm. Since both rules and
+expressions appear as types to Basic Storm (and most other languages as well), and that the
+production-types inherit from the corresponding rule-type. This means that we can inspect the parse
+tree simply by using a downcast.
 
+We first store the result of `parser.tree()` in a variable. The result has the type `SExpr` (the
+same as the parameter to the `Parser`) since that is the rule we started parsing at:
+
+```bsstmt
+SExpr tree = parser.tree();
+```
+
+The `SExpr` type is abstract since it corresponds to a rule. That means that it will contain one of
+the subclasses to `SExpr`. In our case we have three subclasses, one for each of the productions
+`Add`, `Subtract`, and `Product`. We can check which one it is using the `as` operator in an
+`if`-statement:
+
+```bsstmt
+if (tree as Add) {
+    // ...
+}
+```
+
+Remember that `tree` will have the type `Add` inside the `if`-statement. This means that we can
+access the subtrees that correspond to the bound tokens as member variables inside `tree`. For
+example, we can print the left- and right-hand sides as follows:
+
+```
+print("Addition of:");
+print(tree.l.toS());
+print("and:");
+print(tree.r.toS());
+```
+
+If we do the same thing for the remaining productions, we get the following implementation of
+`eval`:
+
+
+```bs
+void eval(Str expr) on Compiler {
+    Parser<SExpr> parser;
+    parser.parse(expr, Url());
+    SExpr tree = parser.tree();
+    if (tree as Add) {
+        print("Addition of:");
+        print(tree.l.toS());
+        print("and:");
+        print(tree.r.toS());
+    } else if (tree as Sub) {
+        print("Subtraction of:");
+        print(tree.l.toS());
+        print("and:");
+        print(tree.r.toS());
+    } else if (tree as Product) {
+        print("Just a product:");
+        print(tree.p.toS());
+    }
+}
+```
+
+As we can see, this quickly gets tedious to maintain. We have to write code that is tightly coupled
+with the grammar just to extract the meaning of the parse. This structure also makes it difficult to
+extend the grammar, since adding a new production would require adding another branch to the long
+if-statements somewhere in the system.
 
 Using Syntax Transforms
 -----------------------
+
+Due to the problems we saw above, it is not common to use names and type-casts to inspect the
+grammar in Storm. Instead, the Syntax Language provides a mechanism, called *syntax transforms*, to
+specify the semantics of the grammar along with the grammar itself. This allows the Syntax Lanugage
+to generate code that traverses the grammar and transforms it into a more convenient representation.
+Since this representation is written alongside the grammar, it also has the benefit that it allows
+easy extension from other places.
+
+In this tutorial, we will not use the grammar to generate an AST, which is often the case for
+languages in Storm. Rather, we will use the syntax transforms to actually *evaluate* the parsed
+expressions directly.
+
 
 Let's use transforms instead! Remove the names and add transforms!
 
@@ -359,11 +457,11 @@ SAtom => e : "(", SExpr e, ")";
 
 ```bs
 void eval(Str expr) on Compiler {
-	Parser<SExpr> parser;
-	parser.parse(expr, Url());
-	SExpr tree = parser.tree();
-	Int result = tree.transform();
-	print("${expr} evaluated to ${result}");
+    Parser<SExpr> parser;
+    parser.parse(expr, Url());
+    SExpr tree = parser.tree();
+    Int result = tree.transform();
+    print("${expr} evaluated to ${result}");
 }
 ```
 
@@ -377,49 +475,49 @@ Let's add variables!
 
 First, we add a class for our variables with associated exception:
 
-```
+```bs
 class NoVariable extends Exception {
 
-	Str variable;
+    Str variable;
 
-	init(Str variable) {
-		init { variable = variable; }
-	}
+    init(Str variable) {
+        init { variable = variable; }
+    }
 
-	void message(StrBuf out) : override {
-		out << "No variable named " << variable << " is defined.";
-	}
+    void message(StrBuf out) : override {
+        out << "No variable named " << variable << " is defined.";
+    }
 }
 
 class VarList {
-	Str->Int values;
+    Str->Int values;
 
-	void put(Str name, Int value) {
-		values.put(name, value);
-	}
+    void put(Str name, Int value) {
+        values.put(name, value);
+    }
 
-	Int get(Str name) {
-		if (x = values.at(name)) {
-			x;
-		} else {
-			throw NoVariable(name);
-		}
-	}
+    Int get(Str name) {
+        if (x = values.at(name)) {
+            x;
+        } else {
+            throw NoVariable(name);
+        }
+    }
 }
 
 void eval(Str expr) {
-	Parser<SExpr> parser;
-	parser.parse(expr, Url());
-	SExpr tree = parser.tree();
+    Parser<SExpr> parser;
+    parser.parse(expr, Url());
+    SExpr tree = parser.tree();
 
-	VarList variables;
-	variables.put("ans", 42);
-	Int result = tree.transform(variables);
-	print("${expr} evaluated to ${result}");
+    VarList variables;
+    variables.put("ans", 42);
+    Int result = tree.transform(variables);
+    print("${expr} evaluated to ${result}");
 }
 
 void main() {
-	eval("1 + ans");
+    eval("1 + ans");
 }
 ```
 
@@ -460,16 +558,16 @@ Changes to the BS file:
 
 ```bs
 void eval(Str expr) {
-	Parser<SStmtList> parser;
-	parser.parse(expr, Url());
-	if (parser.hasError())
-		throw parser.error();
+    Parser<SStmtList> parser;
+    parser.parse(expr, Url());
+    if (parser.hasError())
+        throw parser.error();
 
-	SStmtList tree = parser.tree();
+    SStmtList tree = parser.tree();
 
-	VarList variables;
-	Array<Int> results = tree.transform(variables);
-	print("Results: ${results}");
+    VarList variables;
+    Array<Int> results = tree.transform(variables);
+    print("Results: ${results}");
 }
 ```
 
