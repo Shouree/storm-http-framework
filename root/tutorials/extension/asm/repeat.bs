@@ -1,0 +1,42 @@
+use lang:bs;
+use lang:bs:macro;
+use core:lang;
+use core:asm;
+
+class RepeatStmt extends Expr {
+	private Expr times;
+	private Expr body;
+
+	init(SrcPos pos, Block parent, Expr times, Expr body) {
+		init(pos) {
+			times = expectCastTo(times, named{Nat}, parent.scope);
+			body = body;
+		}
+	}
+
+	void code(CodeGen gen, CodeResult result) : override {
+		// Compute the number of iterations.
+		CodeResult counter(named{Nat}, gen.block);
+		times.code(gen, counter);
+		var counterVar = counter.location(gen);
+
+		// Top of the loop.
+		Label loopStart = gen.l.label();
+		gen.l << loopStart;
+
+		// Check number of iterations.
+		Label loopEnd = gen.l.label();
+		gen.l << cmp(counterVar, natConst(0));
+		gen.l << jmp(loopEnd, CondFlag:ifEqual);
+
+		// Evaluate the body.
+		body.code(gen, CodeResult());
+
+		// Decrement the counter and jump to the start.
+		gen.l << sub(counterVar, natConst(1));
+		gen.l << jmp(loopStart);
+
+		gen.l << loopEnd;
+	}
+
+}

@@ -1,0 +1,9 @@
+use tutorials:extension:ast;
+
+void mainAST() {
+	repeat(5) { print("Hello!"); }
+
+	Int[] values = [8, 10, 3];
+	Int[] result = map(x + 2 for x in values);
+	print(result.toS);
+}

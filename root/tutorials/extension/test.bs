@@ -1,0 +1,6 @@
+use tutorials:extension:ast;
+
+void main() {
+	mainAST();
+	mainASM();
+}

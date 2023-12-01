@@ -1,0 +1,33 @@
+use lang:bs;
+use lang:bs:macro;
+use core:lang;
+use core:asm;
+
+class MapBlock extends ExprBlock {
+	private ExprBlock loopBody;
+
+	init(SrcPos pos, Block parent, Expr src, SStr name) {
+		src = expectCastTo(src, named{Array<Int>}, parent.scope);
+
+		init(pos, parent) {
+			loopBody(pos, parent);
+		}
+
+		LocalVar local(name.v, named{Int}, name.pos, false);
+		add(local);
+
+		add(pattern(this) {
+				Array<Int> original = ${src};
+				Array<Int> out;
+				for (Nat i = 0; i < original.count; i++) {
+					${LocalVarAccess(pos, local)} = original[i];
+					out << ${loopBody};
+				}
+				out;
+			});
+	}
+
+	void setTransform(Expr expr) {
+		loopBody.add(expectCastTo(expr, named{Int}, scope));
+	}
+}

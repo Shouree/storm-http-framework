@@ -1,0 +1,6 @@
+use lang.bs;
+
+optional delimiter = SDelimiter;
+required delimiter = SRequiredDelimiter;
+
+SStmt => RepeatStmt(pos, block, times, body) : "repeat" #keyword, "(", SExpr(block) times, ")", SStmt(block) body;
