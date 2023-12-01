@@ -1,7 +1,7 @@
 use lang:bs;
 use lang:bs:macro;
 
-Expr repeatStmt(Block parent, Expr times, Expr body) {
+Expr repeatStmt(Block parent, Expr times, Expr body) on Compiler {
 	pattern(parent) {
 		for (Nat i = ${times}; i > 0; i--) {
 			${body};

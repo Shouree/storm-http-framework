@@ -1,91 +1,196 @@
 A New Expression in Basic Storm
 ===============================
 
+This tutorial shows how to create syntax extensions to Basic Storm. We will implement two relatively
+simple extensions. The first one is a loop-like repeat block that simply executes the loop body a
+certain number of times:
 
-Create dir `map`, with files
+```bsstmt:use=tutorials.extension.ast
+repeat(10) {
+    print("Test");
+}
+```
 
+The second one is a simple map-like construct (limited to integers for simplicity):
+
+```bsstmt:use=tutorials.extension.ast
+Int[] input = [1, 2, 3];
+Int[] output = map(x * 2 for x in input);
+```
+
+As with the other tutorials, the code produced by this tutorial is available in
+`root/tutorials/extension`. You can run it by typing `tutorials:extension:main` in the Basic Storm
+top loop. Note that the structure of the aforementioned directory is slightly different to what is
+proposed in the tutorial. This is so that it can contain both an implementation that generates ASTs
+in Basic Storm, and an implementation that generates code in the intermediate representation
+directly.
+
+
+Setup
+-----
+
+First, we need somewhere to work. Create an empty directory somewhere on your system. The name does
+not matter too much, but the remainder of the tutorial assumes that it is `extension`. If you pick
+another name, you need to modify the package names in `use` statements.
+
+Create two subdirectories inside the directory you just created: `repeat` and `map`. We will place
+the two extensions inside these directories. This is so that we can create a `main` function that
+uses the extensions in a separate package from the extension itself. It is usually not a good idea
+to define and use a language extension in the same package, as that easily creates dependency cycles
+that are difficult to resolve.
+
+Finally, create a file named `test.bs` (or some other name) inside the `extension` directory. Start
+by adding a definition of a `main` function as below:
+
+```bs
+void main() {
+}
+```
+
+We will use this function to write tests later on. After all of this, open a terminal and navigate
+to the newly created directory. This makes it possible to run the code we will write by typing:
+
+```
+storm .
+```
+
+If done successfully, this will not produce any output, and Storm will exit successfully.
+
+
+Repeat Syntax Using the Basic Storm AST
+---------------------------------------
+
+First, we will implement the `repeat` syntax as a form of macro using the facilities already present
+in Basic Storm. The first step is to create the grammar for the new syntax. To do this, create a
+file `syntax.bnf` inside the directory `repeat`. Inside the file we start by using the `lang.bs`
+namespace to easily access the productions in Basic Storm, and then we define the delimiters as in
+the [previous](md:Using_Grammar) tutorial:
 
 ```bnf
 use lang.bs;
 
 optional delimiter = SDelimiter;
 required delimiter = SRequiredDelimiter;
-
-SExpr => MapBlock(pos, block, src, name) : "map" #keyword, "(", SExpr(me), "for" #keyword, SName name, "in" #keyword ~ SExpr(block) src, ")";
 ```
 
+After this, we can add a production that extends the `SStmt` rule in Basic Storm. We pick the
+`SStmt` rule since the `repeat` block will act as a statement (i.e. it is not necessary to put a
+semicolon after it). We start simple, by adding just the syntax and saving transforms for later:
+
+```bnf
+SStmt : "repeat" #keyword, "(", SExpr, ")", SStmt;
+```
+
+This rule matches the word `repeat` (colored as a keyword), followed by a start parenthesis, an
+expression that indicates the number of iterations, and end parenthesis, and a statement that
+constitutes the body of the `repeat` block.
+
+We can now write a simple test in the `test.bs` file as follows:
+
+```bs:partial
+void main() {
+    repeat(5) {
+        print("Hello");
+    }
+}
+```
+
+If you try to run the test now (with `storm .`), you will receive a parse error (complaining about
+`{`). This is because we have not yet included our package, so the new syntax is not yet visible. To
+include the grammar, we simply add the following to the top of the file:
+
 ```bs
-use core:lang;
+use extension:repeat;
+```
+
+If we run the test yet again, we will receive the error: "No return value specified for a production
+that does not return 'void'." This means that we have not yet added a transform function to our
+production. However, due to Storm's lazy compilation, this means that the rule was successfully
+matched at least!
+
+So, the next step is to add logic for the transform. We start by adding a call to a function that
+creates a syntax node, and passing it the repeat count and the body of the statement:
+
+```bnf
+SStmt => repeatStmt(times, body) : "repeat" #keyword, "(", SExpr times, ")", SStmt body;
+```
+
+If we run the code now, Storm will complain that it is unable to transform a `lang.bs.Expr` with
+parameters `()`. This is because we have not passed the necessary parameters to the `SExpr` and
+`SStmt` rules. If we look in the Basic Storm grammar for the definition of the rules, we see that
+they accept a parameter named `block` that corresponds to the block in which they are located. Since
+we are a statement as well, we can simply forward our parameter of the same name. We also forward the parameter to the `repeatStmt` function, since we will need it:
+
+```bnf
+SStmt => repeatStmt(block, times, body) :
+  "repeat" #keyword, "(", SExpr(block) times, ")", SStmt(block) body;
+```
+
+We try to run the code again. This time, we will receive an error stating that Storm is unable to
+find `repeatStmt` with parameters `(lang.bs.Block&, lang.bs.Expr&, lang.bs.Expr&)`. This is because
+we have not yet implemented the `repeatStmt` function. So let's do that. Create a file `sematics.bs`
+next to the `syntax.bnf` where we created the syntax. Then we add the following:
+
+```bs
+use lang:bs;
+
+Expr repeatStmt(Block parent, Expr times, Expr body) on Compiler {
+    Expr(core:lang:SrcPos());
+}
+```
+
+That is, we define a function that does nothing but return an empty expression (which we need to
+give a `SrcPos`). At this point, our example will actually compile and run without errors. However,
+since we have not yet implemented any semantics, our program will simply ignore the body of the
+`repeat` statement altogether (the reason it works at this stage is since we don't expect our
+`repeat` statement to return anything, and the no-op behavior of `Expr` works for that case).
+
+The next step is to actually implement the behavior of our block. We do this by observing that:
+
+```bsstmt:placeholders:use=tutorials.extension.ast
+repeat(<times>) {
+    <body>;
+}
+```
+
+is equivalent to:
+
+```bsstmt:placeholders
+for (Nat i = <times>; i > 0; i--) {
+    <body>;
+}
+```
+
+This means that we can use the
+[patterns](md:/Language_Reference/Basic_Storm/Extensibility/Metaprogramming) functionality from the
+`lang.bs.macro` package to create the AST nodes for us. We have already matched the placeholders
+`<times>` and `<body>` in our grammar. So using a `pattern`, we can insert them into the new
+structure using the `${...}` syntax:
+
+```bs
 use lang:bs;
 use lang:bs:macro;
 
-class MapBlock extends Block {
-	private Expr src;
-	private SStr name;
-	private Expr? transform;
-
-	init(SrcPos pos, Block parent, Expr src, SStr name) {
-		init(pos, parent) {
-			src = src;
-			name = name;
+Expr repeatStmt(Block parent, Expr times, Expr body) on Compiler {
+	pattern(parent) {
+		for (Nat i = ${times}; i > 0; i--) {
+			${body};
 		}
-	}
-
+	};
 }
 ```
 
-Test program:
+At this point, our language extension works as indented. If we run the test program now (`storm .`),
+we see that the program prints `Hello` five times as intended.
 
-```bs
-use tutorials:extension:repeat;
-
-void main() {
-	Int[] values = [8, 10, 3];
-	Int[] result = map(x + 2 for x in values);
-	print(result.toS);
-}
-```
-
-This is enough to get a type error:
-
-```
-@/home/filip/Projects/storm/root/tutorials/extension/test.bs(82-88): Syntax error: No appropriate constructor for core.Array(core.Int) found. Can not initialize result. Expected signature: __init(core.Array(core.Int), void)
-```
-
-Adding the result overload is enough to make it crash with an "abstract function called".
-
-```
-	ExprResult result() : override {
-		ExprResult(Value(named{Array<Int>}));
-	}
-```
-
-Start by looking at the transform?
-
-```
-	void setTransform(Expr expr) {
-		Value expected(named{Int});
-		if (!expected.mayStore(expr.result.type))
-			throw TypeError(pos, expected, expr.result);
-		transform = expr;
-	}
-```
-
-The above gets us a type error so that we have to fix the scoping.
-
-Let's implement that!
-
-```
-	void blockCode(CodeGen gen, CodeResult res) : override {
-	}
-```
-
-Now we crash with a memory access error! Nice!
+It is worth noting that even though it looks like we introduce a variable `i` that is visible inside
+the body of the loop, this is not the case. Name lookup in Basic Storm is performed using the
+`block` that is passed to statements and expressions. Since we passed the block that corresponds to
+the context outside of the generated `for`-loop to the body of the loop, it will not be able to find
+any variables we generate inside the `pattern`, even though it will be placed inside the `for` loop
+eventually.
 
 
+Map Syntax Using the Basic Storm AST
+------------------------------------
 
-- Create two simple extensions to Basic Storm. One that is an expression, and one that is a
-  top-level construct.
-
-- The extension can simply be a loop construct (repeat N times). First, implement in ASM, then use
-  existing AST nodes.
