@@ -61,9 +61,9 @@ class MapBlock extends Block {
 		gen.l << jmp(endLoop, CondFlag:ifAboveEqual);
 
 		// Get an element. Returns a reference to the element.
-		Function accessFunction = arrayAccessFunction();
+		Function accessFunction = named{Array<Int>:"[]"<Array<Int>, Nat>};
 		CodeResult varTarget(accessFunction.result, gen.block);
-		arrayAccessFunction.autoCall(gen, [originalArrayVar, loopVar], varTarget);
+		accessFunction.autoCall(gen, [originalArrayVar, loopVar], varTarget);
 
 		// Evaluate the expression to get the value to insert. First set our variable:
 		gen.l << mov(ptrA, varTarget.location(gen));
@@ -82,13 +82,5 @@ class MapBlock extends Block {
 
 		// End of the loop.
 		gen.l << endLoop;
-	}
-
-	Function arrayAccessFunction() : static {
-		Type arrayType = named{Array<Int>};
-		var found = arrayType.find(SimplePart("[]", [arrayType, named{Nat}]), Scope());
-		unless (found as Function)
-			throw InternalError("Could not find the [] operator for arrays.");
-		return found;
 	}
 }

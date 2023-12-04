@@ -21,6 +21,11 @@ SrcName namePart(SrcPos pos) on Compiler {
 	name;
 }
 
+// Generate a name part from a string.
+RecPart strRecPart(Str name) {
+	RecPart(name.unescape('"'));
+}
+
 // Create something that gives you a TypePart.
 Expr createTypePart(SrcPos pos, Block block, NamePart part) on Compiler {
 	ExprBlock b(pos, block);

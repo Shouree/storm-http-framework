@@ -1,21 +1,35 @@
 // Syntax extensions useful when generating code or manipulating the syntax tree.
 use lang.bs;
+use core.lang;
 
 optional delimiter = SDelimiter;
 required delimiter = SRequiredDelimiter;
 
 // Use type{a:b:c} to build a type name quickly and easily.
-SAtom => createType(pos, block, type) : "name" #keyword, "{", SType type, "}";
+SAtom => createType(pos, block, type) : "name" #keyword, "{", SMacroType type, "}";
 
 // Use named{a:b:c} to refer to objects. Evaluates compile-time to the type of the actual object
 // in the compiler.
-SAtom => referNamed(pos, block, name) : "named" #keyword, "{", SType name, "}";
+SAtom => referNamed(pos, block, name) : "named" #keyword, "{", SMacroType name, "}";
 
 // Special case for the current package.
 SAtom => referNamed(pos, block) : "named" #keyword, "{", "}";
 
 // Special case for absolute "paths".
-SAtom => referNamedAbs(pos, block, name) : "named" #keyword, "{", ":", SType name, "}";
+SAtom => referNamedAbs(pos, block, name) : "named" #keyword, "{", ":", SMacroType name, "}";
+
+// Allow more "exotic" type names in the Named syntax:
+SrcName SMacroType();
+SMacroType[100] => x : SType x;
+SMacroType[0] => SrcName(pos) : SMacroTypePart -> add - (, ":", SMacroTypePart -> add)*;
+
+NamePart SMacroTypePart();
+SMacroTypePart => x : STypePart x;
+SMacroTypePart => strRecPart(name) : SString name - SMacroTypeParams(me);
+
+void SMacroTypeParams(RecPart part);
+SMacroTypeParams : (, "<", ">")?;
+SMacroTypeParams => part : , "<", SMacroType -> add, (",", SMacroType -> add, )* ">";
 
 // Reload a package (TODO: Nicer syntax!)
 SExpr => reloadName(block, type) : "reload" #keyword, "{", SType type, "}";

@@ -352,3 +352,6 @@ Mymake will set the current directory to the root of the repository before doing
 means that any relative paths passed to Storm will be incorrect, and errors will be reported. As
 such, to avoid this kind of surprises, it is a good idea to always run Mymake in the root of the
 Storm repository.
+
+Note: In versions of Mymake earlier than 2.3.3, the flag `--` was not available. In these versions,
+use `-a` instead of `--`.

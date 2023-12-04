@@ -21,6 +21,14 @@ contains the name specified inside the curly brackets. An `SrcName` additionally
 to the location in the source code where the name was written, so that error messages can provide an
 accurate location.
 
+The `name` syntax extends the allowed syntax for names slightly to allow accessing more "exotic"
+names more easily. It allows the name of each part to be enclosed in quotes like a string literal.
+String escapes are interpreted as usual. This makes it possible to access operators as follows:
+
+```bsstmt:use=lang.bs.macro
+name{core:Int:"+"<core:Int, core:Int>};
+```
+
 
 Accessing the Name Tree
 -----------------------
@@ -29,7 +37,8 @@ Similarly to the `name` macro, it is often useful to reference entries in the na
 The `named{}` syntax can be used to achieve this in a type-safe way. The `named` syntax looks up the
 name within the curly brackets at compile-time, and inserts a reference to the specified named
 entity in the generated code. This means that the `named{}` syntax incurs no overhead at runtime,
-since it compiles to a single load instruction.
+since it compiles to a single load instruction. The `named{}` syntax supports the same extensions to
+names as `name{}` does.
 
 Since Basic Storm knows the exact type of the named entity at compile time, `named{}` evaluates to
 the type of the referred named entity. This often eliminates the need for downcasts, that would be
