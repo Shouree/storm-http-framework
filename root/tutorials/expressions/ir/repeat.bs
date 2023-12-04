@@ -16,9 +16,8 @@ class RepeatStmt extends Expr {
 
 	void code(CodeGen gen, CodeResult result) : override {
 		// Compute the number of iterations.
-		CodeResult counter(named{Nat}, gen.block);
-		times.code(gen, counter);
-		var counterVar = counter.location(gen);
+		VarInfo counter = gen.createVar(named{Nat});
+		times.code(gen, CodeResult(named{Nat}, counter));
 
 		// Top of the loop.
 		Label loopStart = gen.l.label();
@@ -26,14 +25,14 @@ class RepeatStmt extends Expr {
 
 		// Check number of iterations.
 		Label loopEnd = gen.l.label();
-		gen.l << cmp(counterVar, natConst(0));
+		gen.l << cmp(counter.v, natConst(0));
 		gen.l << jmp(loopEnd, CondFlag:ifEqual);
 
 		// Evaluate the body.
 		body.code(gen, CodeResult());
 
 		// Decrement the counter and jump to the start.
-		gen.l << sub(counterVar, natConst(1));
+		gen.l << sub(counter.v, natConst(1));
 		gen.l << jmp(loopStart);
 
 		gen.l << loopEnd;

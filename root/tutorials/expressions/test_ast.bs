@@ -1,4 +1,4 @@
-use tutorials:extension:ast;
+use tutorials:expressions:ast;
 
 void mainAST() {
 	repeat(5) { print("Hello!"); }

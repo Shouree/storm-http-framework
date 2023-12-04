@@ -1,4 +1,4 @@
-use tutorials:extension:asm;
+use tutorials:expressions:ir;
 
 void mainASM() {
 	repeat(5) { print("Hello!"); }
