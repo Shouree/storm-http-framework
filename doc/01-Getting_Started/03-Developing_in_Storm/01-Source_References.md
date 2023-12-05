@@ -34,10 +34,10 @@ characters that contain the problem. After that is a colon (`:`) followed by the
 In this case, Storm tells us that there is no operator `+` for `core.Str` and `core.Int`. In this
 example it is fairly easy to deduce where the error is (there is only one `+` after all).
 Regardless, the error states that the error is on characters 70-71 in the file `demo.bs`. In Emacs,
-it is possible to jump to the correct character position by typing `M-g M-g` (i.e. holding down Alt
-and pressing `g` twice). Emacs then asks which character to go to. Type `70` and press Enter. This
-causes the cursor to go to the `+` character in the file. Other editors work differently, but are
-likely to provide similar functionality.
+it is possible to jump to the correct character position by typing `M-g M-c` (i.e. holding down Alt
+and pressing `g` followed by `c` while keeping Alt pressed). Emacs then asks which character to go
+to. Type `70` and press Enter. This causes the cursor to go to the `+` character in the file. Other
+editors work differently, but are likely to provide similar functionality.
 
 To fix the error, we need to convert `i` to a string by adding `.toS`. That is, the print statement
 should read `print("i = " + i.toS);`.
