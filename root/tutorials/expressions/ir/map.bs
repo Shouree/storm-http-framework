@@ -3,7 +3,7 @@ use lang:bs:macro;
 use core:lang;
 use core:asm;
 
-class MapBlock extends Block {
+class MapExpr extends Block {
 	private Expr src;
 	private LocalVar nameVar;
 	private Expr? transform;

@@ -3,4 +3,4 @@ use lang.bs;
 optional delimiter = SDelimiter;
 required delimiter = SRequiredDelimiter;
 
-SExpr => MapBlock(pos, block, src, name) : "map" #keyword, "(", SExpr(me) -> setTransform, "for" #keyword ~ SName name #varName, "in" #keyword ~ SExpr(block) src, ")";
+SExpr => MapExpr(pos, block, src, name) : "map" #keyword, "(", SExpr(me) -> setTransform ~ "for" #keyword ~ SName name #varName ~ "in" #keyword ~ SExpr(block) src, ")";
