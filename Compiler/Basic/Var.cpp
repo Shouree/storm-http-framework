@@ -73,8 +73,8 @@ namespace storm {
 			Function *ctor = as<Function>(t->find(name, scope));
 			if (!ctor) {
 				Str *msg = TO_S(engine(), S("No appropriate constructor for ") << var->result
-								<< S(" found. Can not initialize ") << var->name
-								<< S(". Expected signature: ") << name);
+								<< S(" found. Can not initialize '") << var->name
+								<< S("'. Expected signature: ") << name);
 				throw new (this) SyntaxError(var->pos, msg);
 			}
 
