@@ -1,0 +1,174 @@
+use core:asm;
+use core:lang;
+use lang:bs:macro;
+
+class Expr on Compiler {
+	SrcPos pos;
+
+	init(SrcPos pos) {
+		init { pos = pos; }
+	}
+
+	// Convention: Output result into the eax register.
+	void code(CodeGen to) : abstract;
+}
+
+class Literal extends Expr {
+	Int value;
+
+	init(SrcPos pos, Str value) {
+		init(pos) {
+			value = value.toInt();
+		}
+	}
+
+	void code(CodeGen to) : override {
+		to.l << mov(eax, intConst(value));
+	}
+}
+
+class VarAccess extends Expr {
+	private DemoVar toRead;
+
+	init(SrcPos pos, Str name, Scope scope) {
+		init(pos) {
+			toRead = if (x = scope.find(SimpleName(name)) as DemoVar) {
+				x;
+			} else {
+				throw SyntaxError(pos, "Unknown variable: ${name}");
+			};
+		}
+	}
+
+	void code(CodeGen to) {
+		to.l << mov(eax, toRead.asmVar);
+	}
+}
+
+class FnCall extends Expr {
+	private Function toCall;
+	private Expr[] params;
+
+	init(SrcPos pos, Str name, Expr[] params, Scope scope) {
+		SimplePart part(name);
+		for (x in params)
+			part.params.push(named{Int});
+
+		SimpleName lookFor(part);
+
+		init(pos) {
+			params = params;
+			toCall = if(x = scope.find(lookFor) as Function) {
+				if (!Value(named{Int}).mayStore(x.result))
+					throw SyntaxError(pos, "Functions used in the demo language must return Int!");
+				x;
+			} else {
+				throw SyntaxError(pos, "Unknown function: ${lookFor}");
+			};
+		}
+	}
+
+	void code(CodeGen to) {
+		Operand[] ops;
+		for (x in params) {
+			Var tmp = to.l.createIntVar(to.block);
+			ops << tmp;
+
+			x.code(to);
+			to.l << mov(tmp, eax);
+		}
+
+		if (true) {
+			// Preferred solution. Use 'autoCall' to handle thread switches if necessary:
+			CodeResult result(named{Int}, to.block);
+			toCall.autoCall(to, ops, result);
+			to.l << mov(eax, result.location(to));
+		} else {
+			// Alternative, works for cases where thread switches are not necessary:
+			for (x in ops) {
+				to.l << fnParam(intDesc, x);
+			}
+			to.l << fnCall(toCall.ref(), toCall.isMember, intDesc, eax);
+		}
+	}
+}
+
+class OpAdd extends Expr {
+	private Expr lhs;
+	private Expr rhs;
+
+	init(SrcPos pos, Expr lhs, Expr rhs) {
+		init(pos) {
+			lhs = lhs;
+			rhs = rhs;
+		}
+	}
+
+	void code(CodeGen to) : override {
+		Var tmp = to.l.createIntVar(to.block);
+		rhs.code(to);
+		to.l << mov(tmp, eax);
+		lhs.code(to);
+		to.l << add(eax, tmp);
+	}
+}
+
+class OpSub extends Expr {
+	private Expr lhs;
+	private Expr rhs;
+
+	init(SrcPos pos, Expr lhs, Expr rhs) {
+		init(pos) {
+			lhs = lhs;
+			rhs = rhs;
+		}
+	}
+
+	void code(CodeGen to) : override {
+		Var tmp = to.l.createIntVar(to.block);
+		rhs.code(to);
+		to.l << mov(tmp, eax);
+		lhs.code(to);
+		to.l << sub(eax, tmp);
+	}
+}
+
+class OpMul extends Expr {
+	private Expr lhs;
+	private Expr rhs;
+
+	init(SrcPos pos, Expr lhs, Expr rhs) {
+		init(pos) {
+			lhs = lhs;
+			rhs = rhs;
+		}
+	}
+
+	void code(CodeGen to) : override {
+		Var tmp = to.l.createIntVar(to.block);
+		rhs.code(to);
+		to.l << mov(tmp, eax);
+		lhs.code(to);
+		to.l << mul(eax, tmp);
+	}
+}
+
+class OpDiv extends Expr {
+	private Expr lhs;
+	private Expr rhs;
+
+	init(SrcPos pos, Expr lhs, Expr rhs) {
+		init(pos) {
+			lhs = lhs;
+			rhs = rhs;
+		}
+	}
+
+	void code(CodeGen to) : override {
+		Var tmp = to.l.createIntVar(to.block);
+		rhs.code(to);
+		to.l << mov(tmp, eax);
+		lhs.code(to);
+		to.l << idiv(eax, tmp);
+	}
+}

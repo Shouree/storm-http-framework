@@ -1,0 +1,44 @@
+use core.lang;
+
+optional delimiter = SDelimiter;
+
+void SDelimiter();
+SDelimiter : "[ \n\r\t]*" - (SComment - SDelimiter)?;
+
+void SComment();
+SComment : "//[^\n]*\n" #comment;
+
+Str SIdentifier();
+SIdentifier => x : "[A-Za-z]+" x;
+
+
+Array<DemoFunction> SRoot();
+SRoot => Array<DemoFunction>() : , (SFunction -> push, )*;
+
+DemoFunction SFunction();
+SFunction => DemoFunction(pos, name, params, body)
+  : SIdentifier name #fnName, "(", SParamList params, ")", ":", SExpr @body;
+
+Array<Str> SParamList();
+SParamList => Array<Str>() : ;
+SParamList => Array<Str>() : SIdentifier -> push - (, ",", SIdentifier -> push)*;
+
+Expr SExpr(Scope scope);
+SExpr => OpAdd(pos, l, r) : SExpr(scope) l, "\+", SProduct(scope) r;
+SExpr => OpSub(pos, l, r) : SExpr(scope) l, "-", SProduct(scope) r;
+SExpr => p : SProduct(scope) p;
+
+Expr SProduct(Scope scope);
+SProduct => OpMul(pos, l, r) : SProduct(scope) l, "\*", SAtom(scope) r;
+SProduct => OpDiv(pos, l, r) : SProduct(scope) l, "/", SAtom(scope) r;
+SProduct => a : SAtom(scope) a;
+
+Expr SAtom(Scope scope);
+SAtom => Literal(pos, num) : "-?[0-9]+" num #constant;
+SAtom => VarAccess(pos, name, scope)  : SIdentifier name #varName;
+SAtom => FnCall(pos, name, params, scope) : SIdentifier name #fnName, "(", SActuals(scope) params, ")";
+SAtom => x : "(", SExpr x, ")";
+
+Array<Expr> SActuals(Scope scope);
+SActuals => Array<Expr>() : ;
+SActuals => Array<Expr>() : SExpr(scope) -> push - (, ",", SExpr(scope) -> push)*;

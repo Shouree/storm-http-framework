@@ -1,0 +1,97 @@
+use core:io;
+use core:lang;
+use lang:bs:macro;
+use core:asm;
+
+lang:PkgReader reader(Url[] files, Package pkg) {
+	lang:FilePkgReader(files, pkg, &createReader);
+}
+
+DemoFileReader createReader(lang:FileInfo info) {
+	DemoFileReader(info);
+}
+
+class DemoFileReader extends lang:FileReader {
+	init(lang:FileInfo info) {
+		init(info) {}
+	}
+
+	void readFunctions() {
+		Parser<SRoot> parser;
+		parser.parse(info.contents, info.url, info.start);
+		if (parser.hasError)
+			throw parser.error();
+
+		DemoFunction[] functions = parser.tree().transform();
+		for (f in functions)
+			info.pkg.add(f);
+	}
+}
+
+class DemoFunction extends Function {
+	SExpr body;
+	Str[] paramNames;
+
+	init(SrcPos pos, Str name, Str[] paramNames, SExpr body) {
+		Value[] valParams;
+		for (x in paramNames)
+			valParams << named{Int};
+
+		init(pos, named{Int}, name, valParams) {
+			body = body;
+			paramNames = paramNames;
+		}
+
+		setCode(LazyCode(&this.createCode));
+	}
+
+	private CodeGen createCode() {
+		CodeGen gen(runOn, isMember, result);
+
+		gen.l << prolog();
+
+		DemoLookup lookup(this);
+		for (name in paramNames) {
+			Var param = gen.l.createIntParam();
+			lookup.addParam(pos, name, param);
+		}
+
+		Expr e = body.transform(Scope(lookup));
+		e.code(gen);
+
+		gen.l << fnRet(eax);
+
+		gen;
+	}
+}
+
+class DemoLookup extends NameLookup {
+	init(NameLookup parent) {
+		init(parent) {}
+	}
+
+	Str->DemoVar vars;
+
+	void addParam(SrcPos pos, Str name, Var param) {
+		vars.put(name, DemoVar(pos, name, param));
+	}
+
+	Named? find(SimplePart part, Scope scope) : override {
+		if (part.params.empty) {
+			if (found = vars.at(part.name)) {
+				return found;
+			}
+		}
+		null;
+	}
+}
+
+class DemoVar extends Variable {
+	init(SrcPos pos, Str name, Var asmVar) {
+		init(pos, name, named{Int}) {
+			asmVar = asmVar;
+		}
+	}
+
+	Var asmVar;
+}

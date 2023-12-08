@@ -1,0 +1,11 @@
+void main() {
+	print(f(1, 2).toS);
+	print(g(4, 2).toS);
+	print(h(10).toS);
+}
+
+
+Int bsfn(Int x, Int y) {
+	print("In Basic Storm: ${x}, ${y}");
+	x + y;
+}
