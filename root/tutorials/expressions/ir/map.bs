@@ -5,19 +5,16 @@ use core:asm;
 
 class MapExpr extends Block {
 	private Expr src;
-	private LocalVar nameVar;
 	private Expr? transform;
+	private LocalVar boundVar;
 
-	init(SrcPos pos, Block parent, Expr src, SStr name) {
-		src = expectCastTo(src, named{Array<Int>}, parent.scope);
-
-		LocalVar local(name.v, named{Int}, name.pos, false);
+	init(SrcPos pos, Block parent, Expr src, SStr varName) {
 		init(pos, parent) {
-			src = src;
-			nameVar = local;
+			src = expectCastTo(src, named{Array<Int>}, parent.scope);
+			boundVar = LocalVar(varName.v, named{Int}, varName.pos, false);
 		}
 
-		add(local);
+		add(boundVar);
 	}
 
 	void setTransform(Expr expr) {
@@ -30,57 +27,58 @@ class MapExpr extends Block {
 
 	void blockCode(CodeGen gen, CodeResult res) : override {
 		unless (transform)
-			throw InternalError("Failed to set the transform of a MapBlock!");
+			throw InternalError("No transform set for a MapBlock!");
 
 		// Create the array. Put it in the result variable:
-		var arrayVar = res.location(gen);
-		allocObject(gen, named{Array<Int>:__init<Array<Int>>}, [], arrayVar);
+		var resultVar = res.location(gen);
+		allocObject(gen, named{Array<Int>:__init<Array<Int>>}, [], resultVar);
 		res.created(gen);
 
 		// Get the original array:
-		CodeResult originalArray(named{Array<Int>}, gen.block);
-		src.code(gen, originalArray);
-		var originalArrayVar = originalArray.location(gen);
+		CodeResult originalArrayRes(named{Array<Int>}, gen.block);
+		src.code(gen, originalArrayRes);
+		var originalArray = originalArrayRes.location(gen);
 
 		// Extract the count of the original array.
 		Function countFn = named{Array<Int>:count<Array<Int>>};
-		CodeResult countResult(named{Nat}, gen.block);
-		countFn.autoCall(gen, [originalArrayVar], countResult);
+		CodeResult originalCountRes(named{Nat}, gen.block);
+		countFn.autoCall(gen, [originalArray], originalCountRes);
+		var originalCount = originalCountRes.location(gen);
 
 		// Create a loop counter:
-		var loopVar = gen.createVar(named{Nat}).v;
-		gen.l << mov(loopVar, natConst(0));
+		var loopCounter = gen.createVar(named{Nat}).v;
+		gen.l << mov(loopCounter, natConst(0));
 
 		// Start the loop:
 		Label loopStart = gen.l.label();
 		gen.l << loopStart;
 
 		// Check if we are done.
-		Label endLoop = gen.l.label();
-		gen.l << cmp(loopVar, countResult.location(gen));
-		gen.l << jmp(endLoop, CondFlag:ifAboveEqual);
+		Label loopEnd = gen.l.label();
+		gen.l << cmp(loopCounter, originalCount);
+		gen.l << jmp(loopEnd, CondFlag:ifAboveEqual);
 
 		// Get an element. Returns a reference to the element.
 		Function accessFunction = named{Array<Int>:"[]"<Array<Int>, Nat>};
-		CodeResult varTarget(accessFunction.result, gen.block);
-		accessFunction.autoCall(gen, [originalArrayVar, loopVar], varTarget);
+		CodeResult elemPtr(accessFunction.result, gen.block);
+		accessFunction.autoCall(gen, [originalArray, loopCounter], elemPtr);
 
 		// Evaluate the expression to get the value to insert. First set our variable:
-		gen.l << mov(ptrA, varTarget.location(gen));
-		gen.l << mov(nameVar.var.v, intRel(ptrA));
+		gen.l << mov(ptrA, elemPtr.location(gen));
+		gen.l << mov(boundVar.var.v, intRel(ptrA));
 		CodeResult transformed(named{Int}, gen.block);
 		transform.code(gen, transformed);
 
 		// Push it into the array.
 		Function pushFn = named{Array<Int>:push<Array<Int>, Int>};
 		gen.l << lea(ptrA, transformed.location(gen));
-		pushFn.autoCall(gen, [arrayVar, ptrA], CodeResult());
+		pushFn.autoCall(gen, [resultVar, ptrA], CodeResult());
 
 		// Increment the loop counter and restart the loop.
-		gen.l << add(loopVar, natConst(1));
+		gen.l << add(loopCounter, natConst(1));
 		gen.l << jmp(loopStart);
 
 		// End of the loop.
-		gen.l << endLoop;
+		gen.l << loopEnd;
 	}
 }

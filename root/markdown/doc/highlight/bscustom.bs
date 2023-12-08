@@ -14,6 +14,11 @@ InfoParser? highlight_bsstmt(Str[] parts) on Compiler {
 	highlightBS(named{BSStmtList}, parts);
 }
 
+// Custom highlighting for class members.
+InfoParser? highlight_bsclass(Str[] parts) on Compiler {
+	highlightBS(named{lang:bs:SClassBody}, parts);
+}
+
 
 // The main logic:
 InfoParser? highlightBS(Str rootRule, Str[] parts) on Compiler {

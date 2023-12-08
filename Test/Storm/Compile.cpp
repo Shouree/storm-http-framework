@@ -73,3 +73,8 @@ BEGIN_TEST(Markdown, Compile) {
 	Engine &e = gEngine();
 	CHECK_RUNS(compileNoRes(e.package(S("markdown"))));
 } END_TEST
+
+BEGIN_TEST(Tutorials, Compile) {
+	Engine &e = gEngine();
+	CHECK_RUNS(compileNoRes(e.package(S("tutorials"))));
+} END_TEST

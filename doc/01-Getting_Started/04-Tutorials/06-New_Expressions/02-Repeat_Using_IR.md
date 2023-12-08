@@ -2,10 +2,11 @@ Repeat Syntax Using the Intermediate Language
 =============================================
 
 This page assumes that you have followed the [setup](md:..) for the syntax extension guide already,
-so that you have somewhere to work. This part will re-implement the [repeat
+so that you have somewhere to work. This page describes how to re-implement the [repeat
 syntax](md:Repeat_Using_AST) using the Intermediate Language. Since the grammar is identical, we
-will not modify it here. If you have not already implemented the `repeat` grammar, copy it from
-[here](md:Repeat_Using_AST).
+will not modify it here. If you have not already implemented the `repeat` grammar, copy it from the
+[previous part](md:Repeat_Using_AST). Also make sure you have added the example code to the
+`test.bs` file as well, as we will use it for testing purposes throughout this page.
 
 The main reason why we might wish to generate code in the Intermediate Language directly, rather
 than relying on Basic Storm, is to give Basic Storm entirely new capabilities with constructs that

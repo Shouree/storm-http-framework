@@ -151,22 +151,15 @@ code!
 As a starting point, we can create some simple code using the `pattern` macro again and add that to
 our block by calling the `add` function:
 
-```bs
-use lang:bs;
-use lang:bs:macro;
-use core:lang;
-use core:asm;
+```bsclass:use=lang.bs.macro
+init(SrcPos pos, Block parent) {
+    init(pos, parent) {}
 
-class MapExpr extends ExprBlock {
-    init(SrcPos pos, Block parent) {
-        init(pos, parent) {}
-
-        add(pattern(this) {
-                Array<Int> out;
-                out << 9;
-                out;
-            });
-    }
+    add(pattern(this) {
+            Array<Int> out;
+            out << 9;
+            out;
+        });
 }
 ```
 
@@ -207,28 +200,20 @@ SExpr => MapExpr(pos, block, src)
   ~ "in" #keyword ~ SExpr(block) src, ")";
 ```
 
-Then, we modify the `MapExpr` constructor class to accept the new parameter and use it in our
-pattern:
+Then, we modify the `MapExpr` constructor to accept the new parameter and use it in our pattern:
 
-```bs
-use lang:bs;
-use lang:bs:macro;
-use core:lang;
-use core:asm;
+```bsclass:use=lang.bs.macro
+init(SrcPos pos, Block parent, Expr src) {
+    init(pos, parent) {}
 
-class MapExpr extends ExprBlock {
-    init(SrcPos pos, Block parent, Expr src) {
-        init(pos, parent) {}
-
-        add(pattern(this) {
-                Array<Int> original = ${src};
-                Array<Int> out;
-                for (Nat i = 0; i < original.count(); i++) {
-                    out << original[i];
-                }
-                out;
-            });
-    }
+    add(pattern(this) {
+            Array<Int> original = ${src};
+            Array<Int> out;
+            for (Nat i = 0; i < original.count(); i++) {
+                out << original[i];
+            }
+            out;
+        });
 }
 ```
 
@@ -288,21 +273,14 @@ SExpr => MapExpr(pos, block, src, var, tfm)
 Then we modify the constructor of `MapExpr` so that it creates a variable with the specified name
 and adds it to itself:
 
-```bs
-use lang:bs;
-use lang:bs:macro;
-use core:lang;
-use core:asm;
+```bsclass:use=lang.bs.macro
+init(SrcPos pos, Block parent, Expr src, SStr varName, Expr tfm) {
+    init(pos, parent) {}
 
-class MapExpr extends ExprBlock {
-    init(SrcPos pos, Block parent, Expr src, SStr varName, Expr tfm) {
-        init(pos, parent) {}
+    Var local(this, named{Int}, varName, Actuals());
+    add(local);
 
-        Var local(this, named{Int}, varName, Actuals());
-        add(local);
-
-        // The remainder of the constructor is as before.
-    }
+    // The remainder of the constructor is as before.
 }
 ```
 
