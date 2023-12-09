@@ -118,7 +118,7 @@ namespace storm {
 		// Get the syntax rules.
 		virtual void STORM_FN readSyntaxRules();
 
-		// Get the syntax options.
+		// Get the syntax productions.
 		virtual void STORM_FN readSyntaxProductions();
 
 		// Get the types.

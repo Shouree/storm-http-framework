@@ -17,11 +17,11 @@ SRoot => Array<DemoFunction>() : , (SFunction -> push, )*;
 
 DemoFunction SFunction();
 SFunction => DemoFunction(pos, name, params, body)
-  : SIdentifier name #fnName, "(", SParamList params, ")", ":", SExpr @body;
+  : SIdentifier name #fnName, "(", SParamList params, ")", "=", SExpr @body;
 
 Array<Str> SParamList();
 SParamList => Array<Str>() : ;
-SParamList => Array<Str>() : SIdentifier -> push - (, ",", SIdentifier -> push)*;
+SParamList => Array<Str>() : SIdentifier #varName -> push - (, ",", SIdentifier #varName -> push)*;
 
 Expr SExpr(Scope scope);
 SExpr => OpAdd(pos, l, r) : SExpr(scope) l, "\+", SProduct(scope) r;

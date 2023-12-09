@@ -3,12 +3,8 @@ use core:lang;
 use lang:bs:macro;
 use core:asm;
 
-lang:PkgReader reader(Url[] files, Package pkg) {
-	lang:FilePkgReader(files, pkg, &createReader);
-}
-
-DemoFileReader createReader(lang:FileInfo info) {
-	DemoFileReader(info);
+lang:PkgReader reader(Url[] files, Package pkg) on Compiler {
+	lang:FilePkgReader(files, pkg, (x) => DemoFileReader(x));
 }
 
 class DemoFileReader extends lang:FileReader {
@@ -16,7 +12,7 @@ class DemoFileReader extends lang:FileReader {
 		init(info) {}
 	}
 
-	void readFunctions() {
+	void readFunctions() : override {
 		Parser<SRoot> parser;
 		parser.parse(info.contents, info.url, info.start);
 		if (parser.hasError)
@@ -25,6 +21,10 @@ class DemoFileReader extends lang:FileReader {
 		DemoFunction[] functions = parser.tree().transform();
 		for (f in functions)
 			info.pkg.add(f);
+	}
+
+	lang:bnf:Rule rootRule() : override {
+		named{SRoot};
 	}
 }
 
