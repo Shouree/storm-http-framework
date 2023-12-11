@@ -1,11 +1,86 @@
-void main() {
-	print(f(1, 2).toS);
-	print(g(4, 2).toS);
-	print(h(10).toS);
-}
+use core:io;
+use core:lang;
+use lang:bs:macro;
+
+/**
+ * This file looks different from what you would do if you load the package "demo" into "lang.demo".
+ * The code here essentially emulates Storm's loading behavior. This is not necessary if the package
+ * is properly loaded. We can't locate it properly here, since that would make it difficult to
+ * follow the tutorial (there would already be a "lang.demo" package then...).
+ */
 
 
-Int bsfn(Int x, Int y) {
-	print("In Basic Storm: ${x}, ${y}");
-	x + y;
+// This is the contents of the "main.bs" file in the tutorial.
+private Str bsCode on Compiler = str{
+	void main() {
+		print(f(1, 2).toS);
+		print(g(4, 2).toS);
+		print(h(10).toS);
+	}
+
+
+	Int bsfn(Int x, Int y) {
+		print("In Basic Storm: ${x}, ${y}");
+		x + y;
+	}
+};
+
+// This is the contents of the "demo.demo" file in the tutorial.
+private Str demoCode on Compiler = str{
+	f(a, b) = a + b + 1
+	g(a, b) = a / b
+	h(a) = bsfn(f(a, a), 5)
+};
+
+
+// This main function creates the package reader and loads it manually. As mentioned above, you
+// don't need to do this if you locate the "demo" package correctly.
+void main() on Compiler {
+	// Create in-memory files for the code above.
+	MemoryProtocol protocol;
+	Url bsFile = protocol.put("test.bs", bsCode);
+	Url demoFile = protocol.put("demo.demo", demoCode);
+	print(demoCode);
+
+	// Create a temporary package and add it to the name tree as a sub-package to this package
+	// (named{} is short for the current package).
+	Package tmpPkg("test");
+	(named{}).add(tmpPkg);
+
+	// Create readers for the file types.
+	var bsReader = lang:bs:reader([bsFile], tmpPkg);
+	var demoReader = demo:reader([demoFile], tmpPkg);
+
+	// Progressively load the contents:
+	bsReader.readSyntaxProductions();
+	demoReader.readSyntaxProductions();
+	bsReader.readTypes();
+	demoReader.readTypes();
+	bsReader.resolveTypes();
+	demoReader.resolveTypes();
+	bsReader.readFunctions();
+	demoReader.readFunctions();
+	bsReader.resolveFunctions();
+	demoReader.resolveFunctions();
+
+	// Now, we can just find the function "main" in the package!
+	unless (mainFunction = tmpPkg.find(SimplePart("main"), Scope()) as Function) {
+		throw InternalError("Failed to find the \"main\" function in the loaded package!");
+	}
+
+	// Get the pointer to the function, cast it to the type we expect, and call it!
+	unless (ptr = mainFunction.pointer() as fn()->void) {
+		throw InternalError("The return type of the \"main\" function is not void as expected.");
+	}
+
+	ptr.call();
 }
+
+Url put(MemoryProtocol to, Str name, Str contents) {
+	MemOStream output;
+	Utf8Output textOut(output);
+	textOut.write(contents);
+	textOut.flush();
+	return to.put(name, output.buffer);
+}
+
