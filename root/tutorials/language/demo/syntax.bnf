@@ -13,7 +13,7 @@ SIdentifier => x : "[A-Za-z]+" x;
 
 
 Array<DemoFunction> SRoot();
-SRoot => Array<DemoFunction>() : , (SFunction -> push, )*;
+SRoot => functions : , (SFunction functions, )*;
 
 DemoFunction SFunction();
 SFunction => DemoFunction(pos, name, params, body)

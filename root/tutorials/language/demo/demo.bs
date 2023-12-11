@@ -29,8 +29,8 @@ class DemoFileReader extends lang:FileReader {
 }
 
 class DemoFunction extends Function {
-	SExpr body;
 	Str[] paramNames;
+	SExpr body;
 
 	init(SrcPos pos, Str name, Str[] paramNames, SExpr body) {
 		Value[] valParams;
@@ -38,8 +38,8 @@ class DemoFunction extends Function {
 			valParams << named{Int};
 
 		init(pos, named{Int}, name, valParams) {
-			body = body;
 			paramNames = paramNames;
+			body = body;
 		}
 
 		setCode(LazyCode(&this.createCode));
@@ -61,7 +61,7 @@ class DemoFunction extends Function {
 
 		gen.l << fnRet(eax);
 
-		gen;
+		return gen;
 	}
 }
 

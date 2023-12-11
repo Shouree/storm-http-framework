@@ -36,7 +36,10 @@ example it is fairly easy to deduce where the error is (there is only one `+` af
 Regardless, the error states that the error is on characters 70-71 in the file `demo.bs`. In Emacs,
 it is possible to jump to the correct character position by typing `M-g M-c` (i.e. holding down Alt
 and pressing `g` followed by `c` while keeping Alt pressed). Emacs then asks which character to go
-to. Type `70` and press Enter. This causes the cursor to go to the `+` character in the file. Other
+to. Type `70` and press Enter. This causes the cursor to go to the character before the `+`
+character in the file. The reason for the offset of 1 is that Emacs starts counting from 1, while
+Storm starts counting from 0. So, to go to the correct character, we need to add 1 to the character
+number. As such, doing `M-g M-c 71` then pressing return takes us to the correct character. Other
 editors work differently, but are likely to provide similar functionality.
 
 To fix the error, we need to convert `i` to a string by adding `.toS`. That is, the print statement
