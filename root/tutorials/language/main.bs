@@ -13,9 +13,9 @@ use lang:bs:macro;
 // This is the contents of the "main.bs" file in the tutorial.
 private Str bsCode on Compiler = str{
 	void main() {
-		print(f(1, 2).toS);
-		print(g(4, 2).toS);
-		print(h(10).toS);
+		print("f(1, 2) = ${f(1, 2)}");
+		print("g(4, 2) = ${g(4, 2)}");
+		print("h(10) = ${h(10)}");
 	}
 
 
@@ -28,7 +28,7 @@ private Str bsCode on Compiler = str{
 // This is the contents of the "demo.demo" file in the tutorial.
 private Str demoCode on Compiler = str{
 	f(a, b) = a + b + 1
-	g(a, b) = a / b
+	g(a, b) = f(a, a) * b
 	h(a) = bsfn(f(a, a), 5)
 };
 

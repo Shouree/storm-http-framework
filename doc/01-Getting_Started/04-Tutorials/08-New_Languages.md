@@ -1026,9 +1026,1026 @@ class OpDiv extends Expr {
 Variables
 ---------
 
+Now that we can evaluate expressions properly, let's make the language more useful by adding
+variables. Since there are no assignments in the language, the only way to define a variable is to
+specify it as a parameter to a function.
+
+Under these constraints, it would be possible to implement variables trivially using a simple hash
+table. This tutorial will, however, illustrate a slightly more complex implementation that is able
+to accommodate more advanced languages as well. In particular, the implementation here will utilize
+the name lookup mechanisms in Storm, so that it is possible to look up variables and functions using
+an uniform interface. The structure also allows implementing things like blocks that introduce
+separate namespaces for example. All in all, the structure is a simplified version of the structure
+used in Basic Storm.
+
+As in the previous parts of the tutorial, we start by updating our test file. To test parameters and
+variables, let's add a new test to the `demo.demo` file, so that it looks like below:
+
+```
+f() = (10 + 4) / 2
+f(a, b) = a + b + 1
+```
+
+If we run the program now, it will actually still work. This is due to the lazy compilation in
+Storm. The file will parse successfully since we added a production that matches variables. This
+means that the code parses correctly, even if we have not yet implemented support for variables.
+Since we never call `f` that accepts two parameters, we will never try to compile it, and we thus
+never discover the error. As mentioned [here](md:../Developing_in_Storm/Compilation_Model), we can
+force Storm to compile all of our code eagerly to see the error. This does, however, mean that we
+have to implement function calls as well before being able to test our implementation of variables.
+The easiest way to test our implementation is to modify the `main` function in the `test.bs` file to
+call the new function:
+
+```bs
+void main() {
+    Int result = f(1, 2);
+    print("Result: ${result}");
+}
+```
+
+
+If we run the program at this stage, we get an error as we would expect:
+
+```
+@/home/storm/language/demo/syntax.bnf(962-981): Syntax error:
+No return value specified for a production that does not return 'void'.
+```
+
+As before, we solve this error by adding a transform function to the production. This time we use it
+to create a node called `VarAccess`:
+
+```bnf
+SAtom => VarAccess(pos, name) : SIdentifier name;
+```
+
+We also need to define the `VarAccess` class in the `ast.bs` file as before:
+
+```bs
+class VarAccess extends Expr {
+    init(SrcPos pos, Str name) {
+        init(pos) {}
+    }
+
+    void code(CodeGen to) : override {
+        // ?
+    }
+}
+```
+
+This is enough to allow us to run the program, but not enough to produce the correct result (I get
+the number 3 when running it, but it might differ on your machine or even crash). The big question
+that remains is: how do we know which variable to read in the `code` function?
+
+To answer that question, let's start at the root of the AST, when we start code generation in the
+`createCode` function inside the `DemoFunction` class. At the moment we completely ignore that the
+function receives parameters. This means that we actually generate code for a function that accepts
+0 parameters, even though we pass two integers when we call it. The first step is therefore to tell
+the `Listing` object that the function accepts parameters, so that it can generate code that
+receives the parameters properly. We do this by calling the `createParam` function for each
+parameter, and giving it a `TypeDesc` (type description) that contains information about the type
+that should be received. We can easily get a `TypeDesc` from a `Type` by calling its `desc()`
+member:
+
+```bsclass:use=lang.bs.macro
+private CodeGen createCode() {
+    CodeGen gen(runOn, isMember, result);
+
+    gen.l << prolog();
+
+    for (name in paramNames) {
+        Var param = gen.l.createParam(named{Int}.desc());
+    }
+
+    Expr e = body.transform();
+    e.code(gen);
+
+    gen.l << fnRet(eax);
+
+    return gen;
+}
+```
+
+As we can see from the code, the `createParam` function returns a `Var` object. This means that we
+can treat parameters in the Intermediate Language just as we treat normal variables. This means that
+as long as we manage to get the `Var` values from the `createCode` function to the `VarAccess`
+class, we can easily generate code to load the variable into the `eax` register. The question that
+remains is therefore: how do we allow the `VarAccess` class to access the parameters?
+
+As mentioned above, we will solve name lookups using the facilities provided by Storm. As such, the
+first step is to create a named entity for storing our variables. We can inherit from the
+[stormname:core.lang.Variable] class in Storm to simplify the implementation a bit:
+
+```bsclass:use=lang.bs.macro
+class DemoVar extends Variable {
+    Var codeVar;
+
+    init(SrcPos pos, Str name, Var codeVar) {
+       init(pos, name, named{Int}) {
+           codeVar = codeVar;
+       }
+    }
+}
+```
+
+As we can see, this class simply stores a `Var` instance that corresponds to the variable we
+received from the `createParam` function. The base class `Variable` also gives it a `result` member
+that stores the type of the variable (this is why we pass `named{Int}` to the parent constructor).
+Furthermore, since `Variable` inherits from `Named`, it also has a name and a source position. The
+inheritance from `Named` also means that it can be a part of the name tree in Storm, and that we can
+search for it using the standard lookup mechanisms.
+
+Before we can use the `DemoVar` class we just created, we need somewhere to store them. Since the
+variables are local to the function, we don't want them to be accessible from the root of the name
+tree. We do, however, wish to have a node in the name tree with a parent pointer to the right point
+in the name tree, so that we can lookup functions and other variables later on. For this reason, we
+create a class that inherits from [stormname:core.lang.NameLookup]. The `NameLookup` class is the
+super class of [stormname:core.lang.Named], and represents a node in the name tree where it is
+possible to look up names, and that has a parent pointer to some location in the name tree. It does,
+however, not have a name and it is therefore not possible to store a `NameLookup` in the name tree,
+or to find them by name. This is exactly what we want. We start the implementation as follows:
+
+```bs
+class DemoLookup extends NameLookup {
+    init(NameLookup parent) {
+        init(parent) {}
+    }
+}
+```
+
+Since we wish to be able to look up names in the name tree from the `NameLookup` later on, we let
+the constructor accepts a parameter that specifies the parent node in the name tree. This also lets
+us link multiple `DemoLookup` together to represent nested namespaces inside functions in our
+language if we wish.
+
+The next step is to add somewhere to store variables inside the `DemoLookup`. Since variables do not
+have any parameters, we can simply use a `Map<Str, DemoVar>` (also spelled `Str->DemoVar`). We also
+add a function that makes it convenient to add variables:
+
+```bs
+class DemoLookup extends NameLookup {
+    Str->DemoVar variables;
+
+    init(NameLookup parent) {
+        init(parent) {}
+    }
+
+    void addVar(SrcPos pos, Str name, Var v) {
+        DemoVar var(pos, name, v);
+        var.parentLookup = this;
+        variables.put(name, var);
+    }
+}
+```
+
+One thing is worth noting in the code above. In the `addVar` function we explicitly set
+`parentLookup` of the created variable to `this`. This connects the variable to the current block,
+so that it is possible to start in the variable and traverse the name tree towards the root. We do
+not need this ability in our language, but for some types of named entities (e.g. functions), it is
+necessary to attach them to the name tree before using them. The function `add` in the `NameSet`
+class sets the `parentLookup` internally, so it is only necessary to set `parentLookup` manually when
+working with `NameLookups` like in this example.
+
+We can now go back to the `createCode` function and store the parameters inside a `DemoLookup`:
+
+```bsclass:use=lang.bs.macro
+private CodeGen createCode() {
+    CodeGen gen(runOn, isMember, result);
+
+    gen.l << prolog();
+
+    DemoLookup lookup(this);
+    for (name in paramNames) {
+        Var param = gen.l.createParam(named{Int}.desc());
+        lookup.addVar(pos, name, param);
+    }
+
+    Expr e = body.transform();
+    e.code(gen);
+
+    gen.l << fnRet(eax);
+
+    return gen;
+}
+```
+
+Now that we have stored the parameters somewhere, we just need to pass them to the `VarLookup` class
+through the grammar. We do this by encapsulating the `DemoLookup` inside a
+[stormname:core.lang.Scope] class. The `Scope` class can be thought of as a pointer to a location in
+the name tree, together with a strategy for looking up names based on that location. For example,
+when asked to look up the name `Str` in the context of the package `lang.demo`, the `Scope` used in
+Basic Storm will first look in the package `lang.demo`, then in the root package, and after that in
+the `core` package (the strategy is customizable by providing a `ScopeLookup` class, but we will not
+need to do that in this tutorial).
+
+To give the name tree access to the current scope, we modify the call to `transform` into the
+following:
+
+```bsstmt
+Expr e = body.transform(Scope(lookup));
+```
+
+We must also change the syntax to accept the new parameter and pass it along to the `VarAccess`
+class. We first add `use core.lang;` to the `syntax.bnf` file so we do not have to write
+`core.lang.Scope` every time we wish to refer to the `Scope` class. After that, we add a parameter
+`scope` with the type `Scope` to the `SExpr`, `SProduct`, and `SAtom` rules, and modify the usages
+of these rules to pass the `scope` parameter along. After the changes, the productions should look
+like this:
+
+```bnf
+use core.lang;
+
+// ...
+
+Expr SExpr(Scope scope);
+SExpr => OpAdd(pos, l, r) : SExpr(scope) l, "\+", SProduct(scope) r;
+SExpr => OpSub(pos, l, r) : SExpr(scope) l, "-", SProduct(scope) r;
+SExpr => x : SProduct(scope) x;
+
+Expr SProduct(Scope scope);
+SProduct => OpMul(pos, l, r) : SProduct(scope) l, "\*", SAtom(scope) r;
+SProduct => OpDiv(pos, l, r) : SProduct(scope) l, "/", SAtom(scope) r;
+SProduct => x : SAtom(scope) x;
+
+Expr SAtom(Scope scope);
+SAtom => Literal(pos, num) : "-?[0-9]+" num;
+SAtom => x : "(", SExpr(scope) x, ")";
+
+SAtom => VarAccess(pos, name, scope) : SIdentifier name;
+```
+
+Now, we can finally return to our `VarAccess` implementation. We start by modifying the constructor
+to accept the new `Scope` parameter. It can then use the new parameter to try to look up the
+variable as follows:
+
+```bsclass
+init(SrcPos pos, Str name, Scope scope) {
+    init(pos) {}
+
+    if (x = scope.find(SimpleName(name)) as DemoVar) {
+        print("Found ${x.name}!");
+    } else {
+        throw SyntaxError(pos, "Unknown variable: ${name}");
+    }
+}
+```
+
+As we can see, the `Scope` class has a `find` function that accepts a single parameter that contains
+the name that it should attempt to find. Since we have no unresolved parameters, we can simply
+create a [stormname:core.lang.SimpleName] that consists of a single part that contains the name we
+are looking for. The function returns a `Maybe<Named>` value that is `null` if no name was found.
+Since we are looking for `DemoVar` instances, we cast it to a `DemoVar` using the `as` keyword. This
+check is also able to check for `null` at the same time. For now, we simply print a message if we
+found a matching variable, and throw a syntax error on failure.
+
+If we run the code like this, we will (perhaps surprisingly) reach the error case:
+
+```
+@/home/storm/language/test/demo.demo(29-30): Syntax error: Unknown variable: a
+```
+
+To understand why the error occurs, we need to know a bit more about how the `find` function works
+internally. On a high level, the `find` function iterates through the individual parts in the
+supplied name. It attempts to find the first part in the `NameLookup` stored in the `Scope`. The
+next part is resolved in the context of the entity found by the first, and so on. To find a single
+part in a `NameLookup` class, the `Scope` calls the `find` function in the `NameLookup`. If it fails
+by returning `null`, the name lookup is considered a failure, and the `Scope` may try again from a
+different starting point (e.g. the parent to the current `NameLookup`).
+
+Knowing this strategy allows us to find the problem in our implementation. While we store `DemoVar`
+entities in our `DemoLookup`, we have not yet implemented the `find` function that lets the `Scope`
+find the variables. As such, we need to take a slight detour and override the `find` function in our
+`DemoLookup` class:
+
+```bsclass
+Named? find(SimplePart part, Scope scope) : override {
+    if (part.params.empty) {
+        if (found = variables.at(part.name)) {
+            return found;
+        }
+    }
+    return null;
+}
+```
+
+The function receives two parameters. The first one is the part of the name that the `Scope` wishes
+to find. The second parameter is the scope itself. It can be used to inspect the context in which
+the name lookup occurred, so that we can determine which variables are visible from that context
+(e.g. for private variables). Since we are working with local variables that are not reachable from
+anywhere outside the function, we can safely ignore the `scope` parameter in our implementation.
+
+The `find` function starts by checking if the `part` contains any parameters. If it does, we know
+that none of our variables will match, since variables do not take parameters by definition. If the
+part had no parameters, we can proceed to look up the variable in the hash table, and return it if
+we found a match.
+
+This is enough for our needs, and if we try to run our program again, we can see that the error
+message is replaced by the messages `Found a!` and `Found b!` This means that our name lookup works
+as expected. The only thing that remains is to use the found entity to retrive the value of the
+variable!
+
+We add a variable in the `VarAccess` class that stores the `DemoVar` we found in the constructor.
+Note, however, that due to how the `unless` statement is implemented in Basic Storm, it is not
+possible to use it before `init` or `super` blocks. This means that we need to rely on the fact that
+`if` statements are expressions when we initialize the `DemoVar` variable (it is possible to write a
+helper function as well, but where is the fun in that?). Once we have stored the `DemoVar` in the
+class, we can use it in the `code` function to load the `codeVar` into the register `eax`:
+
+```bs
+class VarAccess extends Expr {
+    DemoVar toRead;
+
+    init(SrcPos pos, Str name, Scope scope) {
+        init(pos) {
+            toRead = if (x = scope.find(SimpleName(name)) as DemoVar) {
+                x;
+            } else {
+                throw SyntaxError(pos, "Unknown variable: ${name}");
+            };
+        }
+    }
+
+    void code(CodeGen to) : override {
+        to.l << mov(eax, toRead.codeVar);
+    }
+}
+```
+
+And with those changes, the implementation of variables is complete. If we run the program now, it
+will print `Result: 4` as expected.
+
+
 Function Calls
 --------------
+
+After implementing variables, the last thing that remains is to implement function calls. Luckily,
+it turns out that we can re-use much of the work we did to implement variables when implementing
+functions. In particular, we can use the `find` function in the `Scope` class to look for functions
+as well.
+
+Before we get to the implementation, let's update our `demo.demo` file with some new tests:
+
+```
+f() = (10 + 4) / 2
+f(a, b) = a + b + 1
+g(a, b) = f(a, a) * b
+```
+
+We also change the `main` function in `test.bs` as follows:
+
+```bs
+void main() {
+    print("f(1, 2) = ${f(1, 2)}");
+    print("g(4, 2) = ${g(4, 2)}");
+}
+```
+
+If we run the program at this point, we get the familiar error message below that indicates that we
+are trying to transform a production that we have not yet specified a transform for:
+
+```
+@/home/storm/language/demo/syntax.bnf(1145-1184): Syntax error:
+No return value specified for a production that does not return 'void'.
+```
+
+To fix the issue, we need to add transforms to the function call production. Since it uses the
+`SActuals` rule, we also need to update that production to include transforms and the `Scope`
+parameter:
+
+```bnf
+SAtom => FnCall(pos, name, params, scope) : SIdentifier name, "(", SActuals(scope) params, ")";
+
+Array<Expr> SActuals(Scope scope);
+SActuals => Array<Expr>() : ;
+SActuals => Array<Expr>() : SExpr(scope) -> push - (, ",", SExpr(scope) -> push)*;
+```
+
+Next, we need to implement the `FnCall` node in the file `ast.bs`. We start with the basic
+structure:
+
+```bs
+class FnCall extends Expr {
+    private Expr[] params;
+
+    init(SrcPos pos, Str name, Expr[] params, Scope scope) {
+        init(pos) {
+            params = params;
+        }
+    }
+
+    void code(CodeGen to) : override {
+        // ?
+    }
+}
+```
+
+As was the case for variables, it is now possible to run the test. It will run and produce some
+answer (4 on my system, but it may differ on your system). This is nice as it lets us experiment a
+bit easier.
+
+The implementation in the `FnCall` class will be similar to the `VarAccess` class. In the
+constructor we will use the `scope` to find the function to call. We store it as a variable in the
+class so that we can use it in the `code` function. The difference is that we need to create a name
+that has the right number of integer parameters. Otherwise we will not find the function we are
+looking for. Since we will be able to find functions in other languages in Storm, it is also a good
+idea to verify the return type of the function we found.
+
+We start by creating a name to look for in the constructor:
+
+```bsclass:use=lang.bs.macro
+init(SrcPos pos, Str name, Expr[] params, Scope scope) {
+    SimplePart part(name);
+    for (x in params)
+        part.params.push(named{Int});
+
+    SimpleName lookFor(part);
+
+    // For debugging!
+    print(lookFor.toS);
+
+    init(pos) {
+        params = params;
+    }
+}
+```
+
+We start by creating a `SimplePart` that only contains the name of the function we are looking for.
+We then add one integer parameter for each parameter that was passed to the function. The reason we
+do not have to inspect the expressions in the `params` array is again since the `demo` language only
+supports integers. This means that we know that all expressions evaluate to `Int`. If we add support
+for other types, we would have to ask each parameter what type it evaluated to and add that type to
+the `part` instead.
+
+After we have created the `part`, we create a `SimpleName` out of the part. In our case, the name
+only contains a single part since the `demo` language does not have any syntax to specify functions
+that are located in other packages (e.g. `tutorials.language.main()`). Finally, we print the name to
+see that we have created something that is sensible. If we run the program it will print
+`f(core.Int, core.Int)` which looks exactly like what we would expect.
+
+Since the created name looks right, we can try to look up the name using the `scope`. We add a new
+variable `toCall` to store the function in, and like in the `VarAccess` class, we will initialize it
+using an `if` statement in the `init` block:
+
+```bsclass:use=lang.bs.macro
+class FnCall extends Expr {
+    private Expr[] params;
+    private Function toCall;
+
+    init(SrcPos pos, Str name, Expr[] params, Scope scope) {
+        SimplePart part(name);
+        for (x in params)
+            part.params.push(named{Int});
+
+        SimpleName lookFor(part);
+
+        init(pos) {
+            params = params;
+            toCall = if (x = scope.find(lookFor) as Function) {
+                if (!Value(named{Int}).mayStore(x.result))
+                    throw SyntaxError(pos, "Functions used in the demo language must return Int!");
+                x;
+            } else {
+                throw SyntaxError(pos, "Unknown function: ${lookFor}");
+            };
+        }
+    }
+
+    // ...
+}
+```
+
+As can be seen above, the only difference from the `VarAccess` class is that we try to cast the
+found element to a `Function` rather than a `DemoVar`, and that we also verify the result using the
+`mayStore` function in the `Value` class. This function checks that the left hand side (the `Int`)
+is a binary compatible with the right hand side (`x.result`). For value types, it would technically
+be enough to check if the type is exactly `Int`. The `mayStore` function takes inheritance for
+class- and actor-types as well, which is usually useful but not really necessary here.
+
+Finally, the only thing that remains is to implement the `code` function. Here, we can take a
+similar approach to the implementation of the `code` functions for the operators. We start by
+evaluating all parameters to the function, and store them in temporary variables, and then call the
+function. We can evaluate the parameters and store them in variables like this:
+
+```bsclass
+void code(CodeGen to) : override {
+    Operand[] ops;
+    for (x in params) {
+        Var tmp = to.l.createIntVar(to.block);
+
+        s.code(to);
+        to.l << mov(tmp, eax);
+        ops << tmp;
+    }
+}
+```
+
+We then have two options to call the function. The most robust one is to utilize the `autoCall`
+function inside the `Function` class. The `autoCall` function inspects the `CodeGen` object and
+determines if a thread switch is necessary or not. Using it requires creating a `CodeResult` object
+to let it know where it should place the result. This can be done as follows:
+
+```bsclass:use=lang.bs.macro
+void code(CodeGen to) : override {
+    Operand[] ops;
+    for (x in params) {
+        Var tmp = to.l.createIntVar(to.block);
+
+        x.code(to);
+        to.l << mov(tmp, eax);
+        ops << tmp;
+    }
+
+    CodeResult result(named{Int}, to.block);
+    toCall.autoCall(to, ops, result);
+    to.l << mov(eax, result.location(to));
+}
+```
+
+In the first new line, we create a `CodeResult` and specify that we want the result to be located in
+a variable visible in the current block (`to.block`), and that the variable should store an integer.
+Then, we call `autoCall` to ask it to generate code for the function call. Finally, we copy the
+resultfrom the variable the `CodeResult` object created for it to the `eax` register to follow the
+convention of the `code` function.
+
+The other option is to emit `fnParam` and `fnCall` instructions directly. This works in cases where
+we are sure that a thread switch is *not* necessary. We can not really assume this in our
+implementation. Therefore, the following implementation is *not* recommended in this case. It is
+only provided to illustrate how function calls in the intermediate language work:
+
+```bsstmt:use=lang.bs.macro
+for (x in ops) {
+    to.l << fnParam(named{Int}.desc, x);
+}
+to.l << fnCall(toCall.ref(), toCall.isMember, named{Int}.desc, x);
+```
+
+With that, the implementation of function calls is complete. Running the tests now should produce
+the expected output:
+
+```
+f(1, 2) = 4
+f(4, 2) = 18
+```
+
+Since we are using the generic `Function` interface for function calls, it is actually possible to
+call functions implemented in Basic Storm from our `demo` language. To illustrate this, we can
+create a new function in the file `demo.demo`:
+
+```
+h(a) = bsfn(f(a, a), 5)
+```
+
+We then update our `main` function in the file `test.bs` to call the new function. We also implement
+`bsfn` there:
+
+```bs
+void main() {
+    print("f(1, 2) = ${f(1, 2)}");
+    print("g(4, 2) = ${g(4, 2)}");
+    print("h(10) = ${h(10)}");
+}
+
+Int bsfn(Int x, Int y) {
+    print("In Basic Storm: ${x}, ${y}");
+    x + y;
+}
+```
+
+If we run the program now, we can see that it works as expected. The output from the `print`
+statement in `bsfn` is visible as we would expect, and the correct result is produced:
+
+```
+f(1, 2) = 4
+g(4, 2) = 18
+In Basic Storm: 21, 5
+h(10) = 26
+```
 
 
 Syntax Highlighting
 -------------------
+
+Using the [language server](md:/Language_Reference/Storm/Language_Server) in Storm, we can easily
+add syntax higlighting to our language. For this, we need two things: a function in our `FileReader`
+that tells the language server which rule is the root in our grammar, and annotations in the
+grammar.
+
+We start by adding the required function to the `FileReader`. In the class `DemoFileReader`, we
+simply need to add the following function:
+
+```bsclass:use=lang.bs.macro
+lang:bnf:Rule rootRule() : override {
+    named{SRoot};
+}
+```
+
+This instructs the language server to start parsing `demo` files using the rule `SRoot`. Apart from
+that, we just need to annotate the grammar to tell the language server which parts of the text to
+highlight, and which color to use.
+
+...
+
+
+
+Ideas for Extending the Language
+--------------------------------
+
+The language created here provides a good starting point for further development. Below are some
+ideas for how to expand the language further, towards a more "real" language:
+
+- **Assignments**
+
+  Based on what is currently in the language, it is fairly straight-forward to add assignments
+  (perhaps in the form of `let` statements) to the language. It is already possible to add new
+  variables to the `DemoLookup` object. The tricky part is that the variables must be added in the
+  constructor of the AST node that creates them, but the `codeVar` variable can not be initialized
+  until code is generated. Fortunately, the `Var` type has an empty constructor that creates an
+  invalid variable value that can be used as a placeholder.
+
+  It is also interesting to further extend the language by introducing blocks that delimit the scope
+  of local variables. This can be done by representing the new scope as a new instance of the
+  `DemoLookup` class. By setting the `parent` to the previous `DemoLookup` instance, the `Scope`
+  will actually traverse the scopes as we would expect by default.
+
+- **Extensible Syntax**
+
+  Since the parser in Storm is built to support extensible languages, it is quite easy to use this
+  functionality in our demo language. The goal is to call the function `addSyntax` on the parser to
+  add new packages with syntax before we call `parse`. The question is how we manage to read which
+  packages to include before we start parsing anything.
+
+  The key to this problem is that it is possible to divide files into different sections. What we
+  want to do is to create a new `FileReader` that we call `IncludesReader` or similar. We create
+  this reader instead of the `DemoFileReader` in the `reader` function. The `IncludesReader` then
+  parses only the first piece of the file using a new rule that only matches `use` statements. This
+  is done very similarly to the code in the `readFunctions` function we created, except that instead
+  of calling `hasError` to check if the parse was successfull, we call `hasTree`. The `hasTree` is
+  weaker than `hasError` in the sense that it does not consider it an error if the parse did not
+  match the entire string.
+
+  ...
+
+
+- **Types**
+
+  It requires some work to extend the language to other types, but it is doable. This requires
+  adding a member to the `Expr` class that returns the type of each expression. This type
+  information can then be used in the function call node to find a function that accepts the proper
+  parameters. Since we can no longer guarantee that the result of evaluating a node fits in a
+  register anymore, we need to transition to another scheme. One option is to let the `code`
+  function return a `Var` that contains the value. This results in quite a number of copies of value
+  types, but works. Copies can be eliminated by letting nodes work with references to value types,
+  for example.
+
+
+Full Source Code
+----------------
+
+For completeness, the full source produced in this tutorial is provided below.
+
+`syntax.bnf`:
+
+```bnf
+use core.lang;
+
+optional delimiter = SDelimiter;
+
+void SDelimiter();
+SDelimiter : "[ \n\r\t]*" - (SComment - SDelimiter)?;
+
+void SComment();
+SComment : "//[^\n]*\n" #comment;
+
+Str SIdentifier();
+SIdentifier => x : "[A-Za-z]+" x;
+
+
+Array<DemoFunction> SRoot();
+SRoot => functions : , (SFunction functions, )*;
+
+DemoFunction SFunction();
+SFunction => DemoFunction(pos, name, params, body)
+  : SIdentifier name #fnName, "(", SParamList params, ")", "=", SExpr @body;
+
+Array<Str> SParamList();
+SParamList => Array<Str>() : ;
+SParamList => Array<Str>()
+  : SIdentifier -> push #varName - (, ",", SIdentifier -> push #varName)*;
+
+Expr SExpr(Scope scope);
+SExpr => OpAdd(pos, l, r) : SExpr(scope) l, "\+", SProduct(scope) r;
+SExpr => OpSub(pos, l, r) : SExpr(scope) l, "-", SProduct(scope) r;
+SExpr => p : SProduct(scope) p;
+
+Expr SProduct(Scope scope);
+SProduct => OpMul(pos, l, r) : SProduct(scope) l, "\*", SAtom(scope) r;
+SProduct => OpDiv(pos, l, r) : SProduct(scope) l, "/", SAtom(scope) r;
+SProduct => a : SAtom(scope) a;
+
+Expr SAtom(Scope scope);
+SAtom => Literal(pos, num) : "-?[0-9]+" num #constant;
+SAtom => VarAccess(pos, name, scope)  : SIdentifier name #varName;
+SAtom => FnCall(pos, name, params, scope)
+  : SIdentifier name #fnName, "(", SActuals(scope) params, ")";
+SAtom => x : "(", SExpr x, ")";
+
+Array<Expr> SActuals(Scope scope);
+SActuals => Array<Expr>() : ;
+SActuals => Array<Expr>() : SExpr(scope) -> push - (, ",", SExpr(scope) -> push)*;
+```
+
+`demo.bs`:
+
+```bs
+use core:io;
+use core:lang;
+use lang:bs:macro;
+use core:asm;
+
+lang:PkgReader reader(Url[] files, Package pkg) on Compiler {
+	lang:FilePkgReader(files, pkg, (x) => DemoFileReader(x));
+}
+
+class DemoFileReader extends lang:FileReader {
+    init(lang:FileInfo info) {
+        init(info) {}
+    }
+
+	void readFunctions() : override {
+		Parser<SRoot> parser;
+		parser.parse(info.contents, info.url, info.start);
+		if (parser.hasError)
+			throw parser.error();
+
+		DemoFunction[] functions = parser.tree().transform();
+		for (f in functions)
+			info.pkg.add(f);
+	}
+}
+
+
+class DemoFunction extends Function {
+    Str[] paramNames;
+	SExpr body;
+
+    init(SrcPos pos, Str name, Str[] paramNames, SExpr body) {
+        Value[] valParams;
+        for (x in paramNames)
+            valParams << named{Int};
+
+        init(pos, named{Int}, name, valParams) {
+            paramNames = paramNames;
+			body = body;
+        }
+
+		setCode(LazyCode(&this.createCode));
+    }
+
+	private CodeGen createCode() {
+		CodeGen gen(runOn, isMember, result);
+
+		gen.l << prolog();
+
+		DemoLookup lookup(this);
+		for (name in paramNames) {
+			Var param = gen.l.createParam(named{Int}.desc());
+			lookup.addVar(pos, name, param);
+		}
+
+		Expr e = body.transform(Scope(lookup));
+		e.code(gen);
+
+		gen.l << fnRet(eax);
+
+		return gen;
+	}
+}
+
+
+class DemoVar extends Variable {
+    Var codeVar;
+
+    init(SrcPos pos, Str name, Var codeVar) {
+       init(pos, name, named{Int}) {
+           codeVar = codeVar;
+       }
+    }
+}
+
+class DemoLookup extends NameLookup {
+    Str->DemoVar variables;
+
+    init(NameLookup parent) {
+        init(parent) {}
+    }
+
+    void addVar(SrcPos pos, Str name, Var v) {
+        DemoVar var(pos, name, v);
+        var.parentLookup = this;
+        variables.put(name, var);
+    }
+
+	Named? find(SimplePart part, Scope scope) : override {
+		if (part.params.empty) {
+			if (found = variables.at(part.name)) {
+				return found;
+			}
+		}
+		return null;
+	}
+}
+```
+
+`ast.bs`:
+
+```bs
+use core:asm;
+use core:lang;
+use lang:bs:macro;
+
+class Expr on Compiler {
+	SrcPos pos;
+
+	init(SrcPos pos) {
+		init { pos = pos; }
+	}
+
+	// Convention: Output result into the eax register.
+	void code(CodeGen to) : abstract;
+}
+
+class Literal extends Expr {
+	Int value;
+
+	init(SrcPos pos, Str value) {
+		init(pos) {
+			value = value.toInt();
+		}
+	}
+
+	void code(CodeGen to) : override {
+		to.l << mov(eax, intConst(value));
+	}
+}
+
+class VarAccess extends Expr {
+    DemoVar toRead;
+
+    init(SrcPos pos, Str name, Scope scope) {
+        init(pos) {
+            toRead = if (x = scope.find(SimpleName(name)) as DemoVar) {
+                x;
+            } else {
+                throw SyntaxError(pos, "Unknown variable: ${name}");
+            };
+        }
+    }
+
+    void code(CodeGen to) : override {
+        to.l << mov(eax, toRead.codeVar);
+    }
+}
+
+class FnCall extends Expr {
+    private Expr[] params;
+    private Function toCall;
+
+    init(SrcPos pos, Str name, Expr[] params, Scope scope) {
+        SimplePart part(name);
+        for (x in params)
+            part.params.push(named{Int});
+
+        SimpleName lookFor(part);
+
+        init(pos) {
+            params = params;
+            toCall = if (x = scope.find(lookFor) as Function) {
+                if (!Value(named{Int}).mayStore(x.result))
+                    throw SyntaxError(pos, "Functions used in the demo language must return Int!");
+                x;
+            } else {
+                throw SyntaxError(pos, "Unknown function: ${lookFor}");
+            };
+        }
+    }
+
+    void code(CodeGen to) : override {
+		Operand[] ops;
+		for (x in params) {
+			Var tmp = to.l.createIntVar(to.block);
+
+			x.code(to);
+			to.l << mov(tmp, eax);
+			ops << tmp;
+		}
+
+		CodeResult result(named{Int}, to.block);
+		toCall.autoCall(to, ops, result);
+		to.l << mov(eax, result.location(to));
+    }
+}
+
+class OpAdd extends Expr {
+    private Expr lhs;
+    private Expr rhs;
+
+    init(SrcPos pos, Expr lhs, Expr rhs) {
+        init(pos) {
+            lhs = lhs;
+            rhs = rhs;
+        }
+    }
+
+	void code(CodeGen to) : override {
+		Var tmp = to.l.createIntVar(to.block);
+		rhs.code(to);
+		to.l << mov(tmp, eax);
+		lhs.code(to);
+		to.l << add(eax, tmp);
+	}
+}
+
+class OpSub extends Expr {
+    private Expr lhs;
+    private Expr rhs;
+
+    init(SrcPos pos, Expr lhs, Expr rhs) {
+        init(pos) {
+            lhs = lhs;
+            rhs = rhs;
+        }
+    }
+
+	void code(CodeGen to) : override {
+		Var tmp = to.l.createIntVar(to.block);
+		rhs.code(to);
+		to.l << mov(tmp, eax);
+		lhs.code(to);
+		to.l << sub(eax, tmp);
+	}
+}
+
+class OpMul extends Expr {
+    private Expr lhs;
+    private Expr rhs;
+
+    init(SrcPos pos, Expr lhs, Expr rhs) {
+        init(pos) {
+            lhs = lhs;
+            rhs = rhs;
+        }
+    }
+
+	void code(CodeGen to) : override {
+		Var tmp = to.l.createIntVar(to.block);
+		rhs.code(to);
+		to.l << mov(tmp, eax);
+		lhs.code(to);
+		to.l << mul(eax, tmp);
+	}
+}
+
+class OpDiv extends Expr {
+    private Expr lhs;
+    private Expr rhs;
+
+    init(SrcPos pos, Expr lhs, Expr rhs) {
+        init(pos) {
+            lhs = lhs;
+            rhs = rhs;
+        }
+    }
+
+	void code(CodeGen to) : override {
+		Var tmp = to.l.createIntVar(to.block);
+		rhs.code(to);
+		to.l << mov(tmp, eax);
+		lhs.code(to);
+		to.l << idiv(eax, tmp);
+	}
+}
+```
+
+
+`test.bs`:
+
+```bs
+void main() {
+    print("f(1, 2) = ${f(1, 2)}");
+    print("g(4, 2) = ${g(4, 2)}");
+	print("h(10) = ${h(10)}");
+}
+
+Int bsfn(Int x, Int y) {
+	print("In Basic Storm: ${x}, ${y}");
+	x + y;
+}
+```
+
+`demo.demo`:
+
+```
+f() = (10 + 4) / 2
+f(a, b) = a + b + 1
+g(a, b) = f(a, a) * b
+h(a) = bsfn(f(a, a), 5)
+```

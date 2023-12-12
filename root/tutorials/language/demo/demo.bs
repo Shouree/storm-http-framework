@@ -52,8 +52,8 @@ class DemoFunction extends Function {
 
 		DemoLookup lookup(this);
 		for (name in paramNames) {
-			Var param = gen.l.createIntParam();
-			lookup.addParam(pos, name, param);
+			Var param = gen.l.createParam(named{Int}.desc());
+			lookup.addVar(pos, name, param);
 		}
 
 		Expr e = body.transform(Scope(lookup));
@@ -66,19 +66,21 @@ class DemoFunction extends Function {
 }
 
 class DemoLookup extends NameLookup {
+	private Str->DemoVar variables;
+
 	init(NameLookup parent) {
 		init(parent) {}
 	}
 
-	Str->DemoVar vars;
-
-	void addParam(SrcPos pos, Str name, Var param) {
-		vars.put(name, DemoVar(pos, name, param));
+	void addVar(SrcPos pos, Str name, Var v) {
+		DemoVar var(pos, name, v);
+		var.parentLookup = this;
+		variables.put(name, var);
 	}
 
 	Named? find(SimplePart part, Scope scope) : override {
 		if (part.params.empty) {
-			if (found = vars.at(part.name)) {
+			if (found = variables.at(part.name)) {
 				return found;
 			}
 		}
@@ -87,11 +89,11 @@ class DemoLookup extends NameLookup {
 }
 
 class DemoVar extends Variable {
-	init(SrcPos pos, Str name, Var asmVar) {
+	Var codeVar;
+
+	init(SrcPos pos, Str name, Var codeVar) {
 		init(pos, name, named{Int}) {
-			asmVar = asmVar;
+			codeVar = codeVar;
 		}
 	}
-
-	Var asmVar;
 }
