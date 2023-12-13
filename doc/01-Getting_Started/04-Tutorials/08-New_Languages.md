@@ -1642,7 +1642,84 @@ This instructs the language server to start parsing `demo` files using the rule 
 that, we just need to annotate the grammar to tell the language server which parts of the text to
 highlight, and which color to use.
 
-...
+To allow the end-user to customize the appearance of the highlighted code, the colors for tokens are
+expressed in terms of what function the characters have in the source code. The following classes
+are available:
+
+- `#comment` - for comments
+- `#delimiter` - for delimiters (e.g. punctuation)
+- `#string` - for string literals
+- `#constant` - for numeric literals (i.e. constant numbers)
+- `#keyword` - for keywords
+- `#fnName` - for function names
+- `#varName` - for variable names
+- `#typeName` - for names of types
+
+Of course, Storm places no requirement on a language to highlight all parts of the text.
+Furthermore, some languages might make it difficult to distinguish between for example type- and
+variable names from the information available to the parser. In such cases, it might be possible to
+modify the grammar slightly to match conventions in the language. For example, it is possible to
+split a production that matches a generic identifier into two. One matches identifiers that start
+with an uppercase letter, and is highlighted as a type name. Another matches identifiers that start
+with a lowercase letter, and is highlighted as a function name. Since the rules can still contain
+the same syntax transforms, this does not impact the rest of the language.
+
+With this in mind, we can then simply annotate our syntax by adding `#`-annotations after the
+relevant tokens. This ends up looking like below:
+
+```bnf
+Array<DemoFunction> SRoot();
+SRoot => functions : , (SFunction functions, )*;
+
+DemoFunction SFunction();
+SFunction => DemoFunction(pos, name, params, body)
+  : SIdentifier name #fnName, "(", SParamList params, ")", "=", SExpr @body;
+
+Str SIdentifier();
+SIdentifier => x : "[A-Za-z]+" x;
+
+Array<Str> SParamList();
+SParamList => Array<Str>() : ;
+SParamList => Array<Str>()
+  : SIdentifier -> push #varName - (, ",", SIdentifier -> push #varName)*;
+
+Expr SExpr(Scope scope);
+SExpr => OpAdd(pos, l, r) : SExpr(scope) l, "\+", SProduct(scope) r;
+SExpr => OpSub(pos, l, r) : SExpr(scope) l, "-", SProduct(scope) r;
+SExpr => p : SProduct(scope) p;
+
+Expr SProduct(Scope scope);
+SProduct => OpMul(pos, l, r) : SProduct(scope) l, "\*", SAtom(scope) r;
+SProduct => OpDiv(pos, l, r) : SProduct(scope) l, "/", SAtom(scope) r;
+SProduct => a : SAtom(scope) a;
+
+Expr SAtom(Scope scope);
+SAtom => Literal(pos, num) : "-?[0-9]+" num #constant;
+SAtom => VarAccess(pos, name, scope)  : SIdentifier name #varName;
+SAtom => FnCall(pos, name, params, scope)
+  : SIdentifier name #fnName, "(", SActuals(scope) params, ")";
+SAtom => x : "(", SExpr x, ")";
+
+Array<Expr> SActuals(Scope scope);
+SActuals => Array<Expr>() : ;
+SActuals => Array<Expr>() : SExpr(scope) -> push - (, ",", SExpr(scope) -> push)*;
+```
+
+In order to test the syntax highlighting, it is necessary to start the [language
+server](md:../Developing_in_Storm/Emacs_Integration). If you have developed the new language
+directly in Storm's `root/` directory, then you do not need to do anything else. If you developed it
+separately, you need to make sure that the library is properly included in the Storm process used as
+the language server. This is done by modifying the variable `storm-mode-include` in Emacs before
+starting the language server. A good way to do this short-term is to simly set the variable to the
+value we want using `setq`. This makes it easier to re-set the variable if we make a mistake:
+
+```
+(setq storm-mode-include '(("/path/to/demo" . "lang.demo")))
+```
+
+One way to evaluate the expression is to press `M-x`, type `eval-expression`, press Enter, and then
+typing the expression above and finish by hitting Enter. Another way is to open the buffer
+`*scratch*`, type the expression there, and then press `C-M-x` at the end of the expression.
 
 
 
@@ -1673,17 +1750,73 @@ ideas for how to expand the language further, towards a more "real" language:
   add new packages with syntax before we call `parse`. The question is how we manage to read which
   packages to include before we start parsing anything.
 
-  The key to this problem is that it is possible to divide files into different sections. What we
-  want to do is to create a new `FileReader` that we call `IncludesReader` or similar. We create
-  this reader instead of the `DemoFileReader` in the `reader` function. The `IncludesReader` then
-  parses only the first piece of the file using a new rule that only matches `use` statements. This
-  is done very similarly to the code in the `readFunctions` function we created, except that instead
-  of calling `hasError` to check if the parse was successfull, we call `hasTree`. The `hasTree` is
-  weaker than `hasError` in the sense that it does not consider it an error if the parse did not
-  match the entire string.
+  The key to this problem is that it is possible to divide files into different sections by chaining
+  `FileReader`s. This allows us to treat a file in our language like this:
 
-  ...
+  ```
+  use my.package
+  ---------------
+  f(a) = 10
+  ```
 
+  Where the dashed line represents how we "split" the file into different parts. The two parts are
+  essentially treated as different languages. The first one is only able to parse `use` statements,
+  and the second only knows the function definition syntax. We also implement the first reader so
+  that it does not produce an error if it is not able to reach the end of the file. This can be done
+  by simply replacing `parser.hasError` with `!parser.hasTree` in the code.
+
+  In summary, the structure would look approximately like this:
+
+  ```bs
+  lang:PkgReader reader(Url[] files, Package pkg) on Compiler {
+      lang:filePkgReader(files, pkg, (x) => DemoIncludeReader(x));
+  }
+
+  class DemoIncludeReader extends lang:FileReader {
+      init(lang:FileInfo info) {
+          init(info) {}
+      }
+
+      // We can provide 'readX' functions as well if we wish to. If we do, it is
+      // a good idea to make sure that we only parse the text once, as parsing is
+      // a fairly expensive operation.
+
+      // Called by the system to request the "next" piece.
+      lang:FileReader? next(lang:ReaderQuery query) : override {
+          Parser<SIncludes> parser;
+          parser.parse(info.contents, info.url, info.start);
+          if (!parser.hasTree())
+              throw parser.error();
+
+          // Extract use-statements here.
+          Name usedPkgs = [];
+
+          // Create the "normal" reader. Ask it to start reading where we stopped.
+          // We can pass any new parameters as well.
+          return DemoFileReader(info.next(parser.matchEnd), usedPkgs);
+      }
+  }
+
+  class DemoFileReader extends lang:FileReader {
+      Name[] used;
+
+      init(lang:FileInfo info, Name[] used) {
+          init(info) {
+              used = used;
+          }
+      }
+
+      void readFunctions() : override {
+          Parser<SRoot> parser;
+          for (x in used) {
+              // Resolve 'x'
+              parser.addSyntax(resolved);
+          }
+          parser.parse(info.contents, info.url, info.start);
+          // ...
+      }
+  }
+  ```
 
 - **Types**
 
@@ -1715,16 +1848,15 @@ SDelimiter : "[ \n\r\t]*" - (SComment - SDelimiter)?;
 void SComment();
 SComment : "//[^\n]*\n" #comment;
 
-Str SIdentifier();
-SIdentifier => x : "[A-Za-z]+" x;
-
-
 Array<DemoFunction> SRoot();
 SRoot => functions : , (SFunction functions, )*;
 
 DemoFunction SFunction();
 SFunction => DemoFunction(pos, name, params, body)
   : SIdentifier name #fnName, "(", SParamList params, ")", "=", SExpr @body;
+
+Str SIdentifier();
+SIdentifier => x : "[A-Za-z]+" x;
 
 Array<Str> SParamList();
 SParamList => Array<Str>() : ;
