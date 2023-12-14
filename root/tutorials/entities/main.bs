@@ -1,0 +1,17 @@
+use tutorials:entities:notes;
+use lang:bs:macro;
+
+note MyNote {
+	My Example Note
+
+	It can contain multiple
+	lines of text in the body
+}
+
+void main() {
+	print("Using named{}:");
+	print(named{MyNote}.note.toS);
+
+	print("Using the name directly:");
+	print(MyNote.toS);
+}

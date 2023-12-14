@@ -1,0 +1,9 @@
+use lang.bs;
+
+optional delimiter = SDelimiter;
+required delimiter = SRequiredDelimiter;
+
+SPlainFileItem => NoteDecl(name, note) : "note" #keyword ~ SName name #typeName, "{", SNote note, "}";
+
+Note SNote();
+SNote => makeNote(title, body) : "[^} \n\t][^{}\n]*" title - "\n" - "[ \t]*\n" - "[^{}]*" body;

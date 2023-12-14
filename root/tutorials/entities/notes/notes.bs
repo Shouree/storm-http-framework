@@ -1,0 +1,78 @@
+use core:lang;
+use core:asm;
+use lang:bs:macro;
+
+/**
+ * A note that we wish to make accessible from the name tree.
+ */
+class Note {
+	// Title of the note.
+	Str title;
+
+	// The body text of the note.
+	Str body;
+
+	// Create.
+	init(Str title, Str body) {
+		init() {
+			title = title;
+			body = body;
+		}
+	}
+
+	// To string:
+	void toS(StrBuf to) : override {
+		to << title << "\n\n";
+		to << body;
+	}
+}
+
+// Helper function to create a note from the grammar. Acts like the constructor but removes
+// indentation from the body.
+Note makeNote(Str title, Str body) {
+	Note(title, body.removeIndentation());
+}
+
+
+/**
+ * A entity that we can add to the name tree.
+ */
+class NoteEntity extends Function {
+	// The note stored in the entity.
+	Note note;
+
+	// Create.
+	init(SrcPos pos, Str name, Note note) {
+		init(pos, named{Note}, name, []) {
+			note = note;
+		}
+
+		Listing l(false, ptrDesc);
+		l << prolog();
+		l << fnParam(ptrDesc, objPtr(note));
+		l << fnCall(named{clone<Note>}.ref, false, ptrDesc, ptrA);
+		l << fnRet(ptrA);
+
+		setCode(DynamicCode(l));
+	}
+}
+
+
+/**
+ * Declaration of the named entity.
+ */
+class NoteDecl extends lang:bs:NamedDecl {
+	SStr name;
+	Note note;
+
+	init(SStr name, Note note) {
+		init {
+			name = name;
+			note = note;
+		}
+	}
+
+	protected Named doCreate() : override {
+		NoteEntity(name.pos, name.v, note);
+	}
+}

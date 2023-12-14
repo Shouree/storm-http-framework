@@ -15,9 +15,9 @@ Setup
 -----
 
 First, we need somewhere to work. Create an empty directory somewhere on your system. The name does
-not matter too much, but it is easier to avoid spaces and numbers in the name since it will be used
-as a package name in Storm. For example, use the name `grammar`. Then, open a terminal and change
-into the directory you just created. This makes it possible to run the code we will write by
+not matter too much, but it is easier if you avoid spaces and numbers in the name since it will be
+used as a package name in Storm. For example, use the name `grammar`. Then, open a terminal and
+change into the directory you just created. This makes it possible to run the code we will write by
 typing the following in the terminal:
 
 ```
