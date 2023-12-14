@@ -1698,7 +1698,7 @@ SAtom => Literal(pos, num) : "-?[0-9]+" num #constant;
 SAtom => VarAccess(pos, name, scope)  : SIdentifier name #varName;
 SAtom => FnCall(pos, name, params, scope)
   : SIdentifier name #fnName, "(", SActuals(scope) params, ")";
-SAtom => x : "(", SExpr x, ")";
+SAtom => x : "(", SExpr(scope) x, ")";
 
 Array<Expr> SActuals(Scope scope);
 SActuals => Array<Expr>() : ;
@@ -1878,7 +1878,7 @@ SAtom => Literal(pos, num) : "-?[0-9]+" num #constant;
 SAtom => VarAccess(pos, name, scope)  : SIdentifier name #varName;
 SAtom => FnCall(pos, name, params, scope)
   : SIdentifier name #fnName, "(", SActuals(scope) params, ")";
-SAtom => x : "(", SExpr x, ")";
+SAtom => x : "(", SExpr(scope) x, ")";
 
 Array<Expr> SActuals(Scope scope);
 SActuals => Array<Expr>() : ;
