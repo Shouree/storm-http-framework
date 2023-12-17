@@ -1,0 +1,10 @@
+void text() {
+    Nat current = 0;
+    Nat next = 1;
+    for (Nat i = 0; i < 10; i++) {
+        print("fib(${i,20}) is: ${current,5r}");
+        Nat sum = current + next;
+        current = next;
+        next = sum;
+    }
+}
