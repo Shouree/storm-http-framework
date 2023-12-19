@@ -1,0 +1,12 @@
+void arrays() {
+	Nat[] numbers = [0, 1];
+	for (Nat i = 2; i < 15; i++) {
+		numbers << numbers[i - 1] + numbers[i - 2];
+	}
+
+	for (k, v in numbers) {
+		print("${k,2r}: ${v,3r}");
+	}
+
+	print(join(numbers, " -> ").toS);
+}

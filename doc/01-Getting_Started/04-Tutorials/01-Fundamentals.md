@@ -210,22 +210,106 @@ A full reference of the formatting options available in interpolated strings is 
 [here](md:/Language_Reference/Basic_Storm/Code/Literals).
 
 
-Values and Classes
-------------------
-
-Actors are covered in the next part.
-
-- By value vs by reference
-- Adding custom types to the `toS` mechanism
-- Uniform Call Syntax
-- parens vs. no parens (for refactoring)
-
-
-
 Containers
 ----------
 
-- Also: loops
+Storm's [standard library](md:/Library_Reference/Standard_Library/Containers) contains a number of
+useful containers. These containers are *generic* which means that they can store any type in the
+system. The type is specified as a parameter to the type, much like templates in C++ or generics in
+Java.
+
+### Arrays
+
+*The code for this part of the tutorial is in the file `root/tutorials/fundamentals/containers.bs`
+ and can be run by typing `tutorials:fundamentals:arrays` in the Basic Storm top-loop.*
+
+The most fundamental container is perhaps the `Array<T>`. It is an array of elements of type
+`T`. Basic Storm provides a shorthand for the type as `T[]`. Elements in arrays are accessed using
+the `[]` operator as in many other languages. New elements can be added with the `push` function, or
+with the `<<` operator. With this in mind, we can rewrite the previous example to compute the first
+few Fibonacci numbers and store them in an array:
+
+```bs
+void main() {
+    Nat[] numbers = [0, 1];
+    for (Nat i = 2; i < 15; i++) {
+        numbers << numbers[i - 1] + numbers[i - 2];
+    }
+    print(numbers.toS());
+}
+```
+
+The first line in the program uses an array literal to create the initial array. This syntax
+attempts to automatically deduce the array type based on the elements and the context. If the
+automatic deduction fails, it is possible to specify the desired type as follows:
+
+```bsstmt
+Nat[] numbers = Nat:[0, 1];
+```
+
+This is usually only necessary to do when working with empty arrays and/or overloaded functions.
+
+In the loop, we then use the `<<` operator to add elements to the array, and the `[]` operator to
+access elements. Finally, we use the `toS` function to generate a string representation.
+
+If we wish to format the output a bit nicer, we can iterate through the array using a regular
+for-loop as follows:
+
+```bsstmt
+for (Nat i = 0; i < numbers.count; i++) {
+    print("${i,2r}: ${numbers[i],3r}");
+}
+```
+
+Storm does, however, also provide a loop construct that is specificially designed to iterate through
+elements in containers. It is semantically equivalent to the code above, but utilizes
+[iterators](md:/Library_Reference/Standard_Library/Iterators) if possible. With it, we can instead
+write:
+
+```bsstmt
+for (k, v in numbers) {
+    print("${k,2r}: ${v,3r}");
+}
+```
+
+In the loop above, we provide two iteration variables named `k` and `v`. The first one is optional,
+and is used for the "key" for the container we iterate through. For arrays, the key is the index of
+the element. The second is the "value" for the container. This is naturally the element itself for
+arrays. As we shall see, this scheme naturally extends to maps as well.
+
+Since the key is optional, we could simply write the following if we were only interested in the
+value itself:
+
+```bsstmt
+for (v in numbers) { /* ... */ }
+```
+
+Finally, Storm provides a function called `join` that is useful for concating arrays of elements
+into strings. For example, we can create a representation that separates the computed Fibonacci
+numbers with arrows as follows:
+
+```bsstmt
+print(join(numbers, " -> ").toS());
+```
+
+By default, the `join` function uses the standard to-string implementation. It is, however, possible
+to provide a lambda function that specifies how to convert elements into strings before
+concatenating them.
+
+
+### Maps
+
+*The code for this part of the tutorial is in the file `root/tutorials/fundamentals/containers.bs`
+ and can be run by typing `tutorials:fundamentals:maps` in the Basic Storm top-loop.*
+
+
+
+
+Maybe
+-----
+
+- Also: How to check for things being null/not null.
+
 
 Command-Line Arguments
 ----------------------
