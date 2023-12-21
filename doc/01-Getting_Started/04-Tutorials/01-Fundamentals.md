@@ -203,7 +203,7 @@ we can set the width of a field by specifying a number, and right-align the numb
 `r`. In our case, it may look like this:
 
 ```bsstmt
-print("fib(${i2r}) is: ${current,5r}");
+print("fib(${i,2}) is: ${current,5}");
 ```
 
 A full reference of the formatting options available in interpolated strings is available
@@ -257,7 +257,7 @@ for-loop as follows:
 
 ```bsstmt
 for (Nat i = 0; i < numbers.count; i++) {
-    print("${i,2r}: ${numbers[i],3r}");
+    print("${i,2}: ${numbers[i],3}");
 }
 ```
 
@@ -268,7 +268,7 @@ write:
 
 ```bsstmt
 for (k, v in numbers) {
-    print("${k,2r}: ${v,3r}");
+    print("${k,2}: ${v,3}");
 }
 ```
 
@@ -302,13 +302,166 @@ concatenating them.
 *The code for this part of the tutorial is in the file `root/tutorials/fundamentals/containers.bs`
  and can be run by typing `tutorials:fundamentals:maps` in the Basic Storm top-loop.*
 
+Another useful container is the `Map<K, V>` type. Similarly to arrays, Basic Storm provides a
+shorthand syntax for the `Map<K, V>` type as: `K->V`. A map contains an set of pairs. Each pair
+contains a *key* (of type `K`) and a *value* (of type `V`). The map indexes the keys so that lookups
+based on keys are efficient. In contrast to the `Array<T>`, however, the `Map<K, V>` is unordered.
+This means that while it is possible to iterate through the elements in a map, there is no
+guarantees that the order in which elements appear are the same as the one they were inserted in.
+Furthermore, the order may even *change* between different iterations, even if the map has not been
+modified.
 
+Elements are inserted into the map with the `put` function as follows:
+
+```bs
+void main() {
+    Nat->Str numbers;
+    numbers.put("zero", 0);
+    numbers.put("one", 1);
+    numbers.put("two", 2);
+    numbers.put("three", 3);
+    numbers.put("ten", 10);
+
+    print(numbers.toS);
+}
+```
+
+By running the above example, we can clearly observe that the order of elements are not preserved.
+The `toS` operator iterates through the elements when creating the string representation, and places
+them in the following order, that is seemingly arbitrary:
+
+```
+{three -> 3, one -> 1, ten -> 10, zero -> 0, two -> 2}
+```
+
+The map requires that keys are unique, so if the key passed to `put` already exists, then `put` will
+update the existing pair. The `put` function actually returns a boolean that indicates if it
+inserted a new pair or not. If `put` returns true, then a new pair was inserted. Otherwise, an
+existing pair was updated.
+
+
+We can iterate through the map manually using the `for` loop as with arrays as follows:
+
+```bsstmt
+for (k, v in numbers) {
+    print("${k,5l} -> ${v,2}");
+}
+```
+
+If the keys are not desired for some reason, it is possible to omit the `k` variable, as with
+arrays.
+
+The map type also provides a number of ways to look up and modify the elements in the array. The
+simplest of them is `has` that checks if a key is present in the map:
+
+```bsstmt
+numbers.has("one"); // -> true
+numbers.has("twenty"); // -> false
+```
+
+We can then get the value associated with a key using the `get` function. It retrieves the value
+associated with a key, and throws an exception if the it does not exist. For example:
+
+```bsstmt
+print(numbers.get("one")); // -> 1
+print(numbers.get("twenty")); // -> throws MapError
+```
+
+It is also possible to provide a default element to the `get` function that will be returned in case
+the requested key does not exist. Note that the default value is *not* inserted into the map:
+
+```bsstmt
+print(numbers.get("one", 0)); // -> 1
+print(numbers.get("twenty", 0)); // -> 0
+```
+
+Note, however, that since `get` is a normal function, the default value is always created, even if
+it is not needed. This means that it is probably not a good idea to create a large object and pass
+it as the default value to `get`. This means that the large object is always created, even if it is
+not used. For such cases, it is likely better to use `at` (see below).
+
+Whenever the type `V` has a default constructor, the map also provides a `[]` operator that allows
+treating it like an array. The `[]` operator works like in C++ in that it never throws. Rather, if
+the requested key was not found, a default-constructed value is inserted in the map, and then a
+reference to that value is returned. To illustrate the behavior, we can write as follows:
+
+```bsstmt
+print(numbers["one"]); // -> 1
+print(numbers["twenty"]); // -> inserts "twenty" -> Nat(), returns 0
+```
+
+This might seem strange at first. It is, however, quite useful in many situations. For example, if
+`words` is an array of strings that each contain a word, we can compute a word frequency table as
+follows:
+
+```bs
+Str->Nat wordFrequency(Str[] words) {
+    Str->Nat result;
+    for (word in words) {
+        result[word] += 1;
+    }
+    return result;
+}
+```
+
+The final function for accessing elements is the `at` function. It attempts to make it convenient to
+look up a key and extracting the value, while taking into account the fact that the key may not
+exist. One way to do this is to use the `has` and `get` functions as follows:
+
+```bsstmt
+if (numbers.has("twenty")) {
+    return numbers.get("twenty");
+} else {
+    return 0;
+}
+```
+
+This does, of course, work as intended. It does, however, require two searches in the map. The map
+is implemented as a hash table, so lookups are fairly cheap, but they are far from free. The `at`
+function solves this by looking up the key, and returning the value as a `Maybe<V>`, to represent
+the fact that the value may not exist. This means that we can implement our lookup as follows:
+
+```bsstmt
+if (value = numbers.at("twenty")) {
+    return value;
+} else {
+    return 0;
+}
+```
+
+To fully understand why this works, we need to understand `Maybe<T>` types. They are introduced in
+the section below this.
+
+Before we move on to maybe types, it is worth mentioning some details regarding how the map handles
+keys. In general, the hash table uses the same concept of equality as the `==` operator does. That
+is, value- and class-types are compared by-value, while actor types are compared by-reference.
+
+As mentioned previously, the map is implemented as a hash table. This means that the `Map<K, V>`
+requires that the type `K` has a `hash()` function and a comparison operator. Most primitive types
+in Storm implement this functionality, but it is not generated automatically for custom types. As
+such, to use custom types as keys in a map, it is necessary to implement a `hash` function (that
+returns a `Nat`), and a comparison function (a function named `==`).
 
 
 Maybe
 -----
 
-- Also: How to check for things being null/not null.
+*The code for this part of the tutorial is in the file `root/tutorials/fundamentals/maybe.bs`
+ and can be run by typing `tutorials:fundamentals:maybe` in the Basic Storm top-loop.*
+
+As we saw above, the `at` function in the map type returned a value of the type `Maybe<T>`. By
+default, Storm assumes that values, even for class- and actor-types are not `null`. It is, however,
+often useful to have a variable that may either contain some value, or be "empty". This scenario is
+represented by the type `Maybe<T>`. A value of the type `Maybe<T>` may either contain a value of the
+type `T`, or the special value `null` that represent the absence of a value.
+
+What makes the type `Maybe<T>` a bit unique is that while the type provides the functions `any` and
+`empty` to check if a value is present, it does not provide a way to access the value. Rather, a
+*weak cast* must be used to extract the value inside a condition that checks for the presence of the
+value. This means that it is not possible to accidentally access a `null` value and crash.
+
+...
+
 
 
 Command-Line Arguments
@@ -320,3 +473,5 @@ Command-Line Arguments
 Stack Traces
 ------------
 
+Trailing Returns?
+-----------------

@@ -5,8 +5,20 @@ void arrays() {
 	}
 
 	for (k, v in numbers) {
-		print("${k,2r}: ${v,3r}");
+		print("${k,2}: ${v,3}");
 	}
 
 	print(join(numbers, " -> ").toS);
+}
+
+
+void maps() {
+	Nat current = 0;
+	Nat next = 1;
+	for (Nat i = 0; i < 10; i++) {
+		print("fib(${i,2}) is: ${current,5}");
+		Nat sum = current + next;
+		current = next;
+		next = sum;
+	}
 }

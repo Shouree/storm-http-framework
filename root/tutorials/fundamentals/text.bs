@@ -2,7 +2,7 @@ void text() {
     Nat current = 0;
     Nat next = 1;
     for (Nat i = 0; i < 10; i++) {
-        print("fib(${i,20}) is: ${current,5r}");
+        print("fib(${i,2}) is: ${current,5}");
         Nat sum = current + next;
         current = next;
         next = sum;
