@@ -59,7 +59,7 @@ SrcName SType();
 SType => SrcName(pos) : STypePart -> add - (, ":", STypePart -> add)*;
 
 // Array type.
-SType => arrayType(t) : SType t, "\[\]";
+SType[-20] => arrayType(t) : SType t, "\[\]";
 
 // Map type.
 SType[-10] => mapType(k, v) : SType k, "->", SType v;
