@@ -1,0 +1,30 @@
+Int? parseInt(Str from) {
+	if (from.isInt()) {
+		return from.toInt();
+	} else {
+		return null;
+	}
+}
+
+Int? addIf(Int? a, Int? b) {
+	if (a) {
+		if (b) {
+			return a + b;
+		}
+	}
+	return null;
+}
+
+Int? addUnless(Int? a, Int? b) {
+	unless (a)
+		return null;
+	unless (b)
+		return null;
+
+	return a + b;
+}
+
+void maybe() {
+	Int? result = addUnless(parseInt("10"), parseInt("20"));
+	print(result.toS);
+}

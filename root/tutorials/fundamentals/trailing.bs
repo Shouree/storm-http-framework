@@ -1,0 +1,12 @@
+void trailing() {
+    Str string = {
+        StrBuf tmp;
+        for (Nat i = 0; i < 10; i++) {
+            tmp << if (i > 0) { ", "; } else { ""; };
+            tmp << i;
+        }
+        tmp.toS();
+    };
+    // "tmp" is no longer accessible.
+    print(string.toS);
+}

@@ -449,29 +449,355 @@ Maybe
 *The code for this part of the tutorial is in the file `root/tutorials/fundamentals/maybe.bs`
  and can be run by typing `tutorials:fundamentals:maybe` in the Basic Storm top-loop.*
 
-As we saw above, the `at` function in the map type returned a value of the type `Maybe<T>`. By
-default, Storm assumes that values, even for class- and actor-types are not `null`. It is, however,
-often useful to have a variable that may either contain some value, or be "empty". This scenario is
-represented by the type `Maybe<T>`. A value of the type `Maybe<T>` may either contain a value of the
-type `T`, or the special value `null` that represent the absence of a value.
+By default, Storm (and thereby also Basic Storm) assumes that values are always properly
+initialized. This is true even for class- and actor types that are handled by reference. As such, it
+is *not* possible to store `null` in a `Str` variable, even though the variable is represented as a
+pointer internally.
 
-What makes the type `Maybe<T>` a bit unique is that while the type provides the functions `any` and
-`empty` to check if a value is present, it does not provide a way to access the value. Rather, a
-*weak cast* must be used to extract the value inside a condition that checks for the presence of the
-value. This means that it is not possible to accidentally access a `null` value and crash.
+It is, however, useful to be able to represent the absence of a value. One example is the `at`
+function in the map container. It needs to be able to both return a value corresponding to the
+sought-after key, or a value that indicates that no such value exists. It achieves this by returning
+the type `Maybe<V>`, where `V` is the type of the values stored in the map.
 
-...
+The type `Maybe<T>` thereby represent a value that can either be a valid instance of the type `T`,
+but it may also contain the special value `null` to indicate that no value of the type `T` is
+present. As with arrays and maps, Basic Storm provides the shorthand syntax `T?` that is equivalent
+to `Maybe<T>`.
+
+The benefits of using a separate type for nullable values are twofold: first, a special type makes
+it very clear both to the compiler and the programmer which values may be null. Secondly, since
+nullability is not tied to a particular set of types, it is possible to make any type in the system
+nullable. For example, Storm allows `Maybe<Int>` for an integer that may be `null`. However,
+languages like Java requires wrapping the primitive `int` in the class `Integer` to make it
+nullable.
+
+The first point above is used by Basic Storm to ensure that it is not possible to use a value that
+may be null. The type `Maybe<T>` is a completely separate type from `T` in the type system.
+Furthermore, `Maybe<T>` provides no way of directly accessing the contained value. It only provides
+the members `any` and `empty` that allows checking for the presence or absence of a value. Instead,
+Basic Storm provides a special construct for converting a `Maybe<T>` into a `T`. Since this
+conversion may fail, it needs to occur inside an if-statement that checks if the conversion was
+successful.
+
+To illustrate how this works, let's start by defining a function that attempts to parse a string
+into an integer:
+
+```bs
+Int? parseInt(Str from) {
+    if (from.isInt()) {
+        return from.toInt();
+    } else {
+        return null;
+    }
+}
+```
+
+The idea is that the function returns an `Int` if the conversion was successful, and `null`
+otherwise. This is represented by the function returning `Maybe<Int>`, written as `Int?`. From the
+example, we can also see that Storm is able to automatically convert values from `Int` into
+`Maybe<Int>` (on the line `return from.toInt();`).
+
+We can test so that the function works as intended by defining the following `main` function:
+
+```bs
+void main() {
+    print(parseInt("10").toS);
+    print(parseInt("five").toS);
+}
+```
+
+This program will print `10` followed by `null` as we expect. However, if we try to use the value
+from `parseInt` we will run into problems. For example, let's say we wanted to perform some
+computations with the returned `Int?`:
+
+```bs
+void main() {
+    Int? converted = parseInt("10");
+    var modified = converted * 2;
+    print(modified.toS);
+}
+```
+
+If we run the program above we will get the following error:
+
+```
+@/home/storm/root/fundamentals.bs(182-183): Syntax error:
+Can not find an implementation of the operator * for core.Maybe(core.Int)&, core.Int.
+```
+
+The error tells us that Storm has no operator for multiplying a `Maybe<Int>` with an `Int`. This
+means that we need to "extract" the `Int` that is inside the `Maybe<Int>` before we can do anything
+useful with it. We do this using a [*weak
+cast*](md:/Language_Reference/Basic_Storm/Code/Conditionals) as follows:
+
+```bs
+void main() {
+    Int? converted = parseInt("10");
+    if (converted) {
+        Int modified = converted * 2;
+        print(modified.toS);
+    }
+}
+```
+
+The *weak cast* is a special form of the `if` statement. When the condition is an expression that
+evaluates to `Maybe<T>`, the `if` statement will attempt to unwrap the contained `T`. The conversion
+is considered successful if the `Maybe<T>` value was not `null`. The `if` statement makes the
+extracted `T` available in the "true" branch by declaring a variable that shadows the original one
+if possible. The example above is roughly equivalent to the following:
+
+```bsstmt
+if (converted.any()) {
+    Int converted = converted.extract();
+    // ...
+}
+```
+
+Note that the function `extract` does *not* exist in Storm. It is only present to illustrate what
+the weak cast does internally. The important part is that the `if` statement declares a variable wit
+the type `Int` that shadows the original one. It thus appears as if `converted` has changed type
+inside the body of the `if` statement. An important implication of this is that assigning to
+`converted` inside the `if`-statement will only change the local copy, and will not modify the
+original variable.
+
+The `if` statement is only able to create a variable that shadows the original one in this manner if
+the condition to the `if`-statement is the name of a variable. To illustrate this, assume that we
+rewrite our program like this:
+
+```bs
+void main() {
+    if (parseInt("10")) {
+        print("Success!");
+        // How to access the result?
+    }
+}
+```
+
+This would work in the sense that the program would print `Success!`. However, it is currently *not*
+possible to access the value produced by `parseInt`. For cases like this, it is possible to
+explicitly specify a variable name that should contain the result of the conversion. In our case, we
+can write like this:
+
+```bs
+void main() {
+    if (converted = parseInt("10")) {
+        Int modified = converted * 2;
+        print(modified.toS);
+    }
+}
+```
+
+This is, of course, also possible to do even if the expression to the right of the equal sign is
+just a variable.
 
 
+The weak casts as presented above are enough to work with the `Maybe`-type. However, it gets a bit
+cumbersome in certain cases. For example, consider a function `add` that adds two `Maybe<Int>`
+together. We can write it as follows:
 
-Command-Line Arguments
-----------------------
+```bs
+Int? add(Int? a, Int? b) {
+    if (a) {
+        if (b) {
+            return a + b;
+        }
+    }
+    return null;
+}
 
-- `argv`
-- return from `main`
+void main() {
+    Int? result = add(parseInt("10"), parseInt("20"));
+    print(result.toS);
+}
+```
 
-Stack Traces
-------------
+Since it is not possible to use operators like `&` to combine different weak casts, we need to nest
+the casts inside each other. This is not too bad in the case of the `add` function. However, it
+quickly gets difficult to read if more casts are needed. In situations like this, we would rather
+like to write something like this:
 
-Trailing Returns?
------------------
+```bs
+Int? add(Int? a, Int? b) {
+    if (!a)
+        return null;
+    if (!b)
+        return null;
+
+    return a + b;
+}
+```
+
+Unfortunately, this will not work either since there is no `!` operator for the `Maybe<T>` type.
+Even if it would provide one, this would mean that the expression in the `if`-statement would
+evaluate to a `Bool`, and thus it would no longer be a weak cast.
+
+Fortunately, Basic Storm provides the conditional `unless` that can be thought of as an inverted
+`if` statement. In order to work properly with weak casts, the `unless` statement is a bit peculiar
+in that it *requires* that the body either returns or throws an exception. This is to guarantee that
+the code located after the entire `unless` statement is only executed if the weak cast succeeded.
+
+To illustrate the semantics, consider the `unless` statement below:
+
+```bsstmt:placeholders
+unless (<condition>) {
+    <if-failed>;
+}
+<if-successful>;
+```
+
+It is equivalent to the following `if`-statement:
+
+```bsstmt:placeholders
+if (<condition>) {
+    <if-successful>;
+} else {
+    <if-failed>;
+}
+```
+
+Using the `unless` statement we can write the `add` function as below. This approach has the benefit
+that it remains easy to follow even if multiple weak casts are necessary.
+
+```bs
+Int? add(Int? a, Int? b) {
+    unless (a)
+        return null;
+    unless (b)
+        return null;
+
+    return a + b;
+}
+```
+
+Of course it is possible to rename the result variable in the `unless` statement using the equals
+sign, just as in the `if` statement. For example:
+
+```bs
+Int? add(Int? a, Int? b) {
+    unless (unwrappedA = a)
+        return null;
+    unless (unwrappedB = b)
+        return null;
+
+    return unwrappedA = unwrappedB;
+}
+```
+
+Trailing Returns
+----------------
+
+*The code for this part of the tutorial is in the file `root/tutorials/fundamentals/trailing.bs` and
+ can be run by typing `tutorials:fundamentals:trailing` in the Basic Storm top-loop.*
+
+Many constructs that are statements in other languages are expressions in Basic Storm. Two examples
+of this are blocks and if-statements. This feature was mainly designed to simplify the
+implementation of syntax extensions, but it turns out that it is also useful in other situations as
+well.
+
+Let us first consider blocks. As in C, C++, and Java, it is possible to introduce new blocks
+anywhere inside a Basic Storm function in order to delimit the scope of local variables. For
+example, consider the case where we wish to use a string buffer (`StrBuf`) to create a string, but
+we do not wish to keep the temporary variable longer than necessary:
+
+```bs
+void main() {
+    Str string;
+    {
+        StrBuf tmp;
+        for (Nat i = 0; i < 10; i++) {
+            if (i > 0)
+                tmp << ", ";
+            tmp << i;
+        }
+        string = tmp.toS();
+    }
+    // "tmp" is no longer accessible.
+    print(string.toS);
+}
+```
+
+One difference from the aforementioned languages is that blocks can also be used as expressions. In
+such cases, a block evaluates to the value of the last statement inside the block. We can use this
+to make it clearer that the purpose of the block is to initialize the variable `string`. As an
+additional bonus, we also avoid creating an empty string to initialize the `string` variable that we
+almost immediately discard.
+
+```bs
+void main() {
+    Str string = {
+        StrBuf tmp;
+        for (Nat i = 0; i < 10; i++) {
+            if (i > 0)
+                tmp << ", ";
+            tmp << i;
+        }
+        tmp.toS(); // Last statement, will be the result of the block.
+    };
+    // "tmp" is no longer accessible.
+    print(string.toS);
+}
+```
+
+Note that it is necessary to add a semicolon after the closing curly brace to terminate the
+statement that initializes `string`.
+
+This structure is very convenient when implementing macro-like constructs that need to use temporary
+variables. For example, the array initialization syntax expands to a structure similar to the above.
+In particular, the literal `Array<Int> x = [1, 2, 3];` expands to the following:
+
+```bsstmt
+Array<Int> x = {
+    Array<Int> tmp;
+    tmp.reserve(3);
+    tmp << 1;
+    tmp << 2;
+    tmp << 3;
+    tmp;
+};
+```
+
+This idea also extends to the top-level block in functions: by default, a function returns the value
+of the last statement in the topmost block of the function. This means that it is possible to
+implement an `add` function without using `return` like this:
+
+```bs
+Int add(Int a, Int b) { a + b; }
+```
+
+Finally, the same idea also extends to `if` statements. For example, we could rewrite the
+`if`-statement in the loop above as follows:
+
+```bs
+void main() {
+    Str string = {
+        StrBuf tmp;
+        for (Nat i = 0; i < 10; i++) {
+            tmp << if (i > 0) { ", "; } else { ""; };
+            tmp << i;
+        }
+        tmp.toS(); // Last statement, will be the result of the block.
+    };
+    // "tmp" is no longer accessible.
+    print(string.toS);
+}
+```
+
+Since the `if` statement can be used as an expression, Basic Storm does not need a dedicated ternary
+operator like C, C++, and Java. While using the `if`-statement as an expression did perhaps not
+improve the readability in the example above, this ability can be quite useful when working with
+`Maybe` types. For example, consider a case where we accept a `Maybe<Nat>` as a parameter to a
+function. If the supplied value was not `null`, we wish to use the value. Otherwise, we wish to use
+some default value. We can implement this compactly as follows:
+
+```bs
+Nat computeStuff(Nat? input) {
+    Nat input = if (input) {
+        input;
+    } else {
+        0;
+    };
+    // Our computations go here:
+    input + 1;
+}
+```
+
