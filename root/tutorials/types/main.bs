@@ -1,0 +1,113 @@
+value Pair {
+	Nat key;
+	Str value;
+
+	init() {
+		init {
+			key = 1;
+			value = "default";
+		}
+	}
+
+	init(Nat key, Str value) {
+		init {
+			key = key;
+			value = value;
+		}
+	}
+
+	void add(Nat toAdd) {
+		key += toAdd;
+	}
+}
+
+StrBuf <<(StrBuf to, Pair this) {
+	to << "{ key: " << key << ", value: " << value << " }";
+}
+
+void valueFunction(Pair p) {
+	p.add(10);
+	print("In function: ${p}");
+}
+
+void valueMain() {
+	Pair p(5, "test");
+	print("Key: ${p.key}");
+	print("Value: ${p.value}");
+	print("Pair: ${p}");
+
+	Pair copy = p;
+	copy.add(5);
+
+	print("Copied: ${copy}");
+	print("Original: ${p}");
+
+	valueFunction(p);
+	print("After calling function: ${p}");
+}
+
+class ClassPair {
+	Nat key;
+	Str value;
+
+	init(Nat key, Str value) {
+		init {
+			key = key;
+			value = value;
+		}
+	}
+
+	void add(Nat toAdd) {
+		key += toAdd;
+	}
+
+	void toS(StrBuf to) {
+		to << "{ key: " << key << ", value: " << value << " }";
+	}
+}
+
+void classFunction(ClassPair p) {
+	p.add(10);
+}
+
+void classMain() {
+	ClassPair p(5, "test");
+	print("Pair: ${p}");
+
+	ClassPair copy = p;
+	copy.add(5);
+
+	print("Copied: ${copy}");
+	print("Original: ${p}");
+
+	copy = ClassPair(p); // Or: ClassPair copy(p);
+	copy.add(5);
+	print("Copied: ${copy}");
+	print("Original: ${p}");
+
+	classFunction(p);
+	print("After calling function: ${p}");
+}
+
+class CountedPair extends ClassPair {
+	Nat count;
+
+	init(Nat key, Str value) {
+		init(key, value) {
+			count = 0;
+		}
+	}
+
+	void toS(StrBuf to) : override {
+		super:toS(to);
+		to << " (count = " << count << ")";
+	}
+}
+
+void main() {
+	print("-- Value --");
+	valueMain();
+
+	print("-- Class --");
+	classMain();
+}

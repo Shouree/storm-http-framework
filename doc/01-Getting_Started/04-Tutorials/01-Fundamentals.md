@@ -16,8 +16,8 @@ Setup
 -----
 
 Before starting to write code, we need somewhere to work. For this tutorial, it is enough to create
-a file with the extension `.bs` somewhere in your system. The tutorial uses the name
-`fundamentals.bs` for this, but any name that contain only letters works.
+a file with the extension `.bs` somewhere on your system. The tutorial uses the name
+`fundamentals.bs` for this, but any name that contains only letters works.
 
 When you have created a file, open a terminal and change to the directory where you created the
 file. You can instruct Storm to run the file by typing:
