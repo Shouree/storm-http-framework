@@ -27,7 +27,7 @@ StrBuf <<(StrBuf to, Pair this) {
 
 void valueFunction(Pair p) {
 	p.add(10);
-	print("In function: ${p}");
+	print("Inside the function: ${p}");
 }
 
 void valueMain() {
@@ -43,7 +43,7 @@ void valueMain() {
 	print("Original: ${p}");
 
 	valueFunction(p);
-	print("After calling function: ${p}");
+	print("After calling the function: ${p}");
 }
 
 class ClassPair {
