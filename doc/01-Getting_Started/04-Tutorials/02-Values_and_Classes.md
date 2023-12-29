@@ -326,7 +326,185 @@ void valueMain() {
 
 
 Class Types
-------------
+-----------
+
+Objects of class types are always allocated on the heap, and are managed by the garbage collector.
+As such, variables of a class type is just a pointer to memory on the heap. This means that class
+types have *reference semantics*. This means that assignments of class types simply make a copy of
+the pointer. The same is true when passing class types to and from functions. This means that for
+class types, any changes made to an object by a function are generally visible to the caller.
+
+This does, of course, require some care. However, the fact that the system does not need to copy
+class types makes it easy to pass them around, even if they are large objects. The pointer
+indirection also allows a pointer to a type `T` to actually refer to an object that is a subtype of
+`T`. This opens up for many common OOP techniques like inheritance, polymorphism, and dynamic
+dispatch.
+
+To illustrate this, let's start by implementing a `ClassPair` class like the one for value types
+before. The only difference in the implementation so far is that we use the keyword `class` instead
+of `value` to define the type:
+
+```bs
+class ClassPair {
+    Nat key;
+    Str value;
+
+    init(Nat key, Str value) {
+        init {
+            key = key;
+            value = value;
+        }
+    }
+
+    void add(Nat toAdd) {
+        key += toAdd;
+    }
+}
+```
+
+To test our implementation, we define the functions `classMain` and `classFunction` as below:
+
+```bs
+void classFunction(ClassPair p) {
+    p.add(10);
+}
+
+void classMain() {
+    ClassPair p(5, "test");
+    print("Pair: ${p}");
+
+    ClassPair copy = p;
+    copy.add(5);
+
+    print("Copied: ${copy}");
+    print("Original: ${p}");
+
+    classFunction(p);
+    print("After calling function: ${p}");
+}
+```
+
+Finally, we call `classMain` from the `main` function so that the code is actually executed:
+
+```bs
+void main() {
+    print("-- Value --");
+    valueMain();
+
+    print("-- Class --");
+    classMain();
+}
+```
+
+If we run the code now, we get the following output:
+
+```
+-- Class --
+Pair: ClassPair @0x00007F891EF5A1D8
+Copied: ClassPair @0x00007F891EF5A1D8
+Original: ClassPair @0x00007F891EF5A1D8
+After calling function: ClassPair @0x00007F891EF5A1D8
+```
+
+This is not too helpful. Since we have not defined a string representation yet, we get the default
+one provided by the `Object` class. This implementation simply prints the name of the class and its
+address in memory. We can, however, see one thing from the output: all printed objects are actually
+the *same object* since they have the same address. We can already at this point conclude that the
+behavior will be different from the version that uses value types.
+
+To define the string representation for classes, we simply override the `toS(StrBuf)` function. This
+makes both the `toS` function and the `<<` operator work as expected, as they both call the
+`toS(StrBuf)` function eventually. We do this by adding the following definition to the `ClassPair`
+class:
+
+```bsclass
+void toS(StrBuf to) : override {
+    to << "{ key: " << key << ", value: " << value << " }";
+}
+```
+
+After adding this definition, we get output that is easier to read:
+
+```
+-- Class --
+Pair: { key: 5, value: test }
+Copied: { key: 10, value: test }
+Original: { key: 10, value: test }
+After calling function: { key: 20, value: test }
+```
+
+From this output we can indeed see that the result is different from the value types. Since
+assignments and function calls have reference semantics, there is only ever one instance of the
+`ClassPair` type. Therefore, the modifications done through the `copy` variable and in the
+`classFunction` function are both visible through the original `p` variable. This is because all
+variables refer to the same piece of memory as we saw before.
+
+We can verify this by comparing the identities of the objects in `p` and `copy`. For class types,
+the `==` operator is used to compare objects semantically (which allows using `==` for strings
+safely). The reason for this will become clear when we consider the semantics of class types in the
+presence of threads. Basic Storm does, however, provide the operator `is` to compare object
+identities. We can use it in the `classMain` function as follows:
+
+```bs
+void classMain() {
+    ClassPair p(5, "test");
+    print("Pair: ${p}");
+
+    ClassPair copy = p;
+    copy.add(5);
+
+    print("Copied: ${copy}");
+    print("Original: ${p}");
+    if (p is copy) {
+        print("p and copy are the same object");
+    } else {
+        print("p and copy are different objects");
+    }
+
+    classFunction(p);
+    print("After calling function: ${p}");
+}
+```
+
+As we would expect, the program prints the line `p and copy are the same object`.
+
+Since classes have reference semantics by default, we need to explicitly make copies when we need
+them. Basic Storm still generates a copy constructor for this purpose. We just need to call it. We
+can do this by explicitly calling the constructor as follows:
+
+```bsstmt
+ClassPair copy = ClassPair(p);
+```
+
+We can also use parentheses when declaring the variable, as this version *always* calls a
+constructor:
+
+```bsstmt
+ClassPair copy(p);
+```
+
+Regardless of which option was selected, the program should now print `p and copy are different
+objects`, and the changes to the variable `copied` are no longer visible in the original:
+
+```
+-- Class --
+Pair: { key: 5, value: test }
+Copied: { key: 10, value: test }
+Original: { key: 5, value: test }
+p and copy are different objects
+After calling function: { key: 15, value: test }
+```
+
+Note that the copy constructor only performs a *shallow copy*. That is, only the top-level object is
+copied, and any member variables that have reference semantics are still shared between the copies.
+In the case of the `ClassPair` type, the `value` member of the two instances will still refer to the
+same string since `Str` is a class type. This does, however, not matter here since strings in Storm
+are immutable. If we wish to create a deep copy, Storm provides a `clone` function that performs
+deep copies.
+
+Inheritance
+-----------
+
 
 
 Function Call Syntax

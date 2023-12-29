@@ -79,11 +79,21 @@ void classMain() {
 
 	print("Copied: ${copy}");
 	print("Original: ${p}");
+	if (p is copy) {
+		print("p and copy are the same object");
+	} else {
+		print("p and copy are different objects");
+	}
 
 	copy = ClassPair(p); // Or: ClassPair copy(p);
 	copy.add(5);
 	print("Copied: ${copy}");
 	print("Original: ${p}");
+	if (p is copy) {
+		print("p and copy are the same object");
+	} else {
+		print("p and copy are different objects");
+	}
 
 	classFunction(p);
 	print("After calling function: ${p}");
