@@ -47,22 +47,28 @@ void valueMain() {
 }
 
 class ClassPair {
-	Nat key;
+	private Nat myKey;
 	Str value;
 
 	init(Nat key, Str value) {
 		init {
-			key = key;
+			myKey = key;
 			value = value;
 		}
 	}
 
+	Nat key() { myKey; }
+
+	assign key(Nat newKey) {
+		myKey = newKey;
+	}
+
 	void add(Nat toAdd) {
-		key += toAdd;
+		myKey += toAdd;
 	}
 
 	void toS(StrBuf to) {
-		to << "{ key: " << key << ", value: " << value << " }";
+		to << "{ key: " << myKey << ", value: " << value << " }";
 	}
 }
 
@@ -108,10 +114,41 @@ class CountedPair extends ClassPair {
 		}
 	}
 
+	assign key(Nat newKey) : override {
+		count++;
+		super:key(newKey);
+	}
+
+	void add(Nat toAdd) : override {
+		count++;
+		super:add(toAdd);
+	}
+
 	void toS(StrBuf to) : override {
 		super:toS(to);
 		to << " (count = " << count << ")";
 	}
+}
+
+void inheritanceMain() {
+	CountedPair p(5, "test");
+	classFunction(p);
+	print("After calling the function: ${p}");
+}
+
+void refactorMain() {
+	CountedPair p(1, "test");
+	p.key = 2 * p.key + 1;
+	print("Count is now: ${p.count}");
+}
+
+Nat count(Str s, Char ch) {
+	Nat result = 0;
+	for (c in s) {
+		if (c == ch)
+			result++;
+	}
+	return result;
 }
 
 void main() {
@@ -120,4 +157,14 @@ void main() {
 
 	print("-- Class --");
 	classMain();
+
+	print("-- With inheritance --");
+	inheritanceMain();
+
+	print("-- Refactor --");
+	refactorMain();
+
+	print("-- Uniform call syntax ---");
+	Nat c = "hello".count('l');
+	print("Count: ${c}");
 }
