@@ -59,8 +59,10 @@
     but the scale of the issue should be assessed first.
   - [ ] Parsing core.lang.syntax.bnf takes about 80 ms, which is a bit on the high end when compiling code...
 
-* Loose ends so far [62/112]
+* Loose ends so far [62/113]
   - [ ] Relative imports in Basic Storm?
+  - [ ] The Compiler thread should probably wait for all UThreads to terminate. Otherwise any UThreads
+    that are sleeping will not block the system from terminating properly.
   - [ ] Add a buffered input stream to match the buffered output stream. Add to stream documentation.
   - [ ] Introduce "negative matches" or "lookahead" in the BNF grammar. This would make it easier
     to write rules for matching "int" that do not match "intx" by having the "int" rule like:

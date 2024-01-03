@@ -7,15 +7,15 @@ will look at the differences between value types and class types, and how to imp
 Basic Storm.
 
 The code presented in this tutorial is available in the directory `root/tutorials/types` in the
-release of Storm. You can run it by typing `tutorials:types:main` in the Basic Storm interactive
+Storm release. You can run it by typing `tutorials:types:main` in the Basic Storm interactive
 top-loop.
 
 Setup
 -----
 
 Before starting to write code, we need somewhere to work. For this tutorial, it is enough to create
-a file with the extension `.bs` somewhere on your system. The tutorial uses the name `types.bs`,
-but any name that contains only letters works. As a starting point, add the following code to the
+a file with the extension `.bs` somewhere on your system. The tutorial uses the name `types.bs`, but
+any name that contains only letters will work. As a starting point, add the following code to the
 file:
 
 ```bs
@@ -24,7 +24,7 @@ void main() {
 ```
 
 When you have created a file, open a terminal and change to the directory where you created the
-file. You can instruct Storm to run the file by typing:
+file. You can then run it by typing:
 
 ```
 storm types.bs

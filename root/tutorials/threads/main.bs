@@ -1,0 +1,48 @@
+Nat computeSum(Nat n, Str progressText) {
+	Nat sum = 0;
+	for (Nat i = 1; i <= n; i++) {
+		sum += i;
+		print("${progressText}: at ${i}, sum ${sum}");
+		sleep(1 s);
+	}
+	return sum;
+}
+
+void main() {
+	Future<Nat> sum3 = spawn computeSum(3, "To 3");
+	Nat sum5 = computeSum(5, "To 5");
+	print("Sum of 1 to 3 is: ${sum3.result}");
+	print("Sum of 1 to 5 is: ${sum5}");
+}
+
+// TODO: We can use fibonacci to illustrate this instead!
+// void busywait() {
+// 	Nat x = 0;
+// 	while (x < 0x70000000)
+// 		x++;
+// }
+
+// void threadfn() on B {
+// 	busywait();
+// }
+
+// void async() {
+// 	var a = spawn threadfn();
+// 	var b = spawn busywait();
+// 	a.result;
+// 	b.result;
+// }
+
+// void main() {
+// 	printSequence("main");
+
+// 	// named{threadfn}.compile();
+// 	// named{busywait}.compile();
+
+// 	// for (Nat i = 0; i < 2; i++) {
+// 	// 	Moment a;
+// 	// 	async();
+// 	// 	Moment b;
+// 	// 	print("Async: ${b - a}");
+// 	// }
+// }
