@@ -510,6 +510,8 @@ namespace storm {
 
 		// Create the result object.
 		Type *futureT = wrapFuture(e, this->result).type;
+		// Not technically necessary to do before calling 'safeLocation', but we do it anyway for future-proofing.
+		Bool resultNeeded = result->needed();
 		code::Var resultPos = result->safeLocation(sub, thisPtr(futureT));
 		allocObject(sub, futureT->defaultCtor(), new (this) Array<Operand>(), resultPos);
 		result->created(sub);
@@ -541,6 +543,17 @@ namespace storm {
 				*to->l << mov(id->location(to), rax);
 		} else {
 			*to->l << fnCall(e.ref(builtin::spawnFuture), false);
+		}
+
+		// If the result was not used, call 'detach' on the future:
+		if (!resultNeeded) {
+			Function *detachFn = as<Function>(futureT->find(S("detach"), Value(futureT), Scope()));
+			if (detachFn) {
+				*to->l << fnParam(ptrDesc(e), resultPos);
+				*to->l << fnCall(detachFn->ref(), true);
+			} else {
+				WARNING(L"Failed to find Future::detach. Will not call it automatically!");
+			}
 		}
 
 		// Now, we're done!
