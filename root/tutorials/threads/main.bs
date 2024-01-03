@@ -8,11 +8,31 @@ Nat computeSum(Nat n, Str progressText) {
 	return sum;
 }
 
+Word fibonacci(Nat n) {
+	if (n < 2)
+		return n;
+	else
+		return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
 void main() {
-	Future<Nat> sum3 = spawn computeSum(3, "To 3");
-	Nat sum5 = computeSum(5, "To 5");
-	print("Sum of 1 to 3 is: ${sum3.result}");
-	print("Sum of 1 to 5 is: ${sum5}");
+	if (false) {
+		print("-- Spawn ---");
+
+		Future<Nat> sum3 = spawn computeSum(3, "To 3");
+		Nat sum5 = computeSum(5, "To 5");
+		print("Sum of 1 to 3 is: ${sum3.result}");
+		print("Sum of 1 to 5 is: ${sum5}");
+	}
+
+	{
+		print("-- Threads --");
+
+		Moment start;
+		Word value = fibonacci(40);
+		Moment end;
+		print("Computed fibonacci(40)=${value} in ${end - start}");
+	}
 }
 
 // TODO: We can use fibonacci to illustrate this instead!

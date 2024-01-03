@@ -178,6 +178,59 @@ spawn computeSum(3, "To 3");
 Multiple Threads
 ----------------
 
+Storm implements two kinds of threads: *OS threads* and *user threads*. The first kind, *OS
+threads*, are threads that are scheduled by the operating system. Different OS threads may therefore
+run on different physical CPU cores. User threads on the other hand are implemented inside Storm
+(i.e. in *userspace*). They are therefore invisible to the operating system, and the operating
+system may not schedule them on different cores.
+
+All user threads belong to a specific OS thread. All user threads that belong to the same OS thread
+are scheduled in a cooperative fashion. This means that a user thread will be executed until a point
+where it explicitly allows other threads to run. This is nice since it makes it easier to reason
+about where threads may be interrupted, but it needs some care with long-running tasks.
+
+In the example above, `spawn` will create different user threads on the same OS thread. As such,
+they are scheduled cooperatively on the same OS thread, and are not able to execute in parallel on
+multiple cores. The reason the above example works well is that the call to `sleep` (and actually
+also `print`) lets other user threads run if necessary.
+
+To illustrate the implications of this, let's implement a simple recursive `fibonacci` function and
+measure its execution time. We intentionally use a slow implementation to make it easier to see when
+we utilize multiple physical cores or not:
+
+```bs
+Word fibonacci(Nat n) {
+    if (n < 2)
+        return n;
+    else
+        return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+void main() {
+    Moment start;
+    Word value = fibonacci(40);
+    Moment end;
+    print("Computed fibonacci(40)=${value} in ${end - start}");
+}
+```
+
+In the example we use the `Moment` class to measure execution time. As the name implies, a `Moment`
+reprents a moment in time. The `Moment` is initialized to the current time in a high-resolution
+system specific clock. We then compute the difference between two `Moment`s to get a `Duration` that
+we print.
+
+It is also worth noting that we make `fibonacci` return a `Word`, which is a 64-bit unsigned
+integer. This is to avoid overflows for a bit longer than just using a `Nat`.
+
+The execution time will of course vary depending on the speed of your computer. The output on my
+machine is the following:
+
+```
+Computed fibonacci(40)=102334155 in 2.10 s
+```
+
+
+
 - Declaring named threads, executing code on them
 - Implications on semantics for class types
 
