@@ -15,6 +15,44 @@ Word fibonacci(Nat n) {
 		return fibonacci(n - 1) + fibonacci(n - 2);
 }
 
+thread FibA;
+thread FibB;
+
+Word fibonacciA(Nat n) on FibA {
+	return fibonacci(n);
+}
+
+Word fibonacciB(Nat n) on FibB {
+	return fibonacci(n);
+}
+
+class Data {
+	Nat value;
+
+	init() {}
+
+	init(Data other) {
+		init { value = other.value; }
+		print("Copied data!");
+	}
+}
+
+thread MyThread;
+
+Data modifyData(Data toModify) on MyThread {
+	toModify.value = 10;
+	return toModify;
+}
+
+class ActorData on MyThread {
+	Nat value;
+}
+
+ActorData modifyData(ActorData toModify) on MyThread {
+	toModify.value = 10;
+	return toModify;
+}
+
 void main() {
 	if (false) {
 		print("-- Spawn ---");
@@ -25,44 +63,51 @@ void main() {
 		print("Sum of 1 to 5 is: ${sum5}");
 	}
 
-	{
-		print("-- Threads --");
+	if (false) {
+		print("-- Threads, same OS thread --");
 
 		Moment start;
-		Word value = fibonacci(40);
+		Future<Word> value1 = spawn fibonacci(40);
+		Future<Word> value2 = spawn fibonacci(41);
+		print("Finished fibonacci(40)=${value1.result}");
+		print("Finished fibonacci(41)=${value2.result}");
 		Moment end;
-		print("Computed fibonacci(40)=${value} in ${end - start}");
+		print("Total time: ${end - start}");
+	}
+
+	if (false) {
+		print("-- Threads, different OS threads --");
+
+		Moment start;
+		Future<Word> value1 = spawn fibonacciA(40);
+		Future<Word> value2 = spawn fibonacciB(41);
+		print("Finished fibonacci(40)=${value1.result}");
+		print("Finished fibonacci(41)=${value2.result}");
+		Moment end;
+		print("Total time: ${end - start}");
+	}
+
+	{
+		print("-- Sharing data --");
+
+		Data data;
+		Future<Data> modify = spawn modifyData(data);
+		data.value = 20;
+		Data modified = modify.result();
+		print("After modifications: ${data.value}");
+		print("Returned object: ${modified.value}");
+		print("Are they the same? ${data is modified}");
+	}
+
+	{
+		print("-- Sharing data with actors --");
+
+		ActorData data;
+		Future<ActorData> modify = spawn modifyData(data);
+		data.value = 20;
+		ActorData modified = modify.result();
+		print("After modifications: ${data.value}");
+		print("Returned object: ${modified.value}");
+		print("Are they the same? ${data is modified}");
 	}
 }
-
-// TODO: We can use fibonacci to illustrate this instead!
-// void busywait() {
-// 	Nat x = 0;
-// 	while (x < 0x70000000)
-// 		x++;
-// }
-
-// void threadfn() on B {
-// 	busywait();
-// }
-
-// void async() {
-// 	var a = spawn threadfn();
-// 	var b = spawn busywait();
-// 	a.result;
-// 	b.result;
-// }
-
-// void main() {
-// 	printSequence("main");
-
-// 	// named{threadfn}.compile();
-// 	// named{busywait}.compile();
-
-// 	// for (Nat i = 0; i < 2; i++) {
-// 	// 	Moment a;
-// 	// 	async();
-// 	// 	Moment b;
-// 	// 	print("Async: ${b - a}");
-// 	// }
-// }

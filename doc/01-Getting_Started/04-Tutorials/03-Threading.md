@@ -229,13 +229,259 @@ machine is the following:
 Computed fibonacci(40)=102334155 in 2.10 s
 ```
 
+Let's try to compute both `fibonacci(40)` and `fibonacci(41)`. Of course, we can do it sequentially
+as follows:
+
+```bs
+void main() {
+    Moment start;
+    Word value1 = fibonacci(40);
+    Moment middle;
+    Word value2 = fibonacci(41);
+    Moment end;
+    print("Computed fibonacci(40)=${value1} in ${middle - start}");
+    print("Computed fibonacci(41)=${value2} in ${end - middle}");
+    print("Total time: ${end - start}");
+}
+```
+
+This produces output similar to below. Again, the times are likely to be different on your machine:
+
+```
+Computed fibonacci(40)=102334155 in 2.10 s
+Computed fibonacci(41)=165580141 in 3.40 s
+Total time: 5.49 s
+```
+
+Since the two calls to `fibonacci` are independent of each other, we can execute them in parallell
+with the `spawn` keyword. Hopefully this allows the computation to finish quicker!
+
+```bs
+void main() {
+    Moment start;
+    Future<Word> value1 = spawn fibonacci(40);
+    Future<Word> value2 = spawn fibonacci(41);
+    print("Finished fibonacci(40)=${value1.result}");
+    print("Finished fibonacci(41)=${value2.result}");
+    Moment end;
+    print("Total time: ${end - start}");
+}
+```
+
+Interestingly, the program above does not execute quicker than the sequential program. Why did we
+not se any speedup?
+
+The reason is that the threads started by `spawn` start on the same user thread by default. This
+means that the two calls to `fibonacci` are sceduled cooperatively on a single OS thread. Since only
+OS threads are visible to the operating system, the operating system is unable to schedule the user
+threads on different cores. In our case, one call to `fibonacci` will simply run before the other,
+just as in the sequential example. As such, different user threads on the same OS thread are good
+for concurrent execution of different tasks that are not CPU bound. To achieve parallel execution,
+we need to create the user threads on different OS threads. There is a cost associated with this,
+which is why it is not done by default.
+
+In Basic Storm, we can declare OS threads using the `thread` keyword as follows:
+
+```bs
+thread FibA;
+thread FibB;
+```
+
+We can then instruct the system that certain functions need to be executed by a particular thread
+using the `on` keyword:
+
+```bs
+Word fibonacciA(Nat n) on FibA {
+    return fibonacci(n);
+}
+
+Word fibonacciB(Nat n) on FibB {
+    return fibonacci(n);
+}
+```
+
+This means that the system will ensure that `fibonacciA` is always executed on the thread named
+`FibA`, and that `fibonacciB` is always executed on the thread named `FibB`. We can of course still
+call the functions normally as follows:
+
+```bs
+void main() {
+    Word value1 = fibonacciA(40);
+    Word value2 = fibonacciB(41);
+    // ...
+}
+```
+
+This is, however, not very useful for us. While the system ensures that the different threads are
+used, the program above would first start the computation of `fibonacciA` on the `FibA` thread, then
+wait for the computation to complete before starting to compute `fibonacciB`. As such, the above is
+equivalent to:
+
+```bs
+void main() {
+    Word value1 = (spawn fibonacciA(40)).result();
+    Word value2 = (spawn fibonacciB(41)).result();
+    // ...
+}
+```
+
+This is not what we want, since our goal is to execute the two functions in parallel. With this
+setup we can, however, go back to our previous idea of using `spawn`:
+
+```bs
+void main() {
+    Moment start;
+    Future<Word> value1 = spawn fibonacciA(40);
+    Future<Word> value2 = spawn fibonacciB(41);
+    print("Finished fibonacci(40)=${value1.result}");
+    print("Finished fibonacci(41)=${value2.result}");
+    Moment end;
+    print("Total time: ${end - start}");
+}
+```
+
+If we run the program now, we can see that it finishes in around 3.4 seconds instead of almost 6
+seconds. This means that we have managed to execute the compuations in parallel at last!
 
 
-- Declaring named threads, executing code on them
-- Implications on semantics for class types
+Sharing Data Between OS Threads
+-------------------------------
 
-Actors: Sharing Data Safely
----------------------------
+Now that we know how to execute code in parallel, let's explore how Storm makes parallel programming
+safe. Remember that Storm guarantees that data races are not possible. However, the following
+program looks like it would violate that principle:
+
+```bs
+thread MyThread;
+
+class Data {
+    Nat value;
+}
+
+void modifyData(Data toModify) on MyThread {
+    toModify.value = 10;
+}
+
+void main() {
+    Data data;
+    Future<void> modify = spawn modifyData(data);
+    data.value = 20;
+    modify.result(); // To wait for 'modifyData' to finish.
+    print("After modifications: ${toModify.value}");
+}
+```
+
+Remember that class types have reference semantics. We would therefore expect that `main` and
+`modifyData` would have access to the same instance of `Data`. Since they execute in parallel, this
+would constitute a data race.
+
+However, if we run the program we will see that it always prints `20`. If we remove the assignment
+`data.value = 20` in `main`, we will further see that the program always prints `0`, even though we
+ensure that `modifyData` has finished execution before printing the modified value. This seems
+strange!
+
+The reason for the behavior above is that Storm enforces that value- and class-types are *not*
+shared between different OS threads, since that would risk creating data races. This means that
+Storm needs to copy data that may be passed between two thread. This decision is generally made
+statically. In this case, the function `main` is not associated with a OS thread, so it may run on
+any thread in the system. Since the call to `modifyData` has to run on the thread `MyThread`, Storm
+inserts code to send a message to the appropriate thread. As a part of that process, it also makes a
+deep copy of any value- and class-types passed to and from the function. We can observe this
+behavior by defining a copy-constructor in our class:
+
+```bs
+class Data {
+    Nat value;
+
+    // We need to define the default constructor explicitly, since it will
+    // no longer be generated by default when we define another constructor.
+    init() {}
+
+    // The copy constructor.
+    init(Data other) {
+        init { value = other.value; }
+        print("Copied data!");
+    }
+}
+```
+
+If we run the program again, we will see that the string `Copied data!` is printed once, when we
+call `modifyData`. This is why the changes to `Data` is not visible in the `main` function as we
+initially expected.
+
+This behavior can be summarized as: class-types have by-value semantics when they are passed across
+a thread boundary. This is the reason why the `==` operator and hash tables compare the contents of
+the class rather than using the identity of the object. The identity of the object might change when
+objects cross a thread boundary.
+
+To illustrate this, let's modify the `modifyData` function to actually return the `Data` instance
+as well:
+
+```bs
+Data modifyData(Data toModify) on MyThread {
+    toModify.value = 10;
+    return toModify;
+}
+```
+
+We can then inspect the behavior more closely in our `main` function:
+
+```bs
+void main() {
+    Data data;
+    Future<Data> modify = spawn modifyData(data);
+    data.value = 20;
+    Data modified = modify.result();
+    print("After modifications: ${data.value}");
+    print("Returned object: ${modified.value}");
+    print("Are they the same? ${data is modified}");
+}
+```
+
+At this point, we can observe that the copy constructor is called twice: once when the `Data`
+instance in the `main` function is passed to `modifyData`, and then again when the instance is
+returned back to `main`. The instance returned from `modifyData` has indeed been modified to contain
+10 as we would expect. Finally, we can also see that `data` and `modified` do not refer to the same
+object, which would be the case if we had not associated `modifyData` with a thread. Remember that
+the `is` operator compares object identities.
+
+
+Sharing Data Safely with Actors
+-------------------------------
+
+To make it possible to safely share data between OS threads, Storm provides a third kind of type:
+*actors*. An *actor* is similar to a class in that it has by-reference semantics. The difference is
+that it retains the by-reference semantics even across thread boundaries. This might initially seem
+like it would violate the guarantee of no data races. However, an actor needs to be associated with
+a thread. Just like the functions that are associated with a thread, this means that the object may
+only be accessed by code running on the associated thread.
+
+This is perhaps best illustrated with an example. Let's make a version of the `Data` class that is
+an actor and compare its behavior to the example above. An actor is declared just like a class. The
+only difference is that we add the `on` keyword followed by the associated thread:
+
+```bs
+class ActorData on MyThread {
+    Nat value;
+}
+```
+
+We then modify the code in the `main` function to use the new type instead:
+
+```bs
+void main() {
+    ActorData data;
+    Future<ActorData> modify = spawn modifyData(data);
+    data.value = 20;
+    ActorData modified = modify.result();
+    print("After modifications: ${data.value}");
+    print("Returned object: ${modified.value}");
+    print("Are they the same? ${data is modified}");
+}
+```
+
+This produces an error...
+
 
 - Actors
 - Talk about inheritance
