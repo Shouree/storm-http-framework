@@ -509,8 +509,8 @@ namespace storm {
 			// We need to copy. See if we shall warn the user...
 			if (assignTo)
 				throw new (this) SyntaxError(pos, S("Unable to assign to member variables in objects running ")
-											S("on a different thread than the caller. Use assignment functions ")
-											S("for this task instead."));
+											S("on a different thread than the caller. Create a function in ")
+											S("the actor that performs the desired operation instead."));
 
 			extractCopyCode(s, to);
 		}

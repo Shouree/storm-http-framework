@@ -480,16 +480,182 @@ void main() {
 }
 ```
 
-This produces an error...
+If we try to run this code it produces the following error on the line `data.value = 20`:
 
+```
+@/home/storm/threads.bs(2105-2110): Syntax error:
+Unable to assign to member variables in objects running on a different thread than
+the caller. Create a function in the actor that performs the desired operation instead.
+```
 
-- Actors
-- Talk about inheritance
+As the error indicates, Storm has noticed that `data` is an actor associated wit the thread
+`MyThread`, while `main` is not necessarily executed on that thread. Therefore, to avoid data races,
+Storm does not allow modifying `value` in this manner. As the error message indicates, we need to
+create a function that performs the assignment for us instead. Since function calls are dispatched
+to the proper thread as a message, this approach will avoid data races.
 
+For now, we can simply remove the assignment to `data.value` to be able to run the program. This is
+actually enough, even though we read from `value` in the `print` statements. This does indeed look
+like a data race, but Basic Storm allows it anyway. What happens in cases like these is that Basic
+Storm generates a function that retrieves the variable, and arranges for that function to be
+executed on `MyThread`. This means that it is possible to read member variables from actors as
+usual, even though the cost of doing so is much higher, and often involves a copy.
 
+Running the program produces the following output:
 
-As mentioned in the [previous tutorial](md:Values_and_Classes), Storm has three kinds of types:
-value types, class types, and actor types.
+```
+After modifications: 10
+Returned object: 10
+Are they the same? true
+```
 
+This is the behavior we initially expected from class types. As such, we can conclude that actor
+types retain the by-reference semantics even across thread boundaries.
 
-- Example with different threads, and how it affects mutability.
+Let's fix the error with the assignment in the `main` function above. The error message told us that
+we need to make a function in the actor that modifies the variable for us. In this case, we can make
+a function `set` as follows inside `ActorData`:
+
+```bsclass
+void set(Nat newValue) {
+    value = newValue;
+}
+```
+
+Then we can replace the removed line `data.value = 20;` with `data.set(20);` in the `main` function.
+If we run the program now, it runs without errors and produces the following output (most of the
+time):
+
+```
+After modifications: 20
+Returned object: 20
+Are they the same? true
+```
+
+It is worth noting that the program is currently non-deterministic. The output depends on whether
+the `modifyData` or the `set` function is executed first, and the order of these calls is not
+specified since they may execute in parallel. Storm does, however, guarantee that `modifyData` and
+`set` are not interleaved with each other, since they are scheduled cooperatively on the same OS
+thread.
+
+### Thread-safety
+
+To illustrate the implications of the message-passing model in Storm, let's assume that we wish to
+increase `value` with a specific amount from two different threads. We can implement this as
+follows:
+
+```bs
+thread MyThread;
+
+class ActorData on MyThread {
+    Nat value;
+
+    void set(Nat newValue) {
+        value = newValue;
+    }
+}
+
+thread MyOtherThread;
+
+void addData(ActorData toUpdate, Nat toAdd) on MyOtherThread {
+    toUpdate.set(toUpdate.value + toAdd);
+}
+
+void main() {
+    ActorData data;
+    Future<void> modify = spawn addData(data, 20);
+    for (Nat i = 0; i < 10; i++) {
+        data.set(data.value + 10);
+    }
+    modify.result(); // Wait for completion.
+    print("Final result: ${data.value}");
+}
+```
+
+Since we add 10 to `value` 10 times and 20 once, we would expect this program to always print the
+result `120`. This is, however, not the case. If I run the program on my machine, I get the
+following output most of the time:
+
+```
+Final result: 100
+```
+
+What happened here? The issue lies in how we have implemented the increment operation, both in
+`main` and in `addData`. As it is written now, we first read from `value`, then add some value to
+it, and finally write it back using the `set` function. While Storm provides the guarantee that
+reading and writing (using `set`) are not interrupted by other threads, it provides no guarantees
+that nothing happens between these operations. As such, what happened above was likely the
+following:
+
+- `main` read `value` and got the value 0.
+- `addData` read `value` and got the value 0.
+- `addData` added 20 to 0 and calls `set(20)`.
+- `main` added 10 to 0 and calls `set(10)`, which overwrites the result from `addData`.
+
+To fix this problem, we need to make sure that the read and write to `value` are not interrupted by
+other operations. Luckily, it is enough to make sure that the increment operation occurs on the same
+OS thread as the one associated with the actor. The easiest way of doing this is to add a member
+function that performs the operation that needs to be uninterrupted:
+
+```bsclass
+void add(Nat toAdd) {
+    value = value + toAdd;
+}
+```
+
+If we then make sure to call the `add` function wherever we increment the value, the program will
+work as expected, and always print `120`:
+
+```bs
+void addData(ActorData toUpdate, Nat toAdd) on MyOtherThread {
+    toUpdate.add(toAdd);
+}
+
+void main() {
+    ActorData data;
+    Future<void> modify = spawn addData(data, 20);
+    for (Nat i = 0; i < 10; i++) {
+        data.add(10);
+    }
+    modify.result(); // Wait for completion.
+    print("Final result: ${data.value}");
+}
+```
+
+As such, we can see that the threading model in Storm generally lets us treat member functions in
+actors as "atomic", i.e. that they are not interrupted partway through. This has the nice property
+that the goal of providing a nice interface to actor types aligns well with making the interface
+thread safe.
+
+There is one exception to this rule. If we call a function on another thread from the member
+function of an actor, other function calls may execute at that point. For example, assume that
+`threadFn` is such a function. Then, calling `threadFn` inside of `add` like below would make it
+possible for the threading issues we saw before to arise:
+
+```bsclass
+void add(Nat toAdd) {
+    Nat original = value;
+    threadFn();
+    value = original + toAdd;
+}
+```
+
+Code like above does, however, make the reader question whether `threadFn` does something to `value`
+already, so these types of situations are not typically a big issue.
+
+### Inheritance
+
+Finally, a quick word on inheritance related to actors. Apart from being associated to a thread,
+actors behave like classes. As such, it is possible to inherit from actors as well. For example, we
+could create an actor that adds a member variable to our `ActorData` as follows:
+
+```bs
+class Derived extends ActorData {
+    Nat count;
+}
+```
+
+Since `Derived` inherits from `ActorData` that is an actor, `Derived` will also become an actor that
+is associated to the same thread as `ActorData`. This also applies to all types that inherit from
+`Derived`. This makes it quire convenient to use and extend functionality from a library without
+worrying too much about threading, as we shall see in the following tutorials.

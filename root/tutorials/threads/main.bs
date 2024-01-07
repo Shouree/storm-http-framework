@@ -46,6 +46,14 @@ Data modifyData(Data toModify) on MyThread {
 
 class ActorData on MyThread {
 	Nat value;
+
+	void set(Nat newValue) {
+		value = newValue;
+	}
+
+	void add(Nat toAdd) {
+		value = value + toAdd;
+	}
 }
 
 ActorData modifyData(ActorData toModify) on MyThread {
@@ -53,8 +61,18 @@ ActorData modifyData(ActorData toModify) on MyThread {
 	return toModify;
 }
 
+thread MyOtherThread;
+
+void addData(ActorData toUpdate, Nat toAdd) on MyOtherThread {
+	toUpdate.set(toUpdate.value + toAdd);
+}
+
+void addData2(ActorData toUpdate, Nat toAdd) on MyOtherThread {
+	toUpdate.add(toAdd);
+}
+
 void main() {
-	if (false) {
+	{
 		print("-- Spawn ---");
 
 		Future<Nat> sum3 = spawn computeSum(3, "To 3");
@@ -63,7 +81,7 @@ void main() {
 		print("Sum of 1 to 5 is: ${sum5}");
 	}
 
-	if (false) {
+	{
 		print("-- Threads, same OS thread --");
 
 		Moment start;
@@ -75,7 +93,7 @@ void main() {
 		print("Total time: ${end - start}");
 	}
 
-	if (false) {
+	{
 		print("-- Threads, different OS threads --");
 
 		Moment start;
@@ -104,10 +122,34 @@ void main() {
 
 		ActorData data;
 		Future<ActorData> modify = spawn modifyData(data);
-		data.value = 20;
+		data.set(20);
 		ActorData modified = modify.result();
 		print("After modifications: ${data.value}");
 		print("Returned object: ${modified.value}");
 		print("Are they the same? ${data is modified}");
+	}
+
+	{
+		print("-- Thread-safe operations, incorrect --");
+
+		ActorData data;
+		Future<void> modify = spawn addData(data, 20);
+		for (Nat i = 0; i < 10; i++) {
+			data.set(data.value + 10);
+		}
+		modify.result();
+		print("Final result: ${data.value}");
+	}
+
+	{
+		print("-- Thread-safe operations, correct --");
+
+		ActorData data;
+		Future<void> modify = spawn addData2(data, 20);
+		for (Nat i = 0; i < 10; i++) {
+			data.add(10);
+		}
+		modify.result();
+		print("Final result: ${data.value}");
 	}
 }
