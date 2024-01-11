@@ -54,7 +54,7 @@
   "Wait for the storm process to send us a message. Times out after about a second."
   (let ((result t))
     (while (and result
-		(endp storm-test-msg))
+		(null storm-test-msg))
       (redisplay)
       (setq result (accept-process-output storm-process 1)))
 
