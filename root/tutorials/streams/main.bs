@@ -1,0 +1,104 @@
+use core:io;
+use lang:bs:macro;
+
+Url resUrl(Str name) {
+    if (url = named{res}.url) {
+        return url / name;
+    } else {
+        throw InternalError("Expected the package 'res' to be non-virtual.");
+    }
+}
+
+void main() {
+	{
+		print("-- Basic Url operations ---");
+
+		Url path;
+		path = path / "streams" / "input.txt";
+		print("Path: ${path}");
+		print("Name: ${path.name}");
+		print("Title: ${path.title}");
+		print("Extension: ${path.ext}");
+		print("Parent: ${path.parent}");
+
+		for (i, x in path) {
+			print("Part ${i}: ${x}");
+		}
+	}
+
+	{
+		print("-- Listing files --");
+
+		Url path = cwdUrl() / "streams";
+		for (child in path.children()) {
+			if (child.dir) {
+				print("Dir:  ${child}");
+			} else {
+				print("File: ${child}");
+			}
+		}
+	}
+
+	{
+		print("-- Accessing files in the name tree --");
+
+		Url example = resUrl("example.txt");
+		print("Does 'example.txt' exist? ${example.exists}");
+	}
+
+	{
+		print("-- Reading files --");
+
+		Url example = resUrl("example.txt");
+		IStream input = example.read();
+
+		Buffer b = buffer(32);
+		do {
+			b.filled = 0; // Reset from previous iteration.
+			input.fill(b);
+			print(b.toS + "\n");
+		} while (b.filled > 0); // Zero bytes read means end of stream.
+
+		input.close();
+	}
+
+	{
+		print("-- Reading text --");
+
+		Url example = resUrl("example.txt");
+		IStream input = example.read();
+		TextInput text = readText(input); // or input.readText()
+		while (text.more()) {
+			print("Line: " + text.readLine());
+		}
+		text.close(); // Also closes 'input'.
+	}
+
+	{
+		print("-- Writing files --");
+
+		Url out = resUrl("out.txt");
+		OStream output = out.write();
+
+		Buffer b = buffer(2);
+		b[0] = 0x41;
+		b[1] = 0x0A;
+		b.filled = 2;
+
+		output.write(b);
+		output.close();
+	}
+
+	{
+		print("-- Writing text --");
+
+		Url out = resUrl("out2.txt");
+		OStream output = out.write();
+
+		Utf8Output textOut(output, sysTextInfo());
+		textOut.writeLine("Text from Storm!");
+		textOut.writeLine("Another line");
+
+		textOut.close();
+	}
+}

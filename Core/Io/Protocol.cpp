@@ -31,7 +31,7 @@ namespace storm {
 	}
 
 	void ProtocolNotSupported::message(StrBuf *to) const {
-		*to << operation << S(" is not supported by the protocol ") << protocol;
+		*to << S("The operation '") << operation << S("' is not supported by the protocol ") << protocol;
 	}
 
 
