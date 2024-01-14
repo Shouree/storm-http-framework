@@ -287,7 +287,7 @@ package Expr testExpr(SrcPos pos, Block block, ExprText expr, SrcName exception)
 		handler.add(FnCall(pos, handler.scope, named{print<Str>}, Actuals(msg)));
 	}
 
-	print(sub.toS);
+	// print(sub.toS);
 
 	sub;
 }
