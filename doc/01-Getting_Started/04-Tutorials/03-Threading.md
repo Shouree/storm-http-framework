@@ -23,7 +23,7 @@ void main() {
 ```
 
 After doing this, open a terminal and change to the directory where you created the file. Then run
-the file by typing:
+it by typing:
 
 ```
 storm threads.bs

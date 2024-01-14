@@ -5,7 +5,7 @@ void compileNoRes(Package *in) {
 	in->forceLoad();
 	for (NameSet::Iter i = in->begin(); i != in->end(); i++) {
 		if (Package *child = as<Package>(i.v())) {
-			if (child->name->endsWith(S("_res"))) {
+			if (child->name->endsWith(S("_res")) || *child->name == S("res")) {
 			} else {
 				compileNoRes(child);
 			}

@@ -1,0 +1,49 @@
+use test;
+use lang:bs:macro; // only needed for 'named{}' in 'main'.
+
+Int fibonacci(Int n) {
+	if (n == 0) {
+		return 0;
+	} else if (n < 0) {
+		throw NotSupported("n must not be negative");
+	}
+
+	Int current = 1;
+	Int previous = 0;
+
+	for (Int i = 1; i < n; i++) {
+		Int next = current + previous;
+		previous = current;
+		current = next;
+	}
+
+	return current;
+}
+
+suite Fibonacci {
+	test fibonacci(0) == 0;
+	test fibonacci(1) == 1;
+	test fibonacci(2) == 1;
+	test fibonacci(3) == 2;
+
+	test fibonacci(-1) throws NotSupported;
+}
+
+void main() {
+	// Call the function directly:
+	{
+		print("-- Manual execution --");
+
+		TestResult result = Fibonacci();
+		print("Failed: ${result.failed}");
+		print(result.toS);
+	}
+
+	// Use the library:
+	{
+		print("-- Using the library --");
+
+		TestResult result = runTests(named{});
+		print("Failed: ${result.failed}");
+	}
+}
