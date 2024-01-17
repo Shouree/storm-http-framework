@@ -15,10 +15,24 @@ good idea to start from the topmost one and work downwards:
   Shows basic concepts when working with Storm, such as text IO, debugging tips, and some common
   constructs.
 
+- [**Values and Classes**](md:Values_and_Classes)
+
+  Illustrates the differences between value types and class types through examples.
+
 - [**Threading**](md:Threading)
 
   Shows how the [threading model](md:/Language_Reference/Storm/Threading_Model) in Storm works, and
   some implications that might be surprising for new users of Storm.
+
+- [**Files and Streams**](md:Files_and_Streams)
+
+  Shows how the [IO library](md:/Library_Reference/Standard_Library/IO) in Storm can be used to
+  access files in the file system, and how to read and write text files.
+
+- [**Serialization**](md:Serialization)
+
+  Shows how [serialization](md:/Library_Reference/Standard_Library/IO/Serialization) works in Storm,
+  and how it can be used to implement a simple network protocol.
 
 - [**UI**](md:UI)
 
@@ -27,10 +41,10 @@ good idea to start from the topmost one and work downwards:
   library](md:/Library_Reference/Layout_Library) can be used to simplify the task of positioning
   elements in a window.
 
-- [**Serialization**](md:Serialization)
+- [**Tests**](md:Tests)
 
-  Shows how [serialization](md:/Library_Reference/Standard_Library/IO/Serialization) works in Storm,
-  and how it can be used to implement a simple network protocol.
+  Shows how the [unit test library](md:/Library_Reference/Unit_Tests) can be used to write tests for
+  code in Storm.
 
 - [**Using Grammar**](md:Using_Grammar)
 
@@ -54,3 +68,8 @@ good idea to start from the topmost one and work downwards:
 
   Shows how to implement a new but small language in Storm. This illustrates how Storm loads new
   languages, and illustrates how one would start implementing a new language in Storm.
+
+- [**Libraries in C++**](md:Libraries_in_C++)
+
+  Describes how to create a library with code written in C++, and how to integrate it into the
+  compilation process of Storm.

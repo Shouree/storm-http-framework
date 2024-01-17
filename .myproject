@@ -97,7 +97,7 @@ Graphics+=CppTypes
 SQL+=CppTypes
 Crypto+=CppTypes
 
-[!dist]
+[deps,!dist]
 #To make sure everything is built.
 #When building for Debian we want a bit more control of what we are building.
 Compiler+=TestLib
