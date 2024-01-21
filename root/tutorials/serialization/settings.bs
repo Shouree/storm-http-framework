@@ -1,0 +1,62 @@
+use core:io;
+use util:serialize;
+
+class Settings : serializable {
+	User user = User("Filip", 30);
+	Str country = "Sweden";
+
+	void toS(StrBuf to) : override {
+		to << "{ user: " << user << ", country: " << country << " }";
+	}
+}
+
+class User : serializable {
+	Str name;
+	Nat age;
+
+	init(Str name, Nat age) {
+		init { name = name; age = age; }
+	}
+
+	void toS(StrBuf to) : override {
+		to << "{ name: " << name << ", age: " << age << " }";
+	}
+}
+
+Url settingsUrl() {
+	return cwdUrl / "settings.dat";
+}
+
+void save() {
+	Settings settings;
+
+	Url saveTo = settingsUrl();
+	ObjOStream out(saveTo.write());
+	settings.write(out);
+	out.close();
+
+	print("Saved to: ${saveTo}");
+}
+
+void text() {
+	Url loadFrom = settingsUrl();
+	TextObjStream in(loadFrom.read());
+
+	Str textRepr = in.read();
+	print("Settings as text:");
+	print(textRepr);
+}
+
+void load() {
+	Url loadFrom = settingsUrl();
+	ObjIStream in(loadFrom.read());
+
+	print("Loading settings from: ${loadFrom}...");
+
+	try {
+		Settings settings = Settings:read(in);
+		print("Success: ${settings}");
+	} catch (SerializationError e) {
+		print("Failed: ${e.message}");
+	}
+}

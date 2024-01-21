@@ -1,0 +1,114 @@
+use core:io;
+use util:serialize;
+
+class Request : serializable {
+	Response execute(Server server) : abstract;
+}
+
+class Response : serializable {}
+
+class AddRequest : extends Request, serializable {
+	Str toAdd;
+
+	init(Str toAdd) {
+		init { toAdd = toAdd; }
+	}
+
+	Response execute(Server server) : override {
+		server.data.push(toAdd);
+		return Response();
+	}
+}
+
+class GetRequest : extends Request, serializable {
+	Response execute(Server server) : override {
+		return GetResponse(server.data);
+	}
+}
+
+class GetResponse : extends Response, serializable {
+	Str[] data;
+
+	init(Str[] data) {
+		init { data = data; }
+	}
+}
+
+class Server {
+	Str[] data;
+
+	void run(IStream read, OStream write) {
+		ObjIStream input(read);
+		ObjOStream output(BufferedOStream(write));
+
+		try {
+			do {
+				Request request = Request:read(input);
+				Response response = request.execute(this);
+				response.write(output);
+				output.flush();
+			}
+		} catch (EndOfStream e) {
+			// End of stream reached, this is normal.
+		} catch (SerializationError e) {
+			print("Serialization error: ${e.message}");
+		}
+
+		input.close();
+		output.close();
+	}
+}
+
+class Client {
+	private ObjIStream input;
+	private ObjOStream output;
+
+	init(IStream read, OStream write) {
+		init {
+			input(read);
+			output(BufferedOStream(write));
+		}
+	}
+
+	Response request(Request request) {
+		request.write(output);
+		output.flush();
+		return Response:read(input);
+	}
+
+	void close() {
+		input.close();
+		output.close();
+	}
+}
+
+void runClient(IStream read, OStream write) {
+	Client client(read, write);
+
+	client.request(AddRequest("a"));
+	client.request(AddRequest("b"));
+
+	if (response = client.request(GetRequest()) as GetResponse) {
+		print("Final data: ${response.data}");
+	} else {
+		print("Invalid response.");
+	}
+
+	client.close();
+}
+
+void protocol() {
+	Pipe a;
+	Pipe b;
+	var server = {
+		Server server;
+		spawn server.run(a.input, b.output);
+	};
+	var client = {
+		spawn runClient(b.input, a.output);
+	};
+
+	// Wait for both to finish.
+	server.result();
+	client.result();
+}
