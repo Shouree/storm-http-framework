@@ -10,6 +10,7 @@ class MenuWindow extends Frame {
 		init("Menu test", Size(300, 100)) {
 			root = root;
 			help = help;
+			button = Button("Test button");
 		}
 
 		help << Menu:Check("Enable help", &this.enableHelp);
@@ -19,11 +20,15 @@ class MenuWindow extends Frame {
 		root << Menu:Text("Test") << Menu:Submenu("Help", help);
 		menu = root;
 
+		add(button);
+		button.pos(Rect(0, 0, 300, 100).shrink(Size(8)));
+
 		create();
 	}
 
 	MenuBar root;
 	PopupMenu help;
+	Button button;
 
 	Bool onClick(Bool pressed, Point at, MouseButton button) : override {
 		if (pressed) {

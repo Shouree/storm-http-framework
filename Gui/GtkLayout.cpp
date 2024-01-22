@@ -73,15 +73,9 @@ void basic_move(Basic *layout, GtkWidget *widget, gint x, gint y, gint w, gint h
 	if (h < 0)
 		h = 0;
 
-	// Transform based on this container's position. Child coordinates seem to be relative the
-	// parent window, not the parent container.
-	GtkWidget *me = GTK_WIDGET(layout);
-	if (!gtk_widget_get_has_window(me)) {
-		GtkAllocation alloc;
-		gtk_widget_get_allocation(me, &alloc);
-		x += alloc.x;
-		y += alloc.y;
-	}
+	// Child coordinates seem to be relative to the same origin as the allocation of this widget.
+	GtkAllocation allocation;
+	gtk_widget_get_allocation(GTK_WIDGET(layout), &allocation);
 
 	BasicChild *child = get_child(layout, widget);
 	assert(child, L"No child info!");
@@ -89,8 +83,8 @@ void basic_move(Basic *layout, GtkWidget *widget, gint x, gint y, gint w, gint h
 
 	// Update the allocation of the widget as well.
 	GtkAllocation alloc;
-	alloc.x = x;
-	alloc.y = y;
+	alloc.x = allocation.x + x;
+	alloc.y = allocation.y + y;
 	alloc.width = w;
 	alloc.height = h;
 	gtk_widget_size_allocate(widget, &alloc);
@@ -209,17 +203,10 @@ static void basic_size_allocate(GtkWidget *widget, GtkAllocation *allocation) {
 			continue;
 
 		GtkAllocation alloc;
-		alloc.x = child->x;
-		alloc.y = child->y;
+		alloc.x = allocation->x + child->x;
+		alloc.y = allocation->y + child->y;
 		alloc.width = child->w;
 		alloc.height = child->h;
-
-		// if (!gtk_widget_get_has_window(widget)) {
-		// 	// Really? It seems these coordinates are supposed to be relative to the parent... They
-		// 	// are, however, relative to the window of the parent. Wayland is a good way to test this.
-		// 	alloc.x += allocation->x;
-		// 	alloc.y += allocation->y;
-		// }
 
 		gtk_widget_size_allocate(child->widget, &alloc);
 	}
