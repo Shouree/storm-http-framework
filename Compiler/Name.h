@@ -43,6 +43,7 @@ namespace storm {
 
 		// Get the last element.
 		NamePart *STORM_FN last() const { return parts->last(); }
+		NamePart *STORM_ASSIGN last(NamePart *p) { parts->last() = p; return p; }
 
 		// Number of elements.
 		Nat STORM_FN count() const { return parts->count(); }

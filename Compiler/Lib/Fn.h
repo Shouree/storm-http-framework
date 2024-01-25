@@ -46,7 +46,7 @@ namespace storm {
 	};
 
 	// Find the function type.
-	Type *fnType(Array<Value> *params) ON(Compiler);
+	Type *STORM_FN fnType(Array<Value> *params) ON(Compiler);
 
 	// Create a function pointer to a function.
 	FnBase *STORM_FN pointer(Function *target) ON(Compiler);

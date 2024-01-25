@@ -129,6 +129,14 @@ namespace storm {
 		init();
 	}
 
+	NameSet::NameSet(SrcPos pos, Str *name) : Named(pos, name) {
+		init();
+	}
+
+	NameSet::NameSet(SrcPos pos, Str *name, Array<Value> *params) : Named(pos, name, params) {
+		init();
+	}
+
 	void NameSet::init() {
 		loaded = false;
 		loading = false;

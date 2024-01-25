@@ -83,6 +83,8 @@ namespace storm {
 		// Create.
 		STORM_CTOR NameSet(Str *name);
 		STORM_CTOR NameSet(Str *name, Array<Value> *params);
+		STORM_CTOR NameSet(SrcPos pos, Str *name);
+		STORM_CTOR NameSet(SrcPos pos, Str *name, Array<Value> *params);
 
 		// Add a named object.
 		virtual void STORM_FN add(Named *item);
