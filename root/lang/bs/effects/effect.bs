@@ -1,0 +1,15 @@
+use core:lang;
+use lang:bs;
+
+/**
+ * Effect definition.
+ *
+ * Expands to a function that can be called from other languages.
+ */
+class Effect extends Function {
+	// TODO: List of handlers.
+
+	init(SrcPos pos, Str name, Value result, ValParam[] params) {
+		init(pos, result, name, values(params)) {}
+	}
+}

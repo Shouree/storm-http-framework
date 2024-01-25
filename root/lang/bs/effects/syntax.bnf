@@ -1,0 +1,26 @@
+use lang.bs;
+use core.lang;
+
+optional delimiter = SDelimiter;
+required delimiter = SRequiredDelimiter;
+
+// Delimitation:
+SExpr => HandleExpr(pos, block, body, handler)
+    : "handle" #keyword, SBlock(block) body, "with" #keyword ~ SType handler;
+
+// Effect declaration:
+SPlainFileItem => EffectDecl(env, result, name, params)
+    : "effect" #keyword - ":", SType result ~ SName name, "(", SFormals params, ")", ";";
+
+// Handler declaration:
+SPlainFileItem => HandlerDecl(env, name, result, param, clauses)
+    : "handler" #keyword, - ":", SType result ~ SName name #typeName, "(", SType param, ")", "{" [, (SHandlerClause@ clauses, )* ]+ "}";
+
+HandlerClause SHandlerClause(Handler h, Scope scope);
+SHandlerClause => EffectHandlerClause(pos, h, scope, effect, params, contParam, body)
+    : SType effect, "(", SFormals params, ")", ",", SName contParam #varName, HandlerBody body;
+SHandlerClause[10] => returnClause(pos, h, scope, param, body)
+    : "return" #keyword, SName param #varName, HandlerBody body;
+
+SFunctionBody HandlerBody();
+HandlerBody => x : SFunctionBody@ x;

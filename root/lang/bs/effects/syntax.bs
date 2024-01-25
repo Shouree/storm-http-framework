@@ -1,0 +1,75 @@
+use core:lang;
+use lang:bs;
+
+class EffectDecl extends NamedDecl {
+	Scope scope;
+	SrcPos pos;
+	Str name;
+	SrcName result;
+	NameParam[] params;
+
+	init(Scope scope, SrcName result, SStr name, NameParam[] params) {
+		init() {
+			scope = scope;
+			pos = name.pos;
+			result = result;
+			name = name.v;
+			params = params;
+		}
+	}
+
+	protected Named doCreate() : override {
+		Scope fScope = fileScope(scope, pos);
+
+		Value result = fScope.value(result);
+		var params = params.resolve(fScope);
+
+		return Effect(pos, name, result, params);
+	}
+}
+
+class HandlerDecl extends NamedDecl {
+	Scope scope;
+	SrcPos pos;
+	Str name;
+	SrcName result;
+	SrcName param;
+	SHandlerClause[] clauses;
+
+	init(Scope scope, SStr name, SrcName result, SrcName param, SHandlerClause[] clauses) {
+		init() {
+			scope = fileScope(scope, name.pos);
+			pos = name.pos;
+			name = name.v;
+			result = result;
+			param = param;
+			clauses = clauses;
+		}
+	}
+
+	protected Named doCreate() : override {
+		return Handler(pos, name, scope.value(result), scope.value(param));
+	}
+
+	protected void doResolve(Named created) : override {
+		unless (created as Handler)
+			return;
+
+		Set<Named> used;
+
+		for (clause in clauses) {
+			HandlerClause c = clause.transform(created, scope);
+			if (c as EffectHandlerClause) {
+				if (used.has(c.effect))
+					throw SyntaxError(clause.pos, "This effect has already been handled in this handler.");
+
+				used.put(c.effect);
+				created.effectClauses << c;
+			} else {
+				if (created.returnClause.any)
+					throw SyntaxError(clause.pos, "The 'return' handler may only be specified once.");
+				created.returnClause = c;
+			}
+		}
+	}
+}
