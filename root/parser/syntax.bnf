@@ -10,7 +10,7 @@ SPlainFileItem => parserOverloads(parser) : SParser(env) parser;
 // Create the actual parser (we want to be able to use the -> syntax).
 Parser SParser(Scope env);
 SParser => parser
-  : lang.bs.SName name #fnName, ":", "parser" #keyword, "(", SParserType(env, name) parser - SParserOptions(parser), ")", SFreeOptions@ -> setOptions, "{", SParserBody -> setSyntax, "}";
+  : lang.bs.SName name #fnName, ":", "parser" #keyword, "(", SParserType(env, name) parser - SParserOptions(parser), ")", SFreeOptions@ -> setOptions, "{" [, SParserBody -> setSyntax, ]+ "}";
 
 
 // Parser types. This creates the actual parser instance to use, also makes the system extensible.
