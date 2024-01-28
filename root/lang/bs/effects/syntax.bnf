@@ -22,5 +22,5 @@ SHandlerClause => EffectHandlerClause(pos, h, scope, effect, params, contParam, 
 SHandlerClause[10] => returnClause(pos, h, scope, param, body)
     : "return" #keyword, SName param #varName, HandlerBody body;
 
-SFunctionBody HandlerBody();
-HandlerBody => x : SFunctionBody@ x;
+SBlock HandlerBody();
+HandlerBody => x : SBlock@ x;

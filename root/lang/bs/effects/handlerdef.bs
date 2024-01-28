@@ -1,5 +1,6 @@
 use core:lang;
 use lang:bs;
+use lang:bs:macro;
 
 /**
  * Handler definition.
@@ -17,8 +18,6 @@ class Handler extends Named {
 			result = result;
 			param = param;
 		}
-
-		print("TODO: If we don't have a return clause, check so that 'result' equals 'param'!");
 	}
 }
 
@@ -33,20 +32,25 @@ class HandlerClause on Compiler {
 	Function handler;
 
 	// Create.
-	init(SrcPos pos, Handler handler, Scope scope, ValParam[] params, SFunctionBody body) {
-		BSFunction f(handler.result, SStr("handler", body.pos), params, scope, null, body);
-		f.parentLookup = handler;
-
+	init(SrcPos pos, Scope scope, Function handler) {
 		init {
 			pos = pos;
-			handler = f;
+			handler = handler;
 		}
 	}
 }
 
 // Create a return clause for an effect.
-HandlerClause returnClause(SrcPos pos, Handler h, Scope scope, SStr param, SFunctionBody body) on Compiler {
-	HandlerClause(pos, h, scope, [ValParam(h.param, param)], body);
+HandlerClause returnClause(SrcPos pos, Handler h, Scope scope, SStr param, SBlock bodyBlock) on Compiler {
+	BSTreeFn f(h.result, SStr("handler", bodyBlock.pos), [ValParam(h.param, param)], null);
+	f.parentLookup = h;
+
+	FnBody body(f, scope);
+	f.body = body;
+
+	body.add(bodyBlock.transform(body));
+
+	HandlerClause(pos, scope, f);
 }
 
 /**
@@ -57,7 +61,7 @@ class EffectHandlerClause extends HandlerClause {
 	Effect effect;
 
 	// Create.
-	init(SrcPos pos, Handler h, Scope scope, SrcName effectName, NameParam[] params, SStr contParam, SFunctionBody body) {
+	init(SrcPos pos, Handler h, Scope scope, SrcName effectName, NameParam[] params, SStr contParam, SBlock bodyBlock) {
 		var resolvedParams = params.resolve(scope);
 
 		SrcName toFind = effectName.clone();
@@ -69,10 +73,46 @@ class EffectHandlerClause extends HandlerClause {
 			throw SyntaxError(effectName.pos, "Unable to find an effect named ${effectName}.");
 		};
 
-		var contType = fnType([h.param, found.result]);
+		// Add a HandlerFrame as the first parameter. That is where we store our result.
+		resolvedParams.insert(0, ValParam(named{HandlerFrame}, "@result"));
+
+		var contType = fnType([h.param, found.result]); // TODO: The cont type might need to take a HandlerFrame.
 		resolvedParams << ValParam(contType, contParam.v);
 
-		init(pos, h, scope, resolvedParams, body) {
+		BSTreeFn f(Value(), SStr("handler", bodyBlock.pos), resolvedParams, null);
+		f.parentLookup = h;
+
+		FnBody body(f, scope);
+		f.body = body;
+
+		var resultVar = if (x = body.lookup.find(resolvedParams[0].name, scope) as LocalVar) {
+			x;
+		} else {
+			throw InternalError("Could not find result parameter!");
+		};
+
+		var typedFrame = if (x = named{}.find("HandlerFrame", h.result, Scope()) as Type) {
+			x;
+		} else {
+			throw InternalError("Failed to find a handler frame.");
+		};
+
+		WeakDowncast cast(body, LocalVarAccess(pos, resultVar), typedFrame);
+		If check(body, cast);
+
+		if (var = cast.result) {
+			check.success(pattern(check.successBlock) {
+							${LocalVarAccess(pos, var)}.result = ${bodyBlock.transform(body)};
+						});
+		}
+
+		check.fail(pattern(body) {
+							throw InternalError("Invalid types!");
+						});
+
+		body.add(check);
+
+		init(pos, scope, f) {
 			effect = found;
 		}
 	}

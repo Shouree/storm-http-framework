@@ -28,9 +28,6 @@ package class HandlerFrame {
 	// Exception that ocurred, if any.
 	Exception? error;
 
-	// Should we resume by calling a handler?
-	HandlerResume? resume;
-
 	// Ctor.
 	init() {
 		init {
@@ -60,6 +57,15 @@ package class HandlerFrame {
 	// Indicate that a result is available.
 	void signal() {
 		sema.up();
+	}
+
+	// Should we resume by calling a handler?
+	private HandlerResume? resume;
+
+	// Called to resume from an HandlerResume object.
+	void resume(HandlerResume r) {
+		resume = r;
+		signal();
 	}
 }
 

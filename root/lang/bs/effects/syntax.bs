@@ -71,5 +71,11 @@ class HandlerDecl extends NamedDecl {
 				created.returnClause = c;
 			}
 		}
+
+		if (created.returnClause.empty) {
+			if (!created.result.mayStore(created.param)) {
+				throw SyntaxError(pos, "A return handler is required when the parameter and result types differ.");
+			}
+		}
 	}
 }

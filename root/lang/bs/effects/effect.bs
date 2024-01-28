@@ -12,30 +12,26 @@ use core:sync;
 class Effect extends Function {
 	init(SrcPos pos, Str name, Value result, ValParam[] params) {
 		var vals = params.values();
-		var helperVals = vals.clone();
-
-		helperVals.insert(0, Value(named{FnBase}));
 
 		var frameType = if (found = named{}.find("EffectFrame", result, Scope()) as Type) {
 			found;
 		} else {
 			throw InternalError("Could not found EffectFrame!");
 		};
-		helperVals.insert(1, Value(frameType));
+
 
 		init(pos, result, name, vals) {
+			resumeType(vals);
 			frameType = frameType;
-			helperFn(pos, Value(), name + "-helper", helperVals);
 		}
 
-		helperFn.parentLookup = this;
-		helperFn.setCode(LazyCode(&this.generateHelper()));
-
 		setCode(LazyCode(&this.generate()));
+
+		resumeType.parentLookup = this;
 	}
 
-	// Helper function for receiving the call on another thread.
-	private Function helperFn;
+	// Type for resuming the handler.
+	private HandlerResumeType resumeType;
 
 	// Type of the frame.
 	private Type frameType;
@@ -43,47 +39,71 @@ class Effect extends Function {
 	private CodeGen generate() {
 		CodeGen gen(runOn, isMember, result);
 
-		Operand[] actuals;
+		core:asm:Var[] actuals;
 		for (x in params)
 			actuals << gen.l.createParam(x.desc);
 
 		gen.l << prolog();
 
-		// Find the current handler frame:
-		var handlerFrame = gen.l.createVar(gen.block, sPtr);
-		gen.l << fnCall(named{currentHandlerFrame}.ref, false, ptrDesc, handlerFrame);
-
-		// Find a handler:
-		var handlerFn = gen.l.createVar(gen.block, sPtr);
+		// Find a handler and update the resume object:
+		var targetObj = gen.l.createVar(gen.block, sPtr);
 		gen.l << fnParam(ptrDesc, objPtr(this));
-		gen.l << fnParam(ptrDesc, handlerFrame);
-		gen.l << fnCall(named{findHandler<Effect, Maybe<HandlerFrame>>}.ref, false, ptrDesc, handlerFn);
-
-		// TODO: Create a subclass to HandlerResume, store all parameters inside of it, and pass it
-		// to the handler frame we found.
+		gen.l << fnCall(named{findHandler<Effect>}.ref, false, ptrDesc, targetObj);
 
 		// Create our effects frame:
-		var frame = gen.allocObject(frameType);
+		var frameObj = gen.allocObject(frameType);
 
-		// Store the current handler frame in the frame.
-		gen.l << mov(ptrA, frame);
-		gen.l << mov(ptrRel(ptrA, named{EffectFrame:topFrame<EffectFrame>}.offset), handlerFrame);
+		// Create a handler resume frame to store the parameters we received:
+		var resumeObj = gen.l.createVar(gen.block, sPtr);
+		gen.l << fnParam(ptrDesc, resumeType.typeRef);
+		gen.l << fnCall(BuiltIn:alloc.ref, false, ptrDesc, resumeObj);
 
-		// Call the helper function:
-		actuals.insert(0, handlerFn);
-		actuals.insert(1, frame);
-		helperFn.asyncLocalCall(gen, actuals, CodeResult());
+		// Call the base class' constructor:
+		var ctorParams = Value:[named{HandlerResume}, named{HandlerResume:Target}, named{EffectFrame}];
+		if (ctor = named{HandlerResume}.find("__init", ctorParams, Scope()) as Function) {
+			gen.l << fnParam(ptrDesc, resumeObj);
+			gen.l << fnParam(ptrDesc, targetObj);
+			gen.l << fnParam(ptrDesc, frameObj);
+			gen.l << fnCall(ctor.ref, true);
+		} else {
+			throw InternalError("Failed to find resume type ctor!");
+		}
+
+		// Now, we can copy the parameters there:
+		for (i, actual in actuals) {
+			var v = resumeType.vars[i];
+			if (v.type.isAsmType) {
+				gen.l << mov(ptrA, resumeObj);
+				gen.l << mov(xRel(v.type.size, ptrA, v.offset), actual);
+			} else {
+				gen.l << mov(ptrA, resumeObj);
+				gen.l << add(ptrA, ptrConst(v.offset));
+				gen.l << lea(ptrC, actual);
+				gen.l << fnParam(ptrDesc, ptrA);
+				gen.l << fnParam(ptrDesc, ptrC);
+				gen.l << fnCall(v.type.copyCtor, true);
+			}
+		}
+
+		// Finally, set the vtable properly!
+		if (vtable = resumeType.vtable)
+			vtable.insert(gen.l, resumeObj);
+
+
+		// Finish set-up of the resume object.
+		gen.l << fnParam(ptrDesc, resumeObj);
+		gen.l << fnCall(named{HandlerResume:finish<HandlerResume>}.ref, true);
 
 		// Wait for it to complete:
-		gen.l << fnParam(ptrDesc, frame);
+		gen.l << fnParam(ptrDesc, frameObj);
 		gen.l << fnCall(named{EffectFrame:wait<EffectFrame>}.ref, true);
 
 		// Load a pointer to the result:
 		unless (resultVar = frameType.find("result", frameType, Scope()) as MemberVar)
 			throw InternalError("Failed to find 'result' in EffectFrame!");
 
-		gen.l << add(frame, ptrConst(resultVar.offset));
-		gen.l << fnRetRef(frame);
+		gen.l << add(frameObj, ptrConst(resultVar.offset));
+		gen.l << fnRetRef(frameObj);
 
 		gen;
 	}
@@ -117,13 +137,16 @@ class Effect extends Function {
 	}
 }
 
-private FnBase findHandler(Effect effect, HandlerFrame? top) {
-	HandlerFrame? frame = top;
-	while (f = frame) {
-		if (h = f.effects.at(effect))
-			return h;
+private HandlerResume:Target findHandler(Effect effect) {
+	if (top = currentHandlerFrame()) {
+		HandlerFrame? current = top;
+		while (c = current) {
+			if (h = c.effects.at(effect)) {
+				return HandlerResume:Target(top, c, h);
+			}
 
-		frame = f.prev;
+			current = c.prev;
+		}
 	}
 	throw NoHandlerFor(effect.identifier());
 }
@@ -137,9 +160,6 @@ package class EffectFrame {
 			sema(0);
 		}
 	}
-
-	// Topmost handler frame of the previous thread.
-	HandlerFrame? topFrame;
 
 	// Semaphore to wait for execution to finish.
 	// Note: We might need something more elaborate later.
@@ -183,6 +203,117 @@ EffectFrame : generate(params) {
  * and the appropriate logic inside 'call'.
  */
 class HandlerResume {
+	// Metadata.
+	class Target {
+		// Top of the handler chain.
+		HandlerFrame top;
+
+		// Target frame.
+		HandlerFrame target;
+
+		// Function to call.
+		FnBase handler;
+
+		init(HandlerFrame top, HandlerFrame target, FnBase handler) {
+			init {
+				top = top;
+				target = target;
+				handler = handler;
+			}
+		}
+	}
+
+	// Target information.
+	Target target;
+
+	// Information for controlling the old frame.
+	EffectFrame frame;
+
+	// Create.
+	init(Target target, EffectFrame frame) {
+		init { target = target; frame = frame; }
+	}
+
+	// Called to update the target frame.
+	void finish() {
+		target.target.resume(this);
+	}
+
 	// Called on the original UThread to invoke the handler.
 	void call(HandlerFrame frame) : abstract;
+}
+
+
+/**
+ * Class that subclasses "HandlerResume" inside effects.
+ *
+ * Note: The type has no constructor, since it is intended to be created directly from ASM.
+ */
+class HandlerResumeType extends Type {
+	// Create.
+	init(Value[] members) {
+		init("HandlerResume", TypeFlags:typeClass) {}
+		setSuper(named{HandlerResume});
+
+		for (i, m in members) {
+			MemberVar v("member" + i.toS, m, this);
+			vars << v;
+			add(v);
+		}
+	}
+
+	// Member variables, easily accessible.
+	MemberVar[] vars;
+
+	// Load functions.
+	Bool loadAll() : override {
+		Function callFn(Value(), "call", [this, named{HandlerFrame}]);
+		callFn.setCode(LazyCode(&this.createCall));
+		add(callFn);
+
+		true;
+	}
+
+	// Create the body to 'call'
+	private CodeGen createCall() {
+		CodeGen gen(RunOn(), true, Value());
+
+		var me = gen.l.createParam(ptrDesc);
+		var frameParam = gen.l.createParam(ptrDesc);
+
+		gen.l << prolog();
+
+		// TODO: Capture the old thread and grab it as a function pointer!
+
+		// Find the function to call:
+		gen.l << mov(ptrA, me);
+		gen.l << mov(ptrC, ptrRel(ptrA, named{HandlerResume:target<HandlerResume>}.offset));
+		gen.l << mov(ptrC, ptrRel(ptrC, named{HandlerResume:Target:handler<HandlerResume:Target>}.offset));
+
+		// Compile a parameter list:
+		// gen.l << mov(ptrA, me); // already done above
+		gen.l << fnParam(ptrDesc, ptrC);
+		gen.l << fnParam(ptrDesc, frameParam);
+		for (v in vars) {
+			gen.l << fnParam(v.type.desc, xRel(v.type.size, ptrA, v.offset));
+		}
+		gen.l << fnParam(ptrDesc, ptrConst(0)); // Pointer to the continuation.
+
+		Value[] paramTypes;
+		paramTypes << Value(); // Return
+		paramTypes << named{HandlerFrame}; // Where to return
+		for (x in vars)
+			paramTypes << x.type;
+		paramTypes << named{FnBase}; // Continuation -- TODO: Better type! Probably Fn<HandlerFrame, "effect result">.
+		var type = fnType(paramTypes.clone);
+		paramTypes[0] = type;
+
+		unless (toCall = type.find("call", paramTypes, Scope()) as Function)
+			throw InternalError("Failed to find 'call' inside Fn!");
+
+		gen.l << fnCall(toCall.ref, true);
+		gen.l << fnRet();
+
+		gen;
+	}
 }

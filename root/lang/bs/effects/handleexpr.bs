@@ -20,7 +20,12 @@ class HandleExpr extends Expr {
 			throw SyntaxError(handler.pos, "Failed to find an entity named ${handler}");
 		};
 
-		var handlerFn = fnType([h.param]);
+		var handlerFn = fnType([h.result]);
+
+		// Inject the return clause into the lambda if we need to.
+		if (retClause = h.returnClause) {
+			body = WrapInCall(body, retClause.handler);
+		}
 
 		init(pos) {
 			body = LambdaExpr(body.pos, parent, NameParam:[], body).expectCastTo(handlerFn, parent.scope);
@@ -28,17 +33,36 @@ class HandleExpr extends Expr {
 		}
 	}
 
+	// Helper class to wrap the entire body of the lambda function in a function call:
+	private class WrapInCall extends SExpr {
+		SExpr body;
+		Function fn;
+
+		init(SExpr body, Function fn) {
+			init() {
+				body = body;
+				fn = fn;
+			}
+			pos = body.pos;
+		}
+
+		Expr transform(Block block) : override {
+			var tfm = body.transform(block);
+			tfm = tfm.expectCastTo(fn.params[0], block.scope);
+			FnCall(pos, block.scope, fn, Actuals(tfm));
+		}
+	}
+
 	void code(CodeGen code, CodeResult result) : override {
-		unless (frameType = named{}.find("HandlerFrame", handler.param, Scope()) as Type)
+		unless (frameType = named{}.find("HandlerFrame", handler.result, Scope()) as Type)
 			throw InternalError("Failed to find HandlerFrame!");
 
 		unless (frameResult = frameType.find("result", frameType, Scope()) as MemberVar)
 			throw InternalError("Failed to find 'result' in HandlerFrame!");
 
-		Value bodyFnType = fnType([handler.param]);
+		Value bodyFnType = fnType([handler.result]);
 		unless (mainFn = frameType.find("main", [frameType, bodyFnType], Scope()) as Function)
 			throw InternalError("Failed to find the main function of the frame.");
-
 
 		// Create a frame:
 		var frame = code.allocObject(frameType);
@@ -80,25 +104,7 @@ class HandleExpr extends Expr {
 		// Note: Due to how maybe types work, we can actually use it as if it was a regular value.
 		// We know that it is set at this point.
 
-		// Call the return handler if we have one:
-		if (returnHandler = handler.returnClause) {
-			code.l << mov(ptrA, frame);
-			code.l << add(ptrA, ptrConst(frameResult.offset));
-
-			// We can only give a pointer if the expected type is a value.
-			Operand location = if (handler.param.isValue) {
-				Operand(ptrA);
-			} else {
-				var size = handler.param.size;
-				Operand d = asSize(ptrA, size);
-				code.l << mov(d, xRel(size, ptrA));
-				d;
-			};
-
-			// Call the return handler:
-			returnHandler.handler.autoCall(code, [location], result);
-
-		} else if (result.needed()) {
+		if (result.needed()) {
 			// Just copy the result.
 			if (handler.param.isAsmType) {
 				code.l << mov(ptrA, frame);
