@@ -1,0 +1,10 @@
+use lang.bs;
+use core.lang;
+
+optional delimiter = SDelimiter;
+required delimiter = SRequiredDelimiter;
+
+SStmt => AsThread(pos, block, name, contents)
+    : "as" #keyword ~ "thread" #keyword ~ SType name, SBlock(block) contents;
+SExpr => AsThread(pos, block, name, contents)
+    : "as" #keyword ~ "thread" #keyword ~ SType name, SBlock(block) contents;

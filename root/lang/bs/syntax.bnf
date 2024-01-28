@@ -537,7 +537,7 @@ SStmt[10] => Break(pos, block) : "break" #keyword, ";";
 ////////////////////////////////////////////////////////////////////
 
 SExpr[50] => LambdaExpr(pos, block, params, content) : "(", SFormals params, ")", "=>", SExpr@ content;
-SExpr[50] => LambdaExpr(pos, block, params, content) : "(", SLambdaFormals params, ")", "=>", SExpr @content;
+SExpr[50] => LambdaExpr(pos, block, params, content) : "(", SLambdaFormals params, ")", "=>", SExpr@ content;
 
 // Note: The empty case is handled by the typed version!
 Array<SStr> SLambdaFormals();

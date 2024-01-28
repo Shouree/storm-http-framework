@@ -1,0 +1,34 @@
+use lang:bs;
+use core:lang;
+
+class AsThread extends Expr {
+	Block contents;
+	NamedThread thread;
+
+	init(SrcPos pos, Block parent, SrcName threadName, Block contents) {
+		var thread = if (found = parent.scope.find(threadName) as NamedThread) {
+			found;
+		} else {
+			throw SyntaxError(threadName.pos, "Unable to find a named thread with the name ${threadName}.");
+		};
+
+		init(pos) {
+			contents = contents;
+			thread = thread;
+		}
+	}
+
+	ExprResult result() : override {
+		contents.result();
+	}
+
+	void code(CodeGen gen, CodeResult r) : override {
+		gen = CodeGen(gen);
+		gen.runOn = RunOn(thread);
+		contents.code(gen, r);
+	}
+
+	Bool isolate() : override {
+		false;
+	}
+}

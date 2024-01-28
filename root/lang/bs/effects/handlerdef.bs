@@ -17,6 +17,8 @@ class Handler extends Named {
 			result = result;
 			param = param;
 		}
+
+		print("TODO: If we don't have a return clause, check so that 'result' equals 'param'!");
 	}
 }
 
@@ -42,6 +44,7 @@ class HandlerClause on Compiler {
 	}
 }
 
+// Create a return clause for an effect.
 HandlerClause returnClause(SrcPos pos, Handler h, Scope scope, SStr param, SFunctionBody body) on Compiler {
 	HandlerClause(pos, h, scope, [ValParam(h.param, param)], body);
 }
@@ -72,50 +75,5 @@ class EffectHandlerClause extends HandlerClause {
 		init(pos, h, scope, resolvedParams, body) {
 			effect = found;
 		}
-	}
-}
-
-
-/**
- * Handler expression.
- */
-class HandleExpr extends Expr {
-	Expr body;
-	Handler handler;
-
-	init(SrcPos pos, Block parent, Block body, SrcName handler) {
-		var h = if (found = parent.scope.find(handler)) {
-			unless (found as Handler) {
-				throw SyntaxError(handler.pos, "The entity ${handler} is not an effect handler.");
-			}
-			found;
-		} else {
-			throw SyntaxError(handler.pos, "Failed to find an entity named ${handler}");
-		};
-
-		init(pos) {
-			body = body.expectCastTo(h.param, parent.scope);
-			handler = h;
-		}
-	}
-
-	void code(CodeGen code, CodeResult result) : override {
-		if (returnHandler = handler.returnClause) {
-			CodeResult res(handler.param, code.block);
-			body.code(code, res);
-
-			// Call the handler:
-			returnHandler.handler.autoCall(code, [res.location(code)], result);
-		} else {
-			body.code(code, result);
-		}
-	}
-
-	ExprResult result() : override {
-		ExprResult(handler.result);
-	}
-
-	void toS(StrBuf to) : override {
-		to << "handle " << body << " with " << handler.identifier();
 	}
 }

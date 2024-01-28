@@ -177,9 +177,6 @@ class PatternExprSrc extends SPatternExpr {
 			r.exprs[id];
 		} else {
 			throw SyntaxError(block.pos, "Can not use \${} syntax outside of pattern blocks.");
-
-			// Can be removed when we have exceptions.
-			Expr(block.pos);
 		}
 	}
 
@@ -189,9 +186,6 @@ class PatternExprSrc extends SPatternExpr {
 			r.actuals[id];
 		} else {
 			throw SyntaxError(block.pos, "Can not use @{} syntax outside of pattern blocks.");
-
-			// Can be removed when we have exceptions.
-			Array<Expr>();
 		}
 	}
 

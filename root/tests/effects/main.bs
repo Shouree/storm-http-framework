@@ -15,7 +15,7 @@ handler: Int MyHandler(Int) {
 
 suite Basic {
 	Int w = handle {
-		Int x = 0; //myEffect(10);
+		Int x = myEffect(10);
 		x + 10;
 	} with MyHandler;
 

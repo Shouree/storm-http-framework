@@ -1,0 +1,125 @@
+use core:lang;
+use lang:bs;
+use lang:bs:macro;
+use core:asm;
+
+/**
+ * Handler expression.
+ */
+class HandleExpr extends Expr {
+	Expr body;
+	Handler handler;
+
+	init(SrcPos pos, Block parent, SExpr body, SrcName handler) {
+		var h = if (found = parent.scope.find(handler)) {
+			unless (found as Handler) {
+				throw SyntaxError(handler.pos, "The entity ${handler} is not an effect handler.");
+			}
+			found;
+		} else {
+			throw SyntaxError(handler.pos, "Failed to find an entity named ${handler}");
+		};
+
+		var handlerFn = fnType([h.param]);
+
+		init(pos) {
+			body = LambdaExpr(body.pos, parent, NameParam:[], body).expectCastTo(handlerFn, parent.scope);
+			handler = h;
+		}
+	}
+
+	void code(CodeGen code, CodeResult result) : override {
+		unless (frameType = named{}.find("HandlerFrame", handler.param, Scope()) as Type)
+			throw InternalError("Failed to find HandlerFrame!");
+
+		unless (frameResult = frameType.find("result", frameType, Scope()) as MemberVar)
+			throw InternalError("Failed to find 'result' in HandlerFrame!");
+
+		Value bodyFnType = fnType([handler.param]);
+		unless (mainFn = frameType.find("main", [frameType, bodyFnType], Scope()) as Function)
+			throw InternalError("Failed to find the main function of the frame.");
+
+
+		// Create a frame:
+		var frame = code.allocObject(frameType);
+
+		// Set "prev". Note: Representation of pointer-maybe is a pointer
+		{
+			// Get our handler frame:
+			code.l << fnCall(named{currentHandlerFrame}.ref, false, ptrDesc, ptrC);
+
+			// Set it.
+			var prevVar = named{HandlerFrame:prev<HandlerFrame>};
+			code.l << mov(ptrA, frame);
+			code.l << mov(ptrRel(ptrA, prevVar.offset), ptrC);
+		}
+
+		// Set "effects"
+		{
+			Map<Effect, FnBase> toHandle;
+			for (h in handler.effectClauses)
+				toHandle.put(h.effect, h.handler.pointer);
+
+			var effectsVar = named{HandlerFrame:effects<HandlerFrame>};
+			code.l << mov(ptrA, frame);
+			code.l << mov(ptrRel(ptrA, effectsVar.offset), objPtr(toHandle));
+		}
+
+		// Create the lambda function:
+		CodeResult lambda(bodyFnType, code.block);
+		body.code(code, lambda);
+
+		// Call 'main' on the desired thread. Note: not using the result calls detach automatically.
+		mainFn.asyncLocalCall(code, [frame, lambda.location(code)], CodeResult());
+
+
+		// Wait for the result to be ready:
+		code.l << fnParam(ptrDesc, frame);
+		code.l << fnCall(named{HandlerFrame:wait<HandlerFrame>}.ref, true);
+
+		// Note: Due to how maybe types work, we can actually use it as if it was a regular value.
+		// We know that it is set at this point.
+
+		// Call the return handler if we have one:
+		if (returnHandler = handler.returnClause) {
+			code.l << mov(ptrA, frame);
+			code.l << add(ptrA, ptrConst(frameResult.offset));
+
+			// We can only give a pointer if the expected type is a value.
+			Operand location = if (handler.param.isValue) {
+				Operand(ptrA);
+			} else {
+				var size = handler.param.size;
+				Operand d = asSize(ptrA, size);
+				code.l << mov(d, xRel(size, ptrA));
+				d;
+			};
+
+			// Call the return handler:
+			returnHandler.handler.autoCall(code, [location], result);
+
+		} else if (result.needed()) {
+			// Just copy the result.
+			if (handler.param.isAsmType) {
+				code.l << mov(ptrA, frame);
+				code.l << mov(result.location(code), xRel(handler.param.size, ptrA, frameResult.offset));
+			} else {
+				code.l << mov(ptrA, frame);
+				code.l << add(ptrA, ptrConst(frameResult.offset));
+				code.l << lea(ptrC, result.location(code));
+				code.l << fnParam(ptrDesc, ptrC);
+				code.l << fnParam(ptrDesc, ptrA);
+				code.l << fnCall(handler.param.copyCtor, true);
+				result.created(code);
+			}
+		}
+	}
+
+	ExprResult result() : override {
+		ExprResult(handler.result);
+	}
+
+	void toS(StrBuf to) : override {
+		to << "handle " << body << " with " << handler.identifier();
+	}
+}

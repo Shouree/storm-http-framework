@@ -1,5 +1,8 @@
 use core:lang;
 use lang:bs;
+use lang:bs:macro;
+use core:asm;
+use core:sync;
 
 /**
  * Effect definition.
@@ -7,9 +10,179 @@ use lang:bs;
  * Expands to a function that can be called from other languages.
  */
 class Effect extends Function {
-	// TODO: List of handlers.
-
 	init(SrcPos pos, Str name, Value result, ValParam[] params) {
-		init(pos, result, name, values(params)) {}
+		var vals = params.values();
+		var helperVals = vals.clone();
+
+		helperVals.insert(0, Value(named{FnBase}));
+
+		var frameType = if (found = named{}.find("EffectFrame", result, Scope()) as Type) {
+			found;
+		} else {
+			throw InternalError("Could not found EffectFrame!");
+		};
+		helperVals.insert(1, Value(frameType));
+
+		init(pos, result, name, vals) {
+			frameType = frameType;
+			helperFn(pos, Value(), name + "-helper", helperVals);
+		}
+
+		helperFn.parentLookup = this;
+		helperFn.setCode(LazyCode(&this.generateHelper()));
+
+		setCode(LazyCode(&this.generate()));
 	}
+
+	// Helper function for receiving the call on another thread.
+	private Function helperFn;
+
+	// Type of the frame.
+	private Type frameType;
+
+	private CodeGen generate() {
+		CodeGen gen(runOn, isMember, result);
+
+		Operand[] actuals;
+		for (x in params)
+			actuals << gen.l.createParam(x.desc);
+
+		gen.l << prolog();
+
+		// Find the current handler frame:
+		var handlerFrame = gen.l.createVar(gen.block, sPtr);
+		gen.l << fnCall(named{currentHandlerFrame}.ref, false, ptrDesc, handlerFrame);
+
+		// Find a handler:
+		var handlerFn = gen.l.createVar(gen.block, sPtr);
+		gen.l << fnParam(ptrDesc, objPtr(this));
+		gen.l << fnParam(ptrDesc, handlerFrame);
+		gen.l << fnCall(named{findHandler<Effect, Maybe<HandlerFrame>>}.ref, false, ptrDesc, handlerFn);
+
+		// TODO: Create a subclass to HandlerResume, store all parameters inside of it, and pass it
+		// to the handler frame we found.
+
+		// Create our effects frame:
+		var frame = gen.allocObject(frameType);
+
+		// Store the current handler frame in the frame.
+		gen.l << mov(ptrA, frame);
+		gen.l << mov(ptrRel(ptrA, named{EffectFrame:topFrame<EffectFrame>}.offset), handlerFrame);
+
+		// Call the helper function:
+		actuals.insert(0, handlerFn);
+		actuals.insert(1, frame);
+		helperFn.asyncLocalCall(gen, actuals, CodeResult());
+
+		// Wait for it to complete:
+		gen.l << fnParam(ptrDesc, frame);
+		gen.l << fnCall(named{EffectFrame:wait<EffectFrame>}.ref, true);
+
+		// Load a pointer to the result:
+		unless (resultVar = frameType.find("result", frameType, Scope()) as MemberVar)
+			throw InternalError("Failed to find 'result' in EffectFrame!");
+
+		gen.l << add(frame, ptrConst(resultVar.offset));
+		gen.l << fnRetRef(frame);
+
+		gen;
+	}
+
+	private CodeGen generateHelper() {
+		CodeGen gen(helperFn.runOn, helperFn.isMember, helperFn.result);
+
+		core:asm:Var frame;
+		core:asm:Var handlerFn;
+		Operand[] actuals;
+		for (i, x in helperFn.params) {
+			if (i == 0)
+				handlerFn = gen.l.createParam(x.desc);
+			else if (i == 1)
+				frame = gen.l.createParam(x.desc);
+			else
+				actuals << gen.l.createParam(x.desc);
+		}
+
+		gen.l << prolog();
+
+		// TODO: This is where we need to collect all frames and make them into a continuation!
+
+		// Note: This is temporary!
+		gen.l << fnParam(ptrDesc, frame);
+		gen.l << fnCall(named{EffectFrame:signal<EffectFrame>}.ref, true);
+
+		gen.l << fnRet();
+
+		gen;
+	}
+}
+
+private FnBase findHandler(Effect effect, HandlerFrame? top) {
+	HandlerFrame? frame = top;
+	while (f = frame) {
+		if (h = f.effects.at(effect))
+			return h;
+
+		frame = f.prev;
+	}
+	throw NoHandlerFor(effect.identifier());
+}
+
+
+// Data structure for storing the result to an effect invocation, and starting it again.
+package class EffectFrame {
+	// Ctor.
+	init() {
+		init {
+			sema(0);
+		}
+	}
+
+	// Topmost handler frame of the previous thread.
+	HandlerFrame? topFrame;
+
+	// Semaphore to wait for execution to finish.
+	// Note: We might need something more elaborate later.
+	private Sema sema;
+
+	// Wait for the result to be present.
+	void wait() {
+		sema.down();
+	}
+
+	// Indicate that a result is available.
+	void signal() {
+		sema.up();
+	}
+}
+
+
+// Generic result.
+EffectFrame : generate(params) {
+	if (params.count != 1)
+		return null;
+
+	var retVal = params[0].asRef(false);
+
+	Type t("EffectFrame", [retVal], TypeFlags:typeClass);
+	t.setSuper(named{EffectFrame});
+	t.add(MemberVar("result", wrapMaybe(retVal), t));
+	t.add(TypeDefaultCtor(t));
+	t.add(TypeCopyCtor(t));
+	t.add(TypeAssign(t));
+	if (needsDestructor(t))
+		t.add(TypeDefaultDtor(t));
+
+	t;
+}
+
+/**
+ * Message indicating that a handler block should invocate a handler.
+ *
+ * This class will be overloaded for each effect to provide a class with the appropriate parameters
+ * and the appropriate logic inside 'call'.
+ */
+class HandlerResume {
+	// Called on the original UThread to invoke the handler.
+	void call(HandlerFrame frame) : abstract;
 }
