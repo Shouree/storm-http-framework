@@ -81,6 +81,7 @@ namespace storm {
 		public:
 			// Create.
 			STORM_CTOR WeakAsCast(Block *block, Expr *expr, SrcName *type);
+			STORM_CTOR WeakAsCast(Block *block, Expr *expr, Value to);
 
 			// Get a suitable position for the cast.
 			virtual SrcPos STORM_FN pos();
@@ -117,6 +118,7 @@ namespace storm {
 		public:
 			// Create.
 			STORM_CTOR WeakDowncast(Block *block, Expr *expr, SrcName *type);
+			STORM_CTOR WeakDowncast(Block *block, Expr *expr, Value to);
 
 			// Generate code.
 			virtual void STORM_FN code(CodeGen *state, CodeResult *boolResult);
@@ -134,6 +136,7 @@ namespace storm {
 		public:
 			// Create.
 			STORM_CTOR WeakVariantCast(Block *Block, Expr *expr, SrcName *type);
+			STORM_CTOR WeakVariantCast(Block *block, Expr *expr, Value to);
 
 			// Generate code.
 			virtual void STORM_FN code(CodeGen *state, CodeResult *boolResult);

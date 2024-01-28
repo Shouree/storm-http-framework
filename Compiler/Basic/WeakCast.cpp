@@ -75,6 +75,13 @@ namespace storm {
 				throw new (this) SyntaxError(expr->pos, S("Can not cast to void."));
 		}
 
+		WeakAsCast::WeakAsCast(Block *block, Expr *expr, Value to)
+			: expr(expr), to(to) {
+
+			if (to == Value())
+				throw new (this) SyntaxError(expr->pos, S("Can not cast to void."));
+		}
+
 		SrcPos WeakAsCast::pos() {
 			return expr->largePos();
 		}
@@ -98,6 +105,20 @@ namespace storm {
 		 */
 
 		WeakDowncast::WeakDowncast(Block *block, Expr *expr, SrcName *type) : WeakAsCast(block, expr, type) {
+			Value from = expr->result().type();
+			if (isMaybe(from))
+				from = unwrapMaybe(from);
+
+			if (!from.isObject())
+				throw new (this) SyntaxError(expr->pos, S("The WeakDowncast class can only be used with object types."));
+			if (!to.type->isA(from.type)) {
+				Str *msg = TO_S(engine(), S("Condition is always false. ") << to
+								<< S(" does not inherit from ") << from << S("."));
+				throw new (this) SyntaxError(expr->pos, msg);
+			}
+		}
+
+		WeakDowncast::WeakDowncast(Block *block, Expr *expr, Value to) : WeakAsCast(block, expr, to) {
 			Value from = expr->result().type();
 			if (isMaybe(from))
 				from = unwrapMaybe(from);
@@ -159,6 +180,12 @@ namespace storm {
 		 */
 
 		WeakVariantCast::WeakVariantCast(Block *block, Expr *expr, SrcName *type) : WeakAsCast(block, expr, type) {
+			variantType = StormInfo<Variant>::type(engine());
+			if (expr->result().type().type != variantType)
+				throw new (this) SyntaxError(expr->pos, S("Can not use WeakVariantCast with anything except variants."));
+		}
+
+		WeakVariantCast::WeakVariantCast(Block *block, Expr *expr, Value to) : WeakAsCast(block, expr, to) {
 			variantType = StormInfo<Variant>::type(engine());
 			if (expr->result().type().type != variantType)
 				throw new (this) SyntaxError(expr->pos, S("Can not use WeakVariantCast with anything except variants."));

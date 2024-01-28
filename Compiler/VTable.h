@@ -77,7 +77,7 @@ namespace storm {
 		void insert(RootObject *obj);
 
 		// Generate code for setting the vtable.
-		void insert(code::Listing *to, code::Var obj);
+		void STORM_FN insert(code::Listing *to, code::Var obj);
 
 		// Get the "topmost" functions for each entry in the vtable. Unused slots are left out
 		// (since they would be null).
