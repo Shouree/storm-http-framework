@@ -31,7 +31,7 @@ namespace code {
 		// Clean up a stack frame from this function.
 		void cleanup(StackFrame &frame);
 
-		// Clean up a stack fraome from this function from the current block, up to and including
+		// Clean up a stack frame from this function from the current block, up to and including
 		// 'until'. Returns the parent of 'until', which is now to be considered the current part.
 		Nat cleanup(StackFrame &frame, Nat until);
 
