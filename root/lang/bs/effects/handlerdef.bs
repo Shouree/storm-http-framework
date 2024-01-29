@@ -76,8 +76,10 @@ class EffectHandlerClause extends HandlerClause {
 		// Add a HandlerFrame as the first parameter. That is where we store our result.
 		resolvedParams.insert(0, ValParam(named{HandlerFrame}, "@result"));
 
-		var contType = fnType([h.param, found.result]);
-		resolvedParams << ValParam(contType, contParam.v);
+		// We accept the continuation as Continuation, since the effect will not know the actual
+		// type of the result. We could parameterize it on the result, but since we need a wrapper
+		// anyway, we just do everything there.
+		resolvedParams << ValParam(named{Continuation}, "@continuation");
 
 		BSTreeFn f(Value(), SStr("handler", bodyBlock.pos), resolvedParams, null);
 		f.parentLookup = h;
@@ -91,17 +93,27 @@ class EffectHandlerClause extends HandlerClause {
 			throw InternalError("Could not find result parameter!");
 		};
 
+		var contVar = if (x = body.lookup.find(resolvedParams.last.name, scope) as LocalVar) {
+			x;
+		} else {
+			throw InternalError("Could not find continuation parameter!");
+		};
+
 		var typedFrame = if (x = named{}.find("HandlerFrame", h.result, Scope()) as Type) {
 			x;
 		} else {
 			throw InternalError("Failed to find a handler frame.");
 		};
 
+		Function contWrapper = wrapContinuation(pos, scope, h.result, found.result);
+		contWrapper.parentLookup = h;
+
 		WeakDowncast cast(body, LocalVarAccess(pos, resultVar), typedFrame);
 		If check(body, cast);
 
 		if (var = cast.result) {
 			check.success(pattern(check.successBlock) {
+							${Var(body, contParam, FnPtr(LocalVarAccess(pos, contVar), contWrapper, pos))};
 							${LocalVarAccess(pos, var)}.result = ${bodyBlock.transform(body)};
 						});
 		}
@@ -115,5 +127,62 @@ class EffectHandlerClause extends HandlerClause {
 		init(pos, scope, f) {
 			effect = found;
 		}
+	}
+
+	// Helper to create a function that wraps a continuation.
+	private Function wrapContinuation(SrcPos pos, Scope scope, Value resultType, Value paramType) : static {
+		ValParam[] params = [ValParam(named{Continuation}, "c"), ValParam(paramType, "param")];
+		BSTreeFn f(Value(resultType), SStr("wrap-continuation", pos), params, null);
+
+		FnBody body(f, scope);
+		f.body = body;
+
+		unless (typedEffect = named{}.find("EffectFrame", paramType, Scope()) as Type)
+			throw InternalError("Failed to find an effect frame.");
+
+		unless (typedHandler = named{}.find("HandlerFrame", resultType, Scope()) as Type)
+			throw InternalError("Failed to find a handler frame.");
+
+		// Get the frame and copy the parameter:
+		{
+			var call = namedExpr(body, pos, "frame", namedExpr(body, pos, "c", Actuals()));
+
+			WeakDowncast cast(body, call, typedEffect);
+			cast.name(SStr("frame"));
+
+			If check(body, cast);
+
+			check.success(pattern(check.successBlock) {
+							frame.result = param;
+						});
+
+			check.fail(pattern(body) { throw InternalError("Invalid parameter type!"); });
+
+			body.add(check);
+		}
+
+		// Call resume and get the result:
+		{
+			var call = namedExpr(body, pos, "resume", namedExpr(body, pos, "c", Actuals()));
+
+			WeakDowncast cast(body, call, typedHandler);
+			cast.name(SStr("result"));
+
+			If check(body, cast);
+
+			check.success(pattern(check.successBlock) {
+							if (r = result.result) {
+								r;
+							} else {
+								throw InternalError("No result set!");
+							}
+						});
+
+			check.fail(pattern(body) { throw InternalError("Invalid parameter type!"); });
+
+			body.add(check);
+		}
+
+		f;
 	}
 }

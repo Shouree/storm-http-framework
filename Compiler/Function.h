@@ -231,6 +231,11 @@ namespace storm {
 		void asyncCall(CodeGen *to, Array<code::Operand> *params, code::Operand thread,
 					CodeResult *future, CodeResult *id, bool copy);
 
+		// Helper for the async function call, in the special case where the function returns void
+		// and the caller is not interested in the result (but possibly it ID).
+		void asyncCallVoid(CodeGen *to, Array<code::Operand> *params, code::Operand thread,
+						CodeResult *id, bool copy);
+
 		// Add parameters for the function call.
 		void addParams(CodeGen *to, Array<code::Operand> *params);
 		void addParam(CodeGen *to, Array<code::Operand> *params, nat id);
@@ -267,5 +272,7 @@ namespace storm {
 	void spawnThreadResult(const void *fn, bool member, os::CallThunk thunk, void **params, void *result, Thread *on);
 	void spawnThreadFuture(const void *fn, bool member, os::CallThunk thunk, void **params, FutureBase *result, Thread *on);
 	Word spawnThreadId(const void *fn, bool member, os::CallThunk thunk, void **params, FutureBase *result, Thread *on);
+	void spawnThreadVoid(const void *fn, bool member, os::CallThunk thunk, void **params, Thread *on);
+	Word spawnThreadVoidId(const void *fn, bool member, os::CallThunk thunk, void **params, Thread *on);
 
 }

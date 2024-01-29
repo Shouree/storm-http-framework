@@ -307,6 +307,9 @@ namespace os {
 		// Exit the current thread.
 		void exit();
 
+		// Resurrect a previously exited thread. Used with continuations.
+		void resurrect(UThreadData *data);
+
 		// Add a new thread as 'ready'. Safe to call from other OS threads.
 		// Note: make sure to add a reference to the thread before calling insert, otherwise
 		// it may be deleted before 'insert' returns.

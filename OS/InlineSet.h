@@ -193,6 +193,12 @@ namespace os {
 			dbg_assert(prev == null, L"Trying to remove a node inside a InlineSet!");
 			dbg_assert(next == null, L"Trying to remove a node inside a InlineSet!");
 		}
+
+		// Check if the type is in a set.
+		bool inASet() const {
+			return next != null || prev != null;
+		}
+
 	private:
 		friend class InlineSet<T>;
 		T *prev;

@@ -41,11 +41,42 @@ class Continuation {
 		stacks << Stack(frame);
 	}
 
-	// Resume
-	void resume() {
-		// We need to restore all stacks. This will re-schedule them immediately.
-		// That is not want for all but the first thread. To solve this, we need
-		// to add a mechanism to the HandlerFrames that re-tries the sema down operation
-		// for the affected stacks. Otherwise, they will run too early.
+	// Get the resume frame so that it is possible to set the result there.
+	EffectFrame frame() {
+		resumeFrame;
+	}
+
+	// Resume. Returns the HandlerFrame that contains the result.
+	HandlerFrame resume() {
+		if (stacks.empty)
+			throw InternalError("Trying to resume an empty continuation!");
+
+		// Previous handler on this thread:
+		HandlerFrame? prevFrame = currentHandlerFrame();
+
+		// Resume all stacks. For all but the last, we need to ask the HandlerFrame object to wait
+		// once more, otherwise the thread will start too early.
+		Bool last = true;
+		for (Nat i = stacks.count; i > 0; i--) {
+			var stack = stacks[i - 1];
+			if (!last) {
+				print("TODO: Modify the HandlerFrame to make it wait once more to avoid too early wakeup.");
+			}
+
+			// Link it into the chain of handlers to make nested invocations work as expected.
+			stack.frame.prev = prevFrame;
+			setHandlerFrame(stack.frame.threadId, stack.frame);
+
+			// Finally, we can resume the thread.
+			stack.mirror.restore();
+
+			prevFrame = stack.frame;
+			last = false;
+		}
+
+		// Finally, wait and return for the last frame.
+		HandlerFrame lastFrame = stacks.last.frame;
+		lastFrame.wait();
+		return lastFrame;
 	}
 }

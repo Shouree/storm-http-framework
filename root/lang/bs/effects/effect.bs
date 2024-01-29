@@ -229,7 +229,7 @@ class HandlerResume {
 	void call(HandlerFrame frame) : abstract;
 
 	// Called at the start of 'call' to save the handler information.
-	void saveContinuation() {
+	Continuation saveContinuation() {
 		// Walk the chain of handler frames and collect the stacks from them.
 		Continuation cont(frame);
 
@@ -252,6 +252,9 @@ class HandlerResume {
 
 		// Wait for it to complete.
 		wait.down();
+
+		// All done!
+		return cont;
 	}
 }
 
@@ -296,8 +299,9 @@ class HandlerResumeType extends Type {
 		gen.l << prolog();
 
 		// Save the continuation.
+		var storedCont = gen.l.createVar(gen.block, sPtr);
 		gen.l << fnParam(ptrDesc, me);
-		gen.l << fnCall(named{HandlerResume:saveContinuation<HandlerResume>}.ref, true);
+		gen.l << fnCall(named{HandlerResume:saveContinuation<HandlerResume>}.ref, true, ptrDesc, storedCont);
 
 		// Find the function to call:
 		gen.l << mov(ptrA, me);
@@ -311,14 +315,16 @@ class HandlerResumeType extends Type {
 		for (v in vars) {
 			gen.l << fnParam(v.type.desc, xRel(v.type.size, ptrA, v.offset));
 		}
-		gen.l << fnParam(ptrDesc, ptrConst(0)); // Pointer to the continuation.
+		gen.l << fnParam(ptrDesc, storedCont);
 
+		// Figure out the parameters of a Fn<> object so that we can find the 'call' function:
 		Value[] paramTypes;
 		paramTypes << Value(); // Return
 		paramTypes << named{HandlerFrame}; // Where to return
 		for (x in vars)
 			paramTypes << x.type;
-		paramTypes << named{FnBase}; // Continuation -- TODO: Better type! Probably Fn<HandlerFrame, "effect result">.
+		paramTypes << named{Continuation};
+
 		var type = fnType(paramTypes.clone);
 		paramTypes[0] = type;
 

@@ -486,6 +486,16 @@ namespace os {
 		assert(false);
 	}
 
+	void UThreadState::resurrect(UThreadData *data) {
+		if (!data->stack.inASet()) {
+			// Removed from the set, add it back!
+			stacks.insert(&data->stack);
+		}
+
+		// Now we can just insert it!
+		insert(data);
+	}
+
 	void UThreadState::insert(UThreadData *data) {
 		data->setOwner(this);
 		dbg_assert(stacks.contains(&data->stack), L"WRONG THREAD");

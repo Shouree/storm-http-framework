@@ -6,19 +6,26 @@ effect: Int myEffect(Int x);
 
 handler: Float MyHandler(Int) {
 	myEffect(Int x), k {
-		x.float;
+		print("In handler, x = ${x}");
+		Float r = k.call(x + 10) + 0.5;
+		print("Returning ${r}");
+		r;
 	}
 	return x {
+		print("In return handler: ${x}");
 		(x + 1).float;
 	}
 }
 
 suite Basic {
 	Float w = handle {
-		Int x = myEffect(10);
-		x + 10;
+		Int x = myEffect(1);
+		print("x = ${x}");
+		Int y = myEffect(x + 100);
+		print("y = ${y}");
+		y;
 	} with MyHandler;
 
-	test w == 11.0;
+	test w == 123.0;
 	print("Result: ${w}");
 }

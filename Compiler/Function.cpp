@@ -498,6 +498,15 @@ namespace storm {
 		if (runOn().state != RunOn::any)
 			thread = findThread(to, params);
 
+		// Not technically necessary to do before calling 'safeLocation', but we do it anyway for future-proofing.
+		Bool resultNeeded = result->needed();
+
+		// Check if we can call the 'asyncCallVoid' specialization:
+		if (!resultNeeded && this->result == Value()) {
+			asyncCallVoid(to, params, thread, id, copy);
+			return;
+		}
+
 		Engine &e = engine();
 		CodeGen *sub = to->child();
 		*to->l << begin(sub->block);
@@ -510,8 +519,6 @@ namespace storm {
 
 		// Create the result object.
 		Type *futureT = wrapFuture(e, this->result).type;
-		// Not technically necessary to do before calling 'safeLocation', but we do it anyway for future-proofing.
-		Bool resultNeeded = result->needed();
 		code::Var resultPos = result->safeLocation(sub, thisPtr(futureT));
 		allocObject(sub, futureT->defaultCtor(), new (this) Array<Operand>(), resultPos);
 		result->created(sub);
@@ -538,7 +545,7 @@ namespace storm {
 
 		// Take care of "id" if we need it.
 		if (id) {
-			*to->l << fnCall(e.ref(builtin::spawnId), false, longDesc(e), rax);
+			*to->l << fnCall(e.ref(builtin::spawnFutureId), false, longDesc(e), rax);
 			if (id->needed())
 				*to->l << mov(id->location(to), rax);
 		} else {
@@ -559,6 +566,47 @@ namespace storm {
 		// Now, we're done!
 		*to->l << end(sub->block);
 	}
+
+	void Function::asyncCallVoid(CodeGen *to, Array<code::Operand> *params, code::Operand thread,
+								CodeResult *id, bool copy) {
+		using namespace code;
+
+		Engine &e = engine();
+		CodeGen *sub = to->child();
+		*to->l << begin(sub->block);
+
+		// Spill any registers to memory if necessary...
+		params = spillRegisters(sub, params);
+
+		// Create the parameters.
+		Var par = createFnCall(sub, this->params, params, copy);
+
+		// Get the thunk.
+		Ref thunk = Ref(threadThunk());
+
+		TypeDesc *ptr = e.ptrDesc();
+
+		// Spawn the thread!
+		*to->l << lea(ptrA, par);
+		*to->l << fnParam(ptr, ref()); // fn
+		*to->l << fnParam(byteDesc(e), toOp(isMember())); // member
+		*to->l << fnParam(ptr, thunk); // thunk
+		*to->l << fnParam(ptr, ptrA); // params
+		*to->l << fnParam(ptr, thread); // on
+
+		// Take care of "id" if we need it.
+		if (id) {
+			*to->l << fnCall(e.ref(builtin::spawnVoidId), false, longDesc(e), rax);
+			if (id->needed())
+				*to->l << mov(id->location(to), rax);
+		} else {
+			*to->l << fnCall(e.ref(builtin::spawnVoid), false);
+		}
+
+		// Now, we're done!
+		*to->l << end(sub->block);
+	}
+
 
 	code::RefSource *Function::threadThunk() {
 		using namespace code;
@@ -601,6 +649,20 @@ namespace storm {
 		os::FnCallRaw call(params, thunk);
 		const os::Thread *thread = on ? &on->thread() : null;
 		return os::UThread::spawnRaw(fn, member, null, call, *result->rawFuture(), result->rawResult(), thread).id();
+	}
+
+	// Spawn a thread, completely ignoring the result.
+	void spawnThreadVoid(const void *fn, bool member, os::CallThunk thunk, void **params, Thread *on) {
+		os::FnCallRaw call(params, thunk);
+		const os::Thread *thread = on ? &on->thread() : null;
+		os::UThread::spawnRaw(fn, member, null, call, thread);
+	}
+
+	// Spawn a thread, completely ignoring the result.
+	Word spawnThreadVoidId(const void *fn, bool member, os::CallThunk thunk, void **params, Thread *on) {
+		os::FnCallRaw call(params, thunk);
+		const os::Thread *thread = on ? &on->thread() : null;
+		return os::UThread::spawnRaw(fn, member, null, call, thread).id();
 	}
 
 	/**

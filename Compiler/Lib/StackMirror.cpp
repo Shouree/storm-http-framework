@@ -113,9 +113,9 @@ namespace storm {
 
 		stack.desc = (os::Stack::Desc *)base;
 
-		// Check if the thread is scheduled anywhere. If not, put it in the ready queue now.
+		// Check if the thread is scheduled anywhere. If not, resurrect it and put it on the ready queue now!
 		if (!thread->next) {
-			thread->owner()->wake(thread);
+			thread->owner()->resurrect(thread);
 		}
 
 		return true;

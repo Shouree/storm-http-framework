@@ -97,6 +97,12 @@ package class ActiveHandlers on Compiler {
 		frames.put(currentUThread(), f);
 	}
 
+	// Set the current frame for a thread.
+	void set(Word threadId, HandlerFrame f) {
+		Lock:Guard z(framesLock);
+		frames.put(threadId, f);
+	}
+
 	// Remove the current frame for a thread.
 	void remove() {
 		Lock:Guard z(framesLock);
@@ -115,6 +121,12 @@ package HandlerFrame? currentHandlerFrame() {
 package void setHandlerFrame(HandlerFrame to) {
 	as thread Compiler {
 		activeHandlers.set(to);
+	}
+}
+
+package void setHandlerFrame(Word threadId, HandlerFrame to) {
+	as thread Compiler {
+		activeHandlers.set(threadId, to);
 	}
 }
 
