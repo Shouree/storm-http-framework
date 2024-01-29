@@ -1,0 +1,51 @@
+use core:unsafe;
+
+/**
+ * A stored continuation.
+ *
+ * It is essentially an array of stored stacks that can be resumed.
+ */
+class Continuation {
+	// Create an empty continuation.
+	init(EffectFrame resume) {
+		init {
+			resume = resume;
+		}
+	}
+
+	// All stacks that are contained in the continuation.
+	private Stack[] stacks;
+
+	// The object used to resume execution.
+	private EffectFrame resume;
+
+	// A single stack in the execution.
+	private value Stack {
+		// Stored stack.
+		StackMirror mirror;
+
+		// The handler frame that launched the stack.
+		HandlerFrame frame;
+
+		// Create.
+		init(HandlerFrame frame) {
+			init {
+				frame = frame;
+				mirror = StackMirror:save(frame.threadId);
+			}
+		}
+	}
+
+	// Add an element to the stack.
+	void add(HandlerFrame frame) {
+		stacks << Stack(frame);
+	}
+
+	// Resume
+	void resume() {
+		// We need to restore all stacks. This will re-schedule them immediately.
+		// That is not want for all but the first thread. To solve this, we need
+		// to add a mechanism to the HandlerFrames that re-tries the sema down operation
+		// for the affected stacks. Otherwise, they will run too early.
+	}
+}

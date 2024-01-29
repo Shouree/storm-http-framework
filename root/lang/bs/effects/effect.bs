@@ -165,14 +165,28 @@ package class EffectFrame {
 	// Note: We might need something more elaborate later.
 	private Sema sema;
 
+	// Should we throw an error to clean up?
+	private Exception? throwError;
+
 	// Wait for the result to be present.
 	void wait() {
 		sema.down();
+
+		if (e = throwError) {
+			throwError = null;
+			throw e;
+		}
 	}
 
 	// Indicate that a result is available.
 	void signal() {
 		sema.up();
+	}
+
+	// Signal that we should throw an exception and exit.
+	void terminate(Exception e) {
+		throwError = e;
+		signal();
 	}
 }
 
@@ -244,9 +258,28 @@ class HandlerResume {
 
 	// Called at the start of 'call' to save the handler information.
 	void saveContinuation() {
-		print(target.top.threadId.toS);
-		var stack = unsafe:StackMirror:save(target.top.threadId);
-		stack.restore();
+		// Walk the chain of handler frames and collect the stacks from them.
+		Continuation cont(frame);
+
+		{
+			HandlerFrame current = target.top;
+			cont.add(current);
+
+			while (current !is target.target) {
+				unless (next = current.prev)
+					break;
+				current = next;
+
+				cont.add(current);
+			}
+		}
+
+		// Then resume the topmost handler to clean up the stack.
+		Sema wait(0);
+		frame.terminate(EffectUnwind(wait, target.target));
+
+		// Wait for it to complete.
+		wait.down();
 	}
 }
 

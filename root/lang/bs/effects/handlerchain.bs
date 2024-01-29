@@ -157,6 +157,11 @@ HandlerFrame : generate(params) {
 
 					try {
 						this.result = body.call();
+					} catch (EffectUnwind u) {
+						if (u.forMe(this))
+							return;
+						else
+							this.error = u;
 					} catch (Exception e) {
 						this.error = e;
 					}
