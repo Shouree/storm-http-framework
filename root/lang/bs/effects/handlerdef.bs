@@ -76,7 +76,7 @@ class EffectHandlerClause extends HandlerClause {
 		// Add a HandlerFrame as the first parameter. That is where we store our result.
 		resolvedParams.insert(0, ValParam(named{HandlerFrame}, "@result"));
 
-		var contType = fnType([h.param, found.result]); // TODO: The cont type might need to take a HandlerFrame.
+		var contType = fnType([h.param, found.result]);
 		resolvedParams << ValParam(contType, contParam.v);
 
 		BSTreeFn f(Value(), SStr("handler", bodyBlock.pos), resolvedParams, null);

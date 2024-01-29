@@ -107,34 +107,6 @@ class Effect extends Function {
 
 		gen;
 	}
-
-	private CodeGen generateHelper() {
-		CodeGen gen(helperFn.runOn, helperFn.isMember, helperFn.result);
-
-		core:asm:Var frame;
-		core:asm:Var handlerFn;
-		Operand[] actuals;
-		for (i, x in helperFn.params) {
-			if (i == 0)
-				handlerFn = gen.l.createParam(x.desc);
-			else if (i == 1)
-				frame = gen.l.createParam(x.desc);
-			else
-				actuals << gen.l.createParam(x.desc);
-		}
-
-		gen.l << prolog();
-
-		// TODO: This is where we need to collect all frames and make them into a continuation!
-
-		// Note: This is temporary!
-		gen.l << fnParam(ptrDesc, frame);
-		gen.l << fnCall(named{EffectFrame:signal<EffectFrame>}.ref, true);
-
-		gen.l << fnRet();
-
-		gen;
-	}
 }
 
 private HandlerResume:Target findHandler(Effect effect) {

@@ -9,7 +9,7 @@ class Continuation {
 	// Create an empty continuation.
 	init(EffectFrame resume) {
 		init {
-			resume = resume;
+			resumeFrame = resume;
 		}
 	}
 
@@ -17,7 +17,7 @@ class Continuation {
 	private Stack[] stacks;
 
 	// The object used to resume execution.
-	private EffectFrame resume;
+	private EffectFrame resumeFrame;
 
 	// A single stack in the execution.
 	private value Stack {
