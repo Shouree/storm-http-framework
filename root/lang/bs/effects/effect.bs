@@ -241,6 +241,13 @@ class HandlerResume {
 
 	// Called on the original UThread to invoke the handler.
 	void call(HandlerFrame frame) : abstract;
+
+	// Called at the start of 'call' to save the handler information.
+	void saveContinuation() {
+		print(target.top.threadId.toS);
+		var stack = unsafe:StackMirror:save(target.top.threadId);
+		stack.restore();
+	}
 }
 
 
@@ -283,7 +290,9 @@ class HandlerResumeType extends Type {
 
 		gen.l << prolog();
 
-		// TODO: Capture the old thread and grab it as a function pointer!
+		// Save the continuation.
+		gen.l << fnParam(ptrDesc, me);
+		gen.l << fnCall(named{HandlerResume:saveContinuation<HandlerResume>}.ref, true);
 
 		// Find the function to call:
 		gen.l << mov(ptrA, me);
