@@ -20,7 +20,7 @@ HandlerClause SHandlerClause(Handler h, Scope scope);
 SHandlerClause => EffectHandlerClause(pos, h, scope, effect, params, contParam, body)
     : SType effect, "(", SFormals params, ")", ",", SName contParam #varName, HandlerBody body;
 SHandlerClause[10] => returnClause(pos, h, scope, param, body)
-    : "return" #keyword, SName param #varName, HandlerBody body;
+    : "return" #keyword, (SName param #varName,)? HandlerBody body;
 
 SBlock HandlerBody();
 HandlerBody => x : SBlock@ x;

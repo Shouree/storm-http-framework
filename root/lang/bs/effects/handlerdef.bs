@@ -41,8 +41,18 @@ class HandlerClause on Compiler {
 }
 
 // Create a return clause for an effect.
-HandlerClause returnClause(SrcPos pos, Handler h, Scope scope, SStr param, SBlock bodyBlock) on Compiler {
-	BSTreeFn f(h.result, SStr("handler", bodyBlock.pos), [ValParam(h.param, param)], null);
+HandlerClause returnClause(SrcPos pos, Handler h, Scope scope, SStr? param, SBlock bodyBlock) on Compiler {
+	ValParam[] fnParams;
+	if (param) {
+		if (h.param.empty)
+			throw SyntaxError(pos, "You can not specify a parameter for a handler that accepts 'void'.");
+		fnParams << ValParam(h.param, param);
+	} else {
+		if (h.param.any)
+			throw SyntaxError(pos, "You need to specify a parameter for a handler that accepts a value.");
+	}
+
+	BSTreeFn f(h.result, SStr("handler", bodyBlock.pos), fnParams, null);
 	f.parentLookup = h;
 
 	FnBody body(f, scope);
@@ -112,12 +122,21 @@ class EffectHandlerClause extends HandlerClause {
 		If check(body, cast);
 
 		if (var = cast.result) {
-			ReturnPoint bodyWrap(bodyBlock.pos, check.successBlock, h.result);
-			check.success(pattern(check.successBlock) {
-							${Var(body, contParam, FnPtr(LocalVarAccess(pos, contVar), contWrapper, pos))};
-							${LocalVarAccess(pos, var)}.result = ${bodyWrap};
-						});
+			ExprBlock inSuccess(bodyBlock.pos, check.successBlock);
+			check.success(inSuccess);
+
+			// Variable for the continuation:
+			inSuccess.add(Var(body, contParam, FnPtr(LocalVarAccess(pos, contVar), contWrapper, pos)));
+
+			// The body, wrapped in a return point to allow return statements to work properly.
+			ReturnPoint bodyWrap(bodyBlock.pos, inSuccess, h.result);
 			bodyWrap.body = bodyBlock.transform(bodyWrap);
+
+			if (h.result.any) {
+				inSuccess.add(pattern(inSuccess) { ${LocalVarAccess(pos, var)}.result = ${bodyWrap}; });
+			} else {
+				inSuccess.add(bodyWrap);
+			}
 		}
 
 		check.fail(pattern(body) {
@@ -133,20 +152,20 @@ class EffectHandlerClause extends HandlerClause {
 
 	// Helper to create a function that wraps a continuation.
 	private Function wrapContinuation(SrcPos pos, Scope scope, Value resultType, Value paramType) : static {
-		ValParam[] params = [ValParam(named{Continuation}, "c"), ValParam(paramType, "param")];
+		ValParam[] params;
+		params << ValParam(named{Continuation}, "c");
+		if (paramType.any)
+			params << ValParam(paramType, "param");
 		BSTreeFn f(Value(resultType), SStr("wrap-continuation", pos), params, null);
 
 		FnBody body(f, scope);
 		f.body = body;
 
-		unless (typedEffect = named{}.find("EffectFrame", paramType, Scope()) as Type)
-			throw InternalError("Failed to find an effect frame.");
-
-		unless (typedHandler = named{}.find("HandlerFrame", resultType, Scope()) as Type)
-			throw InternalError("Failed to find a handler frame.");
-
 		// Get the frame and copy the parameter:
-		{
+		if (paramType.any) {
+			unless (typedEffect = named{}.find("EffectFrame", paramType, Scope()) as Type)
+				throw InternalError("Failed to find an effect frame.");
+
 			var call = namedExpr(body, pos, "frame", namedExpr(body, pos, "c", Actuals()));
 
 			WeakDowncast cast(body, call, typedEffect);
@@ -165,6 +184,9 @@ class EffectHandlerClause extends HandlerClause {
 
 		// Call resume and get the result:
 		{
+			unless (typedHandler = named{}.find("HandlerFrame", resultType, Scope()) as Type)
+				throw InternalError("Failed to find a handler frame.");
+
 			var call = namedExpr(body, pos, "resume", namedExpr(body, pos, "c", Actuals()));
 
 			WeakDowncast cast(body, call, typedHandler);
@@ -172,13 +194,15 @@ class EffectHandlerClause extends HandlerClause {
 
 			If check(body, cast);
 
-			check.success(pattern(check.successBlock) {
-							if (r = result.result) {
-								r;
-							} else {
-								throw InternalError("No result set!");
-							}
-						});
+			if (resultType.any) {
+				check.success(pattern(check.successBlock) {
+								if (r = result.result) {
+									r;
+								} else {
+									throw InternalError("No result set!");
+								}
+							});
+			}
 
 			check.fail(pattern(body) { throw InternalError("Invalid parameter type!"); });
 

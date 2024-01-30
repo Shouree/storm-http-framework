@@ -98,12 +98,16 @@ class Effect extends Function {
 		gen.l << fnParam(ptrDesc, frameObj);
 		gen.l << fnCall(named{EffectFrame:wait<EffectFrame>}.ref, true);
 
-		// Load a pointer to the result:
-		unless (resultVar = frameType.find("result", frameType, Scope()) as MemberVar)
-			throw InternalError("Failed to find 'result' in EffectFrame!");
+		// Load a pointer to the result if necessary:
+		if (result.any) {
+			unless (resultVar = frameType.find("result", frameType, Scope()) as MemberVar)
+				throw InternalError("Failed to find 'result' in EffectFrame!");
 
-		gen.l << add(frameObj, ptrConst(resultVar.offset));
-		gen.l << fnRetRef(frameObj);
+			gen.l << add(frameObj, ptrConst(resultVar.offset));
+			gen.l << fnRetRef(frameObj);
+		} else {
+			gen.l << fnRet();
+		}
 
 		gen;
 	}
@@ -172,7 +176,8 @@ EffectFrame : generate(params) {
 
 	Type t("EffectFrame", [retVal], TypeFlags:typeClass);
 	t.setSuper(named{EffectFrame});
-	t.add(MemberVar("result", wrapMaybe(retVal), t));
+	if (retVal.any)
+		t.add(MemberVar("result", wrapMaybe(retVal), t));
 	t.add(TypeDefaultCtor(t));
 	t.add(TypeCopyCtor(t));
 	t.add(TypeAssign(t));
@@ -297,6 +302,9 @@ class HandlerResumeType extends Type {
 		var frameParam = gen.l.createParam(ptrDesc);
 
 		gen.l << prolog();
+
+		// Note: We *could* pass ourselves to the handler directly instead of decomposing ourselves
+		// into pieces. Then the handler itself would have to find the variables instead.
 
 		// Save the continuation.
 		var storedCont = gen.l.createVar(gen.block, sPtr);

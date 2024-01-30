@@ -160,7 +160,8 @@ HandlerFrame : generate(params) {
 
 	Type t("HandlerFrame", [retVal], TypeFlags:typeClass);
 	t.setSuper(named{HandlerFrame});
-	t.add(MemberVar("result", wrapMaybe(retVal), t));
+	if (retVal.any)
+		t.add(MemberVar("result", wrapMaybe(retVal), t));
 	t.add(TypeDefaultCtor(t));
 	t.add(TypeCopyCtor(t));
 	t.add(TypeAssign(t));
@@ -179,12 +180,18 @@ HandlerFrame : generate(params) {
 		fn.body = body;
 		t.add(fn);
 
+		var assign = if (retVal.any) {
+			pattern(body) { this.result = body.call(); };
+		} else {
+			pattern(body) { body.call(); };
+		};
+
 		body.add(pattern(body) {
 					this.threadId = currentUThread();
 					setHandlerFrame(this);
 
 					try {
-						this.result = body.call();
+						${assign};
 					} catch (EffectUnwind u) {
 						if (u.forMe(this)) {
 							return;

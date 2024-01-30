@@ -47,18 +47,27 @@ class HandleExpr extends Expr {
 		}
 
 		Expr transform(Block block) : override {
-			var tfm = body.transform(block);
-			tfm = tfm.expectCastTo(fn.params[0], block.scope);
-			FnCall(pos, block.scope, fn, Actuals(tfm));
+			Value result;
+			if (fn.params.any)
+				result = fn.params[0];
+
+			ReturnPoint p(pos, block, result);
+			p.body = body.transform(p);
+
+			if (result.any) {
+				return FnCall(pos, block.scope, fn, Actuals(p));
+			} else {
+				ExprBlock seq(pos, block);
+				seq.add(p);
+				seq.add(FnCall(pos, block.scope, fn, Actuals()));
+				return seq;
+			}
 		}
 	}
 
 	void code(CodeGen code, CodeResult result) : override {
 		unless (frameType = named{}.find("HandlerFrame", handler.result, Scope()) as Type)
 			throw InternalError("Failed to find HandlerFrame!");
-
-		unless (frameResult = frameType.find("result", frameType, Scope()) as MemberVar)
-			throw InternalError("Failed to find 'result' in HandlerFrame!");
 
 		Value bodyFnType = fnType([handler.result]);
 		unless (mainFn = frameType.find("main", [frameType, bodyFnType], Scope()) as Function)
@@ -96,7 +105,6 @@ class HandleExpr extends Expr {
 		// Call 'main' on the desired thread. Note: not using the result calls detach automatically.
 		mainFn.asyncLocalCall(code, [frame, lambda.location(code)], CodeResult());
 
-
 		// Wait for the result to be ready:
 		code.l << fnParam(ptrDesc, frame);
 		code.l << fnCall(named{HandlerFrame:wait<HandlerFrame>}.ref, true);
@@ -104,19 +112,27 @@ class HandleExpr extends Expr {
 		// Note: Due to how maybe types work, we can actually use it as if it was a regular value.
 		// We know that it is set at this point.
 
-		if (result.needed()) {
-			// Just copy the result.
-			if (handler.param.isAsmType) {
-				code.l << mov(ptrA, frame);
-				code.l << mov(result.location(code), xRel(handler.param.size, ptrA, frameResult.offset));
-			} else {
-				code.l << mov(ptrA, frame);
-				code.l << add(ptrA, ptrConst(frameResult.offset));
-				code.l << lea(ptrC, result.location(code));
-				code.l << fnParam(ptrDesc, ptrC);
-				code.l << fnParam(ptrDesc, ptrA);
-				code.l << fnCall(handler.param.copyCtor, true);
-				result.created(code);
+		if (handler.result.any) {
+			unless (frameResult = frameType.find("result", frameType, Scope()) as MemberVar)
+				throw InternalError("Failed to find 'result' in HandlerFrame!");
+
+			if (result.needed()) {
+				print("param ${handler.param}");
+				print("result ${handler.result}");
+
+				// Just copy the result.
+				if (handler.result.isAsmType) {
+					code.l << mov(ptrA, frame);
+					code.l << mov(result.location(code), xRel(handler.result.size, ptrA, frameResult.offset));
+				} else {
+					code.l << mov(ptrA, frame);
+					code.l << add(ptrA, ptrConst(frameResult.offset));
+					code.l << lea(ptrC, result.location(code));
+					code.l << fnParam(ptrDesc, ptrC);
+					code.l << fnParam(ptrDesc, ptrA);
+					code.l << fnCall(handler.result.copyCtor, true);
+					result.created(code);
+				}
 			}
 		}
 	}
