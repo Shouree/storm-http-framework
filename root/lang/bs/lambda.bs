@@ -27,17 +27,21 @@ class LambdaExpr extends Expr {
 
 	// Create a lambda expression where the types of all parameters are known.
 	init(SrcPos pos, Block parent, Array<NameParam> params, SExpr body) {
-		var p = params.resolve(parent.scope);
+		self(pos, parent, params.resolve(parent.scope), body);
+	}
+
+	// Create a lambda expression where the types of all parameters are known.
+	init(SrcPos pos, Block parent, Array<ValParam> params, SExpr body) {
 		Scope scope = lambdaScope(parent);
-		var info = lambdaInfo(scope, p, body, parent);
+		var info = lambdaInfo(scope, params, body, parent);
 		Value result = info.result.type.asRef(false);
 
 		SimpleName name;
 		name.add("core");
-		name.add("Fn", { var z = p.values(); z.insert(0, result); z; });
+		name.add("Fn", { var z = params.values(); z.insert(0, result); z; });
 
 		init(pos) {
-			fnParams = params.resolve(parent.scope);
+			fnParams = params;
 			type = rootScope.value(name, pos);
 			body = body;
 			parent = parent;
