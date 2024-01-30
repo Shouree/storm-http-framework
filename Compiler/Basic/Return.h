@@ -5,7 +5,7 @@ namespace storm {
 	namespace bs {
 		STORM_PKG(lang.bs);
 
-		class FnBody;
+		class ReturnInfo;
 
 		/**
 		 * Return statement.
@@ -34,17 +34,69 @@ namespace storm {
 
 		private:
 			// Function body we are returning from.
-			FnBody *body;
+			ReturnInfo *retInfo;
 
 			// Check type.
 			void checkType();
 
-			// Find the surrounding FnBody.
-			FnBody *findParentFn(SrcPos pos, Block *block);
+			// Find the surrounding ReturnTo.
+			ReturnInfo *findReturn(SrcPos pos, Block *block);
 
 			// Code generation.
 			void voidCode(CodeGen *state);
 			void valueCode(CodeGen *state);
+		};
+
+
+		/**
+		 * Information about where to return to.
+		 */
+		class ReturnInfo : public ObjectOn<Compiler> {
+			STORM_CLASS;
+		public:
+			// Create, initialize with a type.
+			STORM_CTOR ReturnInfo(Value type);
+
+			// Type that should be returned.
+			Value type;
+
+			// If present, we are generating code in an inline function. That means that the result
+			// should be stored inside this CodeResult, and execution should jump to the label
+			// indicated below. If null, we are being used as a top-level function.
+			MAYBE(CodeResult *) inlineResult;
+
+			// Label to jump to when we return from an inline function.
+			code::Label inlineLabel;
+
+			// Block to jump out to.
+			code::Block inlineBlock;
+		};
+
+
+		/**
+		 * A block that is possible to return from, as an expression.
+		 */
+		class ReturnPoint : public Block {
+			STORM_CLASS;
+		public:
+			STORM_CTOR ReturnPoint(SrcPos pos, Scope scope, Value type);
+			STORM_CTOR ReturnPoint(SrcPos pos, Block *parent, Value type);
+
+			// Compute the result.
+			virtual ExprResult STORM_FN result();
+
+			// Generate code.
+			virtual void STORM_FN blockCode(CodeGen *state, CodeResult *to, code::Block newBlock);
+
+			// Return information.
+			ReturnInfo *info;
+
+			// Set contained expression.
+			void STORM_ASSIGN body(Expr *e);
+
+		private:
+			// Body expression.
+			MAYBE(Expr *) bodyExpr;
 		};
 
 	}

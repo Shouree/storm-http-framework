@@ -240,9 +240,9 @@ namespace storm {
 			params.spillParams();
 
 			FnBody *body = createBody();
-			body->inlineResult = params.result;
-			body->inlineLabel = params.state->l->label();
-			body->inlineBlock = params.state->block;
+			body->info->inlineResult = params.result;
+			body->info->inlineLabel = params.state->l->label();
+			body->info->inlineBlock = params.state->block;
 
 			Expr *bodyExpr = expectCastTo(body, result, Scope(this));
 
@@ -256,7 +256,7 @@ namespace storm {
 
 			bodyExpr->code(params.state, params.result->split(params.state));
 
-			*params.state->l << body->inlineLabel;
+			*params.state->l << body->info->inlineLabel;
 			params.result->created(params.state);
 		}
 
@@ -415,12 +415,14 @@ namespace storm {
 		 */
 
 		bs::FnBody::FnBody(BSRawFn *owner, Scope scope)
-			: ExprBlock(owner->pos, scope), type(owner->result) {
+			: ExprBlock(owner->pos, scope) {
+			info = new (this) ReturnInfo(owner->result);
 		 	parameters = owner->addParams(this);
 		}
 
 		bs::FnBody::FnBody(BSFunction *owner)
-			: ExprBlock(owner->body ? owner->body->pos : owner->pos, owner->scope), type(owner->result) {
+			: ExprBlock(owner->body ? owner->body->pos : owner->pos, owner->scope) {
+			info = new (this) ReturnInfo(owner->result);
 			parameters = owner->addParams(this);
 		}
 

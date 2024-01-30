@@ -4,6 +4,7 @@
 #include "Compiler/Syntax/SStr.h"
 #include "Compiler/Syntax/Node.h"
 #include "Compiler/Doc.h"
+#include "Return.h"
 #include "Decl.h"
 #include "Param.h"
 #include "Block.h"
@@ -201,22 +202,14 @@ namespace storm {
 			STORM_CTOR FnBody(BSRawFn *owner, Scope scope);
 			STORM_CTOR FnBody(BSFunction *owner);
 
-			// Store the result type (needed for 'return' among others).
-			Value type;
-
 			// Parameters, ordered as they appear in the list of formal parameters.
 			Array<LocalVar *> *parameters;
 
-			// If present, we are generating code in an inline function. That means that the result
-			// should be stored inside this CodeResult, and execution should jump to the label
-			// indicated below.
-			MAYBE(CodeResult *) inlineResult;
+			// Lookup information.
+			ReturnInfo *info;
 
-			// Label to jump to when we return from an inline function.
-			code::Label inlineLabel;
-
-			// Block to jump out to.
-			code::Block inlineBlock;
+			// Get the type.
+			Value STORM_FN type() const { return info->type; }
 
 			// We don't need to create a separate block for the function body itself, we can just
 			// use the root block.

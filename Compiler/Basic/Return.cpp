@@ -7,16 +7,16 @@
 namespace storm {
 	namespace bs {
 
-		Return::Return(SrcPos pos, Block *block) : Expr(pos), body(findParentFn(pos, block)) {
-			if (body->type != Value()) {
-				throw new (this) SyntaxError(pos, TO_S(this, S("Trying to return void from a function that returns ") << body->type));
+		Return::Return(SrcPos pos, Block *block) : Expr(pos), retInfo(findReturn(pos, block)) {
+			if (retInfo->type != Value()) {
+				throw new (this) SyntaxError(pos, TO_S(this, S("Trying to return void from a function that returns ") << retInfo->type));
 			}
 		}
 
-		Return::Return(SrcPos pos, Block *block, Expr *expr) : Expr(pos), body(findParentFn(pos, block)) {
-			if (body->type == Value())
+		Return::Return(SrcPos pos, Block *block, Expr *expr) : Expr(pos), retInfo(findReturn(pos, block)) {
+			if (retInfo->type == Value())
 				throw new (this) SyntaxError(pos, S("Trying to return a value from a function that returns void."));
-			this->expr = expectCastTo(expr, body->type, block->scope);
+			this->expr = expectCastTo(expr, retInfo->type, block->scope);
 		}
 
 		ExprResult Return::result() {
@@ -24,7 +24,7 @@ namespace storm {
 		}
 
 		void Return::code(CodeGen *state, CodeResult *r) {
-			if (body->type == Value())
+			if (retInfo->type == Value())
 				voidCode(state);
 			else
 				valueCode(state);
@@ -33,8 +33,8 @@ namespace storm {
 		void Return::voidCode(CodeGen *state) {
 			using namespace code;
 
-			if (body->inlineResult) {
-				*state->l << jmpBlock(body->inlineLabel, body->inlineBlock);
+			if (retInfo->inlineResult) {
+				*state->l << jmpBlock(retInfo->inlineLabel, retInfo->inlineBlock);
 			} else {
 				*state->l << fnRet();
 			}
@@ -43,15 +43,15 @@ namespace storm {
 		void Return::valueCode(CodeGen *state) {
 			using namespace code;
 
-			if (body->inlineResult) {
-				expr->code(state, body->inlineResult);
-				*state->l << jmpBlock(body->inlineLabel, body->inlineBlock);
+			if (retInfo->inlineResult) {
+				expr->code(state, retInfo->inlineResult);
+				*state->l << jmpBlock(retInfo->inlineLabel, retInfo->inlineBlock);
 			} else {
 				// If we can get the result as a reference, do that as we avoid a copy. The exception
 				// is built-in types, as we can copy them cheaply.
-				Value type = body->type;
+				Value type = retInfo->type;
 				if (!type.isPrimitive() && expr->result().type().ref)
-					type = body->type.asRef();
+					type = retInfo->type.asRef();
 
 				CodeResult *r = new (this) CodeResult(type, state->block);
 				expr->code(state, r);
@@ -63,13 +63,15 @@ namespace storm {
 			}
 		}
 
-		FnBody *Return::findParentFn(SrcPos pos, Block *block) {
+		ReturnInfo *Return::findReturn(SrcPos pos, Block *block) {
 			BlockLookup *lookup = block->lookup;
 
 			while (lookup) {
 				Block *block = lookup->block;
-				if (FnBody *root = as<FnBody>(block))
-					return root;
+				if (ReturnPoint *root = as<ReturnPoint>(block))
+					return root->info;
+				if (FnBody *body = as<FnBody>(block))
+					return body->info;
 
 				lookup = as<BlockLookup>(lookup->parent());
 			}
@@ -81,6 +83,37 @@ namespace storm {
 			*to << S("return");
 			if (expr)
 				*to << S(" ") << expr;
+		}
+
+		ReturnInfo::ReturnInfo(Value type) : type(type) {}
+
+		ReturnPoint::ReturnPoint(SrcPos pos, Scope scope, Value type) : Block(pos, scope) {
+			info = new (this) ReturnInfo(type);
+		}
+
+		ReturnPoint::ReturnPoint(SrcPos pos, Block *parent, Value type) : Block(pos, parent) {
+			info = new (this) ReturnInfo(type);
+		}
+
+		ExprResult ReturnPoint::result() {
+			return info->type;
+		}
+
+		void ReturnPoint::body(Expr *e) {
+			bodyExpr = expectCastTo(e, info->type, scope);
+		}
+
+		void ReturnPoint::blockCode(CodeGen *state, CodeResult *to, code::Block newBlock) {
+			info->inlineResult = to;
+			info->inlineLabel = state->l->label();
+			info->inlineBlock = newBlock;
+
+			*state->l << begin(newBlock);
+			CodeGen *subState = state->child(newBlock);
+			if (bodyExpr)
+				bodyExpr->code(subState, to);
+			*state->l << end(newBlock);
+			*state->l << info->inlineLabel;
 		}
 
 	}
