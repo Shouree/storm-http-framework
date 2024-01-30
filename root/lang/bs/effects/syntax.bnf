@@ -10,11 +10,11 @@ SExpr => HandleExpr(pos, block, body, handler)
 
 // Effect declaration:
 SPlainFileItem => EffectDecl(env, result, name, params)
-    : "effect" #keyword - ":", SType result ~ SName name, "(", SFormals params, ")", ";";
+    : SName name #fnName, ":", "effect" #keyword, "(", SFormals params, ")", "->", SType result, ";";
 
 // Handler declaration:
 SPlainFileItem => HandlerDecl(env, name, result, param, clauses)
-    : "handler" #keyword, - ":", SType result ~ SName name #typeName, "(", SType param, ")", "{" [, (SHandlerClause@ clauses, )* ]+ "}";
+    : SName name #typeName, ":", "handler" #keyword, "(", SType param, ")", "->", SType result, "{" [, (SHandlerClause@ clauses, )* ]+ "}";
 
 HandlerClause SHandlerClause(Handler h, Scope scope);
 SHandlerClause => EffectHandlerClause(pos, h, scope, effect, params, contParam, body)

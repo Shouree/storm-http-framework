@@ -2,9 +2,9 @@ use lang:bs:effects;
 use lang:bs:macro;
 use test;
 
-effect: Int myEffect(Int x);
+myEffect : effect(Int x)->Int;
 
-handler: Float MyHandler(Int) {
+MyHandler : handler(Int)->Float {
 	myEffect(Int x), k {
 		print("In handler, x = ${x}");
 		Float r = k.call(x + 10) + 0.5;
