@@ -32,16 +32,27 @@ package class HandlerFrame {
 	init() {
 		init {
 			sema(0);
+			waitAgain = false;
 		}
 	}
 
 	// Semaphore to wait for execution to finish.
-	// Note: We might need something more elaborate later.
 	private Sema sema;
+
+	// Wait additional times when we have been woken more than once.
+	private Bool waitAgain;
 
 	// Wait for the result to be present.
 	void wait() {
-		sema.down();
+		do {
+			sema.down();
+
+			// If we were re-scheduled we might need to wait once more.
+			if (waitAgain)
+				waitAgain = false;
+			else
+				break;
+		}
 
 		// Report error:
 		if (error)
@@ -66,6 +77,11 @@ package class HandlerFrame {
 	void resume(HandlerResume r) {
 		resume = r;
 		signal();
+	}
+
+	// Called when the thread has been re-scheduled and have to wait again.
+	void resurrected() {
+		waitAgain = true;
 	}
 }
 

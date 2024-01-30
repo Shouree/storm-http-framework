@@ -60,7 +60,7 @@ class Continuation {
 		for (Nat i = stacks.count; i > 0; i--) {
 			var stack = stacks[i - 1];
 			if (!last) {
-				print("TODO: Modify the HandlerFrame to make it wait once more to avoid too early wakeup.");
+				stack.frame.resurrected();
 			}
 
 			// Link it into the chain of handlers to make nested invocations work as expected.
