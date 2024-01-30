@@ -154,6 +154,9 @@ namespace storm {
 			// Called after 'items' are loaded but before 'wraps' are loaded.
 			virtual void STORM_FN prepareWraps();
 
+			// Called when all items are loaded.
+			virtual void STORM_FN finished();
+
 			// Owning class.
 			Class *owner;
 

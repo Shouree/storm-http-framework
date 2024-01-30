@@ -202,6 +202,9 @@ namespace storm {
 				}
 			}
 
+			// Done loading!
+			body->finished();
+
 			// We do not need the syntax tree anymore!
 			this->body = null;
 
@@ -294,6 +297,8 @@ namespace storm {
 		void ClassBody::prepareItems() {}
 
 		void ClassBody::prepareWraps() {}
+
+		void ClassBody::finished() {}
 
 		/**
 		 * Members.

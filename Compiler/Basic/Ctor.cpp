@@ -624,7 +624,9 @@ namespace storm {
 
 			Function *ctor = as<Function>(toCreate->find(values, scope));
 			if (!ctor) {
-				Str *msg = TO_S(engine(), S("No constructor for ") << t << S("(") << values << S(")."));
+				Str *msg = TO_S(engine(), S("No constructor for type '") << t << S("', ")
+								<< S("required for initializing '") << v->name << S("'. ")
+								<< S("Searched for: ") << values << S("."));
 				throw new (this) SyntaxError(pos, msg);
 			}
 
