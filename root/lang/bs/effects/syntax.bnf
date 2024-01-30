@@ -14,7 +14,7 @@ SPlainFileItem => EffectDecl(env, result, name, params)
 
 // Handler declaration:
 SPlainFileItem => HandlerDecl(env, name, result, param, clauses)
-    : SName name #typeName, ":", "handler" #keyword, "(", SType param, ")", "->", SType result, "{" [, (SHandlerClause@ clauses, )* ]+ "}";
+    : SName name #typeName, ":", "handler" #keyword ~ SType param, "->", SType result, "{" [, (SHandlerClause@ clauses, )* ]+ "}";
 
 HandlerClause SHandlerClause(Handler h, Scope scope);
 SHandlerClause => EffectHandlerClause(pos, h, scope, effect, params, contParam, body)

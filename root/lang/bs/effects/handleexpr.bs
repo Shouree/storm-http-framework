@@ -117,9 +117,6 @@ class HandleExpr extends Expr {
 				throw InternalError("Failed to find 'result' in HandlerFrame!");
 
 			if (result.needed()) {
-				print("param ${handler.param}");
-				print("result ${handler.result}");
-
 				// Just copy the result.
 				if (handler.result.isAsmType) {
 					code.l << mov(ptrA, frame);

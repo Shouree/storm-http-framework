@@ -8,11 +8,20 @@ use lang:bs:macro;
  * Contains a list of handler clauses, each handling an effect or a return value.
  */
 class Handler extends Named {
+	// The type returned from handler blocks.
 	Value result;
+
+	// Parameter accepted to the return clause. I.e. what we expect the body of the handler to
+	// evaluate to.
 	Value param;
+
+	// Effect handler clauses.
 	EffectHandlerClause[] effectClauses;
+
+	// Return clauses.
 	HandlerClause? returnClause;
 
+	// Create.
 	init(SrcPos pos, Str name, Value result, Value param) {
 		init(pos, name) {
 			result = result;
