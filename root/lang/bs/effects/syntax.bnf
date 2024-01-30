@@ -6,21 +6,30 @@ required delimiter = SRequiredDelimiter;
 
 // Delimitation:
 SExpr => HandleExpr(pos, block, body, handler)
-    : "handle" #keyword, SExpr@ body, "with" #keyword ~ SType handler;
+    : "handle" #keyword, SExpr@ body, "with" #keyword ~ SExpr(block) handler;
 
 // Effect declaration:
 SPlainFileItem => EffectDecl(env, result, name, params)
     : SName name #fnName, ":", "effect" #keyword, "(", SFormals params, ")", "->", SType result, ";";
 
 // Handler declaration:
-SPlainFileItem => HandlerDecl(env, name, result, param, clauses)
-    : SName name #typeName, ":", "handler" #keyword ~ SType param, "->", SType result, "{" [, (SHandlerClause@ clauses, )* ]+ "}";
+SPlainFileItem => HandlerDecl(env, name, result, param, body)
+    : SName name #typeName, ":", "handler" #keyword ~ SType param, "->", SType result, "{" [ - SHandlerBody@ body - ]+ "}";
 
-HandlerClause SHandlerClause(Handler h, Scope scope);
-SHandlerClause => EffectHandlerClause(pos, h, scope, effect, params, contParam, body)
-    : SType effect, "(", SFormals params, ")", ",", SName contParam #varName, HandlerBody body;
-SHandlerClause[10] => returnClause(pos, h, scope, param, body)
-    : "return" #keyword, (SName param #varName,)? HandlerBody body;
 
-SBlock HandlerBody();
-HandlerBody => x : SBlock@ x;
+// Note: We wish this rule to be compatible with SClassBody. That is why we accept 'Class' rather than 'Handler'.
+ClassBody SHandlerBody(Class handler);
+SHandlerBody => Handler.Body(handler) : (SHandlerItem(handler) -> add)* - SDelimiter;
+
+TObject SHandlerItem(Class handler);
+SHandlerItem[-10] => x : SDocClassItem(handler) x;
+SHandlerItem => x : SDelimiter - SHandlerClause@ x;
+
+HandlerClause SHandlerClause(Handler handler);
+SHandlerClause => effectClause(pos, handler, effect, params, contParam, body)
+    : SDelimiter - SType effect, "(", SFormals params, ")", ",", SName contParam #varName, ClauseBody body;
+SHandlerClause => returnClause(pos, handler, param, body)
+    : SDelimiter - "return" #keyword, (SName param #varName,)? ClauseBody body;
+
+SBlock ClauseBody();
+ClauseBody => x : SBlock@ x;

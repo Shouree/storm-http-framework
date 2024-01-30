@@ -9,27 +9,28 @@ use core:asm;
 class HandleExpr extends Expr {
 	Expr body;
 	Handler handler;
+	Expr handlerCtor;
 
-	init(SrcPos pos, Block parent, SExpr body, SrcName handler) {
-		var h = if (found = parent.scope.find(handler)) {
-			unless (found as Handler) {
-				throw SyntaxError(handler.pos, "The entity ${handler} is not an effect handler.");
-			}
-			found;
+	init(SrcPos pos, Block parent, SExpr body, Expr handler) {
+		var h = if (type = handler.result.type.type as Handler) {
+			type;
 		} else {
-			throw SyntaxError(handler.pos, "Failed to find an entity named ${handler}");
+			throw SyntaxError(handler.pos, "The expression after 'with' must evaluate to an effect. It is a ${handler.result.type}.");
 		};
 
-		var handlerFn = fnType([h.result]);
+		var handlerFn = fnType([h.result, h]);
+		SStr paramName("@handler");
 
 		// Inject the return clause into the lambda if we need to.
 		if (retClause = h.returnClause) {
-			body = WrapInCall(body, retClause.handler);
+			body = WrapInCall(body, paramName, retClause.handler);
 		}
+		LambdaExpr lambdaBody(body.pos, parent, [ValParam(h, paramName)], body);
 
 		init(pos) {
-			body = LambdaExpr(body.pos, parent, NameParam:[], body).expectCastTo(handlerFn, parent.scope);
+			body = lambdaBody.expectCastTo(handlerFn, parent.scope);
 			handler = h;
+			handlerCtor = handler;
 		}
 	}
 
@@ -37,44 +38,69 @@ class HandleExpr extends Expr {
 	private class WrapInCall extends SExpr {
 		SExpr body;
 		Function fn;
+		SStr paramName;
 
-		init(SExpr body, Function fn) {
+		init(SExpr body, SStr paramName, Function fn) {
 			init() {
 				body = body;
 				fn = fn;
+				paramName = paramName;
 			}
 			pos = body.pos;
 		}
 
 		Expr transform(Block block) : override {
 			Value result;
-			if (fn.params.any)
-				result = fn.params[0];
+			if (fn.params.count > 1)
+				result = fn.params[1];
 
 			ReturnPoint p(pos, block, result);
 			p.body = body.transform(p);
 
+			unless (effectVar = block.variable(SimplePart(paramName.v)))
+				throw InternalError("Failed to find effect variable.");
+
+			Actuals actuals(LocalVarAccess(pos, effectVar));
+
 			if (result.any) {
-				return FnCall(pos, block.scope, fn, Actuals(p));
+				actuals.add(p);
+				return FnCall(pos, block.scope, fn, actuals);
 			} else {
 				ExprBlock seq(pos, block);
 				seq.add(p);
-				seq.add(FnCall(pos, block.scope, fn, Actuals()));
+				seq.add(FnCall(pos, block.scope, fn, actuals));
 				return seq;
 			}
 		}
 	}
 
 	void code(CodeGen code, CodeResult result) : override {
-		unless (frameType = named{}.find("HandlerFrame", handler.result, Scope()) as Type)
+		unless (frameType = named{}.find("HandlerFrame", handler, Scope()) as Type)
 			throw InternalError("Failed to find HandlerFrame!");
 
-		Value bodyFnType = fnType([handler.result]);
+		Value bodyFnType = if (handler.returnClause.any) {
+			fnType([handler.result, handler]);
+		} else {
+			fnType([handler.result]);
+		};
 		unless (mainFn = frameType.find("main", [frameType, bodyFnType], Scope()) as Function)
 			throw InternalError("Failed to find the main function of the frame.");
 
+		// Create the handler object.
+		CodeResult handlerObj(handler, code.block);
+		handlerCtor.code(code, handlerObj);
+
 		// Create a frame:
-		var frame = code.allocObject(frameType);
+		var frame = {
+			unless (ctorFn = frameType.find("__init", [frameType, handler], Scope()) as Function)
+				throw InternalError("Failed to find the constructor of the frame.");
+			var handlerAccess = BareVarAccess(SrcPos(), handler, handlerObj.location(code));
+			CtorCall call(SrcPos(), Scope(), ctorFn, Actuals(handlerAccess));
+
+			CodeResult frame(frameType, code.block);
+			call.code(code, frame);
+			frame.location(code);
+		};
 
 		// Set "prev". Note: Representation of pointer-maybe is a pointer
 		{

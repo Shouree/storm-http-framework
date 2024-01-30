@@ -34,48 +34,20 @@ class HandlerDecl extends NamedDecl {
 	Str name;
 	SrcName result;
 	SrcName param;
-	SHandlerClause[] clauses;
+	SHandlerBody body;
 
-	init(Scope scope, SStr name, SrcName result, SrcName param, SHandlerClause[] clauses) {
+	init(Scope scope, SStr name, SrcName result, SrcName param, SHandlerBody body) {
 		init() {
 			scope = fileScope(scope, name.pos);
 			pos = name.pos;
 			name = name.v;
 			result = result;
 			param = param;
-			clauses = clauses;
+			body = body;
 		}
 	}
 
 	protected Named doCreate() : override {
-		return Handler(pos, name, scope.value(result), scope.value(param));
-	}
-
-	protected void doResolve(Named created) : override {
-		unless (created as Handler)
-			return;
-
-		Set<Named> used;
-
-		for (clause in clauses) {
-			HandlerClause c = clause.transform(created, scope);
-			if (c as EffectHandlerClause) {
-				if (used.has(c.effect))
-					throw SyntaxError(clause.pos, "This effect has already been handled in this handler.");
-
-				used.put(c.effect);
-				created.effectClauses << c;
-			} else {
-				if (created.returnClause.any)
-					throw SyntaxError(clause.pos, "The 'return' handler may only be specified once.");
-				created.returnClause = c;
-			}
-		}
-
-		if (created.returnClause.empty) {
-			if (!created.result.mayStore(created.param)) {
-				throw SyntaxError(pos, "A return handler is required when the parameter and result types differ.");
-			}
-		}
+		return Handler(pos, scope, name, body, scope.value(result), scope.value(param));
 	}
 }

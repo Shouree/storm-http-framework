@@ -156,20 +156,39 @@ HandlerFrame : generate(params) {
 	if (params.count != 1)
 		return null;
 
-	var retVal = params[0];
+	unless (handler = params[0].type as Handler)
+		return null;
 
-	Type t("HandlerFrame", [retVal], TypeFlags:typeClass);
+	var retVal = handler.result;
+
+	Type t("HandlerFrame", [handler], TypeFlags:typeClass);
 	t.setSuper(named{HandlerFrame});
+	t.add(MemberVar("object", handler, t));
 	if (retVal.any)
 		t.add(MemberVar("result", wrapMaybe(retVal), t));
-	t.add(TypeDefaultCtor(t));
+
+	// Create a constructor with a single parameter:
+	{
+		SStr memberName("object");
+
+		BSTreeCtor ctor([thisParam(t), ValParam(handler, memberName)], SrcPos());
+		CtorBody body(ctor, Scope());
+		ctor.body = body;
+
+		InitBlock init(SrcPos(), body, null);
+		init.init(Initializer(memberName, LocalVarAccess(SrcPos(), body.parameters[1])));
+		body.add(init);
+
+		t.add(ctor);
+	}
+
 	t.add(TypeCopyCtor(t));
 	t.add(TypeAssign(t));
 	if (needsDestructor(t))
 		t.add(TypeDefaultDtor(t));
 
 	{
-		var fnParam = fnType([retVal]);
+		var fnParam = fnType([retVal, handler]);
 		ValParam[] paramList = [
 			thisParam(t),
 			ValParam(fnParam, "body")
@@ -181,9 +200,9 @@ HandlerFrame : generate(params) {
 		t.add(fn);
 
 		var assign = if (retVal.any) {
-			pattern(body) { this.result = body.call(); };
+			pattern(body) { this.result = body.call(this.object); };
 		} else {
-			pattern(body) { body.call(); };
+			pattern(body) { body.call(this.object); };
 		};
 
 		body.add(pattern(body) {

@@ -7,13 +7,27 @@ myEffect : effect(Int x)->Int;
 MyHandler : handler Int->Float {
 	myEffect(Int x), k {
 		print("In handler, x = ${x}");
-		Float r = k.call(x + 10) + 0.5;
-		print("Returning ${r}");
-		return r;
+		Float sum = 0;
+		for (Int i = 0; i < times; i++) {
+			sum += k.call(x + i);
+		}
+		sum += 0.5;
+		print("Returning ${sum}");
+		return sum;
 	}
 	return x {
-		print("In return handler: ${x}");
+		print("In return handler: ${x}, ${times}");
 		return (x + 1).float;
+	}
+
+	Int times;
+
+	init() {
+		init { times = 1; }
+	}
+
+	init(Int times) {
+		init { times = times; }
 	}
 }
 
@@ -24,8 +38,8 @@ suite Basic {
 		Int y = myEffect(x + 100);
 		print("y = ${y}");
 		y;
-	} with MyHandler;
+	} with MyHandler(2);
 
-	test w == 123.0;
+	test w == 413.5;
 	print("Result: ${w}");
 }
