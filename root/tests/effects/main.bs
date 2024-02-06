@@ -43,3 +43,21 @@ suite Basic {
 	test w == 413.5;
 	print("Result: ${w}");
 }
+
+fork : effect()->Int;
+
+ForkHandler : handler Int->Int {
+	fork(), cont {
+		Int first = cont.call(1);
+		Int second = cont.call(2);
+		return first + second;
+	}
+}
+
+suite Fork {
+	Int result = handle {
+		Int x = fork();
+		return x * 2;
+	} with ForkHandler;
+	test result == 6;
+}
