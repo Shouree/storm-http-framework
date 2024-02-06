@@ -196,7 +196,7 @@ EffectHandlerClause effectClause(SrcPos pos, Class handler, SrcName effectName, 
 		throw InternalError("Failed to find a handler frame.");
 	}
 
-	Function contWrapper = wrapContinuation(pos, scope, handler);
+	Function contWrapper = wrapContinuation(pos, scope, handler, found.result);
 	contWrapper.parentLookup = handler;
 
 	WeakDowncast cast(body, LocalVarAccess(pos, resultVar), typedFrame);
@@ -236,19 +236,19 @@ EffectHandlerClause effectClause(SrcPos pos, Class handler, SrcName effectName, 
 }
 
 // Helper to create a function that wraps a continuation.
-private Function wrapContinuation(SrcPos pos, Scope scope, Handler handler) on Compiler {
+private Function wrapContinuation(SrcPos pos, Scope scope, Handler handler, Value effectResult) on Compiler {
 	ValParam[] params;
 	params << ValParam(named{Continuation}, "c");
-	if (handler.param.any)
-		params << ValParam(handler.param, "param");
+	if (effectResult.any)
+		params << ValParam(effectResult, "param");
 	BSTreeFn f(Value(handler.result), SStr("wrap-continuation", pos), params, null);
 
 	FnBody body(f, scope);
 	f.body = body;
 
 	// Get the frame and copy the parameter:
-	if (handler.param.any) {
-		unless (typedEffect = named{}.find("EffectFrame", handler.param, Scope()) as Type)
+	if (effectResult.any) {
+		unless (typedEffect = named{}.find("EffectFrame", effectResult, Scope()) as Type)
 			throw InternalError("Failed to find an effect frame.");
 
 		var call = namedExpr(body, pos, "frame", namedExpr(body, pos, "c", Actuals()));
