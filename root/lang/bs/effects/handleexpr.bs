@@ -21,10 +21,8 @@ class HandleExpr extends Expr {
 		var handlerFn = fnType([h.result, h]);
 		SStr paramName("@handler");
 
-		// Inject the return clause into the lambda if we need to.
-		if (retClause = h.returnClause) {
-			body = WrapInCall(body, paramName, retClause.handler);
-		}
+		// Inject the return clause and a return point into the lambda:
+		body = WrapLambda(body, paramName, h.result, h.returnClause);
 		LambdaExpr lambdaBody(body.pos, parent, [ValParam(h, paramName)], body);
 
 		init(pos) {
@@ -34,42 +32,59 @@ class HandleExpr extends Expr {
 		}
 	}
 
-	// Helper class to wrap the entire body of the lambda function in a function call:
-	private class WrapInCall extends SExpr {
+	// Helper class to wrap the entire body of the lambda in a ReturnPoint, and optionally pass the
+	// result value through a function as well.
+	private class WrapLambda extends SExpr {
 		SExpr body;
-		Function fn;
+		HandlerClause? wrap;
 		SStr paramName;
+		Value finalResult;
 
-		init(SExpr body, SStr paramName, Function fn) {
+		init(SExpr body, SStr paramName, Value result, HandlerClause? wrap) {
 			init() {
 				body = body;
-				fn = fn;
+				wrap = wrap;
 				paramName = paramName;
+				finalResult = result;
 			}
 			pos = body.pos;
 		}
 
 		Expr transform(Block block) : override {
-			Value result;
-			if (fn.params.count > 1)
-				result = fn.params[1];
+			Value result = finalResult;
 
+			// If we have a function, we should use it:
+			if (wrap) {
+				if (wrap.handler.params.count > 1)
+					result = wrap.handler.params[1];
+				else
+					result = Value();
+			}
+
+			// Wrap in a return point to make returns work as we would expect.
 			ReturnPoint p(pos, block, result);
 			p.body = body.transform(p);
 
-			unless (effectVar = block.variable(SimplePart(paramName.v)))
-				throw InternalError("Failed to find effect variable.");
 
-			Actuals actuals(LocalVarAccess(pos, effectVar));
+			if (wrap) {
+				// A function to wrap:
+				unless (effectVar = block.variable(SimplePart(paramName.v)))
+					throw InternalError("Failed to find effect variable.");
 
-			if (result.any) {
-				actuals.add(p);
-				return FnCall(pos, block.scope, fn, actuals);
+				Actuals actuals(LocalVarAccess(pos, effectVar));
+
+				if (result.any) {
+					actuals.add(p);
+					return FnCall(pos, block.scope, wrap.handler, actuals);
+				} else {
+					ExprBlock seq(pos, block);
+					seq.add(p);
+					seq.add(FnCall(pos, block.scope, wrap.handler, actuals));
+					return seq;
+				}
 			} else {
-				ExprBlock seq(pos, block);
-				seq.add(p);
-				seq.add(FnCall(pos, block.scope, fn, actuals));
-				return seq;
+				// No function to wrap:
+				return p;
 			}
 		}
 	}
@@ -78,11 +93,7 @@ class HandleExpr extends Expr {
 		unless (frameType = named{}.find("HandlerFrame", handler, Scope()) as Type)
 			throw InternalError("Failed to find HandlerFrame!");
 
-		Value bodyFnType = if (handler.returnClause.any) {
-			fnType([handler.result, handler]);
-		} else {
-			fnType([handler.result]);
-		};
+		Value bodyFnType = fnType([handler.result, handler]);
 		unless (mainFn = frameType.find("main", [frameType, bodyFnType], Scope()) as Function)
 			throw InternalError("Failed to find the main function of the frame.");
 
