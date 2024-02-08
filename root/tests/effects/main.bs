@@ -32,13 +32,13 @@ MyHandler : handler Int->Float {
 }
 
 suite Basic {
-	Float w = handle {
+	Float w = with MyHandler(2) handle {
 		Int x = myEffect(1);
 		print("x = ${x}");
 		Int y = myEffect(x + 100);
 		print("y = ${y}");
 		y;
-	} with MyHandler(2);
+	};
 
 	test w == 413.5;
 	print("Result: ${w}");
@@ -55,9 +55,9 @@ ForkHandler : handler Int->Int {
 }
 
 suite Fork {
-	Int result = handle {
+	Int result = with ForkHandler handle {
 		Int x = fork();
 		return x * 2;
-	} with ForkHandler;
+	};
 	test result == 6;
 }

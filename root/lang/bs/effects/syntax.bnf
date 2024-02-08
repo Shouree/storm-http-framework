@@ -6,7 +6,7 @@ required delimiter = SRequiredDelimiter;
 
 // Delimitation:
 SExpr => HandleExpr(pos, block, body, handler)
-    : "handle" #keyword, SExpr@ body, "with" #keyword ~ SExpr(block) handler;
+    : "with" #keyword ~ SExpr(block) handler ~ "handle" #keyword ~ SExpr@ body;
 
 // Effect declaration:
 SPlainFileItem => EffectDecl(env, result, name, params)
