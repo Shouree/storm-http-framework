@@ -28,7 +28,8 @@ Test
 #Main -a -f progvis.debugServer
 #Main -a -f progvis.testCpp
 #Main -a -f trees.main
-Main -a -t tests.effects
+#Main -a -t tests.effects
+Main -a -t tests.templates
 
 #Main -a -t parser.tests
 #Main -a -t sql.tests

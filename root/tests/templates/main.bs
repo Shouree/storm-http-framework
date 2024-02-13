@@ -1,0 +1,17 @@
+use lang:bs:templates;
+use test;
+
+template<T>
+class Templated {
+	T v;
+
+	T f() {
+		v;
+	}
+}
+
+suite UseTemplates {
+	Templated<Int> x;
+	x.v = 10;
+	print(x.f.toS);
+}

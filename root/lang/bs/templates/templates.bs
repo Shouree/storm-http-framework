@@ -1,0 +1,165 @@
+use core:lang;
+use lang:bs;
+use lang:bs:macro;
+
+/**
+ * A high-level template in Storm.
+ */
+package class Template extends core:lang:Template {
+	// Create.
+	init(SrcPos pos, Scope scope, TemplateParam[] params, SFileItem body) {
+		// TODO: It would be nice to be able to extract the name without creating an instance: doing
+		// this without parameters could fail, in spite of lazy loading.
+		var generated = body.transform(defaultParams(scope, params));
+		Str name = if (generated as Named) {
+			checkNamed(pos, generated);
+			generated.name;
+		} else if (generated as NamedDecl) {
+			var created = generated.create();
+			checkNamed(pos, created);
+			created.name;
+		} else {
+			throw SyntaxError(pos, "The declaration after this 'template' keyword can not be templated.");
+		};
+
+		init(name) {
+			scope = scope;
+			params = params;
+			body = body;
+		}
+	}
+
+	// Original scope.
+	private Scope scope;
+
+	// Template parameters.
+	private TemplateParam[] params;
+
+	// The body to create.
+	private SFileItem body;
+
+	Named? generate(SimplePart part) : override {
+		if (part.params.count != params.count)
+			return null;
+
+		Str->Value p;
+		for (i, par in params) {
+			p.put(par.name, part.params[i].asRef(false));
+		}
+
+		Scope child = scope;
+		child.lookup = TemplateLookup(scope.lookup, p);
+
+		var created = body.transform(child);
+
+		Named named = if (created as Named) {
+			created.params = part.params.clone();
+			created;
+		} else if (created as NamedDecl) {
+			Named n = created.create();
+			n.params = part.params.clone();
+			created.resolve();
+			n;
+		} else {
+			throw SyntaxError(body.pos, "This body should always create the same thing.");
+		};
+
+		// TODO: Handle documentation!
+
+		return named;
+	}
+
+	// Check if we can use the generated named for templating.
+	private void checkNamed(SrcPos pos, Named n) : static {
+		if (n.params.any)
+			throw SyntaxError(pos, "Can not use the 'template' keyword to create elements with parameters.");
+	}
+
+	// Generate default parameters.
+	private Scope defaultParams(Scope parent, TemplateParam[] params) : static {
+		Str->Value p;
+		for (par in params)
+			p.put(par.name, par.default);
+		parent.lookup = TemplateLookup(parent.lookup, p);
+		return parent;
+	}
+}
+
+
+/**
+ * Special lookup to inject template parameters.
+ */
+private class TemplateLookup extends ScopeLookup {
+	// Create.
+	init(ScopeLookup? original, Str->Value params) {
+		init("void") {
+			params = params;
+		}
+	}
+
+	// Original lookup.
+	private ScopeLookup? original;
+
+	// Parameters to inject.
+	private Str->Value params;
+
+	// Find named entities.
+	Named? find(Scope source, SimpleName name) : override {
+		if (h = findHere(name)) {
+			if (t = h.type) {
+				return t;
+			}
+		}
+
+		if (original)
+			return original.find(source, name);
+		else
+			return super:find(source, name);
+	}
+
+	// Find types.
+	Value value(Scope source, SimpleName name, SrcPos pos) : override {
+		if (h = findHere(name))
+			return h;
+
+		if (original)
+			return original.value(source, name, pos);
+		else
+			return super:value(source, name, pos);
+	}
+
+	// Helper to find things here.
+	private Value? findHere(SimpleName name) {
+		unless (name.count == 1)
+			return null;
+
+		var part = name[0];
+		unless (part.params.empty)
+			return null;
+
+		params.at(part.name);
+	}
+}
+
+
+/**
+ * Storage of template parameters.
+ *
+ * Special class to allow future expansion wrt. limits on types.
+ */
+package class TemplateParam on Compiler {
+	// Create.
+	init(Str name) {
+		init {
+			name = name;
+		}
+	}
+
+	// The name of the parameter.
+	Str name;
+
+	// Get a default value to use when instantiating the type for the first time.
+	Value default() {
+		Value(named{Object});
+	}
+}
