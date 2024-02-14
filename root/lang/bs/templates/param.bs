@@ -1,0 +1,244 @@
+use core:lang;
+use lang:bs:macro;
+
+/**
+ * Storage of template parameters.
+ *
+ * Special class to allow future expansion wrt. limits on types.
+ */
+package class TemplateParam on Compiler {
+	// Create.
+	init(SrcPos pos, Str name) {
+		init {
+			pos = pos;
+			name = name;
+		}
+	}
+
+	// Location of the parameter.
+	SrcPos pos;
+
+	// The name of the parameter.
+	Str name;
+
+	// Get a default value to use when instantiating the type for the first time.
+	Value default() {
+		Value(named{Object});
+	}
+}
+
+
+/**
+ * Logic for deducing a single parameter.
+ */
+package class Deduction on Compiler {
+	// Called to match 'supplied' to parameters.
+	Bool deduce(Scope scope, Value supplied, Str->Value deduced) : abstract;
+
+	// Get all deduced parameters.
+	void deduced(Set<Str> deduced) : abstract;
+
+	// Get the current deduction.
+	Value current(Scope scope, Str->Value deduced) : abstract;
+}
+
+/**
+ * Parameter deduction that requires an exact match.
+ */
+package class DeduceExact extends Deduction {
+	// Create.
+	init(Value expect) {
+		init { expect = expect; }
+	}
+
+	// What parameter to expect.
+	Value expect;
+
+	// Deduce.
+	Bool deduce(Scope scope, Value supplied, Str->Value deduced) : override {
+		// TODO: How exact?
+		return expect.mayStore(supplied);
+	}
+
+	// Get params.
+	void deduced(Set<Str> deduced) : override {}
+
+	// Current.
+	Value current(Scope scope, Str->Value deduced) : override { expect; }
+}
+
+/**
+ * Parameter deduction that matches a template parameter.
+ */
+package class DeduceParam extends Deduction {
+	// Create.
+	init(Str name) {
+		init { name = name; }
+	}
+
+	// Name of the deduced parameter.
+	Str name;
+
+	// Deduce.
+	Bool deduce(Scope scope, Value supplied, Str->Value deduced) : override {
+		if (prev = deduced.at(name)) {
+			return prev.asRef(false) == supplied.asRef(false);
+		} else {
+			deduced.put(name, supplied.asRef(false));
+			return true;
+		}
+	}
+
+	// Get params.
+	void deduced(Set<Str> deduced) {
+		deduced.put(name);
+	}
+
+	// Current.
+	Value current(Scope scope, Str->Value deduced) : override {
+		deduced.get(name);
+	}
+}
+
+/**
+ * Parameter deduction for partial matches. E.g. Array<T>.
+ */
+package class DeducePartial extends Deduction {
+	// Create.
+	init(SimpleName name) {
+		Part[] parts;
+		for (x in name)
+			parts << Part(x);
+
+		init {
+			parts = parts;
+		}
+	}
+
+	// Parts in the deduction.
+	class Part on Compiler {
+		Str name;
+		Deduction[] params;
+
+		init(SimplePart part) {
+			init {
+				name = part.name;
+				params = createParamDeduction(part.params);
+			}
+		}
+
+		Bool deduce(Scope scope, SimplePart supplied, Str->Value deduced) {
+			if (supplied.name != name)
+				return false;
+
+			if (supplied.params.count != params.count)
+				return false;
+
+			for (i, p in params) {
+				if (!p.deduce(scope, supplied.params[i], deduced))
+					return false;
+			}
+
+			return true;
+		}
+
+		void deduced(Set<Str> deduced) {
+			for (p in params)
+				p.deduced(deduced);
+		}
+
+		SimplePart current(Scope scope, Str->Value deduced) {
+			SimplePart result(name);
+			for (p in params)
+				result.params << p.current(scope, deduced);
+			result;
+		}
+	}
+
+	// List of parts to match.
+	Part[] parts;
+
+	// Deduce.
+	Bool deduce(Scope scope, Value supplied, Str->Value deduced) : override {
+		unless (t = supplied.type)
+			return false;
+
+		// Start from the end of both and work our way towards the start:
+		var suppliedPath = t.path();
+		if (suppliedPath.count < parts.count)
+			return false;
+
+		for (Nat i = 1; i <= parts.count; i++) {
+			var supplied = suppliedPath[suppliedPath.count - i];
+			var ours = parts[parts.count - i];
+
+			if (!ours.deduce(scope, supplied, deduced))
+				return false;
+		}
+
+		// Double-check that we are referring to the same thing:
+		Value current = current(scope, deduced);
+		return current.asRef(false) == supplied.asRef(false);
+	}
+
+	// Get params.
+	void deduced(Set<Str> deduced) {
+		for (x in parts)
+			x.deduced(deduced);
+	}
+
+	// Current.
+	Value current(Scope scope, Str->Value deduced) : override {
+		SimpleName name;
+		for (p in parts)
+			name.add(p.current(scope, deduced));
+
+		if (found = scope.find(name) as Type)
+			Value(found);
+		else
+			Value();
+	}
+}
+
+
+// Simple deduction:
+package Deduction[] createTrivialDeduction(TemplateParam[] params) on Compiler {
+	Deduction[] result;
+	for (x in params)
+		result << DeduceParam(x.name);
+	return result;
+}
+
+// More complex ones:
+package Deduction[] createParamDeduction(SrcPos pos, TemplateParam[] params, Value[] computed) on Compiler {
+	Deduction[] result = createParamDeduction(computed);
+
+	Set<Str> deduced;
+	for (x in result)
+		x.deduced(deduced);
+
+	for (p in params)
+		if (!deduced.has(p.name))
+			throw SyntaxError(pos, "Failed to deduce the parameter ${p.name}. It needs to appear as a parameter.");
+
+	return result;
+}
+
+private Deduction[] createParamDeduction(Value[] computed) on Compiler {
+	Deduction[] result;
+	for (x in computed) {
+		result << createParamDeduction(x);
+	}
+	return result;
+}
+
+// Helper for a single parameter.
+private Deduction createParamDeduction(Value computed) on Compiler {
+	if (t = computed.type as ParamType) {
+		return DeduceParam(t.paramDef.name);
+	} else if (t = computed.type as ReplacementType) {
+		return DeducePartial(t.original);
+	} else {
+		return DeduceExact(computed);
+	}
+}

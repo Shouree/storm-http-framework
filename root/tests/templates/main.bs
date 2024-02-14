@@ -10,8 +10,16 @@ class Templated {
 	}
 }
 
+template <T>
+T pickOne(Array<T> x) {
+	x.first;
+}
+
 suite UseTemplates {
 	Templated<Int> x;
 	x.v = 10;
 	print(x.f.toS);
+
+	Array<Int> w;
+	pickOne(w);
 }

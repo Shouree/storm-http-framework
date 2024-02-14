@@ -11,4 +11,4 @@ STemplateList => Array<TemplateParam>() : ;
 STemplateList => Array<TemplateParam>() : STemplateElem -> push - (, ",", STemplateElem -> push)*;
 
 TemplateParam STemplateElem();
-STemplateElem => TemplateParam(name.v) : SName name;
+STemplateElem => TemplateParam(name.pos, name.v) : SName name;

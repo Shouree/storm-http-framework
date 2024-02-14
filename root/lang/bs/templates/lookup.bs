@@ -1,0 +1,135 @@
+use core:lang;
+use lang:bs;
+
+/**
+ * Lookup used to intercept calls type lookups to allow handling missing types, and types that
+ * contain template parameters.
+ */
+package class PatternLookup extends ScopeLookup {
+	// Create.
+	init(Scope original, TemplateParam[] params) {
+		init {
+			original = original;
+			params = params;
+		}
+
+		for (i, param in params) {
+			if (paramIds.has(param.name))
+				throw SyntaxError(param.pos, "The template parameter name ${param.name} is already used.");
+			paramIds.put(param.name, i);
+
+			paramTypes << ParamType(i, param);
+		}
+	}
+
+	// Original scope, to forward calls to.
+	Scope original;
+
+	// Parameters.
+	TemplateParam[] params;
+
+	// Parameter name -> parameter ID.
+	Str->Nat paramIds;
+
+	// Cache of parameter types.
+	ParamType[] paramTypes;
+
+	Named? find(Scope source, SimpleName name) : override {
+		if (p = templateParam(name))
+			return p;
+		if (t = replacement(name))
+			return t;
+
+		if (l = original.lookup)
+			return l.find(source, name);
+		else
+			return super:find(source, name);
+	}
+
+	Value value(Scope source, SimpleName name, SrcPos pos) : override {
+		if (t = templateParam(name))
+			return Value(t);
+		if (t = replacement(name))
+			return Value(t);
+
+		if (l = original.lookup)
+			return l.value(source, name, pos);
+		else
+			return super:value(source, name, pos);
+	}
+
+	// Helper to look up a template parameter.
+	private Type? templateParam(SimpleName name) {
+		unless (name.count == 1)
+			return null;
+
+		var part = name[0];
+		unless (part.params.empty)
+			return null;
+
+		unless (id = paramIds.at(part.name))
+			return null;
+
+		return paramTypes[id];
+	}
+
+	// Check if the name contains any ParamType instances. If so, return a suitaple replacement type
+	// instead.
+	private Type? replacement(SimpleName name) {
+		for (part in name) {
+			for (param in part.params) {
+				if (param.type as ParamType)
+					return ReplacementType(name);
+				else if (param.type as ReplacementType)
+					return ReplacementType(name);
+			}
+		}
+		return null;
+	}
+}
+
+// Prepare a scope for looking up template parameters. Also makes sure parameters are not duplicated.
+package Scope paramLookupScope(SrcPos pos, Scope originalScope, TemplateParam[] params) on Compiler {
+	Scope scope = originalScope;
+	scope.lookup = PatternLookup(originalScope, params);
+	scope;
+}
+
+
+/**
+ * Dummy type used to represent template parameters when we try to resolve parameters.
+ */
+package class ParamType extends Type {
+	init(Nat id, TemplateParam param) {
+		// TODO: If we support constrained types, we probably should make this type extend from the
+		// specified type.
+		init(param.name, TypeFlags:typeClass) {
+			paramId = id;
+			paramDef = param;
+		}
+
+		parentLookup = rootPkg;
+	}
+
+	// Parameter ID.
+	Nat paramId;
+
+	// Parameter definition.
+	TemplateParam paramDef;
+}
+
+
+/**
+ * Dummy type used as a replacement for more complex expressions.
+ */
+package class ReplacementType extends Type {
+	init(SimpleName original) {
+		init("<replacement>", TypeFlags:typeClass) {
+			original = original;
+		}
+		parentLookup = rootPkg;
+	}
+
+	// Original type.
+	SimpleName original;
+}
