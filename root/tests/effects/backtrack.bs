@@ -37,19 +37,38 @@ handler PickAll(T->Array<T>) {
 }
 
 Int choose(Int first, Int last) {
-	if (first >= last)
-		return last;
-	else if (choose())
+	if (first >= last) {
+		fail();
+		return 0; // NB. will not be executed.
+	} else if (choose()) {
 		return first;
-	else
+	} else {
 		return choose(first + 1, last);
+	}
+}
+
+Nat choose(Nat first, Nat last) {
+	if (first >= last) {
+		fail();
+		return 0; // NB. will not be executed.
+	} else if (choose()) {
+		return first;
+	} else {
+		return choose(first + 1, last);
+	}
+}
+
+template <T>
+T choose(Array<T> in) {
+	// Note: No error handling necessary, choose will fail internally.
+	return in[choose(0, in.count)];
 }
 
 suite Backtrack {
 	var r = with PickAll<Array<Int>> handle {
-		Int a = choose(1, 5);
-		Int b = choose(1, 5);
-		Int c = choose(1, 5);
+		Int a = choose(1, 6);
+		Int b = choose(1, 6);
+		Int c = choose(1, 6);
 		if (a*a + b*b != c*c)
 			fail();
 		[a, b, c];
