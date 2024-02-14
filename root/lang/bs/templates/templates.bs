@@ -66,6 +66,8 @@ package class Template extends core:lang:Template {
 
 		// TODO: Handle documentation!
 
+		// Make the matching behave more predictably.
+		named.flags += NamedFlags:namedMatchNoInheritance;
 		return named;
 	}
 
