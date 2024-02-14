@@ -10,11 +10,11 @@ SExpr => HandleExpr(pos, block, body, handler)
 
 // Effect declaration:
 SPlainFileItem => EffectDecl(env, result, name, params)
-    : SName name #fnName, ":", "effect" #keyword, "(", SFormals params, ")", "->", SType result, ";";
+    : "effect" #keyword ~ SName name #fnName, "(", SFormals params, ")", "->", SType result, ";";
 
 // Handler declaration:
 SPlainFileItem => HandlerDecl(env, name, result, param, body)
-    : SName name #typeName, ":", "handler" #keyword ~ SType param, "->", SType result, "{" [ - SHandlerBody@ body - ]+ "}";
+    : "handler" #keyword ~ SName name #typeName, "(", SType param, "->", SType result, ")", "{" [ - SHandlerBody@ body - ]+ "}";
 
 
 // Note: We wish this rule to be compatible with SClassBody. That is why we accept 'Class' rather than 'Handler'.
