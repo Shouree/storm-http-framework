@@ -44,7 +44,9 @@ namespace storm {
 			using namespace code;
 
 			if (retInfo->inlineResult) {
-				expr->code(state, retInfo->inlineResult);
+				// Note: We need 'split', otherwise we will activate the same variable multiple times.
+				// It is the caller's responsibility to activate the result if required.
+				expr->code(state, retInfo->inlineResult->split(state));
 				*state->l << jmpBlock(retInfo->inlineLabel, retInfo->inlineBlock);
 			} else {
 				// If we can get the result as a reference, do that as we avoid a copy. The exception
@@ -110,10 +112,15 @@ namespace storm {
 
 			*state->l << begin(newBlock);
 			CodeGen *subState = state->child(newBlock);
-			if (bodyExpr)
-				bodyExpr->code(subState, to);
+			if (bodyExpr) {
+				// Note: Avoid duplicate activation by asking this block to not activate the variable.
+				bodyExpr->code(subState, to->split(state));
+			}
 			*state->l << end(newBlock);
 			*state->l << info->inlineLabel;
+
+			// We need to ensure that the result was created.
+			to->created(state);
 		}
 
 		void ReturnPoint::toS(StrBuf *to) const {
