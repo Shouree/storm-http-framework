@@ -162,6 +162,8 @@ HandlerFrame : generate(params) {
 	var retVal = handler.result;
 
 	Type t("HandlerFrame", [handler], TypeFlags:typeClass);
+	t.flags += NamedFlags:namedMatchNoInheritance;
+
 	t.setSuper(named{HandlerFrame});
 	t.add(MemberVar("object", handler, t));
 	if (retVal.any)

@@ -175,6 +175,8 @@ EffectFrame : generate(params) {
 	var retVal = params[0].asRef(false);
 
 	Type t("EffectFrame", [retVal], TypeFlags:typeClass);
+	t.flags += NamedFlags:namedMatchNoInheritance;
+
 	t.setSuper(named{EffectFrame});
 	if (retVal.any)
 		t.add(MemberVar("result", wrapMaybe(retVal), t));
