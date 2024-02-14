@@ -1,0 +1,62 @@
+use lang:bs:effects;
+use lang:bs:templates;
+use test;
+
+choose : effect()->Bool;
+fail : effect()->void;
+
+template <T>
+PickOne : handler T->Maybe<T> {
+	choose(), k {
+		var first = k.call(true);
+		if (first.empty)
+			first = k.call(false);
+		return first;
+
+		// Note: This fails to compile:
+		// if (v = k.call(true))
+		// 	return v;
+		// return k.call(false);
+	}
+	fail(), k {
+		return null;
+	}
+	return x {
+		return x;
+	}
+}
+
+template <T>
+PickAll : handler T->Array<T> {
+	choose(), k {
+		Array<T> result = k.call(true);
+		result.append(k.call(false));
+		return result;
+	}
+	fail(), k {
+		return [];
+	}
+	return x {
+		return [x];
+	}
+}
+
+Int choose(Int first, Int last) {
+	if (first >= last)
+		return last;
+	else if (choose())
+		return first;
+	else
+		return choose(first + 1, last);
+}
+
+suite Backtrack {
+	var r = with PickAll<Int> handle {
+		Int a = choose(1, 5);
+		Int b = choose(1, 5);
+		if (a + b < 4)
+			fail();
+		a + b;
+	};
+	print("Result: ${r}");
+}
