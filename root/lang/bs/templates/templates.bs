@@ -92,8 +92,9 @@ package class Template extends core:lang:Template {
 private class TemplateLookup extends ScopeLookup {
 	// Create.
 	init(ScopeLookup? original, Str->Value params) {
-		init("void") {
+		init() {
 			params = params;
+			original = original;
 		}
 	}
 
