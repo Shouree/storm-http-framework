@@ -7,7 +7,7 @@ use lang:bs:macro;
 
 frame ChessVisualizer {
 
-	layout Grid grid {
+	layout Grid {
 		expandCol: 0;
 		expandCol: 1;
 		expandCol: 2;
@@ -149,6 +149,8 @@ class ChessPainter extends Painter {
 	Text[] rowLabels;
 	Text[] colLabels;
 
+	Str[] order;
+
 	Map<Str, Bitmap> images;
 
 	init() {
@@ -156,6 +158,7 @@ class ChessPainter extends Painter {
 			blackBrush(black);
 			darkBrush(Color(118, 150, 86));
 			whiteBrush(white);
+			order = ["r", "n", "b", "q", "k", "b", "n", "r"];
 		}
 
 		bgColor = Color(238, 238, 210);
@@ -194,28 +197,16 @@ class ChessPainter extends Painter {
 		}
 
 		for (Nat x = 0; x < 8; x++) {
+			Str piece = order[x] + "b";
 			g.draw(images.get("pb"), Rect(Point(squareSz.w * x.float, squareSz.h), squareSz));
+			g.draw(images.get(piece), Rect(Point(squareSz.w * x.float, squareSz.h * 0), squareSz));
 		}
-		g.draw(images.get("rb"), Rect(Point(squareSz.w * 0, squareSz.h * 0), squareSz));
-		g.draw(images.get("rb"), Rect(Point(squareSz.w * 7, squareSz.h * 0), squareSz));
-		g.draw(images.get("nb"), Rect(Point(squareSz.w * 1, squareSz.h * 0), squareSz));
-		g.draw(images.get("nb"), Rect(Point(squareSz.w * 6, squareSz.h * 0), squareSz));
-		g.draw(images.get("bb"), Rect(Point(squareSz.w * 2, squareSz.h * 0), squareSz));
-		g.draw(images.get("bb"), Rect(Point(squareSz.w * 5, squareSz.h * 0), squareSz));
-		g.draw(images.get("qb"), Rect(Point(squareSz.w * 3, squareSz.h * 0), squareSz));
-		g.draw(images.get("kb"), Rect(Point(squareSz.w * 4, squareSz.h * 0), squareSz));
 
 		for (Nat x = 0; x < 8; x++) {
+			Str piece = order[x] + "w";
 			g.draw(images.get("pw"), Rect(Point(squareSz.w * x.float, squareSz.h * 6), squareSz));
+			g.draw(images.get(piece), Rect(Point(squareSz.w * x.float, squareSz.h * 7), squareSz));
 		}
-		g.draw(images.get("rw"), Rect(Point(squareSz.w * 0, squareSz.h * 7), squareSz));
-		g.draw(images.get("rw"), Rect(Point(squareSz.w * 7, squareSz.h * 7), squareSz));
-		g.draw(images.get("nw"), Rect(Point(squareSz.w * 1, squareSz.h * 7), squareSz));
-		g.draw(images.get("nw"), Rect(Point(squareSz.w * 6, squareSz.h * 7), squareSz));
-		g.draw(images.get("bw"), Rect(Point(squareSz.w * 2, squareSz.h * 7), squareSz));
-		g.draw(images.get("bw"), Rect(Point(squareSz.w * 5, squareSz.h * 7), squareSz));
-		g.draw(images.get("qw"), Rect(Point(squareSz.w * 3, squareSz.h * 7), squareSz));
-		g.draw(images.get("kw"), Rect(Point(squareSz.w * 4, squareSz.h * 7), squareSz));
 
 		return false;
 	}

@@ -66,15 +66,14 @@ tutorial. In summary, the directory structure should look something like this:
 
 ```
 language
-|
-|- demo
-|  |- ast.bs
-|  |- demo.bs
-|  |- syntax.bnf
-|
-|- test
-   |- demo.demo
-   |- test.bs
+│
+├─ demo
+│  ├─ ast.bs
+│  ├─ demo.bs
+│  └─ syntax.bnf
+└─ test
+   ├─ demo.demo
+   └─ test.bs
 ```
 
 When you have created the directories (or some of the files), you can then run the code using the
