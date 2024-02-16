@@ -1,0 +1,227 @@
+use ui;
+use graphics;
+use layout;
+use core:io;
+use core:geometry;
+use lang:bs:macro;
+
+frame ChessVisualizer {
+
+	layout Grid grid {
+		expandCol: 0;
+		expandCol: 1;
+		expandCol: 2;
+		expandCol: 3;
+		expandCol: 4;
+		expandRow: 0;
+		border: 10, 10;
+		Window chessBoard { colspan: 4; minHeight: 500; minWidth: 500; }
+		ListView moveList(["Nr", "White", "Black"]) {col: 4; minHeight: 500; minWidth: 150;}
+		nextLine;
+		Button a("|<") {}
+		Button b("<") {}
+		Button c(">") {}
+		Button d(">|") {}
+	}
+
+	ChessPainter boardPainter;
+	Nat currentHighlight;
+
+	init() {
+		init("ChessVisualizer", Size(500, 500)) {}
+		chessBoard.painter(boardPainter);
+
+		moveList.multiSelect(false);
+		moveList.onSelect = &this.onSelect;
+		moveList.add(["1." , "e4"	, "c6"]);
+		moveList.add(["2." , "d4"	, "d5"]);
+		moveList.add(["3." , "Nd2"	, "dxe4"]);
+		moveList.add(["4." , "Nxe4" , "Nd7"]);
+		moveList.add(["5." , "Ng5"	, "Ngf6"]);
+		moveList.add(["6." , "Bc4"	, "e6"]);
+		moveList.add(["7." , "Qe2"	, "Nb6"]);
+		moveList.add(["8." , "Bb3"	, "h6"]);
+		moveList.add(["9." , "N5f3" , "c5"]);
+		moveList.add(["10.", "Bf4"	, "Bd6"]);
+		moveList.add(["11.", "Bg3"	, "Qe7"]);
+		moveList.add(["12.", "dxc5" , "Bxc5"]);
+		moveList.add(["13.", "Ne5"	, "Bd7"]);
+		moveList.add(["14.", "Ngf3" , "Nh5"]);
+		moveList.add(["15.", "O-O-O", "Nxg3"]);
+		moveList.add(["16.", "hxg3" , "O-O-O"]);
+		moveList.add(["17.", "Rh5"	, "Be8"]);
+		moveList.add(["18.", "Rxd8+", "Kxd8"]);
+		moveList.add(["19.", "Qd2+" , "Bd6"]);
+		moveList.add(["20.", "Nd3"	, "Qc7"]);
+		moveList.add(["21.", "g4"	, "Kc8"]);
+		moveList.add(["22.", "g5"	, "Bf8"]);
+		moveList.add(["23.", "Rh4"	, "Kb8"]);
+		moveList.add(["24.", "a4"	, "Be7"]);
+		moveList.add(["25.", "a5"	, "Nd5"]);
+		moveList.add(["26.", "Kb1"	, "Bd8"]);
+		moveList.add(["27.", "a6"	, "Qa5"]);
+		moveList.add(["28.", "Qe2"	, "Nb6"]);
+		moveList.add(["29.", "axb7" , "Bxg5"]);
+		moveList.add(["30.", "Nxg5" , "Qxg5"]);
+		moveList.add(["31.", "Rh5"	, "Qf6"]);
+		moveList.add(["32.", "Ra5"	, "Bc6"]);
+		moveList.add(["33.", "Nc5"	, "Bxb7"]);
+		moveList.add(["34.", "Nxb7" , "Kxb7"]);
+		moveList.add(["35.", "Qa6+" , "Kc6"]);
+		moveList.add(["36.", "Ba4+" , "Kd6"]);
+		moveList.add(["37.", "Qd3+" , "Nd5"]);
+		moveList.add(["38.", "Qg3+" , "Qe5"]);
+		moveList.add(["39.", "Qa3+" , "Kc7"]);
+		moveList.add(["40.", "Qc5+" , "Kd8"]);
+		moveList.add(["41.", "Rxa7" , "1-0"]);
+		currentHighlight = 0;
+		highlightFirst();
+
+		a.onClick = &this.highlightFirst;
+		b.onClick = &this.highlightPrevious;
+		c.onClick = &this.highlightNext;
+		d.onClick = &this.highlightLast;
+
+		// keymap.put(Key:d, &this.highlightNext);
+		// keymap.put(Key:a, &this.highlightPrevious);
+
+		PopupMenu helpMenu;
+		helpMenu << Menu:Text(mnemonic("_About..."), &this.onAbout());
+
+		MenuBar m;
+		m << Menu:Submenu(mnemonic("_Help"), helpMenu);
+
+		menu = m;
+
+		create();
+	}
+
+	private void onAbout() {
+		var license = named{CHESS};
+		var version = named{CHESS_VERSION};
+		showLicenseDialog(this, ProgramInfo("ChessVisualizer", "Simon Ahrenstedt", version.version, license));
+	}
+
+	void onSelect(Nat row, Bool selected) {
+		if(selected) {
+			currentHighlight = row;
+		}
+	}
+
+	void highlightFirst() {
+		currentHighlight = 0;
+		moveList.selection = currentHighlight;
+	}
+
+	void highlightLast() {
+		currentHighlight = moveList.count - 1;
+		moveList.selection = currentHighlight;
+	}
+
+	void highlightNext() {
+		if(currentHighlight < moveList.count - 1){
+			currentHighlight = moveList.selection.get(currentHighlight) + 1;
+			moveList.selection = currentHighlight;
+		}
+	}
+
+	void highlightPrevious() {
+		if(currentHighlight > 0 ){
+			currentHighlight = moveList.selection.get(currentHighlight) - 1;
+			moveList.selection = currentHighlight;
+		}
+	}
+}
+
+Url resUrl() {
+	if(url = named{res}.url) {
+		return url;
+	} else {
+		throw InternalError("Expected the package 'res' to be non-virtual.");
+	}
+}
+
+class ChessPainter extends Painter {
+	SolidBrush blackBrush;
+	SolidBrush whiteBrush;
+	SolidBrush darkBrush;
+
+	Text[] rowLabels;
+	Text[] colLabels;
+
+	Map<Str, Bitmap> images;
+
+	init() {
+		init() {
+			blackBrush(black);
+			darkBrush(Color(118, 150, 86));
+			whiteBrush(white);
+		}
+
+		bgColor = Color(238, 238, 210);
+
+		for (row in ["8", "7", "6", "5", "4", "3", "2", "1"]) {
+			rowLabels << Text(row, defaultFont);
+		}
+
+		for (col in ["a", "b", "c", "d", "e", "f", "g", "h"]) {
+			colLabels << Text(col, defaultFont);
+		}
+
+		Url imgPath = resUrl();
+		for (child in imgPath.children()) {
+			images.put(child.title, Bitmap(child.loadImage));
+		}
+	}
+
+	Bool render(Size me, Graphics g) {
+		Size squareSz = me / 8;
+
+		for (Nat y = 0; y < 8; y++) {
+			for (Nat x = 0; x < 8; x++) {
+				if((x + y) % 2 == 1) {
+					g.fill(Rect(Point(squareSz.w * x.float, squareSz.h * y.float), squareSz), darkBrush);
+				}
+			}
+		}
+
+		for (i, rowLabel in rowLabels) {
+			g.draw(rowLabel, blackBrush, Point(0, squareSz.h * i.float));
+		}
+
+		for (i, colLabel in colLabels) {
+			g.draw(colLabel, blackBrush, Point(squareSz.w * (i + 1).float - 1, me.h) - colLabel.size);
+		}
+
+		for (Nat x = 0; x < 8; x++) {
+			g.draw(images.get("pb"), Rect(Point(squareSz.w * x.float, squareSz.h), squareSz));
+		}
+		g.draw(images.get("rb"), Rect(Point(squareSz.w * 0, squareSz.h * 0), squareSz));
+		g.draw(images.get("rb"), Rect(Point(squareSz.w * 7, squareSz.h * 0), squareSz));
+		g.draw(images.get("nb"), Rect(Point(squareSz.w * 1, squareSz.h * 0), squareSz));
+		g.draw(images.get("nb"), Rect(Point(squareSz.w * 6, squareSz.h * 0), squareSz));
+		g.draw(images.get("bb"), Rect(Point(squareSz.w * 2, squareSz.h * 0), squareSz));
+		g.draw(images.get("bb"), Rect(Point(squareSz.w * 5, squareSz.h * 0), squareSz));
+		g.draw(images.get("qb"), Rect(Point(squareSz.w * 3, squareSz.h * 0), squareSz));
+		g.draw(images.get("kb"), Rect(Point(squareSz.w * 4, squareSz.h * 0), squareSz));
+
+		for (Nat x = 0; x < 8; x++) {
+			g.draw(images.get("pw"), Rect(Point(squareSz.w * x.float, squareSz.h * 6), squareSz));
+		}
+		g.draw(images.get("rw"), Rect(Point(squareSz.w * 0, squareSz.h * 7), squareSz));
+		g.draw(images.get("rw"), Rect(Point(squareSz.w * 7, squareSz.h * 7), squareSz));
+		g.draw(images.get("nw"), Rect(Point(squareSz.w * 1, squareSz.h * 7), squareSz));
+		g.draw(images.get("nw"), Rect(Point(squareSz.w * 6, squareSz.h * 7), squareSz));
+		g.draw(images.get("bw"), Rect(Point(squareSz.w * 2, squareSz.h * 7), squareSz));
+		g.draw(images.get("bw"), Rect(Point(squareSz.w * 5, squareSz.h * 7), squareSz));
+		g.draw(images.get("qw"), Rect(Point(squareSz.w * 3, squareSz.h * 7), squareSz));
+		g.draw(images.get("kw"), Rect(Point(squareSz.w * 4, squareSz.h * 7), squareSz));
+
+		return false;
+	}
+}
+
+void main() {
+	ChessVisualizer cw;
+	cw.waitForClose();
+}
