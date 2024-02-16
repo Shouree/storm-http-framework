@@ -504,7 +504,7 @@ namespace gui {
 			return;
 
 		// If the widget is realized, then we should not inhibit the code that cancels selections.
-		if (gtk_widget_get_realized(handle().widget()))
+		if (created() && gtk_widget_get_realized(handle().widget()))
 			gtkClearSelection = false;
 
 		lastSelected = -1;
