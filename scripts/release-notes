@@ -1,9 +1,5 @@
 #!/bin/bash
 
-echo "Release Notes"
-echo "===="
-echo ""
-
 git for-each-ref "refs/tags/release/" --sort='-*committerdate' --format="%(objectname) %(tag) %(taggerdate:iso)" | while read hash tag date time timezone
 do
     if [[ $(git cat-file -t $hash) == "tag" ]]

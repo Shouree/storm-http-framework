@@ -63,7 +63,7 @@ class StormTheme extends Theme {
 		}
 
 		if (n = options.at("notes")) {
-			releaseNotes = parsePath(n);
+			releaseNotes = parsePath(n).makeAbsolute(cwdUrl);
 			options.remove("notes");
 		}
 	}
