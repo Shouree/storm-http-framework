@@ -5,16 +5,22 @@ command="$2"
 version="$3"
 echo "Compiling $version..."
 
-updateversion=yes
-if [[ $# -gt 3 ]]
-then
-    updateversion="$4"
-fi
 
-if [[ $updateversion == yes ]]
+# Update the COMPILER.version file if needed.
+TMP_VERSION=${STORM_ROOT}/COMPILER.version
+DST_VERSION=${STORM_ROOT}/Compiler/COMPILER.version
+
+echo "core.info" > ${TMP_VERSION}
+echo "$version" >> ${TMP_VERSION}
+
+if [[ ! -f ${DST_VERSION} ]]
 then
-    echo "core.info" > ${STORM_ROOT}/Compiler/COMPILER.version
-    echo "$version" >> ${STORM_ROOT}/Compiler/COMPILER.version
+    mv ${TMP_VERSION} ${DST_VERSION}
+elif ! diff ${TMP_VERSION} ${DST_VERSION} > /dev/null
+then
+    mv ${TMP_VERSION} ${DST_VERSION}
+else
+    rm ${TMP_VERSION}
 fi
 
 

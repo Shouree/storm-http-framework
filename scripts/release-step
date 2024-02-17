@@ -32,8 +32,6 @@ function tar_files {
     tar cz release_notes.txt storm_*.{zip,tar.gz}
 }
 
-updateversion=yes
-
 # Parse the archlist and do what it says.
 while [[ $archlist != "" ]]
 do
@@ -64,11 +62,9 @@ do
 	    packext="tar.gz"
 	fi
 
-	release-compile "$archtag" "$command" "$version" "$updateversion" || { echo "Compilation of $archtag failed."; exit 1; }
+	release-compile "$archtag" "$command" "$version" || { echo "Compilation of $archtag failed."; exit 1; }
 	release-package "$archtag" "$command" "$notes" || { echo "Failed to package $archtag."; exit 1; }
 	release-test $STORM_ROOT/release/storm_$archtag.$packext || { echo "The packaged compiler ($archtag) does not seem to be working."; exit 1; }
-
-	updateversion=no
     else
 	echo "ERROR: Unknown build command: ${first}"
 	exit 1
