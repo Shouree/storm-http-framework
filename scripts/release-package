@@ -1,7 +1,13 @@
 #!/bin/bash
 
-# Launchers to include in build: (space separated). An @ indicates envvars to set on Linux.
-launchers="progvis.main@STORM_RENDER_BACKEND=gtk trees.main"
+# Launchers to include in build: An @ indicates envvars to set on Linux.
+launchers=(
+    "progvis:progvis.main@STORM_RENDER_BACKEND=gtk"
+    "trees:trees.main"
+    "generate_html_doc:markdown.doc.generateStormDoc+--+--clear+html"
+)
+function join_array { local IFS=" "; echo "$*"; }
+launchers=$(join_array "${launchers[@]}")
 
 OUT_BASE=$STORM_ROOT/release/storm
 
@@ -44,19 +50,21 @@ fi
 function fix_name_case {
     if [[ $arch == *_win* ]]
     then
-	echo $1
-    then
 	echo ${1^}
+    else
+	echo $1
     fi
 }
 
 function launcher {
     fn=${1%%@*}
     envvars=$(expr match "$1" '.*@\(.*\)')
+    echo "FN" $fn
+    echo "ENV" $envvars
 
     if [[ "$2" =~ \.bat$ ]]
     then
-	echo '@"%~dp0Storm.exe" -f '"$fn" > "$2"
+	echo '@"%~dp0Storm.exe" -f '"${fn//+/ }" > "$2"
     else
 	(
 	    echo '#!/bin/bash'
@@ -67,7 +75,7 @@ function launcher {
 		echo "export ${envvars%%@*}"
 		envvars=$(expr match "$envvars" '.*@\(.*\)')
 	    done
-	    echo "exec \"\$DIR\"/storm -f $fn"
+	    echo "exec \"\$DIR\"/storm -f ${fn//+/ }"
 	) > "$2"
 	chmod +x "$2"
     fi
@@ -137,13 +145,12 @@ done
 # Add the Emacs plugin.
 add_rename Plugin/emacs.el storm-mode.el
 
-
 # Add any launchers.
 for l in $launchers
 do
-    name=${l%%.*}$scr
+    name=${l%%:*}$scr
     name=$(fix_name_case $name)
-    launcher "$l" "$name"
+    launcher "${l#*:}" "$name"
     eval $add $OUT "$name" > /dev/null
     rm "$name"
 done
