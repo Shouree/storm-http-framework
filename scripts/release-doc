@@ -1,18 +1,5 @@
 #!/bin/bash
 
-echo "Creating zip-file..."
-if [[ -e release/storm.zip ]]
-then
-    rm release/storm.zip
-fi
-
-release-notes > doc/release_notes.md
-7z a release/storm.zip doc/ > /dev/null
-rm doc/release_notes.md
-
-# Add some code examples as well!
-7z a release/storm.zip root/ > /dev/null
-
-echo "Uploading documentation to fprg.se..."
-cat release/storm.zip | ssh filip-www@fprg.se /home/filip-www/upload-doc.sh
-
+echo "Creating tar-file..."
+release-build-doc || exit 1
+cat release/doc.tar.gz | ssh filip-www@fprg.se /home/filip-www/upload-doc.sh

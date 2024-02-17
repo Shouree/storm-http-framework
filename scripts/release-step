@@ -29,7 +29,7 @@ function tar_files {
 	release-notes > $STORM_ROOT/release/release_notes.txt
     fi
     shopt -s nullglob
-    tar cz release_notes.txt storm_*.{zip,tar.gz}
+    tar cz release_notes.txt doc.tar.gz storm_*.{zip,tar.gz}
 }
 
 # Parse the archlist and do what it says.

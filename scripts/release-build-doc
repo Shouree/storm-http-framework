@@ -1,0 +1,27 @@
+#!/bin/bash
+
+echo "Building documentation..."
+
+line=$(git for-each-ref "refs/tags/release/" --sort='-*committerdate' --format="%(tag) %(taggerdate:iso)" | head -n 1)
+version=$(echo "$line" | cut -d" " -f 1)
+version=${version#release/}
+date=$(echo "$line" | cut -d" " -f 2)
+
+mm Main -ne
+release-notes > doc/release_notes.txt
+messages=$(debug/Storm -f markdown.doc.generateStormDoc -- --version=${version} --date=${date} --clear html 2>&1)
+result=$?
+
+
+messages=$(echo "$messages" | grep -vE '^(Loading documentation from|Removing contents of|Generating output to|Done!).*$')
+
+if [[ "$messages" == "" && $result == 0 ]]
+then
+    echo "Documentation for ${version}, ${date} built successfully!"
+    (cd html/; tar czf ${STORM_ROOT}/release/doc.tar.gz .)
+    exit 0
+else
+    echo "Errors while building documentation:"
+    echo "$messages"
+    exit 1
+fi

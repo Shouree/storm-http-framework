@@ -54,7 +54,7 @@ fi
 
 hash=$(git rev-parse HEAD)
 
-release-check-doc || exit 1
+release-build-doc || exit 1
 
 release-step "$ARCHLIST" "$version" "$hash" || { echo "Build failed. Try again!"; exit 1; }
 

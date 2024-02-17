@@ -100,13 +100,13 @@ find doc/ -type f | xargs --delimiter='\n' $add $OUT > /dev/null
 # Release notes.
 if [[ -f $notes ]]
 then
-    cp "$notes" release_notes.txt
+    cp "$notes" doc/release_notes.txt
 else
-    release-notes > release_notes.txt
+    release-notes > doc/release_notes.txt
 fi
 
-$add $OUT release_notes.txt > /dev/null
-rm release_notes.txt
+$add $OUT doc/release_notes.txt > /dev/null
+rm doc/release_notes.txt
 
 # Source code from root/
 find root/ -type f -not -name "*$lib" | grep -v "server-tests/" | xargs --delimiter='\n' $add $OUT > /dev/null
