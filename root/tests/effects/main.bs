@@ -9,11 +9,11 @@ MyHandler : handler(Int)->Float {
 		print("In handler, x = ${x}");
 		Float r = k.call(x + 10) + 0.5;
 		print("Returning ${r}");
-		r;
+		return r;
 	}
 	return x {
 		print("In return handler: ${x}");
-		(x + 1).float;
+		return (x + 1).float;
 	}
 }
 

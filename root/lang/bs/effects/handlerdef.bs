@@ -112,10 +112,12 @@ class EffectHandlerClause extends HandlerClause {
 		If check(body, cast);
 
 		if (var = cast.result) {
+			ReturnPoint bodyWrap(bodyBlock.pos, check.successBlock, h.result);
 			check.success(pattern(check.successBlock) {
 							${Var(body, contParam, FnPtr(LocalVarAccess(pos, contVar), contWrapper, pos))};
-							${LocalVarAccess(pos, var)}.result = ${bodyBlock.transform(body)};
+							${LocalVarAccess(pos, var)}.result = ${bodyWrap};
 						});
+			bodyWrap.body = bodyBlock.transform(bodyWrap);
 		}
 
 		check.fail(pattern(body) {
