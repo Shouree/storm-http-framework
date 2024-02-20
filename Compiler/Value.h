@@ -35,6 +35,10 @@ namespace storm {
 		// Is this value representing a reference to `type`?
 		Bool ref;
 
+		// Any/empty. Empty means 'void'.
+		Bool STORM_FN any() { return type != null; }
+		Bool STORM_FN empty() { return type == null; }
+
 		// Return a copy that is a reference.
 		Value STORM_FN asRef() const;
 		Value STORM_FN asRef(Bool ref) const;

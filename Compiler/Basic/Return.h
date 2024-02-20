@@ -94,6 +94,9 @@ namespace storm {
 			// Set contained expression.
 			void STORM_ASSIGN body(Expr *e);
 
+			// Print.
+			virtual void STORM_FN toS(StrBuf *to) const;
+
 		private:
 			// Body expression.
 			MAYBE(Expr *) bodyExpr;

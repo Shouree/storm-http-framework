@@ -116,5 +116,15 @@ namespace storm {
 			*state->l << info->inlineLabel;
 		}
 
+		void ReturnPoint::toS(StrBuf *to) const {
+			*to << S("<capture return of: ") << info->type << S("> {\n");
+			to->indent();
+			if (bodyExpr) {
+				*to << bodyExpr;
+			}
+			to->dedent();
+			*to << S("\n}");
+		}
+
 	}
 }
