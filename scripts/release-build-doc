@@ -7,7 +7,9 @@ version=$(echo "$line" | cut -d" " -f 1)
 version=${version#release/}
 date=$(echo "$line" | cut -d" " -f 2)
 
-mm Main -ne
+mm Main -ne || exit 1
+
+echo "Generating html..."
 release-notes > doc/release_notes.txt
 messages=$(debug/Storm -f markdown.doc.generateStormDoc -- --version=${version} --date=${date} --clear html 2>&1)
 result=$?
