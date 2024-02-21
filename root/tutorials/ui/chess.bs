@@ -16,7 +16,7 @@ frame ChessVisualizer {
 		expandRow: 0;
 		border: 10, 10;
 		Window chessBoard { colspan: 4; minHeight: 500; minWidth: 500; }
-		ListView moveList(["Nr", "White", "Black"]) {col: 4; minHeight: 500; minWidth: 150;}
+		ListView moveList(["Nr", "White", "Black"]) { col: 4; minHeight: 500; minWidth: 150;}
 		nextLine;
 		Button a("|<") {}
 		Button b("<") {}
@@ -31,7 +31,7 @@ frame ChessVisualizer {
 		init("ChessVisualizer", Size(500, 500)) {}
 		chessBoard.painter(boardPainter);
 
-		moveList.multiSelect(false);
+		moveList.multiSelect = false;
 		moveList.onSelect = &this.onSelect;
 		moveList.add(["1." , "e4"	, "c6"]);
 		moveList.add(["2." , "d4"	, "d5"]);
@@ -82,9 +82,6 @@ frame ChessVisualizer {
 		c.onClick = &this.highlightNext;
 		d.onClick = &this.highlightLast;
 
-		// keymap.put(Key:d, &this.highlightNext);
-		// keymap.put(Key:a, &this.highlightPrevious);
-
 		PopupMenu helpMenu;
 		helpMenu << Menu:Text(mnemonic("_About..."), &this.onAbout());
 
@@ -119,15 +116,15 @@ frame ChessVisualizer {
 	}
 
 	void highlightNext() {
-		if(currentHighlight < moveList.count - 1){
-			currentHighlight = moveList.selection.get(currentHighlight) + 1;
+		if (currentHighlight + 1 < moveList.count) {
+			currentHighlight++;
 			moveList.selection = currentHighlight;
 		}
 	}
 
 	void highlightPrevious() {
-		if(currentHighlight > 0 ){
-			currentHighlight = moveList.selection.get(currentHighlight) - 1;
+		if (currentHighlight > 0) {
+			currentHighlight--;
 			moveList.selection = currentHighlight;
 		}
 	}
@@ -151,7 +148,7 @@ class ChessPainter extends Painter {
 
 	Str[] order;
 
-	Map<Str, Bitmap> images;
+	Str->Bitmap images;
 
 	init() {
 		init() {
@@ -197,15 +194,13 @@ class ChessPainter extends Painter {
 		}
 
 		for (Nat x = 0; x < 8; x++) {
-			Str piece = order[x] + "b";
+			Str blackPiece = order[x] + "b";
 			g.draw(images.get("pb"), Rect(Point(squareSz.w * x.float, squareSz.h), squareSz));
-			g.draw(images.get(piece), Rect(Point(squareSz.w * x.float, squareSz.h * 0), squareSz));
-		}
+			g.draw(images.get(blackPiece), Rect(Point(squareSz.w * x.float, squareSz.h * 0), squareSz));
 
-		for (Nat x = 0; x < 8; x++) {
-			Str piece = order[x] + "w";
+			Str whitePiece = order[x] + "w";
 			g.draw(images.get("pw"), Rect(Point(squareSz.w * x.float, squareSz.h * 6), squareSz));
-			g.draw(images.get(piece), Rect(Point(squareSz.w * x.float, squareSz.h * 7), squareSz));
+			g.draw(images.get(whitePiece), Rect(Point(squareSz.w * x.float, squareSz.h * 7), squareSz));
 		}
 
 		return false;
