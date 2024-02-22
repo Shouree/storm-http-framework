@@ -16,7 +16,7 @@ one that is designed to be used on the command-line. The command line interface 
 follows:
 
 ```
-./Storm -f markdown.doc.generate -- <title> <theme> <input> <output> [options]
+./storm -f markdown.doc.generate -- <title> <theme> <input> <output> [options]
 ```
 
 The placeholders above have the following meaning:
@@ -62,14 +62,17 @@ There is also an alternate entry point that makes it convenient to generate the 
 from the command line:
 
 ```
-./Storm -f markdown.doc.generateStormDoc -- <output> [options]
+./storm -f markdown.doc.generateStormDoc -- <output> [options]
 ```
 
 For example, it is possible to generate the Storm documentation in the `html` directory as follows:
 
 ```
-./Storm -f markdown.doc.generateStormDoc -- html
+./storm -f markdown.doc.generateStormDoc -- html
 ```
+
+The Storm release also provides a script that contains the command above to simplify generation of
+the documentation.
 
 The programmatic interface is similar, and consists of the following two overloads to the function `generate`:
 
@@ -122,22 +125,22 @@ denoted by a trailing slash (`/`):
 
 ```
 root/
-|
-|- index.md
-|
-|- 01-Topic_A/
-|  |- index.md
-|  |- 01-Section_A.md
-|  |- 02-Section_B.md
-|
-|- 02-Topic_B/
-|  |- index.md
-|  |- 01-Section_A.md
-|  |  |- index.md
-|  |  |- 01-Subsection_A.md
-|  |- 02-Section_B.md
-|
-|- 03-Topic_C.md
+│
+├─ index.md
+│
+├─ 01-Topic_A/
+│  ├─ index.md
+│  ├─ 01-Section_A.md
+│  └─ 02-Section_B.md
+│
+├─ 02-Topic_B/
+│  ├─ index.md
+│  ├─ 01-Section_A.md
+│  │  ├─ index.md
+│  │  └─ 01-Subsection_A.md
+│  └─ 02-Section_B.md
+│
+└─ 03-Topic_C.md
 ```
 
 One detail has been left out so far. Namely, the naming scheme does not specify a title for the root
@@ -156,22 +159,22 @@ breaking existing links. As such, the output for the example above would look li
 
 ```
 output/
-|
-|- index.html
-|
-|- Topic_A/
-|  |- index.html
-|  |- Section_A.html
-|  |- Section_B.html
-|
-|- Topic_B/
-|  |- index.md
-|  |- Section_A/
-|  |  |- index.html
-|  |  |- Subsection_A.html
-|  |- Section_B.html
-|
-|- Topic_C.html
+│
+├─ index.html
+│
+├─ Topic_A/
+│  ├─ index.html
+│  ├─ Section_A.html
+│  └─ Section_B.html
+│
+├─ Topic_B/
+│  ├─ index.md
+│  ├─ Section_A/
+│  │  ├─ index.html
+│  │  └─ Subsection_A.html
+│  └─ Section_B.html
+│
+└─ Topic_C.html
 ```
 
 If desired, it is possible to keep the numbers by passing `--numbers` on the command line, or
