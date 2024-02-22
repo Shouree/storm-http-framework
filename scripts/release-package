@@ -1,10 +1,17 @@
 #!/bin/bash
 
+# Extract version information for the documentation launcher
+line=$(git for-each-ref "refs/tags/release/" --sort='-*committerdate' --format="%(tag) %(taggerdate:iso)" | head -n 1)
+version=$(echo "$line" | cut -d" " -f 1)
+version=${version#release/}
+date=$(echo "$line" | cut -d" " -f 2)
+
+
 # Launchers to include in build: An @ indicates envvars to set on Linux.
 launchers=(
     "progvis:progvis.main@STORM_RENDER_BACKEND=gtk"
     "trees:trees.main"
-    "generate_html_doc:markdown.doc.generateStormDoc+--+--clear+html"
+    "generate_html_doc:markdown.doc.generateStormDoc+--+--clear+html+--version=${version}+--date=${date}"
 )
 function join_array { local IFS=" "; echo "$*"; }
 launchers=$(join_array "${launchers[@]}")
