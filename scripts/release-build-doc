@@ -2,10 +2,13 @@
 
 echo "Building documentation..."
 
-line=$(git for-each-ref "refs/tags/release/" --sort='-*committerdate' --format="%(tag) %(taggerdate:iso)" | head -n 1)
-version=$(echo "$line" | cut -d" " -f 1)
-version=${version#release/}
-date=$(echo "$line" | cut -d" " -f 2)
+if [[ $# -lt 2 ]]
+then
+    echo "Expected <version> <date>"
+    exit 1
+fi
+version=$1
+date=$2
 
 mm Main -ne || exit 1
 

@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# Extract version information for the documentation launcher
-line=$(git for-each-ref "refs/tags/release/" --sort='-*committerdate' --format="%(tag) %(taggerdate:iso)" | head -n 1)
-version=$(echo "$line" | cut -d" " -f 1)
-version=${version#release/}
-date=$(echo "$line" | cut -d" " -f 2)
+OUT_BASE=$STORM_ROOT/release/storm
 
+arch="$1"
+command="$2"
+version="$3"
+date="$4"
+notes="$5"
 
 # Launchers to include in build: An @ indicates envvars to set on Linux.
 launchers=(
@@ -16,11 +17,6 @@ launchers=(
 function join_array { local IFS=" "; echo "$*"; }
 launchers=$(join_array "${launchers[@]}")
 
-OUT_BASE=$STORM_ROOT/release/storm
-
-arch="$1"
-command="$2"
-notes="$3"
 
 if [[ $arch == *_win* ]]
 then

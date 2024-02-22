@@ -54,9 +54,12 @@ fi
 
 hash=$(git rev-parse HEAD)
 
-release-build-doc || exit 1
+date=$(git for-each-ref "refs/tags/release/${version}" --format="%(taggerdate:iso)" | cut -d" " -f 1)
 
-release-step "$ARCHLIST" "$version" "$hash" || { echo "Build failed. Try again!"; exit 1; }
+
+release-build-doc "$version" "$date" || exit 1
+
+release-step "$ARCHLIST" "$version" "$date" "$hash" || { echo "Build failed. Try again!"; exit 1; }
 
 completed=true
 echo "Finished! Remember to push tags!"

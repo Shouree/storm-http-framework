@@ -3,15 +3,16 @@
 # Script located on each server used to build Storm. Launches the relevant parts of the remainder of the build process.
 # Not ideal to store inside the repo used to build Storm, as this script attempts to checkout the repository, and could thereby modify itself.
 
-if [[ $# != 3 ]]
+if [[ $# != 4 ]]
 then
-    echo "Usage: <arch-list> <version> <hash>"
+    echo "Usage: <arch-list> <version> <date> <hash>"
     exit 1
 fi
 
 archlist="$1"
 version="$2"
-hash="$3"
+date="$3"
+hash="$4"
 
 # Store other builds from STDIN.
 mkdir -p ~/build
@@ -45,4 +46,4 @@ rm ~/build/storm-other.tar.gz
 cd ..
 
 # Now we can build! Do it inside a virtual X-session, so that we can run our tests.
-xvfb-run -s "-screen 0 640x480x24" ./release.sh step "$archlist" "$version" "$hash" ~/build/storm/release/release_notes.md || { echo "Build failed. Aborting."; exit 1; }
+xvfb-run -s "-screen 0 640x480x24" ./release.sh step "$archlist" "$version" "$date" "$hash" ~/build/storm/release/release_notes.md || { echo "Build failed. Aborting."; exit 1; }

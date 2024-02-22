@@ -7,13 +7,15 @@
 # Where:
 # <archlist> is a list of build instructions. Separated by commas. See 'release-full' for specification.
 # <version> is the current version
+# <date> is the date of the release
 # <hash> is the hash of the current Git-commit
 # <release-notes> is a file containing the release notes (we might not have the latest tags)
 
 archlist="$1"
 version="$2"
-hash="$3"
-notes="$4"
+date="$3"
+hash="$4"
+notes="$5"
 export notes
 
 # Tar the relevant files into one, so we can transmit it through ssh conveniently.
@@ -46,7 +48,7 @@ do
     if [[ $first == *@* ]]
     then
 	echo "Continuing build at ${first}..."
-	tar_files | ssh "$first" '~/build-storm.sh' "$archlist" "$version" "$hash" || exit 1;
+	tar_files | ssh "$first" '~/build-storm.sh' "$archlist" "$version" "$date" "$hash" || exit 1;
 	exit 0;
 
     elif [[ $first == *:* ]]
@@ -63,7 +65,7 @@ do
 	fi
 
 	release-compile "$archtag" "$command" "$version" || { echo "Compilation of $archtag failed."; exit 1; }
-	release-package "$archtag" "$command" "$notes" || { echo "Failed to package $archtag."; exit 1; }
+	release-package "$archtag" "$command" "$version" "$date" "$notes" || { echo "Failed to package $archtag."; exit 1; }
 	release-test $STORM_ROOT/release/storm_$archtag.$packext || { echo "The packaged compiler ($archtag) does not seem to be working."; exit 1; }
     else
 	echo "ERROR: Unknown build command: ${first}"
