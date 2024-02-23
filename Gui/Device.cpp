@@ -42,7 +42,7 @@ namespace gui {
 	// These are ordered by priority:
 	static CreateDevice devices[] = {
 #ifdef GUI_ENABLE_SKIA
-		// { "skia", &create<SkiaDevice> },
+		{ "skia", &create<SkiaDevice> },
 #endif
 #ifdef GUI_ENABLE_CAIRO_GL
 		{ "gl", &create<CairoGLDevice> },
