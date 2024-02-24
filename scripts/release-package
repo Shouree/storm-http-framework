@@ -10,7 +10,7 @@ notes="$5"
 
 # Launchers to include in build: An @ indicates envvars to set on Linux.
 launchers=(
-    "progvis:progvis.main@STORM_RENDER_BACKEND=gtk"
+    "progvis:progvis.main" #@STORM_RENDER_BACKEND=gtk"
     "trees:trees.main"
     "generate_html_doc:markdown.doc.generateStormDoc+--+--clear+html+--version=${version}+--date=${date}"
 )
