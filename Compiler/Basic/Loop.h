@@ -34,11 +34,10 @@ namespace storm {
 			void STORM_FN doBody(Expr *e);
 
 			// Set the body for the while expression.
-			void STORM_FN whileBody(CondSuccess *s);
+			void STORM_FN whileBody(Expr *s);
 
-			// Create a CondSuccess for use with 'whileBody' and add it as the while body. This can
-			// be done manually as well.
-			CondSuccess *STORM_FN createWhileBody();
+			// Get the scope for the wile body.
+			CondSuccess *STORM_FN whileBlock();
 
 			// Result (always void or 'no return').
 			virtual ExprResult STORM_FN result();

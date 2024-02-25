@@ -292,10 +292,8 @@ Function addWrite(Type type, Member[] members, Function typeFun) {
 	};
 
 	If check(body, startCall);
-	CondSuccess ifTrue(pos, check, check.condition);
-	check.trueBranch(ifTrue);
-	ExprBlock writeCalls(pos, ifTrue);
-	ifTrue.set(writeCalls);
+	ExprBlock writeCalls(pos, check.successBlock);
+	check.success(writeCalls);
 	body.add(check);
 
 	if (s = type.declaredSuper) {

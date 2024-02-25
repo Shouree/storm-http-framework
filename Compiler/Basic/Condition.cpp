@@ -82,10 +82,6 @@ namespace storm {
 			expr = e;
 		}
 
-		void CondSuccess::replace(Expr *e) {
-			expr = e;
-		}
-
 		ExprResult CondSuccess::result() {
 			if (expr)
 				return expr->result();

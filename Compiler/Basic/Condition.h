@@ -76,6 +76,8 @@ namespace storm {
 
 		/**
 		 * A block used to encapsulate the additional variable created by a successful weak cast.
+		 *
+		 * It also ensures to call the "trueCode" inside a condition as necessary.
 		 */
 		class CondSuccess : public Block {
 			STORM_CLASS;
@@ -85,9 +87,6 @@ namespace storm {
 			// Set the single contained expression. Throws if used more than once.
 			void STORM_FN set(Expr *expr);
 
-			// Set or replace the contained expression.
-			void STORM_FN replace(Expr *expr);
-
 			// Result.
 			virtual ExprResult STORM_FN result();
 
@@ -96,6 +95,10 @@ namespace storm {
 
 			// Auto casting.
 			virtual Int STORM_FN castPenalty(Value to);
+
+			// Anythin set?
+			Bool STORM_FN any() const { return expr != null; }
+			Bool STORM_FN empty() const { return expr == null; }
 
 		protected:
 			// To string.

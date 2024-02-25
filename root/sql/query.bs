@@ -1164,14 +1164,12 @@ class SelectOneQuery extends SelectQuery {
 		cast.name(SStr("x"));
 		If check(context, cast);
 
-		CondSuccess success(pos, context, cast);
-		check.trueCode = success;
 		if (created = cast.result) {
-			success.set(CtorCall(pos, Scope(), ctor, Actuals(LocalVarAccess(pos, created))));
+			check.success(CtorCall(pos, Scope(), ctor, Actuals(LocalVarAccess(pos, created))));
 		}
 
 		if (maybeCtor = maybe.find("__init", [Value(maybe, true)], Scope()) as Function) {
-			check.falseCode = CtorCall(pos, Scope(), maybeCtor, Actuals());
+			check.fail(CtorCall(pos, Scope(), maybeCtor, Actuals()));
 		}
 
 		check;

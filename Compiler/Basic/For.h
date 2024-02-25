@@ -8,6 +8,8 @@ namespace storm {
 
 		/**
 		 * For loop (basic). The start expression should be placed in a block outside the for loop.
+		 *
+		 * TODO: Maybe use conditional expressions as the test here as well?
 		 */
 		class For : public Breakable {
 			STORM_CLASS;

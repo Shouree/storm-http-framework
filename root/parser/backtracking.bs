@@ -594,12 +594,10 @@ class BacktrackingParser extends Parser {
 				cond.name(SStr("@tmp"));
 
 			If check(state.block, cond);
-			CondSuccess success(SrcPos(), check, cond);
-			check.trueCode = success;
 			state.block.add(check);
 
-			ExprBlock trueBlock(SrcPos(), success);
-			success.set(trueBlock);
+			ExprBlock trueBlock(SrcPos(), check.successBlock);
+			check.success(trueBlock);
 			state.block = trueBlock;
 
 			if (token as RegexToken) {
@@ -630,12 +628,10 @@ class BacktrackingParser extends Parser {
 			cast.name(targetName);
 
 			If check(state.block, cast);
-			CondSuccess success(SrcPos(), check, cast);
-			check.trueCode = success;
 			state.block.add(check);
 
-			ExprBlock trueBlock(SrcPos(), success);
-			success.set(trueBlock);
+			ExprBlock trueBlock(SrcPos(), check.successBlock);
+			check.success(trueBlock);
 			state.block = trueBlock;
 
 			unless (var = cast.result)
@@ -675,7 +671,7 @@ class BacktrackingParser extends Parser {
 		// Add error message to condition.
 		private void addError(ProdState state, Regex regex, If check) {
 			StrLiteral msg(SrcPos(), "Expected: \"${regex}\"");
-			check.falseCode = namedExpr(state.block, SrcPos(), "error", state.state, Actuals(msg));
+			check.fail(namedExpr(state.block, SrcPos(), "error", state.state, Actuals(msg)));
 		}
 
 		// Create a condition that matches the token.

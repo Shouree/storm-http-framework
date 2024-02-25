@@ -6,9 +6,7 @@ namespace storm {
 	namespace bs {
 
 		Unless::Unless(Block *parent, Condition *cond) : Block(cond->pos(), parent), cond(cond) {
-			successRoot = new (this) CondSuccess(pos, this, cond);
-			successBlock = new (this) ExprBlock(pos, successRoot);
-			successRoot->set(successBlock);
+			successBlock = new (this) CondSuccess(pos, this, cond);
 		}
 
 		void Unless::fail(Expr *expr) {
@@ -18,15 +16,18 @@ namespace storm {
 		}
 
 		void Unless::success(Expr *expr) {
-			successBlock->add(expr);
+			successBlock->set(expr);
 		}
 
 		ExprResult Unless::result() {
-			return successRoot->result();
+			return successBlock->result();
 		}
 
 		void Unless::blockCode(CodeGen *state, CodeResult *r) {
 			using namespace code;
+
+			if (!failStmt)
+				throw new (this) SyntaxError(pos, S("The fail statement was never set for this unless statemet."));
 
 			CodeResult *ok = new (this) CodeResult(Value(StormInfo<Bool>::type(engine())), state->block);
 			cond->code(state, ok);
@@ -36,13 +37,13 @@ namespace storm {
 			*state->l << cmp(ok->location(state), byteConst(0));
 			*state->l << jmp(skipLbl, ifNotEqual);
 
-			CodeResult *failResult = CREATE(CodeResult, this);
+			CodeResult *failResult = new (this) CodeResult();
 			failStmt->code(state, failResult);
 			// We have verified that 'failStmt' never returns, no worry about extra jumps!
 
 			*state->l << skipLbl;
 
-			successRoot->code(state, r);
+			successBlock->code(state, r);
 		}
 
 		void Unless::toS(StrBuf *to) const {

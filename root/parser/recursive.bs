@@ -273,9 +273,7 @@ class RecursiveParser extends Parser {
 			If check(body, createCondition(body, first));
 			body.add(check);
 
-			CondSuccess success(SrcPos(), check, check.condition);
-			success.set(createParse(body, rule, production));
-			check.trueCode = success;
+			check.success(createParse(body, rule, production));
 		}
 
 		// Create code that evaluates to 'true' if one of the regexes match.
@@ -468,11 +466,9 @@ class RecursiveParser extends Parser {
 				} else if (production.repType == RepType:repZeroOne) {
 					If c(rootBlock, createCond(g, production.repStart));
 					inRepeat = c;
-					CondSuccess success(SrcPos(), rootBlock, c.condition);
-					c.trueCode = success;
 
-					block = ExprBlock(SrcPos(), success);
-					success.set(block);
+					block = ExprBlock(SrcPos(), c.successBlock);
+					c.success(block);
 				} else if (production.repType == RepType:repOnePlus) {
 					Loop loop(SrcPos(), rootBlock);
 					inRepeat = loop;
@@ -486,7 +482,7 @@ class RecursiveParser extends Parser {
 					loop.condExpr(createCond(g, production.repStart));
 
 					block = ExprBlock(SrcPos(), loop);
-					loop.createWhileBody.set(block);
+					loop.whileBody(block);
 				}
 			}
 
@@ -652,10 +648,8 @@ class RecursiveParser extends Parser {
 				BoolCondition(fnCall);
 			};
 			If check(state.block, cond);
-			CondSuccess success(SrcPos(), check, cond);
-			check.trueCode = success;
 			if (x = cond.result) {
-				success.set(LocalVarAccess(SrcPos(), x));
+				check.success(LocalVarAccess(SrcPos(), x));
 			} else if (needResult) {
 				throw GrammarError(state.pos, "Unable to capture the value of the void-rule ${token.rule.identifier} in a production.");
 			} else {
@@ -663,7 +657,7 @@ class RecursiveParser extends Parser {
 			}
 
 			// False branch: just return the error message.
-			check.falseCode = Return(SrcPos(), state.block, state.errorVal);
+			check.fail(Return(SrcPos(), state.block, state.errorVal));
 
 			check;
 		}

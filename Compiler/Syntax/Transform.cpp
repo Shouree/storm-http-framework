@@ -267,12 +267,10 @@ namespace storm {
 				Expr *access = new (this) LocalVarAccess(this->pos, check->condition->result());
 
 				// Assign something to the variable!
-				CondSuccess *branch = new (this) CondSuccess(this->pos, check, check->condition);
 				actuals->addFirst(access);
 				Expr *tfmCall = new (this) FnCall(this->pos, scope, tfmFn, actuals);
 				OpInfo *assignOp = assignOperator(new (e) syntax::SStr(S("=")), 1);
-				branch->set(new (this) Operator(branch, readV, assignOp, tfmCall));
-				check->trueBranch(branch);
+				check->success(new (this) Operator(check->successBlock, readV, assignOp, tfmCall));
 				in->add(check);
 
 			} else if (isArray(src->type)) {
@@ -428,13 +426,11 @@ namespace storm {
 			Expr *srcAccess = new (this) MemberVarAccess(this->pos, thisVar(in), token->target, true);
 			WeakCast *cast = new (this) WeakMaybeCast(srcAccess);
 			If *check = new (this) If(in, cast);
-			CondSuccess *trueBlock = new (this) CondSuccess(this->pos, check, check->condition);
 
 			LocalVar *overwrite = check->condition->result();
 			assert(overwrite, L"Weak cast did not overwrite variable as expected.");
-			Expr *e = executeToken(trueBlock, me, new (this) LocalVarAccess(this->pos, overwrite), token, pos);
-			trueBlock->set(e);
-			check->trueBranch(trueBlock);
+			Expr *e = executeToken(check->successBlock, me, new (this) LocalVarAccess(this->pos, overwrite), token, pos);
+			check->success(e);
 			in->add(check);
 		}
 

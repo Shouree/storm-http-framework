@@ -268,13 +268,13 @@ SCondition[0] => cast : SWeakCast(block) cast;
 SCondition[5] => cast : SName -> name #varName, "=", SAllWeakCast(block) cast;
 
 // A success block in a condition.
-CondSuccess SCondSuccess(Block block, Condition cond);
-SCondSuccess => CondSuccess(pos, block, cond) : [SDelimiter - SStmt(me) -> set]?;
+Expr SCondSuccess(Block block);
+SCondSuccess => x : [SDelimiter - SStmt(block) x]?;
 
 // If.
 If SIf(Block block);
 SIf => If(block, cond) :
-    "if" #keyword, "(", SCondition(block) cond, ")" - SCondSuccess(me, cond) -> trueBranch - (, "else" #keyword - [, SStmt(me) -> falseBranch]?)?;
+    "if" #keyword, "(", SCondition(block) cond, ")" - SCondSuccess(me.successBlock) -> success - (, "else" #keyword - [, SStmt(me) -> fail]?)?;
 
 // Return.
 Return SReturn(Block block);
@@ -287,8 +287,8 @@ SThrow => Throw(pos, expr) : "throw" #keyword ~ SExpr(block) expr;
 
 // The loop.
 Expr SLoop(Block block);
-SLoop => Loop(pos, block) : "do" #keyword ~ SStmt(me) -> doBody - (, "while" #keyword, "(", SCondition(me) -> cond, ")" - SCondSuccess(me, me.cond) -> whileBody)?;
-SLoop => Loop(pos, block) : "while" #keyword, "(", SCondition(block) -> cond, ")" - SCondSuccess(me, me.cond) -> whileBody;
+SLoop => Loop(pos, block) : "do" #keyword ~ SStmt(me) -> doBody - (, "while" #keyword, "(", SCondition(me) -> cond, ")" - SCondSuccess(me.whileBlock) -> whileBody)?;
+SLoop => Loop(pos, block) : "while" #keyword, "(", SCondition(block) -> cond, ")" - SCondSuccess(me.whileBlock) -> whileBody;
 
 // The for loop. Divided into two to get correct scoping.
 SLoop => ExprBlock(pos, block) : "for" #keyword, "(", SExpr(me) -> add, ";", SForInner(me) -> add;
@@ -302,7 +302,10 @@ SLoop => RangeFor(pos, block, k, v, in) : "for" #keyword, "(", SName k #varName,
 
 // Unless block.
 Unless SUnless(Block block);
-SUnless => Unless(block, cond) : "unless" #keyword, "(", SCondition(block) cond, ")" [, SStmt(me) -> fail ]? (, SStmt(me.successBlock) -> success)*;
+SUnless => Unless(block, cond) : "unless" #keyword, "(", SCondition(block) cond, ")" [, SStmt(me) -> fail ]? - SUnlessTail(me.successBlock) -> success;
+
+ExprBlock SUnlessTail(Block inside);
+SUnlessTail => ExprBlock(pos, inside) : (, SBlockItem(me))*;
 
 // Try-catch block.
 TryBlock STryCatch(Block block);

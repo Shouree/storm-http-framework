@@ -173,11 +173,10 @@ package Expr testExpr(SrcPos pos, Block block, ExprText lhs, OpInfo op, ExprText
 	// Check if they are equal.
 	BoolCondition cond(mkOperator(sub, l, op, r));
 	If check(sub, cond);
-	check.trueCode = CondSuccess(pos, check, cond);
 	sub.add(check);
 
 	ExprBlock fail(pos, check);
-	check.falseCode = fail;
+	check.fail(fail);
 
 	fail.add(namedExpr(fail, pos, "++*", namedExpr(fail, pos, "failed", result)));
 
@@ -228,11 +227,10 @@ package Expr testExpr(SrcPos pos, Block block, Condition cond, Str text) on Comp
 
 	// Check if the condition evaluates to true.
 	If check(sub, cond);
-	check.trueCode = CondSuccess(pos, check, cond);
 	sub.add(check);
 
 	ExprBlock fail(pos, check);
-	check.falseCode = fail;
+	check.fail(fail);
 
 	fail.add(namedExpr(fail, pos, "++*", namedExpr(fail, pos, "failed", result)));
 

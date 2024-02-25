@@ -215,11 +215,9 @@ class TypedRow extends Type {
 		params.add(NumLiteral(SrcPos(), id.long));
 		If check(block, FnCall(SrcPos(), Scope(), fn, params));
 
-		CondSuccess ok(SrcPos(), block, check.condition);
-		ok.set(callCtor(block, maybeType, Actuals()));
-		check.trueCode = ok;
+		check.success(callCtor(check.successBlock, maybeType, Actuals()));
+		check.fail(callCtor(block, maybeType, Actuals(getPlainColumn(block, row, plainType, id))));
 
-		check.falseCode = callCtor(block, maybeType, Actuals(getPlainColumn(block, row, plainType, id)));
 		check;
 	}
 
@@ -242,13 +240,10 @@ class TypedRow extends Type {
 		Actuals params;
 		params.add(row);
 		params.add(NumLiteral(SrcPos(), check.long));
+
 		If check(block, FnCall(SrcPos(), Scope(), fn, params));
-
-		CondSuccess ok(SrcPos(), block, check.condition);
-		ok.set(callCtor(block, wrapped, Actuals()));
-		check.trueCode = ok;
-
-		check.falseCode = callCtor(block, wrapped, Actuals(getPlainNested(block, row, plain)));
+		check.success(callCtor(check.successBlock, wrapped, Actuals()));
+		check.fail(callCtor(block, wrapped, Actuals(getPlainNested(block, row, plain))));
 		check;
 	}
 
@@ -326,11 +321,9 @@ class TypedIter extends Type {
 		If check(body, cast);
 		body.add(check);
 
-		CondSuccess success(SrcPos(), body, cast);
-		check.trueCode = success;
 		if (created = cast.result) {
 			CtorCall c(SrcPos(), Scope(), typeCtor, Actuals(LocalVarAccess(SrcPos(), created)));
-			success.set(Return(SrcPos(), success, c));
+			check.success(Return(SrcPos(), check.successBlock, c));
 		}
 
 		// Just return null otherwise.

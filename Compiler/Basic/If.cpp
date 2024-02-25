@@ -9,23 +9,26 @@
 namespace storm {
 	namespace bs {
 
-		If::If(Block *parent, Condition *cond) : Block(cond->pos(), parent), condition(cond) {}
+		If::If(Block *parent, Condition *cond) : Block(cond->pos(), parent), condition(cond) {
+			successBlock = new (this) CondSuccess(pos, this, condition);
+		}
 
 		If::If(Block *parent, Expr *expr) : Block(expr->pos, parent) {
 			condition = new (this) BoolCondition(expr);
+			successBlock = new (this) CondSuccess(pos, this, condition);
 		}
 
-		void If::trueBranch(CondSuccess *e) {
-			trueCode = e;
+		void If::success(Expr *expr) {
+			successBlock->set(expr);
 		}
 
-		void If::falseBranch(Expr *e) {
-			falseCode = e;
+		void If::fail(Expr *expr) {
+			failStmt = expr;
 		}
 
 		ExprResult If::result() {
-			if (falseCode && trueCode) {
-				return common(trueCode, falseCode, scope);
+			if (failStmt) {
+				return common(successBlock, failStmt, scope);
 			} else {
 				return ExprResult();
 			}
@@ -33,9 +36,6 @@ namespace storm {
 
 		void If::blockCode(CodeGen *state, CodeResult *r) {
 			using namespace code;
-
-			if (!trueCode)
-				throw new (this) UsageError(S("Must set the true branch in an if-statement!"));
 
 			Value condType(StormInfo<Bool>::type(engine()));
 			CodeResult *condResult = new (this) CodeResult(condType, state->block);
@@ -52,19 +52,19 @@ namespace storm {
 
 			// True branch:
 			{
-				Expr *t = expectCastTo(trueCode, rType, scope);
+				Expr *t = expectCastTo(successBlock, rType, scope);
 				t->code(state, r->split(state));
 			}
 
-			if (falseCode) {
+			if (failStmt) {
 				*state->l << jmp(lblDone);
 			}
 
 			*state->l << lblElse;
 
-			if (falseCode) {
+			if (failStmt) {
 				// False branch:
-				Expr *f = expectCastTo(falseCode, rType, scope);
+				Expr *f = expectCastTo(failStmt, rType, scope);
 				f->code(state, r->split(state));
 
 				*state->l << lblDone;
@@ -76,10 +76,10 @@ namespace storm {
 
 		void If::toS(StrBuf *to) const {
 			*to << S("if (") << condition << S(") ");
-			*to << trueCode;
-			if (falseCode) {
+			*to << successBlock;
+			if (failStmt) {
 				*to << S(" else ");
-				*to << falseCode;
+				*to << failStmt;
 			}
 		}
 

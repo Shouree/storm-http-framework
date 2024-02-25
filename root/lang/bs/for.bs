@@ -207,11 +207,9 @@ private:
 		cond.name(SStr(valName, pos));
 		loop.cond(cond);
 
-		CondSuccess body(pos, loop, cond);
-		loop.whileBody(body);
+		ExprBlock eBody(pos, loop.whileBlock);
+		loop.whileBody(eBody);
 
-		ExprBlock eBody(pos, body);
-		body.set(eBody);
 		loopBlock = eBody;
 
 		true;

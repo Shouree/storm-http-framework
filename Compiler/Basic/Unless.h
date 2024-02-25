@@ -18,16 +18,17 @@ namespace storm {
 			// Condition.
 			Condition *cond;
 
+			// Block to execute if the cast succeeds. Also contains additional variables that are
+			// visible in the case that the cast succeeded.
+			CondSuccess *successBlock;
+
 			// Statement to be executed if the cast fails.
-			Expr *failStmt;
+			MAYBE(Expr *) failStmt;
 
-			// Block to be executed if the cast succeeds.
-			ExprBlock *successBlock;
-
-			// Set the fail statement.
+			// Set the fail statement. Helper used from the grammar.
 			void STORM_FN fail(Expr *expr);
 
-			// Add to the success statement.
+			// Set the contents of the success block. Helper used from the grammar.
 			void STORM_FN success(Expr *expr);
 
 			// Result.
@@ -39,10 +40,6 @@ namespace storm {
 		protected:
 			// Output.
 			virtual void STORM_FN toS(StrBuf *to) const;
-
-		private:
-			// The CondSuccess that is the root of the success block.
-			CondSuccess *successRoot;
 		};
 
 

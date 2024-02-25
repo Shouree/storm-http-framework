@@ -9,6 +9,9 @@ namespace storm {
 
 		/**
 		 * If-statement.
+		 *
+		 * Note that the if-statement provides the "successBlock" member that is a special scope
+		 * used for the true branch of the if-statement.
 		 */
 		class If : public Block {
 			STORM_CLASS;
@@ -16,21 +19,22 @@ namespace storm {
 			// Create.
 			STORM_CTOR If(Block *parent, Condition *cond);
 
-			// Some shorthands for creating an if-statement.
+			// Shorthand for creating a condition.
 			STORM_CTOR If(Block *parent, Expr *expr);
 
-			// The condition.
+			// The condition itself.
 			Condition *condition;
 
-			// True branch.
-			MAYBE(CondSuccess *) trueCode;
+			// Success branch. Created by the constructor, use to properly scope variables only
+			// available in the successful branch.
+			CondSuccess *successBlock;
 
-			// False branch.
-			MAYBE(Expr *) falseCode;
+			// Failure branch, if present.
+			MAYBE(Expr *) failStmt;
 
-			// Set true and false branches from the parser.
-			void STORM_FN trueBranch(CondSuccess *e);
-			void STORM_FN falseBranch(Expr *e);
+			// Helpers to set the success and fail branches.
+			void STORM_FN success(Expr *expr);
+			void STORM_FN fail(Expr *expr);
 
 			// Result.
 			virtual ExprResult STORM_FN result();

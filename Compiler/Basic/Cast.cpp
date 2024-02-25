@@ -191,6 +191,12 @@ namespace storm {
 			ExprResult ar = a->result();
 			ExprResult br = b->result();
 
+			// Short-circuit in case one "branch" never returns.
+			if (ar.nothing())
+				return br;
+			if (br.nothing())
+				return ar;
+
 			// Do we need to wrap/unwrap maybe types?
 			if (isMaybe(ar.type()) || isMaybe(br.type())) {
 				Value r = common(unwrapMaybe(ar.type()), unwrapMaybe(br.type()));

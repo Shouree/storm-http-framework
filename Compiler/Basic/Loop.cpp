@@ -9,6 +9,7 @@ namespace storm {
 
 		void Loop::cond(Condition *cond) {
 			condition = cond;
+			whileExpr = new (this) CondSuccess(pos, this, cond);
 		}
 
 		Condition *Loop::cond() {
@@ -27,14 +28,15 @@ namespace storm {
 				liftVars(b);
 		}
 
-		void Loop::whileBody(CondSuccess *e) {
-			whileExpr = e;
+		void Loop::whileBody(Expr *e) {
+			if (!whileExpr)
+				whileBlock();
+			whileExpr->set(e);
 		}
 
-		CondSuccess *Loop::createWhileBody() {
-			if (!condition)
-				throw new (this) UsageError(S("Must call 'cond' before creating a while body!"));
-			whileExpr = new (this) CondSuccess(pos, this, condition);
+		CondSuccess *Loop::whileBlock() {
+			if (!whileExpr)
+				throw new (this) UsageError(S("Must call 'cond' before using the while body!"));
 			return whileExpr;
 		}
 
@@ -96,7 +98,7 @@ namespace storm {
 			}
 
 			// Things in the while-part.
-			if (whileExpr) {
+			if (whileExpr && whileExpr->any()) {
 				Label after = innerState->l->label();
 
 				CodeResult *whileResult = new (this) CodeResult();
@@ -141,7 +143,7 @@ namespace storm {
 				any = true;
 			}
 
-			if (whileExpr) {
+			if (whileExpr && whileExpr->any()) {
 				*to << whileExpr;
 				any = true;
 			}
