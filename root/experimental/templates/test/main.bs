@@ -1,4 +1,4 @@
-use lang:bs:templates;
+use experimental:templates;
 use test;
 
 template<T>

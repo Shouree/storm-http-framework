@@ -1,5 +1,5 @@
-use lang:bs:effects;
-use lang:bs:templates;
+use experimental:effects;
+use experimental:templates;
 use test;
 
 effect choose()->Bool;

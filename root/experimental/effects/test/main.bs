@@ -1,4 +1,4 @@
-use lang:bs:effects;
+use experimental:effects;
 use lang:bs:macro;
 use test;
 
