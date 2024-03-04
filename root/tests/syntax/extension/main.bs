@@ -1,0 +1,15 @@
+use core:lang;
+use core:io;
+
+void eval(Str expr) {
+	Parser<SExpr> parser;
+	parser.parse(expr, Url());
+	SExpr tree = parser.tree();
+	// print(tree.toS);
+	Int transformed = tree.transform();
+	print("${expr} => ${transformed}");
+}
+
+void main() {
+	eval("1 + 2 * 3");
+}

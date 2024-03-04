@@ -1,0 +1,8 @@
+use lang.bnf;
+
+optional delimiter = SDelim;
+required delimiter = SReqDelim;
+
+lang.bnf.SFileItem => BsProductionDecl(pos, member, parent, body)
+  : SParentReq parent, lang.bnf.SName member, SPriority -> pushPrio
+    [, ":", SRepIndentTokens(me) - SProdName(me)]+, lang.bs.SBlock @body;

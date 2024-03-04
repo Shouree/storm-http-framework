@@ -1,0 +1,40 @@
+extend lang.bnf.bs;
+
+optional delimiter = SDelimiter;
+
+void SDelimiter();
+SDelimiter : "[ \n\r\t]*";
+
+Int SExpr();
+SExpr : SExpr lhs, "\+", SProd rhs {
+    return lhs.transform() + rhs.transform();
+};
+SExpr : SExpr lhs, "-", SProd rhs {
+    return lhs.transform() - rhs.transform();
+};
+
+SExpr : SProd expr {
+    return expr.transform();
+};
+
+Int SProd();
+SProd : SProd lhs, "\*", SAtom rhs {
+    return lhs.transform() * rhs.transform();
+};
+SProd : SProd lhs, "/", SAtom rhs {
+    return lhs.transform() / rhs.transform();
+};
+SProd : SAtom expr {
+    return expr.transform();
+};
+
+Int SAtom();
+SAtom : "[0-9]+" nr {
+    return nr.transform().toInt();
+};
+SAtom : "-", SAtom nr {
+    return 0 - nr.transform();
+};
+SAtom : "(", SExpr expr, ")" {
+    return expr.transform();
+};

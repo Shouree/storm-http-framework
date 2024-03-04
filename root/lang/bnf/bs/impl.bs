@@ -1,0 +1,79 @@
+use lang:bnf;
+use lang:bs;
+use core:lang;
+
+class BsProductionDecl extends ProductionDecl {
+	init(SrcPos pos, Name memberOf, Name? parent, SBlock body) {
+		init(pos, memberOf, parent) {
+			body = body;
+		}
+	}
+
+	// The body of the production.
+	SBlock body;
+
+	// Custom creation.
+	ProductionType create(Package into, Delimiters delimiters, Scope scope) : override {
+		for (t in tokens) {
+			if (t.invoke.any)
+				throw SyntaxError(pos, "It is not possible to use the -> syntax together with code.");
+			if (t.raw)
+				throw SyntaxError(pos, "Tokens are always captured in raw form with code.");
+		}
+
+		var safeName = if (name) {
+			name;
+		} else {
+			into.anonName;
+		};
+		BsProductionType(safeName, this, delimiters, scope);
+	}
+}
+
+class BsProductionType extends ProductionType {
+	init(Str name, BsProductionDecl decl, Delimiters delim, Scope scope) {
+		init(name, decl, delim, scope) {
+			body = decl.body;
+			scope = scope;
+		}
+	}
+
+	// Body of the production.
+	SBlock body;
+
+	// Scope.
+	Scope scope;
+
+	protected Bool loadAll() : override {
+		if (!super:loadAll())
+			return false;
+
+		ValParam[] params = this.rule().params().clone();
+		params.insert(0, thisParam(this));
+
+		unless (found = find(SimplePart("transform", params.values()), Scope()) as Function) {
+			return false;
+		}
+
+		BSLookup lookup;
+		if (extraLookup = scope.lookup as ScopeExtra) {
+			for (x in extraLookup.extra) {
+				if (x as Package) {
+					print("Include: ${x}");
+					lookup.includes << x;
+				}
+			}
+		}
+
+		BSTreeFn newTransform(found.result, SStr(found.name), params, null);
+		FnBody fnBody(newTransform, Scope(this, lookup));
+		fnBody.add(body.transform(fnBody));
+		newTransform.body = fnBody;
+
+		// Note: It would be nicer if we could just inhibit the behaviour of the parent.
+		this.remove(found);
+		this.add(newTransform);
+
+		true;
+	}
+}
