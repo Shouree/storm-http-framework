@@ -62,6 +62,12 @@ namespace storm {
 		if (Named *found = NameSet::find(part, source))
 			return found;
 
+		// TODO: Consider if this is interesting to do.
+		// Only consider exports if the call originated from another package than this one. The
+		// feature is named "exports" after all.
+		// if (source.top && ScopeLookup::firstPkg(source.top) == this)
+		// 	return null;
+
 		loadExports();
 		if (exported) {
 			// Look inside exported packages, beware of cycles.
