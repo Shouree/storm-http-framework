@@ -7,6 +7,7 @@
 #include "Compiler/Scope.h"
 #include "Token.h"
 #include "Rule.h"
+#include "Production.h"
 
 namespace storm {
 	namespace syntax {
@@ -113,6 +114,10 @@ namespace storm {
 			if (c == tNone)
 				throw new (this) SyntaxError(color->pos, S("Expected a color name."));
 			this->color = c;
+		}
+
+		Rule *RuleDecl::create(Scope scope) {
+			return new (this) Rule(this, scope);
 		}
 
 
@@ -442,6 +447,13 @@ namespace storm {
 		void ProductionDecl::pushIndentEnd(IndentType type) {
 			indentEnd = tokens->count();
 			indentType = type;
+		}
+
+		ProductionType *ProductionDecl::create(Package *into, Delimiters *delimiters, Scope scope) {
+			Str *name = this->name;
+			if (!name)
+				name = into->anonName();
+			return new (this) ProductionType(name, this, delimiters, scope);
 		}
 
 

@@ -74,7 +74,7 @@ namespace storm {
 
 			for (Nat i = 0; i < c->rules->count(); i++) {
 				RuleDecl *decl = c->rules->at(i);
-				pkg->add(new (this) Rule(decl, scope));
+				pkg->add(decl->create(scope));
 			}
 		}
 
@@ -86,11 +86,7 @@ namespace storm {
 
 			for (Nat i = 0; i < c->productions->count(); i++) {
 				ProductionDecl *decl = c->productions->at(i);
-				Str *name = decl->name;
-				if (!name)
-					name = pkg->anonName();
-
-				pkg->add(new (this) ProductionType(name, decl, delimiters, scope));
+				pkg->add(decl->create(pkg, delimiters, scope));
 			}
 		}
 

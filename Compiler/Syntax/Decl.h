@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/StrBuf.h"
 #include "Compiler/Name.h"
+#include "Compiler/Package.h"
 #include "RepType.h"
 #include "InfoIndent.h"
 #include "TokenColor.h"
@@ -12,6 +13,8 @@ namespace storm {
 
 		class FileContents;
 		class Token;
+		class Rule;
+		class ProductionType;
 
 		/**
 		 * Logic for storing a parsed version of a syntax file before it is transformed into the
@@ -320,6 +323,9 @@ namespace storm {
 			// Output.
 			virtual void STORM_FN toS(StrBuf *to) const;
 
+			// Create.
+			virtual ProductionType *STORM_FN create(Package *into, Delimiters *delimiters, Scope scope);
+
 		private:
 			// Output the end of a repetition.
 			void outputRepEnd(StrBuf *to) const;
@@ -364,6 +370,9 @@ namespace storm {
 
 			// Output.
 			virtual void STORM_FN toS(StrBuf *to) const;
+
+			// Create.
+			virtual Rule *STORM_FN create(Scope scope);
 		};
 
 
