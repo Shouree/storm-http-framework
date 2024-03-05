@@ -59,8 +59,7 @@ class BsProductionType extends ProductionType {
 		if (extraLookup = scope.lookup as ScopeExtra) {
 			for (x in extraLookup.extra) {
 				if (x as Package) {
-					print("Include: ${x}");
-					lookup.includes << x;
+					lookup.addInclude(x, false);
 				}
 			}
 		}

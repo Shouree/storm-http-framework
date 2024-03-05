@@ -88,18 +88,28 @@ namespace storm {
 		}
 
 		void ParserBase::addSyntax(Package *pkg) {
-			addSyntaxI(pkg);
-
-			// Recursive exports.
-			Array<Package *> *deps = pkg->recursiveExports();
-			for (Nat i = 0; i < deps->count(); i++) {
-				addSyntaxI(deps->at(i));
-			}
+			addSyntax(pkg, true);
 		}
 
 		void ParserBase::addSyntax(Array<Package *> *pkgs) {
+			addSyntax(pkgs, true);
+		}
+
+		void ParserBase::addSyntax(Package *pkg, Bool useExports) {
+			addSyntaxI(pkg);
+
+			if (useExports) {
+				// Recursive exports.
+				Array<Package *> *deps = pkg->recursiveExports();
+				for (Nat i = 0; i < deps->count(); i++) {
+					addSyntaxI(deps->at(i));
+				}
+			}
+		}
+
+		void ParserBase::addSyntax(Array<Package *> *pkgs, Bool useExports) {
 			for (nat i = 0; i < pkgs->count(); i++)
-				addSyntax(pkgs->at(i));
+				addSyntax(pkgs->at(i), useExports);
 		}
 
 		Bool ParserBase::sameSyntax(ParserBase *o) {

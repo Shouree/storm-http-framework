@@ -40,17 +40,12 @@ namespace storm {
 		virtual Bool STORM_FN loadName(SimplePart *part);
 		virtual Bool STORM_FN loadAll();
 
-		// Take exported packages into account when looking up names.
-		virtual MAYBE(Named *) STORM_FN find(SimplePart *part, Scope source);
-		using Named::find;
-
 		// Add an exported package.
 		// This is most useful when creating virtual packages. Non-virtual packages read this
 		// information automatically as necessary.
 		void STORM_FN STORM_NAME(addExport, export)(Package *pkg);
 
-		// Get all exports for this package. This is generaly not necessary, as the lookup
-		// mechanisms in the package take exports into account.
+		// Get all exports for this package.
 		Array<Package *> *STORM_FN exports();
 
 		// Get all exports from this package, taking recursive exports into account.
@@ -98,10 +93,6 @@ namespace storm {
 		// won't have to heap allocate too often. Typically, this should not be very large. If it
 		// would be, then we would need a set instead for performance.
 		typedef PODArray<Package *, 32> ExportSet;
-
-		// Recursive lookup through exports. We need to avoid cycles here, that is why we don't call
-		// 'find' directly.
-		MAYBE(Named *) recursiveFind(ExportSet &examined, SimplePart *part, Scope source);
 	};
 
 

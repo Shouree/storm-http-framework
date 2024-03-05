@@ -58,59 +58,6 @@ namespace storm {
 			documentation = new (this) PackageDoc(this);
 	}
 
-	MAYBE(Named *) Package::find(SimplePart *part, Scope source) {
-		if (Named *found = NameSet::find(part, source))
-			return found;
-
-		// TODO: Consider if this is interesting to do.
-		// Only consider exports if the call originated from another package than this one. The
-		// feature is named "exports" after all.
-		// if (source.top && ScopeLookup::firstPkg(source.top) == this)
-		// 	return null;
-
-		loadExports();
-		if (exported) {
-			// Look inside exported packages, beware of cycles.
-			ExportSet examined(engine());
-			examined.push(this);
-
-			for (Nat i = 0; i < exported->count(); i++)
-				if (Named *found = exported->at(i)->recursiveFind(examined, part, source))
-					return found;
-		}
-
-		return null;
-	}
-
-	MAYBE(Named *) Package::recursiveFind(ExportSet &examined, SimplePart *part, Scope source) {
-		// See if this package is already examined.
-		for (nat i = 0; i < examined.count(); i++)
-			if (examined[i] == this)
-				return null;
-
-		// Remember that we have been examined.
-		examined.push(this);
-
-		// Look here. Note: We can not call 'find' directly, then we would lose 'examined'.
-		if (Named *found = NameSet::find(part, source))
-			return found;
-
-		if (exported) {
-			// Look at exports.
-			for (Nat i = 0; i < exported->count(); i++)
-				if (Named *found = exported->at(i)->recursiveFind(examined, part, source))
-					return found;
-		}
-
-		// Note: We don't have to remove this package from 'examined'. Doing so seems intuitive, but
-		// would result in us examining the same package from multiple paths. The big benefit of
-		// removing ourselves is that the 'examined' array would be smaller in size, and thus the
-		// loop in the top of this function would be faster. Calling 'find' more times is likely
-		// more expensive than a few extra iterations in a linear scan, however.
-
-		return null;
-	}
-
 	Bool Package::loadName(SimplePart *part) {
 		// We're only loading packages this way.
 		if (part->params->empty()) {

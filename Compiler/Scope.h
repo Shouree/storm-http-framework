@@ -3,6 +3,7 @@
 #include "Core/SrcPos.h"
 #include "Value.h"
 #include "Core/Array.h"
+#include "Core/Set.h"
 
 namespace storm {
 	STORM_PKG(core.lang);
@@ -136,11 +137,24 @@ namespace storm {
 		// Clone.
 		virtual ScopeLookup *STORM_FN clone() const;
 
-		// Additional NameLookups to search.
-		Array<NameLookup *> *extra;
+		// Add an extra lookup to search.
+		void STORM_FN addExtra(NameLookup *lookup);
+
+		// Add an extra lookup to search, possibly ignoring exports.
+		void STORM_FN addExtra(NameLookup *lookup, Bool useExports);
+
+		// Get all lookups.
+		Array<NameLookup *> *STORM_FN extra() const;
 
 		// Find.
 		virtual MAYBE(Named *) STORM_FN find(Scope in, SimpleName *name);
+
+	private:
+		// Additional NameLookups to search.
+		Array<NameLookup *> *search;
+
+		// Keep track of which objects are in 'search'.
+		Set<TObject *> *inSearch;
 	};
 
 }

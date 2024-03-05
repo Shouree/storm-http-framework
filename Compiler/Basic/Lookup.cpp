@@ -8,16 +8,44 @@ namespace storm {
 	namespace bs {
 
 		BSLookup::BSLookup() : ScopeLookup(S("void")) {
-			includes = new (this) Array<Package *>();
+			toInclude = new (this) Array<Package *>();
+			inIncludes = new (this) Set<TObject *>();
 		}
 
-		BSLookup::BSLookup(Array<Package *> *inc) : ScopeLookup(S("void")), includes(inc) {}
-
+		BSLookup::BSLookup(Array<Package *> *inc) : ScopeLookup(S("void")) {
+			toInclude = new (this) Array<Package *>();
+			inIncludes = new (this) Set<TObject *>();
+			for (Nat i = 0; i < inc->count(); i++)
+				addInclude(inc->at(i), true);
+		}
 
 		ScopeLookup *BSLookup::clone() const {
 			BSLookup *copy = new (this) BSLookup();
-			copy->includes->append(includes);
+			copy->toInclude->append(toInclude);
+			copy->inIncludes = new (this) Set<TObject *>(*inIncludes);
 			return copy;
+		}
+
+		void BSLookup::addInclude(Package *p) {
+			addInclude(p, true);
+		}
+
+		void BSLookup::addInclude(Package *p, Bool useExports) {
+			if (inIncludes->has(p))
+				return;
+
+			inIncludes->put(p);
+			toInclude->push(p);
+
+			if (useExports) {
+				Array<Package *> *add = p->exports();
+				for (Nat i = 0; i < add->count(); i++)
+					addInclude(add->at(i), true);
+			}
+		}
+
+		Array<Package *> *BSLookup::includes() const {
+			return new (this) Array<Package *>(*toInclude);
 		}
 
 		static Named *findFirstParam(Scope s, SimpleName *name, Bool scope) {
@@ -65,8 +93,8 @@ namespace storm {
 				return found;
 
 			// 5: Lastly, examine imported packages.
-			for (Nat i = 0; i < includes->count(); i++) {
-				if (Named *found = storm::find(s, includes->at(i), name))
+			for (Nat i = 0; i < toInclude->count(); i++) {
+				if (Named *found = storm::find(s, toInclude->at(i), name))
 					return found;
 			}
 
@@ -74,19 +102,18 @@ namespace storm {
 		}
 
 		void BSLookup::addSyntax(Scope from, syntax::ParserBase *to) {
-			// Current package.
-			to->addSyntax(firstPkg(from.top));
+			// Note: We have already considered exports, so we ask the syntax pkg to not look at exports either.
 
-			for (Nat i = 0; i < includes->count(); i++)
-				to->addSyntax(includes->at(i));
+			// Current package.
+			to->addSyntax(firstPkg(from.top), false);
+
+			for (Nat i = 0; i < toInclude->count(); i++)
+				to->addSyntax(toInclude->at(i), false);
 		}
 
 		Bool addInclude(Scope to, Package *pkg) {
 			if (BSLookup *s = as<BSLookup>(to.lookup)) {
-				for (Nat i = 0; i < s->includes->count(); i++)
-					if (s->includes->at(i) == pkg)
-						return false;
-				s->includes->push(pkg);
+				s->addInclude(pkg);
 				return true;
 			} else {
 				WARNING(L"This is not what you want to do!");

@@ -47,6 +47,10 @@ namespace storm {
 			void STORM_FN addSyntax(Package *pkg);
 			void STORM_FN addSyntax(Array<Package *> *pkg);
 
+			// Add a package contining syntax, possibly ignoring exports.
+			void STORM_FN addSyntax(Package *pkg, Bool useExports);
+			void STORM_FN addSyntax(Array<Package *> *pkg, Bool useExports);
+
 			// Does this parser contain the same syntax as 'o'?
 			Bool STORM_FN sameSyntax(ParserBase *o);
 

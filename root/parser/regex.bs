@@ -2,6 +2,7 @@ use lang:bs;
 use lang:bs:macro;
 use core:lang;
 use core:asm;
+use lang:bnf;
 
 /**
  * An array of regular expressions stored as a literal.

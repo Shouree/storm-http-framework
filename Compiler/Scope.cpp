@@ -234,25 +234,52 @@ namespace storm {
 	 */
 
 	ScopeExtra::ScopeExtra() {
-		extra = new (this) Array<NameLookup *>();
+		search = new (this) Array<NameLookup *>();
+		inSearch = new (this) Set<TObject *>();
 	}
 
 	ScopeExtra::ScopeExtra(Str *v) : ScopeLookup(v) {
-		extra = new (this) Array<NameLookup *>();
+		search = new (this) Array<NameLookup *>();
+		inSearch = new (this) Set<TObject *>();
 	}
 
 	ScopeLookup *ScopeExtra::clone() const {
 		ScopeExtra *copy = new (this) ScopeExtra();
-		copy->extra->append(extra);
+		copy->search->append(search);
+		copy->inSearch = new (this) Set<TObject *>(*inSearch);
 		return copy;
+	}
+
+	void ScopeExtra::addExtra(NameLookup *lookup) {
+		addExtra(lookup, true);
+	}
+
+	void ScopeExtra::addExtra(NameLookup *lookup, Bool useExports) {
+		if (inSearch->has(lookup))
+			return;
+
+		inSearch->put(lookup);
+		search->push(lookup);
+
+		if (useExports) {
+			if (Package *p = as<Package>(lookup)) {
+				Array<Package *> *add = p->exports();
+				for (Nat i = 0; i < add->count(); i++)
+					addExtra(add->at(i), true);
+			}
+		}
+	}
+
+	Array<NameLookup *> *ScopeExtra::extra() const {
+		return new (this) Array<NameLookup *>(*search);
 	}
 
 	Named *ScopeExtra::find(Scope in, SimpleName *name) {
 		if (Named *found = ScopeLookup::find(in, name))
 			return found;
 
-		for (nat i = 0; i < extra->count(); i++) {
-			if (Named *found = storm::find(in, extra->at(i), name))
+		for (nat i = 0; i < search->count(); i++) {
+			if (Named *found = storm::find(in, search->at(i), name))
 				return found;
 		}
 

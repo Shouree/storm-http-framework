@@ -90,12 +90,6 @@ namespace storm {
 			}
 		}
 
-		static void addSyntax(syntax::ParserBase *to, SyntaxLookup *lookup) {
-			for (Nat i = 0; i < lookup->extra->count(); i++)
-				if (Package *p = as<Package>(lookup->extra->at(i)))
-					to->addSyntax(p);
-		}
-
 		syntax::InfoParser *DeclReader::createParser() {
 			syntax::Rule *r = as<syntax::Rule>(syntaxPkg(this)->find(S("SRoot"), Scope() /* god mode! */));
 			if (!r)
@@ -144,7 +138,7 @@ namespace storm {
 				if (!found)
 					throw new (this) SyntaxError(name->pos,
 												TO_S(this, S("The package ") << name << S(" does not exist!")));
-				to->extra->push(found);
+				to->addExtra(found);
 			}
 		}
 
@@ -166,7 +160,9 @@ namespace storm {
 
 		ScopeLookup *SyntaxLookup::clone() const {
 			SyntaxLookup *copy = new (this) SyntaxLookup();
-			copy->extra->append(extra);
+			Array<NameLookup *> *extra = this->extra();
+			for (Nat i = 0; i < extra->count(); i++)
+				copy->addExtra(extra->at(i), false);
 			return copy;
 		}
 

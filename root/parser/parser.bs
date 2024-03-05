@@ -156,10 +156,10 @@ private Scope addIncludes(Scope scope, NameSet[] add) on Compiler {
 		if (lookup as BSLookup) {
 			for (x in add)
 				if (x as Package)
-					lookup.includes << x;
+					lookup.addInclude(x);
 		} else if (lookup as ScopeExtra) {
 			for (x in add)
-				lookup.extra << x;
+				lookup.addExtra(x);
 		}
 		scope.lookup = lookup;
 	}
@@ -251,20 +251,20 @@ Package createPackage(lang:bnf:FileContents this, Scope scope, NameLookup parent
 
 	SyntaxLookup lookup;
 	if (old = scope.lookup as ScopeExtra) {
-		lookup.extra << parent;
+		lookup.addExtra(parent);
 		for (x in old.extra)
-			lookup.extra << x;
+			lookup.addExtra(x, false);
 	} else if (old = scope.lookup as BSLookup) {
-		lookup.extra << parent;
+		lookup.addExtra(parent);
 		for (x in old.includes)
-			lookup.extra << x;
+			lookup.addExtra(x, false);
 	}
 
 	// New includes.
 	for (x in use) {
 		unless (found = rootScope.find(x))
 			throw SyntaxError(x.pos, "The package ${x} does not exist!");
-		lookup.extra << found;
+		lookup.addExtra(found);
 	}
 
 	scope.lookup = lookup;

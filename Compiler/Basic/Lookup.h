@@ -16,14 +16,27 @@ namespace storm {
 			// Clone.
 			virtual ScopeLookup *STORM_FN clone() const;
 
-			// Included packages.
-			Array<Package *> *includes;
+			// Add included package, taking exports into account.
+			void STORM_FN addInclude(Package *p);
+
+			// Add included package, possibly ignoring exports.
+			void STORM_FN addInclude(Package *p, Bool useExports);
+
+			// Get all included packages.
+			Array<Package *> *STORM_FN includes() const;
 
 			// Find things.
 			virtual MAYBE(Named *) STORM_FN find(Scope in, SimpleName *name);
 
 			// Add syntax to a parser.
 			void STORM_FN addSyntax(Scope from, syntax::ParserBase *to);
+
+		private:
+			// Included packages.
+			Array<Package *> *toInclude;
+
+			// Packages that are in 'includes'.
+			Set<TObject *> *inIncludes;
 		};
 
 		// Add includes. Note: it is generally more efficient to add multiple includes at once.
