@@ -1191,15 +1191,24 @@ namespace storm {
 						// Ignore this non-terminal.
 						length--;
 
-						// Traverse until we reach an epsilon production!
-						for (TreeNode at = child;
-							 at.children() && Syntax::specialProd(at.production()) == Syntax::prodRepeat;
-							 at = store->at(at.children()[0])) {
+						// Traverse until we reach an epsilon production.
+						// Note, when error recovery was used, the production might be empty
+						// even though we expect it not to be empty.
+						TreeNode at = child;
+						while (Syntax::specialProd(at.production()) == Syntax::prodRepeat) {
+							TreeArray children = at.children();
 
+							// If no children, or if the child array is empty, also exit.
+							if (!children || children.count() == 0)
+								break;
+
+							// Compute the length of the production.
 							Item i(syntax, at.production());
 							length += at.children().count();
 							if (i.pos == Item::specialPos)
 								length -= 1;
+
+							at = store->at(children[0]);
 						}
 					}
 				}
