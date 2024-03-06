@@ -154,7 +154,7 @@ namespace storm {
 		};
 
 		// Create a function that transforms an option.
-		Function *createTransformFn(ProductionDecl *option, ProductionType *owner, Scope scope);
+		Function *STORM_FN createTransformFn(ProductionDecl *option, ProductionType *owner, Scope scope);
 
 	}
 }

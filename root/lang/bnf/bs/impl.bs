@@ -34,26 +34,20 @@ class BsProductionType extends ProductionType {
 	init(Str name, BsProductionDecl decl, Delimiters delim, Scope scope) {
 		init(name, decl, delim, scope) {
 			body = decl.body;
-			scope = scope;
 		}
 	}
 
 	// Body of the production.
 	SBlock body;
 
-	// Scope.
-	Scope scope;
+	// Load everything.
+	protected void loadFunctions(ProductionDecl decl, Scope scope) : override {
+		// Add the 'children' function.
+		add(createChildrenFn(decl, this, scope));
 
-	protected Bool loadAll() : override {
-		if (!super:loadAll())
-			return false;
-
-		ValParam[] params = this.rule().params().clone();
+		// Add the 'transform' function.
+		ValParam[] params = rule.params().clone();
 		params.insert(0, thisParam(this));
-
-		unless (found = find(SimplePart("transform", params.values()), Scope()) as Function) {
-			return false;
-		}
 
 		BSLookup lookup;
 		if (extraLookup = scope.lookup as ScopeExtra) {
@@ -64,15 +58,11 @@ class BsProductionType extends ProductionType {
 			}
 		}
 
-		BSTreeFn newTransform(found.result, SStr(found.name), params, null);
+		BSTreeFn newTransform(rule.result, SStr("transform"), params, null);
 		FnBody fnBody(newTransform, Scope(this, lookup));
 		fnBody.add(body.transform(fnBody));
 		newTransform.body = fnBody;
 
-		// Note: It would be nicer if we could just inhibit the behaviour of the parent.
-		this.remove(found);
-		this.add(newTransform);
-
-		true;
+		add(newTransform);
 	}
 }

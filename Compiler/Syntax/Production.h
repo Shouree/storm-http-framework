@@ -157,6 +157,7 @@ namespace storm {
 			MAYBE(MemberVar *) createTarget(SrcPos p, TokenDecl *decl, Token *token, Nat pos, Nat &counter);
 		};
 
+
 		/**
 		 * The type used to name and find a syntax option.
 		 *
@@ -203,6 +204,10 @@ namespace storm {
 		protected:
 			// Load contents.
 			virtual Bool STORM_FN loadAll();
+
+			// Create custom functions. Called from 'loadAll'. The default implementation creates
+			// 'children' and 'transform'.
+			virtual void STORM_FN loadFunctions(ProductionDecl *decl, Scope scope);
 
 		private:
 			// The declaration, stored only until the first time 'loadAll' is called.

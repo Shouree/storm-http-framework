@@ -457,17 +457,18 @@ namespace storm {
 			Value me = thisPtr(this);
 
 			if (decl) {
+				// Create toS.
 				Value strBuf = thisPtr(StrBuf::stormType(e));
-
-				add(createTransformFn(decl, this, scope));
-				add(createChildrenFn(decl, this, scope));
-
 				Array<Value> *p = new (e) Array<Value>(2, me);
 				p->at(1) = strBuf;
 				add(nativeFunction(e, Value(), S("toS"), p, address(&productionToS)));
 
+				// Load remaining functions.
+				loadFunctions(decl, scope);
+
 				// Clear!
 				decl = null;
+				scope = Scope();
 			}
 
 			if (!me.isActor()) {
@@ -476,6 +477,11 @@ namespace storm {
 			}
 
 			return Type::loadAll();
+		}
+
+		void ProductionType::loadFunctions(ProductionDecl *decl, Scope scope) {
+			add(createTransformFn(decl, this, scope));
+			add(createChildrenFn(decl, this, scope));
 		}
 
 	}

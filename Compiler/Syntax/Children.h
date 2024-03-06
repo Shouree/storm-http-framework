@@ -54,6 +54,6 @@ namespace storm {
 
 
 		// Create a children function.
-		Function *createChildrenFn(ProductionDecl *option, ProductionType *owner, Scope scope);
+		Function *STORM_FN createChildrenFn(ProductionDecl *option, ProductionType *owner, Scope scope);
 	}
 }
