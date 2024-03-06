@@ -21,31 +21,31 @@ SWithBlock..lang.bs.SExpr[20] => queryBlockExpr(pos, block, query) : SQuery quer
 Query SQuery();
 
 // Insert:
-SQuery => InsertQuery(pos, table, init) : "INSERT" #keyword ~ "INTO" #keyword ~ SName table ~ "VALUES" #keyword, "(", SExprList init, ")";
-SQuery => InsertQuery(pos, table, cols, init) : "INSERT" #keyword ~ "INTO" #keyword ~ SName table, "(", SNameList cols, ")", "VALUES" #keyword, "(", SExprList init, ")";
+SQuery => InsertQuery(pos, table, init) : "INSERT" #keyword ~ "INTO" #keyword ~ [SName table ~ "VALUES" #keyword, "(", SExprList init, ")"]+;
+SQuery => InsertQuery(pos, table, cols, init) : "INSERT" #keyword ~ "INTO" #keyword ~ [SName table, "(", SNameList cols, ")", "VALUES" #keyword, "(", SExprList init, ")"]+;
 
 // Update:
-SQuery => UpdateQuery(pos, table, assign, condition) : "UPDATE" #keyword ~ SName table ~ "SET" #keyword ~ SAssignExprs assign - SWhere condition;
+SQuery => UpdateQuery(pos, table, assign, condition) : "UPDATE" #keyword ~ [SName table ~ "SET" #keyword ~ SAssignExprs assign - SWhere condition]+;
 
 // Delete:
-SQuery => DeleteQuery(pos, table, condition) : "DELETE" #keyword ~ "FROM" #keyword ~ SName table - SWhere condition;
+SQuery => DeleteQuery(pos, table, condition) : "DELETE" #keyword ~ "FROM" #keyword ~ [SName table - SWhere condition]+;
 
 // Select:
-SQuery => SelectQuery(pos, table, cols, joins, condition, orderBy) : "SELECT" #keyword ~ SSelectCols cols ~ "FROM" #keyword ~ STableName table - SJoins joins - SWhere condition - SOrderBy orderBy;
+SQuery => SelectQuery(pos, table, cols, joins, condition, orderBy) : "SELECT" #keyword ~ [SSelectCols cols ~ "FROM" #keyword ~ STableName table - SJoins joins - SWhere condition - SOrderBy orderBy]+;
 
 // Select one row (or zero):
-SQuery[10] => SelectOneQuery(pos, table, cols, joins, condition, orderBy) : "SELECT" #keyword ~ "ONE" #keyword ~ SSelectCols cols ~ "FROM" #keyword ~ STableName table - SJoins joins - SWhere condition - SOrderBy orderBy;
+SQuery[10] => SelectOneQuery(pos, table, cols, joins, condition, orderBy) : "SELECT" #keyword ~ "ONE" #keyword ~ [SSelectCols cols ~ "FROM" #keyword ~ STableName table - SJoins joins - SWhere condition - SOrderBy orderBy]+;
 
 // Count rows:
-SQuery => CountQuery(pos, table, joins, condition) : "COUNT" #keyword ~ "FROM" #keyword ~ STableName table - SJoins joins - SWhere condition;
+SQuery => CountQuery(pos, table, joins, condition) : "COUNT" #keyword ~ "FROM" #keyword ~ [STableName table - SJoins joins - SWhere condition]+;
 
 // Create table (only untyped)
 SQuery => CreateQuery(pos, false, table) : "CREATE" #keyword ~ "TABLE" #keyword ~ SCreateTail table;
 SQuery => CreateQuery(pos, true, table) : "CREATE" #keyword ~ "TABLE" #keyword ~ "IF" #keyword ~ "NOT" #keyword ~ "EXISTS" #keyword ~ SCreateTail table;
 
 // Add an index (only untyped)
-SQuery => IndexQuery(pos, name, table, cols) : "CREATE" #keyword ~ "INDEX" #keyword ~ SName name ~ "ON" #keyword ~ SName table, "(", SNameList cols, ")";
-SQuery => IndexQuery(pos, table, cols) : "CREATE" #keyword ~ "INDEX" #keyword ~ "ON" #keyword ~ SName table, "(", SNameList cols, ")";
+SQuery => IndexQuery(pos, name, table, cols) : "CREATE" #keyword ~ "INDEX" #keyword ~ SName name ~ "ON" #keyword ~ SName table, "(", [SNameList cols]+, ")";
+SQuery => IndexQuery(pos, table, cols) : "CREATE" #keyword ~ "INDEX" #keyword ~ "ON" #keyword ~ SName table, "(", [SNameList cols]+, ")";
 
 // Drop table (only untyped)
 SQuery => DropQuery(pos, name) : "DROP" #keyword ~ "TABLE" #keyword ~ SName name;
