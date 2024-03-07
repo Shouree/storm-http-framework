@@ -541,7 +541,7 @@ SExpr[50] => LambdaExpr(pos, block, params, content) : "(", SLambdaFormals param
 
 // Note: The empty case is handled by the typed version!
 Array<SStr> SLambdaFormals();
-SLambdaFormals => Array<SStr>() : SName -> push - (, ",", SName -> push)*;
+SLambdaFormals => Array<SStr>() : SName -> push #varName - (, ",", SName -> push #varName)*;
 
 
 ////////////////////////////////////////////////////////////////////
