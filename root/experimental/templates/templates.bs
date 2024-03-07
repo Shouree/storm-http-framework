@@ -48,10 +48,15 @@ package class Template extends core:lang:Template {
 		if (part.params.count != params.count)
 			return null;
 
+		Value[] paramsCopy;
+		for (p in part.params)
+			paramsCopy << p.asRef(false);
+
 		Str->Value p;
-		for (i, par in params)
-			if (!par.deduce(scope, part.params[i].asRef(false), p))
+		for (i, par in params) {
+			if (!par.deduce(scope, paramsCopy[i], p))
 				return null;
+		}
 
 		Scope child = scope;
 		child.lookup = TemplateLookup(scope.lookup, p);
@@ -59,11 +64,11 @@ package class Template extends core:lang:Template {
 		var created = body.transform(child);
 
 		Named named = if (created as Named) {
-			created.params = part.params.clone();
+			created.params = paramsCopy;
 			created;
 		} else if (created as NamedDecl) {
 			Named n = created.create();
-			n.params = part.params.clone();
+			n.params = paramsCopy;
 			created.resolve();
 			n;
 		} else {
