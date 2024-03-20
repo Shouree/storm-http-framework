@@ -47,6 +47,26 @@ namespace storm {
 
 
 		/**
+		 * Custom named element that can be returned in name lookup to allow emitting custom expressions.
+		 *
+		 * By default, Basic Storm only knows about a pre-defined number of standard entities in the
+		 * name tree. Returning this entity allows extending Basic Storm with new concepts, as the
+		 * lookup mechanism in Basic Storm will ask the object to create an expression for itself.
+		 */
+		class CustomNamed : public Named {
+			STORM_ABSTRACT_CLASS;
+		public:
+			// Create.
+			STORM_CTOR CustomNamed(Str *name);
+			STORM_CTOR CustomNamed(Str *name, Array<Value> *params);
+
+			// Try to create an expression given a set of actual parameters.
+			// If 'firstImplicit' is true, then the first parameter was added implicitly.
+			virtual MAYBE(Expr *) STORM_FN create(Actuals *params, Bool firstImplicit) ABSTRACT;
+		};
+
+
+		/**
 		 * Unresolved named expression returned from 'namedExpr' in case a name is not found. This
 		 * is useful since parts of the system (such as the assignment operator when using setters)
 		 * need to inspect and modify a possibly incorrect name.

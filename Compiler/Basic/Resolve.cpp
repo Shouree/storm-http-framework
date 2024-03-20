@@ -58,6 +58,10 @@ namespace storm {
 			return secondPass;
 		}
 
+		CustomNamed::CustomNamed(Str *name) : Named(name) {}
+
+		CustomNamed::CustomNamed(Str *name, Array<Value> *params) : Named(name, params) {}
+
 		static bool isSuperName(SimpleName *name) {
 			if (name->count() != 2)
 				return false;
@@ -123,7 +127,7 @@ namespace storm {
 		static Expr *toExpression(const Scope &scope,
 								Named *found, Actuals *params,
 								const SrcPos &pos,
-								bool firstImplicit, bool useLookup) {
+								Bool firstImplicit, Bool useLookup) {
 
 			if (*found->name == Type::CTOR) {
 				StrBuf *msg = new (found) StrBuf();
@@ -152,6 +156,10 @@ namespace storm {
 
 			if (GlobalVar *v = as<GlobalVar>(found))
 				return new (found) GlobalVarAccess(pos, v);
+
+			if (CustomNamed *c = as<CustomNamed>(found))
+				if (Expr *created = c->create(params, firstImplicit))
+					return created;
 
 			// Error message if it is not supported.
 			StrBuf *msg = new (found) StrBuf();
