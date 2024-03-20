@@ -78,12 +78,12 @@ Rect
 ----
 
 The value [stormname:core.geometry.Rect] stores a 2-dimensional rectangle, expressed as two points,
-`p0` and `p1`. The first point `p0` is the top-right corner of the rectangle, and `p1` is the
-bottom-right corner of the point. The member functions of `Rect` considers the rectangle to contain
-all points except up to, but not including `p1`. The point class also contains the function `size`
-that computes the size of the rectangle. The `size` function also has an assign variant, so it is
-possible to treat the point as if it cointained a point `p0` for the top-left corner, and a `size`
-instead of two points.
+`p0` and `p1`. The first point `p0` is the top-left corner of the rectangle, and `p1` is the
+bottom-right corner of the rectangle. The member functions of `Rect` considers the rectangle to
+contain all points from `p0` up to, but not including `p1`. The class also contains the function
+`size` that computes the size of the rectangle. The `size` function also has an assignment variant,
+so it is possible to treat the point as if it cointained a point `p0` for the top-left corner, and a
+`size` instead of two points.
 
 The `Rect` type has overloads the `+` and `-` operators where the right hand side is a `Point` to
 translate a rectangle based on the coordinates in the point.
