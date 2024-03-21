@@ -152,11 +152,9 @@ namespace storm {
 
 			*l << prolog();
 
-			// Parameters
-			for (Nat i = 0; i < valParams->count(); i++) {
-				SimplePart *name = new (this) SimplePart(valParams->at(i).name);
-				LocalVar *var = body->variable(name);
-				assert(var);
+			// Parameters.
+			for (Nat i = 0; i < body->parameters->count(); i++) {
+				LocalVar *var = body->parameters->at(i);
 				var->createParam(state);
 			}
 
