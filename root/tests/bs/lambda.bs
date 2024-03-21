@@ -48,3 +48,31 @@ Str testLambdaMemory() {
 
 	result.toS();
 }
+
+class LambdaEnv {
+	Int x;
+
+	init() {
+		init { x = 7; }
+	}
+
+	fn(Int)->Int captureImplicit() {
+		return (Int a) => a + x;
+	}
+
+	fn(Int)->Int captureExplicit() {
+		return (Int a) => a + this.x;
+	}
+}
+
+Int testLambdaThisImplicit() {
+	LambdaEnv e;
+	var fn = e.captureImplicit();
+	fn.call(13);
+}
+
+Int testLambdaThisExplicit() {
+	LambdaEnv e;
+	var fn = e.captureExplicit();
+	fn.call(13);
+}
