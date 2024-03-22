@@ -15,12 +15,12 @@ class LayerPainter extends Painter {
 
 	init() {
 		init() {
-			redA = red.withAlpha(0.5);
-			greenA = green.withAlpha(0.5);
-			blueA = blue.withAlpha(0.5);
-			red = red;
-			green = green;
-			blue = blue;
+			redA(red.withAlpha(0.5));
+			greenA(green.withAlpha(0.5));
+			blueA(blue.withAlpha(0.5));
+			red(red);
+			green(green);
+			blue(blue);
 		}
 
 		bgColor = black;
