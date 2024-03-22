@@ -97,12 +97,23 @@ void World::orderFunctions() {
 		bool operator ()(const Function &l, const Function &r) const {
 			if (l.name != r.name)
 				return l.name < r.name;
-			// Not entirely deterministic, but good enough for us.
+
+			// Note: This is not entirely unique, there are things that would be considered *equal*
+			// that actually differ.
+			size_t compare_to = min(l.params.size(), r.params.size());
+			for (size_t i = 0; i < compare_to; i++) {
+				size_t lId = l.params[i]->sortId();
+				size_t rId = r.params[i]->sortId();
+				if (lId != rId)
+					return lId < rId;
+			}
+
 			return l.params.size() < r.params.size();
 		}
 	};
 
-	sort(functions.begin(), functions.end(), pred());
+	// Note: The condition will consider some elements to be equal. Hence stable sort.
+	stable_sort(functions.begin(), functions.end(), pred());
 }
 
 void World::orderTemplates() {

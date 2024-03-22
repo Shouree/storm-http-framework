@@ -8,7 +8,7 @@
 #include "Utils/StackInfoSet.h"
 
 void findHeaders(const Path &in, vector<Path> &out) {
-	vector<Path> c = in.children();
+	vector<Path> c = in.sortedChildren();
 	for (nat i = 0; i < c.size(); i++) {
 		if (c[i].isDir()) {
 			findHeaders(c[i], out);
@@ -27,7 +27,7 @@ vector<Path> findHeaders(const vector<Path> &in) {
 }
 
 void findLicenses(const Path &in, vector<Path> &out) {
-	vector<Path> c = in.children();
+	vector<Path> c = in.sortedChildren();
 	for (nat i = 0; i < c.size(); i++) {
 		if (c[i].isDir()) {
 			findLicenses(c[i], out);
@@ -46,7 +46,7 @@ vector<Path> findLicenses(const vector<Path> &in) {
 }
 
 void findVersions(const Path &in, vector<Path> &out) {
-	vector<Path> c = in.children();
+	vector<Path> c = in.sortedChildren();
 	for (nat i = 0; i < c.size(); i++) {
 		if (c[i].isDir()) {
 			findVersions(c[i], out);

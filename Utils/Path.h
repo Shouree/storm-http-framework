@@ -90,6 +90,9 @@ public:
 	// Find the children of this path.
 	vector<Path> children() const;
 
+	// Get a sorted version of 'children'.
+	vector<Path> sortedChildren() const;
+
 	// Modified time.
 	Timestamp mTime() const;
 

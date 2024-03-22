@@ -32,6 +32,14 @@ public:
 
 	// Print.
 	virtual void print(wostream &to) const = 0;
+
+	// Get an ID to sort functions.
+	// This does not properly account for all cases to be globally unique, it will, however,
+	// give a decent ordering of functions to make cache-locality a bit better when unpacking
+	// at least.
+	// It is currently constructed as follows:
+	// The last two digits indicate modifiers (e.g. templates, references). The upper ones are references.
+	virtual size_t sortId() const = 0;
 };
 
 inline wostream &operator <<(wostream &to, const TypeRef &c) {
@@ -66,6 +74,9 @@ public:
 
 	// Print.
 	virtual void print(wostream &to) const;
+
+	// Get sort id.
+	virtual size_t sortId() const;
 };
 
 
@@ -93,6 +104,9 @@ public:
 
 	// Print.
 	virtual void print(wostream &to) const;
+
+	// Get sort id.
+	virtual size_t sortId() const;
 };
 
 
@@ -117,6 +131,9 @@ public:
 
 	// Print.
 	virtual void print(wostream &to) const;
+
+	// Get sort id.
+	virtual size_t sortId() const;
 };
 
 
@@ -141,6 +158,9 @@ public:
 
 	// Print.
 	virtual void print(wostream &to) const;
+
+	// Get sort id.
+	virtual size_t sortId() const;
 };
 
 
@@ -165,6 +185,9 @@ public:
 
 	// Print.
 	virtual void print(wostream &to) const;
+
+	// Get sort id.
+	virtual size_t sortId() const;
 };
 
 /**
@@ -188,6 +211,9 @@ public:
 
 	// Print.
 	virtual void print(wostream &to) const;
+
+	// Get sort id.
+	virtual size_t sortId() const;
 };
 
 
@@ -213,6 +239,9 @@ public:
 
 	// Print.
 	virtual void print(wostream &to) const;
+
+	// Get sort id.
+	virtual size_t sortId() const;
 };
 
 
@@ -238,6 +267,9 @@ public:
 
 	// Print.
 	virtual void print(wostream &to) const;
+
+	// Get sort id.
+	virtual size_t sortId() const;
 };
 
 
@@ -265,6 +297,9 @@ public:
 
 	// Print.
 	virtual void print(wostream &to) const;
+
+	// Get sort id.
+	virtual size_t sortId() const;
 };
 
 
@@ -286,6 +321,9 @@ public:
 
 	// Print.
 	virtual void print(wostream &to) const;
+
+	// Get sort id.
+	virtual size_t sortId() const;
 };
 
 
@@ -313,6 +351,9 @@ public:
 
 	// Print.
 	virtual void print(wostream &to) const;
+
+	// Get sort id.
+	virtual size_t sortId() const;
 };
 
 
@@ -334,6 +375,9 @@ public:
 
 	// Print.
 	virtual void print(wostream &to) const;
+
+	// Get sort id.
+	virtual size_t sortId() const;
 };
 
 
@@ -355,6 +399,9 @@ public:
 
 	// Print.
 	virtual void print(wostream &to) const;
+
+	// Get sort id.
+	virtual size_t sortId() const;
 };
 
 /**
@@ -376,6 +423,9 @@ public:
 
 	// Print.
 	virtual void print(wostream &to) const;
+
+	// Get sort id.
+	virtual size_t sortId() const;
 };
 
 
@@ -425,6 +475,8 @@ public:
 	// All known ids.
 	static const ID ids[];
 
+	// Get sort id.
+	virtual size_t sortId() const;
 private:
 	// Current id.
 	const ID *id;

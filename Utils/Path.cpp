@@ -292,6 +292,41 @@ vector<Path> Path::children() const {
 	return result;
 }
 
+vector<Path> Path::sortedChildren() const {
+	vector<Path> result;
+	vector<std::pair<String, bool>> pieces;
+
+	String searchStr = toS();
+	if (!isDir())
+		searchStr += L"\\";
+	searchStr += L"*";
+
+	WIN32_FIND_DATA findData;
+	HANDLE h = FindFirstFile(searchStr.c_str(), &findData);
+	if (h == INVALID_HANDLE_VALUE)
+		return result;
+
+	do {
+		if (wcscmp(findData.cFileName, L"..") != 0 && wcscmp(findData.cFileName, L".") != 0) {
+			bool isDir = (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+			pieces.push_back(std::make_pair(String(findData.cFileName), isDir));
+		}
+	} while (FindNextFile(h, &findData));
+
+	FindClose(h);
+
+	sort(pieces.begin(), pieces.end());
+	result.reserve(pieces.size());
+
+	for (size_t i = 0; i < pieces.size(); i++) {
+		result.push_back(*this + pieces[i].first);
+		if (pieces[i].second)
+			result.back().makeDir();
+	}
+
+	return result;
+}
+
 Timestamp fromFileTime(FILETIME ft);
 
 Timestamp Path::mTime() const {
@@ -404,19 +439,76 @@ vector<Path> Path::children() const {
 	dirent *d;
 	struct stat s;
 	while((d = readdir(h)) != null) {
-		if (strcmp(d->d_name, "..") != 0 && strcmp(d->d_name, ".") != 0) {
-			result.push_back(*this + String(d->d_name));
+		if (strcmp(d->d_name, "..") == 0 || strcmp(d->d_name, ".") == 0)
+			continue;
 
+		result.push_back(*this + String(d->d_name));
+
+		switch (d->dt_type) {
+		case DT_UNKNOWN:
+		case DT_LNK:
 			if (stat(result.back().toS().toChar().c_str(), &s) == 0) {
 				if (S_ISDIR(s.st_mode))
 					result.back().makeDir();
-			} else {
-				result.pop_back();
 			}
+			break;
+		case DT_DIR:
+			result.back().makeDir();
+			break;
 		}
 	}
 
 	closedir(h);
+
+	return result;
+}
+
+vector<Path> Path::sortedChildren() const {
+	vector<Path> result;
+	vector<std::pair<String, bool>> pieces;
+
+	std::string base = toS().toChar();
+	if (!base.empty() || base[base.size() - 1] != '/')
+		base += "/";
+
+	DIR *h = opendir(base.c_str());
+	if (h == null)
+		return result;
+
+	dirent *d;
+	struct stat s;
+	while((d = readdir(h)) != null) {
+		if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0)
+			continue;
+
+		bool isDir = false;
+
+		switch (d->d_type) {
+		case DT_UNKNOWN:
+		case DT_LNK:
+			if (stat((base + d->d_name).c_str(), &s) == 0) {
+				if (S_ISDIR(s.st_mode))
+					isDir = true;
+			}
+			break;
+		case DT_DIR:
+			isDir = true;
+			break;
+		}
+
+		pieces.push_back(std::make_pair(String(d->d_name), isDir));
+	}
+
+	closedir(h);
+
+	sort(pieces.begin(), pieces.end());
+	result.reserve(pieces.size());
+
+	for (size_t i = 0; i < pieces.size(); i++) {
+		result.push_back(*this + pieces[i].first);
+		if (pieces[i].second)
+			result.back().makeDir();
+	}
 
 	return result;
 }

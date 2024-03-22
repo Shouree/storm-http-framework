@@ -42,6 +42,13 @@ void TemplateType::print(wostream &to) const {
 	to << L">";
 }
 
+size_t TemplateType::sortId() const {
+	if (params.empty())
+		return 0;
+	else
+		return params[0]->sortId();
+}
+
 ResolvedTemplateType::ResolvedTemplateType(const SrcPos &pos, Template *templ, const vector<Auto<TypeRef>> &params) :
 	TypeRef(pos), type(templ), params(params) {}
 
@@ -62,6 +69,13 @@ void ResolvedTemplateType::print(wostream &to) const {
 	to << L">";
 }
 
+size_t ResolvedTemplateType::sortId() const {
+	if (params.empty())
+		return type->id;
+	else
+		return params[0]->sortId() + type->id + 1;
+}
+
 PtrType::PtrType(Auto<TypeRef> of) : TypeRef(of->pos), of(of) {}
 
 Auto<TypeRef> PtrType::resolve(World &in, const CppName &context) const {
@@ -74,6 +88,10 @@ void PtrType::print(wostream &to) const {
 	to << of << L"*";
 }
 
+size_t PtrType::sortId() const {
+	return of->sortId();
+}
+
 RefType::RefType(Auto<TypeRef> of) : TypeRef(of->pos), of(of) {}
 
 Auto<TypeRef> RefType::resolve(World &in, const CppName &context) const {
@@ -84,6 +102,10 @@ Auto<TypeRef> RefType::resolve(World &in, const CppName &context) const {
 
 void RefType::print(wostream &to) const {
 	to << of << L"&";
+}
+
+size_t RefType::sortId() const {
+	return of->sortId();
 }
 
 MaybeClassType::MaybeClassType(Auto<TypeRef> of) : TypeRef(of->pos) {
@@ -103,6 +125,10 @@ Auto<TypeRef> MaybeClassType::resolve(World &in, const CppName &context) const {
 
 void MaybeClassType::print(wostream &to) const {
 	to << L"MAYBE(" << of << L")";
+}
+
+size_t MaybeClassType::sortId() const {
+	return of->sortId();
 }
 
 MaybeValueType::MaybeValueType(Auto<TypeRef> of) : TypeRef(of->pos), of(of) {
@@ -136,6 +162,10 @@ Auto<TypeRef> MaybeValueType::resolve(World &in, const CppName &context) const {
 
 void MaybeValueType::print(wostream &to) const {
 	to << L"storm::Maybe<" << of << L">";
+}
+
+size_t MaybeValueType::sortId() const {
+	return of->sortId();
 }
 
 NamedType::NamedType(const SrcPos &pos, const CppName &name) : TypeRef(pos), name(name) {}
@@ -172,6 +202,11 @@ void NamedType::print(wostream &to) const {
 	to << name;
 }
 
+size_t NamedType::sortId() const {
+	return 0;
+}
+
+
 ResolvedType::ResolvedType(const TypeRef &templ, Type *type) : TypeRef(templ), type(type) {}
 
 ResolvedType::ResolvedType(Type *type) : TypeRef(type->pos), type(type) {}
@@ -192,6 +227,11 @@ void ResolvedType::print(wostream &to) const {
 	to << type->name;
 }
 
+size_t ResolvedType::sortId() const {
+	return (type->id + 1) * 100;
+}
+
+
 BuiltInType::BuiltInType(const SrcPos &pos, const String &name, Size size) : TypeRef(pos), name(name), tSize(size) {}
 
 Auto<TypeRef> BuiltInType::resolve(World &in, const CppName &context) const {
@@ -202,6 +242,11 @@ void BuiltInType::print(wostream &to) const {
 	to << name;
 }
 
+size_t BuiltInType::sortId() const {
+	return 0;
+}
+
+
 VoidType::VoidType(const SrcPos &pos) : TypeRef(pos) {}
 
 Auto<TypeRef> VoidType::resolve(World &in, const CppName &context) const {
@@ -211,6 +256,11 @@ Auto<TypeRef> VoidType::resolve(World &in, const CppName &context) const {
 void VoidType::print(wostream &to) const {
 	to << L"void";
 }
+
+size_t VoidType::sortId() const {
+	return 0;
+}
+
 
 GcArrayType::GcArrayType(const SrcPos &pos, Auto<TypeRef> of, bool weak) : TypeRef(pos), of(of), weak(weak) {}
 
@@ -231,6 +281,11 @@ void GcArrayType::print(wostream &to) const {
 		to << L"storm::GcArray<" << of << L">";
 }
 
+size_t GcArrayType::sortId() const {
+	return of->sortId();
+}
+
+
 GcWatchType::GcWatchType(const SrcPos &pos) : TypeRef(pos) {}
 
 Auto<TypeRef> GcWatchType::resolve(World &in, const CppName &context) const {
@@ -245,6 +300,11 @@ void GcWatchType::print(wostream &to) const {
 	to << L"storm::GcWatch";
 }
 
+size_t GcWatchType::sortId() const {
+	return 0;
+}
+
+
 Auto<TypeRef> EnginePtrType::resolve(World &in, const CppName &context) const {
 	return new EnginePtrType(*this);
 }
@@ -257,6 +317,10 @@ void EnginePtrType::print(wostream &to) const {
 	to << L"storm::EnginePtr";
 }
 
+size_t EnginePtrType::sortId() const {
+	return 0;
+}
+
 Auto<TypeRef> GcTypeType::resolve(World &in, const CppName &context) const {
 	return new GcTypeType(*this);
 }
@@ -267,6 +331,10 @@ Size GcTypeType::size() const {
 
 void GcTypeType::print(wostream &to) const {
 	to << L"storm::GcType";
+}
+
+size_t GcTypeType::sortId() const {
+	return 0;
 }
 
 
@@ -329,4 +397,8 @@ void UnknownType::print(wostream &to) const {
 	} else {
 		to << L"UNKNOWN(" << alias << L") " << of;
 	}
+}
+
+size_t UnknownType::sortId() const {
+	return alias->sortId();
 }
