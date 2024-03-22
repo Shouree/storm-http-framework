@@ -332,7 +332,9 @@ namespace storm {
 			Str *name = new (this) Str(toWChar(engine(), d->d_name)->v);
 			if (d->d_type == DT_DIR) {
 				result->push(url->pushDir(name));
-				// TODO: Handle 'DT_UNKNOWN' properly...
+			} else if (d->d_type == DT_UNKNOWN || d->d_type == DT_LNK) {
+				// Check if the link or other thing is a directory. We need to call STAT for that.
+				result->push(url->push(name)->updated());
 			} else {
 				result->push(url->push(name));
 			}
