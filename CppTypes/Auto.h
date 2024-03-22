@@ -24,11 +24,11 @@ public:
 	}
 
 	Auto<T> &operator =(const Auto<T> &o) {
+		if (o.ptr)
+			o.ptr->addRef();
 		if (ptr)
 			ptr->release();
 		ptr = o.ptr;
-		if (ptr)
-			ptr->addRef();
 		return *this;
 	}
 
