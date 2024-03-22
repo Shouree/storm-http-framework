@@ -444,7 +444,7 @@ vector<Path> Path::children() const {
 
 		result.push_back(*this + String(d->d_name));
 
-		switch (d->dt_type) {
+		switch (d->d_type) {
 		case DT_UNKNOWN:
 		case DT_LNK:
 			if (stat(result.back().toS().toChar().c_str(), &s) == 0) {
