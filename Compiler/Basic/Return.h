@@ -70,6 +70,11 @@ namespace storm {
 
 			// Block to jump out to.
 			code::Block inlineBlock;
+
+			// Check the result. Called by "Return"'s constructor. Modifies "expr" to return an
+			// appropriate type. Throws on error. If 'expr' is null, then the implementation assumes
+			// an empty return statement (i.e. returning void).
+			virtual MAYBE(Expr *) STORM_FN checkResult(SrcPos pos, Scope scope, MAYBE(Expr *) expr);
 		};
 
 
@@ -81,6 +86,8 @@ namespace storm {
 		public:
 			STORM_CTOR ReturnPoint(SrcPos pos, Scope scope, Value type);
 			STORM_CTOR ReturnPoint(SrcPos pos, Block *parent, Value type);
+			STORM_CTOR ReturnPoint(SrcPos pos, Scope scope, ReturnInfo *info);
+			STORM_CTOR ReturnPoint(SrcPos pos, Block *parent, ReturnInfo *info);
 
 			// Compute the result.
 			virtual ExprResult STORM_FN result();

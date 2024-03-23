@@ -41,7 +41,7 @@ class LambdaExpr extends Expr {
 
 		SimpleName name;
 		name.add("core");
-		name.add("Fn", { var z = params.values(); z.insert(0, tfmBody.type); z; });
+		name.add("Fn", { var z = params.values(); z.insert(0, tfmBody.result.type); z; });
 
 		init(pos) {
 			fnParams = params;
@@ -193,13 +193,16 @@ class LambdaExpr extends Expr {
 /**
  * Root block of a lamdba function. Intercepts variable lookups and creates suitable replacement
  * variables.
+ *
+ * Inherits from ReturnPoint (which inherits from Block) to support "return" statements properly.
  */
-private class LambdaBody extends Block {
+private class LambdaBody extends ReturnPoint {
 	// Create.
 	init(Scope scope, Block context, Array<ValParam> params, SExpr body) {
-		init(body.pos, scope) {
+		DeductiveReturnInfo info;
+
+		init(body.pos, scope, info) {
 			context = context;
-			resultComputed = false;
 		}
 
 		for (p in params) {
@@ -208,7 +211,7 @@ private class LambdaBody extends Block {
 			add(created);
 		}
 
-		this.body = body.transform(this);
+		this.body = info.deduceResult(body.transform(this), scope);
 	}
 
 	// Context from where the lambda function can capture variables.
@@ -223,12 +226,6 @@ private class LambdaBody extends Block {
 	// Variables created to capture parameters. These need to be replaced before using in the real
 	// function.
 	private LocalVar[] parameters;
-
-	// Cached result.
-	private Value cachedResult;
-
-	// Do we have a result?
-	private Bool resultComputed;
 
 	// The contents of the block.
 	private Expr? body;
@@ -257,23 +254,6 @@ private class LambdaBody extends Block {
 		}
 
 		return null;
-	}
-
-	// Forward the result.
-	ExprResult result() : override {
-		if (body)
-			body.result();
-		else
-			ExprResult();
-	}
-
-	// Cached version of the result.
-	Value type() {
-		if (!resultComputed) {
-			cachedResult = result.type().asRef(false);
-			resultComputed = true;
-		}
-		return cachedResult;
 	}
 
 	// Create a FnBody, taking care of the parameters in here.
@@ -324,9 +304,17 @@ private class LambdaBody extends Block {
 			}
 		}
 
-		// Generate code for the body!
-		body.code(childGen, to);
+		// Generate code for the body. We must take care of the return information as well to make
+		// 'return' statements work.
+		info.inlineResult = to;
+		info.inlineLabel = gen.l.label();
+		info.inlineBlock = childGen.block;
+
+		body.code(childGen, to.split(gen));
+
 		gen.l << end(childGen.block);
+		gen.l << info.inlineLabel;
+		to.created(gen);
 	}
 
 	// Populate a type with any captured variables. The returned expression will instantiate the
@@ -370,6 +358,104 @@ private class LambdaBody extends Block {
 	void toS(StrBuf to) : override {
 		if (body) {
 			to << body;
+		}
+	}
+}
+
+/**
+ * ReturnInfo that deduces the return type based on what is actually used with 'return'.
+ */
+class DeductiveReturnInfo extends ReturnInfo {
+	init() {
+		init(Value()) {}
+	}
+
+	// All captured return expressions.
+	private Wrap[] returnExprs;
+
+	// Called for all 'return' statements.
+	Expr? checkResult(SrcPos pos, Scope scope, Expr? expr) : override {
+		if (expr) {
+			Wrap wrap(expr);
+			returnExprs << wrap;
+			return wrap;
+		} else {
+			return null;
+		}
+	}
+
+	// Call when the tree has been transformed. Deduces a single return type for the entire block
+	// and inserts suitable type-casts.
+	Expr deduceResult(Expr body, Scope scope) {
+		ExprResult bodyResult = body.result();
+		ExprResult acc = bodyResult;
+		for (e in returnExprs) {
+			acc = e.findType(acc);
+		}
+
+		// If 'acc' is "never returns", then all paths throws. This means that we can just skip
+		// type-conversions.
+		if (acc.nothing)
+			return body;
+
+		Value finalType = acc.type;
+		this.type = finalType;
+
+		// Now, we have a type. Try to cast everything to that type.
+		for (e in returnExprs) {
+			e.castTo(finalType, scope);
+		}
+
+		if (!bodyResult.nothing())
+			return expectCastTo(body, finalType, scope);
+		else
+			return body;
+	}
+
+	// Wrap expressions that are returned, so that we can change their type when we have all type
+	// information.
+	private class Wrap extends Expr {
+		// Create.
+		init(Expr inside) {
+			init(inside.pos) {
+				inside = inside;
+			}
+		}
+
+		// Contained expression.
+		private Expr inside;
+
+		// Result.
+		ExprResult result() : override { inside.result(); }
+
+		// Generate code.
+		void code(CodeGen code, CodeResult result) : override { inside.code(code, result); }
+
+		// Note: This only needs to be enough for the "return" expr. As such, we don't need to
+		// implement the rest of the interface.
+
+		// Help out in type deduction.
+		ExprResult findType(ExprResult acc) {
+			var insideResult = inside.result();
+
+			if (acc.nothing)
+				return insideResult;
+			if (insideResult.nothing)
+				return acc;
+
+			// Use regular inheritance check.
+			var c = common(acc.type, insideResult.type);
+
+			// If it failed, then just return 'acc'. This makes us try a type conversion later,
+			// which might fail (which is fine).
+			if (c == Value())
+				return acc;
+			return ExprResult(c);
+		}
+
+		// Cast the contained expression.
+		void castTo(Value type, Scope scope) {
+			inside = expectCastTo(inside, type, scope);
 		}
 	}
 }

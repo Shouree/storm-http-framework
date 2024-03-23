@@ -76,3 +76,17 @@ Int testLambdaThisExplicit() {
 	var fn = e.captureExplicit();
 	fn.call(13);
 }
+
+Int testLambdaExplicitReturn() {
+	var x = (Int x) => {
+		if (x > 10) {
+			return 75;
+		} else if (x < 0) {
+			return 35;
+		} else {
+			200;
+		}
+	};
+
+	x.call(20) + x.call(-1);
+}

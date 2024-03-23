@@ -8,15 +8,11 @@ namespace storm {
 	namespace bs {
 
 		Return::Return(SrcPos pos, Block *block) : Expr(pos), retInfo(findReturn(pos, block)) {
-			if (retInfo->type != Value()) {
-				throw new (this) SyntaxError(pos, TO_S(this, S("Trying to return void from a function that returns ") << retInfo->type));
-			}
+			retInfo->checkResult(pos, block->scope, null);
 		}
 
 		Return::Return(SrcPos pos, Block *block, Expr *expr) : Expr(pos), retInfo(findReturn(pos, block)) {
-			if (retInfo->type == Value())
-				throw new (this) SyntaxError(pos, S("Trying to return a value from a function that returns void."));
-			this->expr = expectCastTo(expr, retInfo->type, block->scope);
+			this->expr = retInfo->checkResult(pos, block->scope, expr);
 		}
 
 		ExprResult Return::result() {
@@ -89,6 +85,18 @@ namespace storm {
 
 		ReturnInfo::ReturnInfo(Value type) : type(type) {}
 
+		MAYBE(Expr *) ReturnInfo::checkResult(SrcPos pos, Scope scope, Expr *expr) {
+			if (!expr) {
+				if (this->type != Value())
+					throw new (this) SyntaxError(pos, TO_S(this, S("Trying to return void from a function that returns ") << type));
+			} else {
+				if (this->type == Value())
+					throw new (this) SyntaxError(pos, S("Trying to return a value from a function that returns void."));
+				expr = expectCastTo(expr, type, scope);
+			}
+			return expr;
+		}
+
 		ReturnPoint::ReturnPoint(SrcPos pos, Scope scope, Value type) : Block(pos, scope) {
 			info = new (this) ReturnInfo(type);
 		}
@@ -96,6 +104,10 @@ namespace storm {
 		ReturnPoint::ReturnPoint(SrcPos pos, Block *parent, Value type) : Block(pos, parent) {
 			info = new (this) ReturnInfo(type);
 		}
+
+		ReturnPoint::ReturnPoint(SrcPos pos, Scope scope, ReturnInfo *info) : Block(pos, scope), info(info) {}
+
+		ReturnPoint::ReturnPoint(SrcPos pos, Block *parent, ReturnInfo *info) : Block(pos, parent), info(info) {}
 
 		ExprResult ReturnPoint::result() {
 			return info->type;
