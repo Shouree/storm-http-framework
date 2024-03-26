@@ -20,6 +20,6 @@ suite UseTemplates {
 	x.v = 10;
 	print(x.f.toS);
 
-	Array<Int> w;
+	Array<Int> w = [1, 2, 3];
 	pickOne(w);
 }
