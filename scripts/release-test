@@ -19,7 +19,7 @@ echo "Extracting..."
 $extract > /dev/null
 
 echo "Launching REPL..."
-echo "exit" | ./Storm > /dev/null
+echo "exit" | ./storm > /dev/null
 if [[ $? -ne 0 ]]
 then
     echo "Failed to launch the REPL. Something is bad! Test in release/storm"
@@ -27,7 +27,7 @@ then
 fi
 
 echo "Running basic tests..."
-./Storm -c 'tests:bf:inlineBf' > output.txt
+./storm -c 'tests:bf:inlineBf' > output.txt
 if [[ $? -ne 0 ]]
 then
     echo "Failed to execute BS code. Test in release/storm"
