@@ -55,7 +55,7 @@ function fix_name_case {
     then
 	echo ${1^}
     else
-	echo $1
+	echo ${1,}
     fi
 }
 
