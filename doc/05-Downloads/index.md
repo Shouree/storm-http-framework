@@ -17,8 +17,8 @@ Binary releases for [storm:version] \([storm:date]\)
 
 - [Windows (32-bit, X86)](/storm_mps_win32.zip)
 - [Windows (64-bit, X86)](/storm_mps_win64.zip)
-- [Linux (64-bit, X86)](/storm_mps_amd64.tar.gz) (should work for recent Debian-based distributions)
-- [Linux (64-bit, ARM)](/storm_mps_arm64.tar.gz) (should work for recent Debian-based distributions)
+- [Linux (64-bit, X86)](/storm_mps_amd64.tar.gz) (should work for recent Debian-based distributions at least)
+- [Linux (64-bit, ARM)](/storm_mps_arm64.tar.gz) (should work for recent Debian-based distributions at least)
 
 
 Simply download and unpack the archive somewhere. Then run the `Storm` (`Storm.exe` on Windows) file

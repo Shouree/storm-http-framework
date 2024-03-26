@@ -65,8 +65,8 @@ installed).
 ### Installing from the Webpage
 
 The binaries on the Storm webpage are built using the `oldstable` version of Debian. They are
-therefore known to work on recent Debian-based systems (e.g. Ubuntu). They have also been tested
-on other distributions, such as Arch Linux, and may work there as well.
+therefore known to work on recent Debian-based systems (e.g. Ubuntu). They have also been tested on
+other distributions, such as Fedora and Arch Linux, and may work there as well.
 
 The binary releases contain everything that is necessary, except for core system libraries that
 are likely already installed on your system. Therefore, installing Storm is as simple as
