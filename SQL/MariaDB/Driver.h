@@ -11,8 +11,16 @@
 #include "Windows/mariadb/include/mysql.h"
 #include "Windows/mariadb/include/mysqld_error.h"
 #else
+
+// This is available in C++17 and above:
+#if __has_include(<mariadb/mysql.h>)
 #include <mariadb/mysql.h>
 #include <mariadb/mysqld_error.h>
+#else
+#include <mysql/mysql.h>
+#include <mysql/mysqld_error.h>
+#endif
+
 #endif
 
 
