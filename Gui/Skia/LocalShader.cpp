@@ -8,8 +8,12 @@ namespace gui {
 	LocalShader::LocalShader(sk_sp<SkShader> proxy, const SkMatrix &matrix)
 		: proxy(proxy), matrix(matrix) {}
 
-	std::unique_ptr<GrFragmentProcessor> LocalShader::asFragmentProcessor(const GrFPArgs &args) const {
-		return base()->asFragmentProcessor(GrFPArgs::WithPreLocalMatrix(args, matrix));
+	SkShaderBase::GradientType LocalShader::asGradient(GradientInfo *info, SkMatrix *localMatrix) const {
+		GradientType type = as_SB(proxy)->asGradient(info, localMatrix);
+		if (type != SkShaderBase::GradientType::kNone && localMatrix) {
+			*localMatrix = ConcatLocalMatrices(matrix, *localMatrix);
+		}
+		return type;
 	}
 
 	sk_sp<SkFlattenable> LocalShader::CreateProc(SkReadBuffer &buffer) {
@@ -26,33 +30,22 @@ namespace gui {
 		to.writeFlattenable(proxy.get());
 	}
 
+#ifdef SK_ENABLE_LEGACY_SHADERCONTEXT
+	SkShaderBase::Context* LocalShader::onMakeContext(const ContextRec& rec, SkArenaAlloc* alloc) const {
+		return as_SB(proxy)->makeContext(ContextRec::Concat(rec, matrix), alloc);
+	}
+#endif
+
 	SkImage *LocalShader::onIsAImage(SkMatrix *matrix, SkTileMode *mode) const {
 		SkMatrix imageMatrix;
 		SkImage *image = proxy->isAImage(&imageMatrix, mode);
 		if (image && matrix)
-			*matrix = SkMatrix::Concat(imageMatrix, this->matrix);
+			*matrix = ConcatLocalMatrices(this->matrix, imageMatrix);
 		return image;
 	}
 
-	bool LocalShader::onAppendStages(const SkStageRec &rec) const {
-		SkTCopyOnFirstWrite<SkMatrix> l(matrix);
-		if (rec.fLocalM)
-			l.writable()->preConcat(*rec.fLocalM);
-
-		SkStageRec newRec = rec;
-		newRec.fLocalM = l;
-		return base()->appendStages(newRec);
-	}
-
-	skvm::Color LocalShader::onProgram(skvm::Builder *b, skvm::Coord device, skvm::Coord local, skvm::Color paint,
-									const SkMatrixProvider &mp, const SkMatrix *localMatrix,
-									SkFilterQuality quality, const SkColorInfo &dst,
-									skvm::Uniforms *uniforms, SkArenaAlloc *arena) const {
-		SkTCopyOnFirstWrite<SkMatrix> l(this->matrix);
-		if (localMatrix)
-			l.writable()->preConcat(*localMatrix);
-
-		return base()->program(b, device, local, paint, mp, l.get(), quality, dst, uniforms, arena);
+	bool LocalShader::appendStages(const SkStageRec &rec, const SkShaders::MatrixRec &mRec) const {
+		return as_SB(proxy)->appendStages(rec, mRec.concat(matrix));
 	}
 
 }

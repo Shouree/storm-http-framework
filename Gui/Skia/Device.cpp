@@ -43,7 +43,7 @@ namespace gui {
 		if (!interface)
 			throw new (runtime::someEngine()) GuiError(S("Failed to initialize OpenGL with Skia."));
 
-		skia = GrDirectContext::MakeGL(interface);
+		skia = GrDirectContexts::MakeGL(interface);
 		if (!skia)
 			throw new (runtime::someEngine()) GuiError(S("Failed to initialize OpenGL with Skia."));
 	}
@@ -126,11 +126,11 @@ namespace gui {
 		GrGLFramebufferInfo info;
 		info.fFBOID = framebuffer;
 		info.fFormat = GL_RGB8;
-		target = GrBackendRenderTarget(size.w, size.h, msaa, stencilBits, info);
-		surface = SkSurface::MakeFromBackendRenderTarget(context->skia.get(), target,
-														kBottomLeft_GrSurfaceOrigin,
-														kRGB_888x_SkColorType,
-														nullptr, nullptr);
+		target = GrBackendRenderTargets::MakeGL(size.w, size.h, msaa, stencilBits, info);
+		surface = SkSurfaces::WrapBackendRenderTarget(context->skia.get(), target,
+													kBottomLeft_GrSurfaceOrigin,
+													kRGB_888x_SkColorType,
+													nullptr, nullptr);
 
 		canvas = surface->getCanvas();
 	}
@@ -172,8 +172,8 @@ namespace gui {
 		GrGLFramebufferInfo info;
 		info.fFBOID = framebuffer;
 		info.fFormat = GL_RGB8;
-		target = GrBackendRenderTarget(size.w, size.h, msaa, stencilBits, info);
-		surface = SkSurface::MakeFromBackendRenderTarget(context->skia.get(), target,
+		target = GrBackendRenderTargets::MakeGL(size.w, size.h, msaa, stencilBits, info);
+		surface = SkSurfaces::WrapBackendRenderTarget(context->skia.get(), target,
 														kBottomLeft_GrSurfaceOrigin,
 														kRGB_888x_SkColorType,
 														nullptr, nullptr);

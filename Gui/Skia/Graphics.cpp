@@ -62,7 +62,7 @@ namespace gui {
 		reset();
 
 		// Flush operations so that it is safe to present the contents of the texture.
-		surface.surface->flushAndSubmit();
+		surface.device()->flushAndSubmit();
 
 		rendering = false;
 
@@ -279,10 +279,9 @@ namespace gui {
 		SkPaint paint;
 		paint.setAntiAlias(true);
 		paint.setAlphaf(opacity);
-		paint.setFilterQuality(kMedium_SkFilterQuality); // For linear interpolation w/ mipmaps if available
 
 		SkiaBitmap *b = (SkiaBitmap *)bitmap->forGraphicsRaw(this);
-		surface.canvas->drawImageRect(b->image, skia(rect), &paint);
+		surface.canvas->drawImageRect(b->image, skia(rect), SkFilterMode::kLinear, &paint);
 	}
 
 	void SkiaGraphics::draw(Bitmap *bitmap, Rect src, Rect dest, Float opacity) {
@@ -293,10 +292,9 @@ namespace gui {
 		SkPaint paint;
 		paint.setAntiAlias(true);
 		paint.setAlphaf(opacity);
-		paint.setFilterQuality(kMedium_SkFilterQuality); // For linear interpolation w/ mipmaps if available
 
 		SkiaBitmap *b = (SkiaBitmap *)bitmap->forGraphicsRaw(this);
-		surface.canvas->drawImageRect(b->image, skia(src), skia(dest), &paint);
+		surface.canvas->drawImageRect(b->image, skia(src), skia(dest), SkFilterMode::kLinear, &paint, SkCanvas::kStrict_SrcRectConstraint);
 	}
 
 	void SkiaGraphics::text(Str *text, Font *font, Brush *style, Rect rect) {

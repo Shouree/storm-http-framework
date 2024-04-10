@@ -11,8 +11,13 @@
 #undef None
 
 #include "include/gpu/GrDirectContext.h"
+#include "include/gpu/GrBackendSurface.h"
 #include "include/gpu/gl/GrGLInterface.h"
 #include "include/gpu/gl/GrGLAssembleInterface.h"
+#include "include/gpu/ganesh/gl/GrGLDirectContext.h"
+#include "include/gpu/ganesh/gl/GrGLBackendSurface.h"
+#include "include/gpu/ganesh/SkImageGanesh.h"
+#include "include/gpu/ganesh/SkSurfaceGanesh.h"
 #include "include/core/SkSurface.h"
 #include "include/core/SkCanvas.h"
 #include "include/core/SkColor.h"
@@ -27,8 +32,8 @@
 // This is technically not a part of the public API. We statically link to Skia, so we will make it work.
 // These are only used in LocalShader.h
 #include "src/shaders/SkShaderBase.h"
-#include "src/gpu/GrFragmentProcessor.h"
-#include "src/core/SkVM.h"
+// #include "src/gpu/GrFragmentProcessor.h"
+// #include "src/core/SkVM.h"
 #include "src/core/SkReadBuffer.h"
 #include "src/core/SkWriteBuffer.h"
 // #include "src/gpu/effects/GrMatrixEffect.h"
@@ -38,7 +43,18 @@
 
 // For font rendering.
 #include "src/ports/SkFontHost_FreeType_common.h"
+#include "src/ports/SkTypeface_FreeType.h"
 #include "src/core/SkFontDescriptor.h"
+
+// Skia re-defines the assert macro. Get our original definition back!
+#undef assert
+
+#ifdef VISUAL_STUDIO
+#define assert(X, ...) if (!(X)) throw AssertionException(WIDEN(__FILE__), __LINE__, WIDEN(#X), __VA_ARGS__)
+#else
+#define assert(X, ...) if (!(X)) throw AssertionException(WIDEN(__FILE__), __LINE__, WIDEN(#X), ##__VA_ARGS__)
+#endif
+
 
 GrGLFuncPtr egl_get(void* ctx, const char name[]);
 GrGLFuncPtr glx_get(void* ctx, const char name[]);

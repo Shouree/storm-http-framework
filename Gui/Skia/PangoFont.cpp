@@ -92,14 +92,15 @@ namespace gui {
 		const char *data = hb_blob_get_data(key.blob, &size);
 		std::unique_ptr<SkMemoryStream> stream(new SkMemoryStream(SkData::MakeWithoutCopy(data, size)));
 
-		const SkTypeface_FreeType::Scanner scanner;
+		const SkFontScanner_FreeType scanner;
 		SkString name;
 		SkFontStyle style;
 		bool isFixedWidth = false;
-		if (!scanner.scanFont(stream.get(), 0, &name, &style, &isFixedWidth, nullptr))
+		// NOTE: first parameter is a "collection index". Seems to only be used in certain situations.
+		if (!scanner.scanInstance(stream.get(), 0, 0, &name, &style, &isFixedWidth, nullptr))
 			return nullptr;
 
-		std::unique_ptr<SkFontData> fData(new SkFontData(std::move(stream), key.index, null, 0));
+		std::unique_ptr<SkFontData> fData(new SkFontData(std::move(stream), key.index, 0 /* palette index */, null, 0, null, 0));
 		return sk_sp<SkPangoTypeface>(new SkPangoTypeface(std::move(fData), std::move(name), style, isFixedWidth, key));
 	}
 

@@ -128,7 +128,7 @@ GrGLFuncPtr glx_get(void* ctx, const char name[]) {
         return nullptr;
     }
 
-    return glXGetProcAddress(reinterpret_cast<const GLubyte*>(name));
+	return glXGetProcAddress(reinterpret_cast<const GLubyte*>(name));
 }
 
 #endif

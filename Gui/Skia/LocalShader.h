@@ -6,7 +6,7 @@
 namespace gui {
 
 	/**
-	 * A version of the SkLocalShader.
+	 * A version of the SkLocalMatrixShader.
 	 *
 	 * This is so that we can freely modify the transform without re-creating objects all the
 	 * time. While this is possible to some extent in Skia, there is seemingly no good way to simply
@@ -18,12 +18,17 @@ namespace gui {
 		LocalShader(sk_sp<SkShader> proxy, const SkMatrix &matrix);
 
 		// Overrides for some needed functions.
-		GradientType asAGradient(GradientInfo *info) const override {
-			return proxy->asAGradient(info);
-		}
+		bool isOpaque() const override { return as_SB(proxy)->isOpaque(); }
+		bool isConstant() const override { return as_SB(proxy)->isConstant(); }
+		GradientType asGradient(GradientInfo *info, SkMatrix *localMatrix) const override;
+		ShaderType type() const override { return ShaderType::kLocalMatrix; }
 
-		// Fragment processing.
-		std::unique_ptr<GrFragmentProcessor> asFragmentProcessor(const GrFPArgs &) const override;
+		sk_sp<SkShader> makeAsALocalMatrixShader(SkMatrix *localMatrix) const override {
+			if (localMatrix) {
+				*localMatrix = matrix;
+			}
+			return proxy;
+		}
 
 		// Local matrix.
 		SkMatrix matrix;
@@ -32,28 +37,21 @@ namespace gui {
 		// Flatten.
 		void flatten(SkWriteBuffer &to) const override;
 
+#ifdef SK_ENABLE_LEGACY_SHADERCONTEXT
+		Context* onMakeContext(const ContextRec&, SkArenaAlloc*) const override;
+#endif
+
 		// To an image.
 		SkImage *onIsAImage(SkMatrix *matrix, SkTileMode *mode) const override;
 
 		// Append stages.
-		bool onAppendStages(const SkStageRec &) const override;
-
-		// (execute?) shader program.
-		skvm::Color onProgram(skvm::Builder *, skvm::Coord device, skvm::Coord local, skvm::Color paint,
-							const SkMatrixProvider &, const SkMatrix *localMatrix,
-							SkFilterQuality quality, const SkColorInfo &dst,
-							skvm::Uniforms *uniforms, SkArenaAlloc *arena) const override;
+		bool appendStages(const SkStageRec &, const SkShaders::MatrixRec &) const override;
 
 	private:
 		SK_FLATTENABLE_HOOKS(LocalShader);
 
 		// Shader we're wrapping.
 		sk_sp<SkShader> proxy;
-
-		// Get the proxy shader as a SkShaderBase
-		SkShaderBase *base() const {
-			return static_cast<SkShaderBase *>(proxy.get());
-		}
 	};
 
 }

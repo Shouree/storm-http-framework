@@ -161,7 +161,7 @@ namespace gui {
 		SkPixmap pixmap(info, image->buffer(), image->stride());
 
 		SkiaBitmap *bitmap = new SkiaBitmap();
-		bitmap->image = SkImage::MakeCrossContextFromPixmap(surface->device(), pixmap, false, true);
+		bitmap->image = SkImages::CrossContextTextureFromPixmap(surface->device(), pixmap, false, true);
 
 		result = bitmap;
 		cleanup = &cleanupBitmap;

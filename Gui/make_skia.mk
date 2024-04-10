@@ -6,7 +6,7 @@
 # SKIA_IMPLEMENTATION=1 seems to be needed when building the library
 # SK_UNICODE_AVAILABLE=1 for unicode support in text shaping modules
 # SK_SHAPER_HARFBUZZ_AVAILABLE=1 for harfbuzz support
-DEFINES := SK_R32_SHIFT=16 SK_ASSUME_GL_ES=1 SK_GAMMA_APPLY_TO_A8 GR_OP_ALLOCATE_USE_NEW SKIA_IMPLEMENTATION=1 SK_SUPPORT_GPU=1 SK_GL=1
+DEFINES := SK_R32_SHIFT=16 SK_ASSUME_GL_ES=1 SK_GAMMA_APPLY_TO_A8 GR_OP_ALLOCATE_USE_NEW SKIA_IMPLEMENTATION=1 SK_SUPPORT_GPU=1 SK_GL=1 SK_GANESH=1 SK_DISABLE_LEGACY_PNG_WRITEBUFFER=1
 
 # These are only needed if SkShaper and/or SkParagraph are used.
 #DEFINES := $(DEFINES) SK_UNICODE_AVAILABLE=1 SK_SHAPER_HARFBUZZ_AVAILABLE=1
@@ -26,28 +26,35 @@ CHEAP_CXXFLAGS := -std=c++17 -fPIC -iquote. -Wno-psabi -I/usr/include/freetype2 
 # These are the flags for the final library. We want to use -O3 here for speed.
 CXXFLAGS := -O3 $(CHEAP_CXXFLAGS)
 
+# Workdir, where to store build files. We increase this when Skia is updated to avoid build failures, since
+# the makefile is not perfect at tracking dependencies.
+WORKDIR := out/v2
+
 # Note: We skipped these: codec
 SKIA_LIBS :=
 
 # To use the SkParagraph library (requires more run-time and possibly compile-time dependencies):
 #SKIA_LIBS := skshaper skparagraph
 
-SOURCE_DIRS := effects effects/imagefilters gpu gpu/text gpu/ccpr gpu/effects gpu/effects/generated gpu/geometry gpu/glsl gpu/gl gpu/gl/builders gpu/mock gpu/gl/egl gpu/gl/glx gpu/ops gpu/tessellate gpu/gradients gpu/gradients/generated images opts sfnt utils c core fonts image lazy pathops shaders shaders/gradients sksl sksl/ir
+SOURCE_DIRS := base core effects effects/colorfilters effects/imagefilters fonts gpu gpu/ganesh gpu/ganesh/effects gpu/ganesh/geometry gpu/ganesh/gl gpu/ganesh/gl/builders gpu/ganesh/gl/egl gpu/ganesh/gl/glx gpu/ganesh/glsl gpu/ganesh/gradients gpu/ganesh/image gpu/ganesh/mock gpu/ganesh/ops gpu/ganesh/surface gpu/ganesh/tessellate gpu/ganesh/text gpu/tessellate image lazy opts pathops shaders shaders/gradients sksl sksl/ir sksl/codegen sksl/lex sksl/tracing sksl/transform sksl/analysis text sfnt text/gpu utils
 PORTS := SkDebug_stdio.cpp SkDiscardableMemory_none.cpp SkFontConfigInterface*.cpp SkFontMgr_fontconfig*.cpp SkFontMgr_FontConfigInterface*.cpp SkFontHost_*.cpp SkGlobalInitialization_default.cpp SkMemory_malloc.cpp SkOSFile_posix.cpp SkOSFile_stdio.cpp SkOSLibrary_posix.cpp SkImageGenerator_none.cpp
-CODEC := SkMasks.cpp
+CODEC := SkCodec.cpp SkPixmapUtils.cpp SkSampler.cpp SkCodecImageGenerator.cpp SkImageGenerator_FromEncoded.cpp
 SOURCES := $(wildcard $(addsuffix /*.cpp,$(addprefix src/,$(SOURCE_DIRS)))) $(wildcard $(addprefix src/ports/,$(PORTS))) $(wildcard $(addprefix src/codec/,$(CODEC)))
 SOURCES := $(filter-out src/sksl/SkSLMain.cpp,$(SOURCES)) # Remove the main file...
 SOURCES := $(filter-out src/gpu/gl/GrGLMakeNativeInterface_none.cpp,$(SOURCES))
 SOURCES := $(filter-out src/gpu/GrPathRendering_none.cpp,$(SOURCES))
 LIB_SOURCES := $(wildcard $(addsuffix /src/*.cpp,$(addprefix modules/,$(SKIA_LIBS))))
 LIB_SOURCES := $(filter-out %_coretext.cpp,$(LIB_SOURCES))
-OBJECTS := $(patsubst src/%.cpp,out/%.o,$(SOURCES))
-LIB_OBJECTS := $(patsubst modules/%.cpp,out/modules/%.o,$(LIB_SOURCES))
+OBJECTS := $(patsubst src/%.cpp,$(WORKDIR)/%.o,$(SOURCES))
+LIB_OBJECTS := $(patsubst modules/%.cpp,$(WORKDIR)/modules/%.o,$(LIB_SOURCES))
 
 SKSL_SRC := src/core/SkMalloc.cpp src/core/SkMath.cpp src/core/SkSemaphore.cpp src/core/SkThreadID.cpp src/gpu/GrBlockAllocator.cpp src/gpu/GrMemoryPool.cpp src/ports/SkMemory_malloc.cpp $(wildcard src/sksl/*.cpp src/sksl/ir/*.cpp)
-SKSL_OBJ := $(patsubst src/%.cpp,out/slc/%.o,$(SKSL_SRC))
+SKSL_OBJ := $(patsubst src/%.cpp,$(WORKDIR)/slc/%.o,$(SKSL_SRC))
 SKSL_PRECOMP := $(addsuffix .sksl,$(addprefix src/sksl/sksl_,fp frag geom gpu interp pipeline vert))
 SKSL_DEHYDRATED := $(patsubst src/sksl/%.sksl,src/sksl/generated/%.dehydrated.sksl,$(SKSL_PRECOMP))
+
+SKCMS_FILES := modules/skcms/skcms.cc $(wildcard modules/skcms/src/*.cc)
+SKCMS_OBJECTS := $(patsubst modules/skcms/%.cc,$(WORKDIR)/skcms/%.o,$(SKCMS_FILES))
 
 ifeq ($(OUTPUT),)
 OUTPUT := skia.a
@@ -58,25 +65,27 @@ all: $(OUTPUT)
 
 .PHONY: clean
 clean:
-	rm -r out/
+	rm -r $(WORKDIR)/
 
-$(OUTPUT): $(OBJECTS) $(LIB_OBJECTS) out/skcms.o
+$(OUTPUT): $(OBJECTS) $(LIB_OBJECTS) $(SKCMS_OBJECTS)
 	@echo "Linking $(OUTPUT)..."
-	@ar rcs $(OUTPUT) $(OBJECTS) $(LIB_OBJECTS) out/skcms.o
+	@rm -f $(OUTPUT)
+	@ar rcs $(OUTPUT) $(OBJECTS) $(LIB_OBJECTS) $(SKCMS_OBJECTS)
 
-$(OBJECTS): out/%.o: src/%.cpp
+$(OBJECTS): $(WORKDIR)/%.o: src/%.cpp
 	@echo "Compiling $<..."
 	@mkdir -p $(dir $@)
 	g++ -c $(CXXFLAGS) -o $@ $<
 
-$(LIB_OBJECTS): out/modules/%.o: modules/%.cpp
+$(LIB_OBJECTS): $(WORKDIR)/modules/%.o: modules/%.cpp
 	@echo "Compiling $<..."
 	@mkdir -p $(dir $@)
 	g++ -c $(CXXFLAGS) -I/usr/include/harfbuzz/ -o $@ $<
 
-out/skcms.o: third_party/skcms/skcms.cc
+$(SKCMS_OBJECTS): $(WORKDIR)/skcms/%.o: modules/skcms/%.cc
 	@echo "Compiling $<..."
-	gcc -c -I include/third_party/skcms -O3 -fPIC $< -o $@
+	@mkdir -p $(dir $@)
+	g++ -DSKCMS_DISABLE_HSW -DSKCMS_DISABLE_SKX -c -I include/modules/skcms -O3 -fPIC $< -o $@
 
 # The rules below compile the SKSL sources.
 
@@ -84,20 +93,20 @@ out/skcms.o: third_party/skcms/skcms.cc
 # They are actually committed to the repository, so we don't need to do that, especially as it increases
 # built time by quite a lot since we need to compile parts of Skia multiple times.
 
-# out/sksl/SkSLCompiler.o: src/sksl/SkSLCompiler.cpp $(SKSL_DEHYDRATED)
+# $(WORKDIR)/sksl/SkSLCompiler.o: src/sksl/SkSLCompiler.cpp $(SKSL_DEHYDRATED)
 
-out/skslc: $(SKSL_OBJ)
+$(WORKDIR)/skslc: $(SKSL_OBJ)
 	g++ -pthread -o $@ $(SKSL_OBJ)
 
-$(SKSL_OBJ): out/slc/%.o: src/%.cpp
+$(SKSL_OBJ): $(WORKDIR)/slc/%.o: src/%.cpp
 	@mkdir -p $(dir $@)
 	g++ -c $(CHEAP_CXXFLAGS) -DSKSL_STANDALONE -o $@ $<
 
 src/sksl/sksl_fp.sksl: src/sksl/sksl_fp_raw.sksl
 	cat include/private/GrSharedEnums.h $^ | sed 's|^#|// #|g' > $@
 
-$(SKSL_DEHYDRATED): src/sksl/generated/%.dehydrated.sksl: src/sksl/%.sksl out/skslc
-	cd src/sksl/ && ../../out/skslc $(notdir $<) generated/$(notdir $@)
+$(SKSL_DEHYDRATED): src/sksl/generated/%.dehydrated.sksl: src/sksl/%.sksl $(WORKDIR)/skslc
+	cd src/sksl/ && ../../$(WORKDIR)/skslc $(notdir $<) generated/$(notdir $@)
 
 print:
 	@echo $(SOURCES)

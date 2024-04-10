@@ -43,6 +43,10 @@ define+=SK_GL=1
 # Need this as well.
 linkFlags+=-lharfbuzz
 
+# Tell it to not complain about ABI incompatibilities due to missing CPU features. We build
+# Skia with the same flags, so it is OK.
+flags+=-Wno-psabi
+
 define+=GUI_ENABLE_SKIA
 
 # Note: Cairo needs to be first. Otherwise we link the wrong .so-file for Cairo.
