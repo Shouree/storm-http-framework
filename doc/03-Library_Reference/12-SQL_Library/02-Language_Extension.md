@@ -172,7 +172,7 @@ DATABASE PetDB {
         owner INTEGER
     );
 
-    INDEX ON animal(owner);
+    INDEX ON pet(owner);
 }
 ```
 
