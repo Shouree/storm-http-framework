@@ -92,11 +92,12 @@ class Printf extends Expr {
 
 	// An integer.
 	private class Integer extends Item {
-		init(Int width, Expr value) {
-			init { width = width; value = value; }
+		init(Int width, Bool zeroPad, Expr value) {
+			init { width = width; zeroPad = zeroPad; value = value; }
 		}
 
 		Int width;
+		Bool zeroPad;
 		Expr value;
 
 		asm:Var var;
@@ -108,9 +109,37 @@ class Printf extends Expr {
 		}
 
 		void run(CodeGen gen) : override {
-			var fn = named{PrintfHelpers:putInt<Int, Int>};
+			var fn = named{PrintfHelpers:putInt<Int, Bool, Int>};
 			gen.l << fnParam(intDesc(), intConst(width));
+			gen.l << fnParam(byteDesc(), byteConst(if (zeroPad) { 1b; } else { 0b; }));
 			gen.l << fnParam(intDesc(), var);
+			gen.l << fnCall(fn.ref, false);
+		}
+	}
+
+	// A character.
+	private class Character extends Item {
+		init(Int width, Bool zeroPad, Expr value) {
+			init { width = width; zeroPad = zeroPad; value = value; }
+		}
+
+		Int width;
+		Bool zeroPad;
+		Expr value;
+
+		asm:Var var;
+
+		void computeExpr(CodeGen gen) : override {
+			CodeResult r(named{Byte}, gen.block);
+			value.code(gen, r);
+			var = r.location(gen);
+		}
+
+		void run(CodeGen gen) : override {
+			var fn = named{PrintfHelpers:putChar<Int, Bool, Byte>};
+			gen.l << fnParam(intDesc(), intConst(width));
+			gen.l << fnParam(byteDesc(), byteConst(if (zeroPad) { 1b; } else { 0b; }));
+			gen.l << fnParam(byteDesc(), var);
 			gen.l << fnCall(fn.ref, false);
 		}
 	}
@@ -133,17 +162,27 @@ class Printf extends Expr {
 			lastCh = ch;
 		}
 
-		// Note: "%08d" should pad with zeros, we don't support that at the moment.
 		Str middle = middleBuf.toS;
+		// Check if we should pad with zero:
+		Bool zeroPad = middle.any & middle.startsWith("0");
+		if (zeroPad)
+			middle = middle.cut(middle.begin + 1);
+
+		if (middle.empty)
+			middle = "0";
+		Int width = middle.toInt;
+
 		Str last = lastCh.toS;
 		if (last == "s") {
-			if (middle.empty)
-				middle = "0";
-			items << StringPtr(middle.toInt, param);
+			if (zeroPad)
+				throw SyntaxError(str.pos, "Zero padding strings is not possible");
+			items << StringPtr(width, param);
 		} else if (last == "d") {
-			if (middle.empty)
-				middle = "0";
-			items << Integer(middle.toInt, param);
+			items << Integer(width, zeroPad, param);
+		} else if (last == "c") {
+			if (zeroPad)
+				throw SyntaxError(str.pos, "Zero padding strings is not possible");
+			items << Character(width, zeroPad, param);
 		} else {
 			throw SyntaxError(str.pos, "Unsupported format specifier ${last}");
 		}
@@ -154,7 +193,7 @@ class Printf extends Expr {
 // Output functions used by the implementation.
 // Due to a bug in loading the ConstPtr type, these need to be in a separate class to delay loading of the functions.
 package class PrintfHelpers {
-	void putInt(Int width, Int value) : static {
+	void putInt(Int width, Bool zeroPad, Int value) : static {
 		StrBuf buf;
 		if (width < 0)
 			buf << left;
@@ -162,7 +201,25 @@ package class PrintfHelpers {
 			buf << right;
 
 		buf << core:width(abs(width).nat);
+		if (zeroPad)
+			buf << core:fill('0');
+
 		buf << value;
+		runtime:printStr(buf.toS);
+	}
+
+	void putChar(Int width, Bool zeroPad, Byte value) : static {
+		StrBuf buf;
+		if (width < 0)
+			buf << left;
+		else
+			buf << right;
+
+		buf << core:width(abs(width).nat);
+		if (zeroPad)
+			buf << core:fill('0');
+
+		buf << Char(value.nat);
 		runtime:printStr(buf.toS);
 	}
 
