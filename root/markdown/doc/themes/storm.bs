@@ -304,7 +304,6 @@ class StormVisitor extends markdown:Visitor {
 
 		PackedElements elements;
 		elements.elements = doc.elements;
-		elements.elements.remove(0);
 
 		elements;
 	}
