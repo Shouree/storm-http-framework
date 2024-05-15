@@ -205,6 +205,41 @@ static void genAbstractImpls(wostream &to, World &w) {
 	}
 }
 
+static void genCreateImpls(wostream &to, World &w) {
+	nat maxParams = 0;
+	for (nat i = 0; i < w.functions.size(); i++) {
+		const Function &fn = w.functions[i];
+		String name = fn.name.last();
+		if (name != Function::ctor)
+			continue;
+
+		maxParams = max(maxParams, nat(fn.params.size()));
+	}
+
+	for (nat numParams = 1; numParams <= maxParams; numParams++) {
+		// Generate an implementation for 'numParams' parameters:
+		to << L"template <class T";
+		for (nat i = 1; i < numParams; i++)
+			to << L", class P" << i;
+		to << L">\n";
+
+		to << L"static void CODECALL create" << numParams << L"(void *mem";
+		for (nat i = 1; i < numParams; i++)
+			to << L", P" << i << L" p" << i;
+		to << L") {\n";
+
+		to << "\tnew (Place(mem))T(";
+		for (nat i = 1; i < numParams; i++) {
+			if (i > 1)
+				to << L", ";
+			to << L"p" << i;
+		}
+		to << L");\n";
+
+		to << "}\n\n";
+	}
+}
+
 static void genTypes(wostream &to, World &w) {
 	for (nat i = 0; i < w.types.size(); i++) {
 		Type &t = *w.types[i];
@@ -987,6 +1022,7 @@ GenerateMap genMap() {
 		{ L"CPP_TYPES", &genTypes },
 		{ L"VTABLE_DECLS", &genVTableFns },
 		{ L"ABSTRACT_IMPLS", &genAbstractImpls },
+		{ L"CREATE_IMPLS", &genCreateImpls },
 		{ L"TEMPLATE_ARRAYS", &genTemplateArrays },
 		{ L"FN_PARAMETERS", &genFnParams },
 		{ L"CPP_FUNCTIONS", &genFunctions },

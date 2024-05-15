@@ -93,45 +93,7 @@ namespace storm {
 		/**
 		 * Constructor for built-in classes.
 		 */
-		template <class T>
-		static void CODECALL create1(void *mem) {
-			new (Place(mem))T();
-		}
-
-		template <class T, class P>
-		static void CODECALL create2(void *mem, P p) {
-			new (Place(mem))T(p);
-		}
-
-		template <class T, class P, class Q>
-		static void CODECALL create3(void *mem, P p, Q q) {
-			new (Place(mem))T(p, q);
-		}
-
-		template <class T, class P, class Q, class R>
-		static void CODECALL create4(void *mem, P p, Q q, R r) {
-			new (Place(mem))T(p, q, r);
-		}
-
-		template <class T, class P, class Q, class R, class S>
-		static void CODECALL create5(void *mem, P p, Q q, R r, S s) {
-			new (Place(mem))T(p, q, r, s);
-		}
-
-		template <class T, class P, class Q, class R, class S, class U>
-		static void CODECALL create6(void *mem, P p, Q q, R r, S s, U u) {
-			new (Place(mem))T(p, q, r, s, u);
-		}
-
-		template <class T, class P, class Q, class R, class S, class U, class V>
-		static void CODECALL create7(void *mem, P p, Q q, R r, S s, U u, V v) {
-			new (Place(mem))T(p, q, r, s, u, v);
-		}
-
-		template <class T, class P, class Q, class R, class S, class U, class V, class W>
-		static void CODECALL create8(void *mem, P p, Q q, R r, S s, U u, V v, W w) {
-			new (Place(mem))T(p, q, r, s, u, v, w);
-		}
+		// CREATE_IMPLS
 
 		// Wrap an assignment operator call.
 		template <class T>
