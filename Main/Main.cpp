@@ -272,7 +272,22 @@ Array<Package *> *importPkgs(Engine &into, const Params &p) {
 
 		NameSet *ns = into.nameSet(n->parent(), true);
 		Package *pkg = new (into) Package(n->last()->name, path);
-		ns->add(pkg);
+
+		try {
+			ns->add(pkg);
+		} catch (storm::TypedefError *) {
+			wcerr << L"WARNING: Unable to import the package " << path << L" as " << n
+				  << L" since a package with the same name already exists.";
+
+			if (import.into) {
+				wcerr << L"Try specifying a different name." << endl;
+			} else {
+				// TODO? If import.tryRun, maybe try an anonymous name?
+				wcerr << L"Either rename the file or directory to a different name, or use the -I flag to specify a different name." << endl;
+			}
+
+			continue;
+		}
 
 		if (import.tryRun)
 			result->push(pkg);
@@ -340,60 +355,67 @@ int stormMain(int argc, const wchar_t *argv[]) {
 	Engine e(root, Engine::reuseMain, &argv);
 	Moment end;
 
-	if (!p.argv.empty())
-		createArgv(e, p.argv);
-
-	Array<Package *> *runPkgs = importPkgs(e, p);
-
-	int result = 1;
-
 	try {
-		switch (p.mode) {
-		case Params::modeAuto:
-			if (!tryRun(e, runPkgs, result)) {
-				// If none of them contained a main function, launch the repl.
-				result = runRepl(e, (end - start), root, null, null);
+
+		if (!p.argv.empty())
+			createArgv(e, p.argv);
+
+		Array<Package *> *runPkgs = importPkgs(e, p);
+
+		int result = 1;
+
+		try {
+			switch (p.mode) {
+			case Params::modeAuto:
+				if (!tryRun(e, runPkgs, result)) {
+					// If none of them contained a main function, launch the repl.
+					result = runRepl(e, (end - start), root, null, null);
+				}
+				break;
+			case Params::modeRepl:
+				result = runRepl(e, (end - start), root, p.modeParam, p.modeParam2);
+				break;
+			case Params::modeFunction:
+				result = runFunction(e, p.modeParam);
+				break;
+			case Params::modeTests:
+				result = runTests(e, p.modeParam, false);
+				break;
+			case Params::modeTestsRec:
+				result = runTests(e, p.modeParam, true);
+				break;
+			case Params::modeVersion:
+				showVersion(e);
+				result = 0;
+				break;
+			case Params::modeServer:
+				server::run(e, proc::in(e), proc::out(e));
+				result = 0;
+				break;
+			default:
+				throw new (e) InternalError(S("Unknown mode."));
 			}
-			break;
-		case Params::modeRepl:
-			result = runRepl(e, (end - start), root, p.modeParam, p.modeParam2);
-			break;
-		case Params::modeFunction:
-			result = runFunction(e, p.modeParam);
-			break;
-		case Params::modeTests:
-			result = runTests(e, p.modeParam, false);
-			break;
-		case Params::modeTestsRec:
-			result = runTests(e, p.modeParam, true);
-			break;
-		case Params::modeVersion:
-			showVersion(e);
-			result = 0;
-			break;
-		case Params::modeServer:
-			server::run(e, proc::in(e), proc::out(e));
-			result = 0;
-			break;
-		default:
-			throw new (e) InternalError(S("Unknown mode."));
+		} catch (const storm::Exception *e) {
+			wcerr << e << endl;
+			result = 1;
+			// Fall-thru to wait for UThreads.
+		} catch (const ::Exception &e) {
+			// Sometimes, we need to print the exception before the engine is destroyed.
+			wcerr << e << endl;
+			return 1;
 		}
-	} catch (const storm::Exception *e) {
-		wcerr << e << endl;
-		result = 1;
-		// Fall-thru to wait for UThreads.
-	} catch (const ::Exception &e) {
-		// Sometimes, we need to print the exception before the engine is destroyed.
-		wcerr << e << endl;
+
+		// Allow 1 s for all UThreads on the Compiler thread to terminate.
+		Moment waitStart;
+		while (os::UThread::leave() && Moment() - waitStart > time::s(1))
+			;
+
+		return result;
+
+	} catch (storm::Exception *e) {
+		wcerr << L"Unhandled exception:\n" << *e << endl;
 		return 1;
 	}
-
-	// Allow 1 s for all UThreads on the Compiler thread to terminate.
-	Moment waitStart;
-	while (os::UThread::leave() && Moment() - waitStart > time::s(1))
-		;
-
-	return result;
 }
 
 #ifdef WINDOWS
