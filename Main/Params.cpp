@@ -127,6 +127,9 @@ static StatePtr start(const wchar_t *arg, Params &result) {
 	} else if (wcscmp(arg, L"--server") == 0) {
 		result.mode = Params::modeServer;
 		return StatePtr();
+	} else if (wcscmp(arg, L"--noconsole") == 0) {
+		result.noConsole = true;
+		return &start;
 	} else if (wcscmp(arg, L"--") == 0) {
 		return &consumeArgv;
 	} else {
@@ -146,7 +149,8 @@ Params::Params(int argc, const wchar_t *argv[])
 	  root(null),
 	  modeParam(L"bs"),
 	  modeParam2(null),
-	  import() {
+	  import(),
+	  noConsole(false) {
 
 	StatePtr state = &start;
 
@@ -181,5 +185,6 @@ void help(const wchar_t *cmd) {
 	wcout << cmd << L" -r <path>        - use <path> as the root path." << endl;
 	wcout << cmd << L" --version        - print the current version and exit." << endl;
 	wcout << cmd << L" --server         - start the language server." << endl;
+	wcout << cmd << L" --noconsole      - on Windows: deallocate the console window during startup." << endl;
 	wcout << cmd << L" -- <arguments>   - interpret remaining arguments as parameters to the program." << endl;
 }

@@ -11,6 +11,11 @@
 #include "Core/Io/StdStream.h"
 #include "Core/Io/Text.h"
 
+// Wait a bit before exiting so that the user can read error messages?
+// This is only applicable on Windows systems in cases where Storm was launched
+// from a non-console environment.
+bool waitBeforeExit = false;
+
 void runRepl(Engine &e, const wchar_t *lang, Repl *repl) {
 	TextInput *input = e.stdIn();
 	TextOutput *output = e.stdOut();
@@ -69,6 +74,7 @@ int runRepl(Engine &e, Duration bootTime, const Path &root, const wchar_t *lang,
 	Function *replFn = as<Function>(e.scope().find(replName));
 	if (!replFn) {
 		wcerr << L"Could not find a repl for " << lang << L": no function named " << replName << L" exists." << endl;
+		waitBeforeExit = true;
 		return 1;
 	}
 
@@ -76,6 +82,7 @@ int runRepl(Engine &e, Duration bootTime, const Path &root, const wchar_t *lang,
 	if (!replVal.mayReferTo(replFn->result)) {
 		wcerr << L"The function " << replName << L" must return a subtype of "
 			  << replVal << L", not " << replFn->result << endl;
+		waitBeforeExit = true;
 		return 1;
 	}
 
@@ -86,6 +93,7 @@ int runRepl(Engine &e, Duration bootTime, const Path &root, const wchar_t *lang,
 	if (input) {
 		if (!repl->eval(new (e) Str(input))) {
 			wcerr << L"The input given to the REPL does not represent a complete input. Try again!" << endl;
+			waitBeforeExit = true;
 			return 1;
 		}
 	} else {
@@ -108,6 +116,7 @@ int runFunction(Engine &e, Function *fn) {
 	if (!r.returnInReg()) {
 		wcout << L"Found a main function: " << fn->identifier() << L", but it returns a value-type." << endl;
 		wcout << L"This is not currently supported. Try running it through the REPL instead." << endl;
+		waitBeforeExit = true;
 		return 1;
 	}
 
@@ -177,12 +186,14 @@ int runFunction(Engine &e, const wchar_t *function) {
 		wcerr << L"Could not find " << function << endl;
 		if (hasColon(function))
 			wcerr << L"Did you mean to use '.' instead of ':'?" << endl;
+		waitBeforeExit = true;
 		return 1;
 	}
 
 	Function *fn = as<Function>(found);
 	if (!fn) {
 		wcout << function << L" is not a function." << endl;
+		waitBeforeExit = true;
 		return 1;
 	}
 
@@ -207,6 +218,8 @@ bool tryRun(Engine &e, Array<Package *> *pkgs, int &result) {
 }
 
 int runTests(Engine &e, const wchar_t *package, bool recursive) {
+	waitBeforeExit = true;
+
 	SimpleName *name = parseSimpleName(new (e) Str(package));
 	Named *found = e.scope().find(name);
 	if (!found) {
@@ -297,6 +310,8 @@ Array<Package *> *importPkgs(Engine &into, const Params &p) {
 }
 
 void showVersion(Engine &e) {
+	waitBeforeExit = true;
+
 	Array<VersionTag *> *tags = storm::versions(e.package(S("core")));
 	if (tags->empty()) {
 		wcerr << L"Error: No version information found. Make sure this release was compiled correctly." << std::endl;
@@ -327,14 +342,22 @@ int stormMain(int argc, const wchar_t *argv[]) {
 	switch (p.mode) {
 	case Params::modeHelp:
 		help(argv[0]);
+		waitBeforeExit = true;
 		return 0;
 	case Params::modeError:
 		wcerr << L"Error in parameters: " << p.modeParam;
 		if (p.modeParam2)
 			wcerr << p.modeParam2;
 		wcerr << endl;
+		waitBeforeExit = true;
 		return 1;
 	}
+
+#ifdef WINDOWS
+	if (p.noConsole) {
+		FreeConsole();
+	}
+#endif
 
 	Moment start;
 
@@ -397,11 +420,13 @@ int stormMain(int argc, const wchar_t *argv[]) {
 			}
 		} catch (const storm::Exception *e) {
 			wcerr << e << endl;
+			waitBeforeExit = true;
 			result = 1;
 			// Fall-thru to wait for UThreads.
 		} catch (const ::Exception &e) {
 			// Sometimes, we need to print the exception before the engine is destroyed.
 			wcerr << e << endl;
+			waitBeforeExit = true;
 			return 1;
 		}
 
@@ -421,12 +446,29 @@ int stormMain(int argc, const wchar_t *argv[]) {
 #ifdef WINDOWS
 
 int _tmain(int argc, const wchar *argv[]) {
+	int result = 0;
+
 	try {
-		return stormMain(argc, argv);
+		result = stormMain(argc, argv);
 	} catch (const ::Exception &e) {
 		wcerr << L"Unhandled exception: " << e << endl;
-		return 1;
+		result = 1;
 	}
+
+	if (waitBeforeExit) {
+		// If the console would disappear when we exit, wait a bit to let the user read any messages
+		// in it.
+		DWORD entries[2];
+		DWORD count = GetConsoleProcessList(entries, 2);
+
+		if (count == 1) {
+			// Only we (note, 'count' may be zer if we detached from it):
+			wcerr << L"\nPress any key to exit" << endl;
+			_getwch();
+		}
+	}
+
+	return result;
 }
 
 #else

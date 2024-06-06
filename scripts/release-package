@@ -10,8 +10,8 @@ notes="$5"
 
 # Launchers to include in build: An @ indicates envvars to set on Linux.
 launchers=(
-    "progvis:progvis.main" #@STORM_RENDER_BACKEND=gtk"
-    "trees:trees.main"
+    "progvis:progvis.main+--noconsole" #@STORM_RENDER_BACKEND=gtk"
+    "trees:trees.main+--noconsole"
     "generate_html_doc:markdown.doc.generateStormDoc+--+--clear+html+--version=${version}+--date=${date}"
 )
 function join_array { local IFS=" "; echo "$*"; }
@@ -65,7 +65,7 @@ function launcher {
 
     if [[ "$2" =~ \.bat$ ]]
     then
-	echo '@"%~dp0Storm.exe" -f '"${fn//+/ }" > "$2"
+	echo '@start "%~dp0Storm.exe" -f '"${fn//+/ }" > "$2"
     else
 	(
 	    echo '#!/bin/bash'

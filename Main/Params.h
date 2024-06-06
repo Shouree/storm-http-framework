@@ -52,6 +52,9 @@ public:
 
 	// Parameters to the program.
 	vector<const wchar_t *> argv;
+
+	// Deallocate the console window?
+	bool noConsole;
 };
 
 void help(const wchar_t *cmd);
