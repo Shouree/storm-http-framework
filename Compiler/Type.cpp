@@ -373,7 +373,26 @@ namespace storm {
 		return s;
 	}
 
-	void Type::setThread(NamedThread *thread) {
+	Bool Type::setThread(NamedThread *thread) {
+		// Can't set threads for value types.
+		if (value())
+			return false;
+
+		if (Type *currentSuper = super()) {
+			// If the current super-type is something other than the base-class Object, or the base
+			// class has a 'useThread' configured, disallow setting the thread here:
+			Type *objType = Object::stormType(engine);
+			if (isA(objType) && currentSuper != objType) {
+				// We inherit indirectly from a class-type. Don't allow introducing TObject.
+				return false;
+			} else if (isA(TObject::stormType(engine))) {
+				// Disallow if the super type has its 'useThread' set:
+				if (currentSuper->useThread != null) {
+					return false;
+				}
+			}
+		}
+
 		useThread = thread;
 
 		Type *def = defaultSuper();
@@ -383,6 +402,8 @@ namespace storm {
 
 		// Propagate the current thread to any child types.
 		notifyThread(thread);
+
+		return true;
 	}
 
 	RunOn Type::runOn() {

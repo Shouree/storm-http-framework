@@ -173,9 +173,6 @@ namespace storm {
 
 			// Scope.
 			CtorBody *block;
-
-			// Call the TObject's ctor, assuming we want to run on 't'.
-			void callTObject(CodeGen *s, NamedThread *t);
 		};
 
 		/**

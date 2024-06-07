@@ -58,21 +58,21 @@ namespace storm {
 		*l << prolog();
 
 		Type *super = owner->super();
-		if (super == TObject::stormType(engine())) {
-			// Run the TObject constructor if possible.
+		if (super && super->runOn().thread == null && runOn().thread != null) {
+			// We are in a situation where we have a specified thread but the parent thread does
+			// not. That means we should inject a parameter specifying the thread to the parent
+			// constructor.
 			NamedThread *thread = runOn().thread;
-			if (!thread) {
-				Str *msg = TO_S(this, S("Can not use TypeDefaultCtor with TObjects without specifying a thread. ")
-								S("Set a thread for ") << owner->identifier() << S(" and try again."));
-				throw new (this) InternalError(msg);
-			}
 
 			Array<Value> *params = new (this) Array<Value>();
 			params->push(thisPtr(super));
 			params->push(thisPtr(Thread::stormType(engine())));
 			Function *ctor = as<Function>(super->find(Type::CTOR, params, Scope()));
-			if (!ctor)
-				throw new (this) InternalError(S("Can not find the default constructor for TObject!"));
+			if (!ctor) {
+				Str *msg = TO_S(this, S("UNable to find a default constructor for the actor ")
+								<< super->identifier() << S(". Can not use TypeDefaultCtor in such cases."));
+				throw new (this) InternalError(msg);
+			}
 
 			*l << fnParam(ptr, me);
 			*l << fnParam(ptr, thread->ref());

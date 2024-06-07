@@ -98,7 +98,7 @@ namespace storm {
 		MAYBE(Type *) STORM_FN declaredSuper() const;
 
 		// Set the thread for this type. This will force the super-type to be TObject.
-		void STORM_FN setThread(NamedThread *t);
+		Bool STORM_FN setThread(NamedThread *t);
 
 		// Get where we want to run.
 		RunOn STORM_FN runOn();

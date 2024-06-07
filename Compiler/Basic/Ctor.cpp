@@ -282,17 +282,16 @@ namespace storm {
 
 			RunOn runOn = thisPtr.type->runOn();
 			bool hiddenThread = runOn.state == RunOn::runtime;
-			if (!hiddenThread && parent == TObject::stormType(engine())) {
-				callTObject(s, runOn.thread);
-				return;
-			}
+			bool implicitThread = runOn.state == RunOn::named && parent->runOn().state == RunOn::runtime;
 
 			// Find something to call.
 			BSNamePart *values = new (this) BSNamePart(Type::CTOR, pos, params);
 			values->alter(0, Value(parent));
 
-			if (hiddenThread)
+			if (hiddenThread || implicitThread) {
+				// We need to insert a Thread as a first parameter.
 				values->insert(storm::thisPtr(Thread::stormType(engine())), 1);
+			}
 
 			Function *ctor = as<Function>(parent->find(values, block->scope));
 			if (!ctor) {
@@ -304,9 +303,13 @@ namespace storm {
 			Array<code::Operand> *actuals = new (this) Array<code::Operand>();
 			actuals->reserve(values->params->count());
 
-			if (hiddenThread) {
+			if (hiddenThread || implicitThread) {
 				actuals->push(params->code(0, s, ctor->params->at(0), block->scope));
-				actuals->push(block->threadParam->var.v);
+				if (hiddenThread) {
+					actuals->push(block->threadParam->var.v);
+				} else {
+					actuals->push(runOn.thread->ref());
+				}
 				for (Nat i = 2; i < values->params->count(); i++)
 					actuals->push(params->code(i - 1, s, ctor->params->at(i), block->scope));
 			} else {
@@ -316,27 +319,6 @@ namespace storm {
 
 			CodeResult *t = new (this) CodeResult();
 			ctor->localCall(s, actuals, t, false);
-		}
-
-		void SuperCall::callTObject(CodeGen *s, NamedThread *t) {
-			if (params->expressions->count() != 1)
-				throw new (this) SyntaxError(pos, S("Can not initialize a threaded object with parameters."));
-
-			// Find the constructor of TObject.
-			Type *parent = TObject::stormType(engine());
-			Array<Value> *values = new (this) Array<Value>(2, Value(parent));
-			values->at(1) = Value(Thread::stormType(engine()));
-			Function *ctor = as<Function>(parent->find(Type::CTOR, values, block->scope));
-			if (!ctor)
-				throw new (this) InternalError(S("The constructor of TObject: __ctor(TObject, Thread) was not found!"));
-
-			// Call the constructor.
-			Array<code::Operand> *actuals = new (this) Array<code::Operand>();
-			actuals->push(params->code(0, s, ctor->params->at(0), block->scope));
-			actuals->push(t->ref());
-
-			CodeResult *res = new (this) CodeResult();
-			ctor->localCall(s, actuals, res, false);
 		}
 
 

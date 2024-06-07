@@ -24,7 +24,7 @@ namespace storm {
 
 		Class::Class(TypeFlags flags, SrcPos pos, Scope scope, Str *name, syntax::Node *body)
 			: Type(name, flags), scope(scope, this), body(body),
-			  otherName(null), otherMeaning(otherNone), allowLazyLoad(true) {
+			  superName(null), threadName(null), threadMeaning(threadNone), allowLazyLoad(true) {
 
 			this->pos = pos;
 		}
@@ -33,37 +33,43 @@ namespace storm {
 		void Class::lookupTypes() {
 			allowLazyLoad = false;
 			try {
-				switch (otherMeaning) {
-				case otherDefaultThread:
-				case otherThread:
-				{
-					// Already done?
-					if (!otherName)
-						break;
-
-					NamedThread *t = as<NamedThread>(scope.find(otherName));
+				// Set the super class first, this makes 'setThread' return true or false as appropriate:
+				if (superName) {
+					Type *t = as<Type>(scope.find(superName));
 					if (!t) {
-						Str *msg = TO_S(engine, S("Can not find the named thread ") << otherName << S("."));
-						throw new (this) SyntaxError(otherName->pos, msg);
+						Str *msg = TO_S(engine, S("Can not find the super class ") << superName << S("."));
+						throw new (this) SyntaxError(superName->pos, msg);
 					}
-
-					setThread(t);
-					break;
-				}
-				case otherSuper:
-				{
-					Type *t = as<Type>(scope.find(otherName));
-					if (!t) {
-						Str *msg = TO_S(engine, S("Can not find the super class ") << otherName << S("."));
-						throw new (this) SyntaxError(otherName->pos, msg);
-					}
-
 					setSuper(t);
-					break;
-				}
 				}
 
-				otherName = null;
+				if (threadMeaning != threadNone) {
+					if (threadName == null) {
+						if (superName) {
+							throw new (this) SyntaxError(
+								superName->pos,
+								S("Can not use 'on ?' together with the 'extends' keyword."));
+						}
+
+						setSuper(TObject::stormType(engine));
+					} else {
+						NamedThread *t = as<NamedThread>(scope.find(threadName));
+						if (!t) {
+							Str *msg = TO_S(engine, S("Can not find the named thread ") << threadName << S("."));
+							throw new (this) SyntaxError(threadName->pos, msg);
+						}
+
+						if (!setThread(t) && threadMeaning != threadDefault) {
+							Str *msg = TO_S(engine, S("Failed to apply the 'on' keyword for this class since ")
+											S("it inherits from a class type, or from an actor that is ")
+											S("already bound to a thread."));
+							throw new (this) SyntaxError(threadName->pos, msg);
+						}
+					}
+				}
+
+				threadName = null;
+				superName = null;
 			} catch (...) {
 				allowLazyLoad = true;
 				throw;
@@ -72,47 +78,36 @@ namespace storm {
 		}
 
 		void Class::super(SrcName *super) {
-			if (otherMeaning == otherThread)
-				throw new (this) SyntaxError(super->pos, S("The 'extends' keyword may not be used together with 'on'."));
-
-			if (otherMeaning == otherSuper)
+			if (superName)
 				throw new (this) SyntaxError(super->pos, S("Only one instance of 'extends' may be used for a single type. ")
 											S("Multiple inheritance is not supported."));
 
-			otherName = super;
-			otherMeaning = otherSuper;
+			superName = super;
 		}
 
 		void Class::thread(SrcName *thread) {
-			if (otherMeaning == otherThread)
+			if (threadMeaning != threadNone && threadMeaning != threadDefault)
 				throw new (this) SyntaxError(thread->pos, S("The 'on' keyword may only be used once."));
 
-			if (otherMeaning == otherSuper)
-				throw new (this) SyntaxError(thread->pos, S("The 'on' keyword may not be used together with 'extends'."));
-
-			otherName = thread;
-			otherMeaning = otherThread;
+			threadName = thread;
+			threadMeaning = threadExplicit;
 		}
 
 		void Class::unknownThread(SrcPos pos) {
-			if (otherMeaning == otherThread)
+			if (threadMeaning != threadNone && threadMeaning != threadDefault)
 				throw new (this) SyntaxError(pos, S("The 'on' keyword may only be used once."));
 
-			if (otherMeaning == otherSuper)
-				throw new (this) SyntaxError(pos, S("The 'on' keyword may not be used together with 'extends'."));
-
-			otherName = null;
-			otherMeaning = otherThread;
-			setSuper(StormInfo<TObject>::type(engine));
+			threadName = null;
+			threadMeaning = threadExplicit;
 		}
 
 		void Class::defaultThread(SrcName *thread) {
 			// Just ignore the default if it is already set!
-			if (otherMeaning != otherNone)
+			if (threadMeaning != threadNone)
 				return;
 
-			otherName = thread;
-			otherMeaning = otherDefaultThread;
+			threadName = thread;
+			threadMeaning = threadDefault;
 		}
 
 		void Class::decorate(SrcName *decorator) {

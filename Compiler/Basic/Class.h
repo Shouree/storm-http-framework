@@ -58,24 +58,24 @@ namespace storm {
 			// Decorators used.
 			MAYBE(Array<SrcName *> *) decorators;
 
-			// Name for either the parent class, or the named thread we shall use. Depending on 'nameIsThread'.
-			MAYBE(SrcName *) otherName;
+			// Name of the parent class, if any.
+			MAYBE(SrcName *) superName;
 
-			// What does 'otherName' mean currently?
-			Byte otherMeaning;
+			// Name of the bound thread, if any.
+			MAYBE(SrcName *) threadName;
+
+			// Meaning of 'threadName'.
+			Byte threadMeaning;
 
 			enum {
-				// Nothing yet.
-				otherNone,
+				// Nothing.
+				threadNone,
 
 				// Default thread to use.
-				otherDefaultThread,
+				threadDefault,
 
-				// Thread to use (non-default, should not be set again). 'otherName' may be null.
-				otherThread,
-
-				// Super class to use.
-				otherSuper,
+				// Set to something explcitly. Might be null, meaning that we should inherit from TObject.
+				threadExplicit,
 			};
 
 			// Allowing lazy loads?
