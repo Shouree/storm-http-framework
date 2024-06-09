@@ -611,6 +611,8 @@ BEGIN_TEST(PatternTest, BS) {
 	CHECK_EQ(runFn<Int>(S("tests.bs.testPatternSplice1")), 23);
 	CHECK_EQ(runFn<Int>(S("tests.bs.testPatternSplice2")), 6);
 
+	CHECK_EQ(runFn<Int>(S("tests.bs.testPatternType")), 1);
+
 	// This is enforced by the syntax, but also by an explicit check in the code.
 	CHECK_ERROR(runFn<void>(S("tests.bs.errors.testPatternOutside")), SyntaxError);
 } END_TEST

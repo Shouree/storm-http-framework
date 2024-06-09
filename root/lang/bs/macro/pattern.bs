@@ -6,15 +6,28 @@ use core:asm; // Note: also contains a Block class!
  * An expression representing creating a template syntax tree.
  */
 class TemplateExpr extends ExprBlock {
-	init(Block block, Expr env, SExpr create) {
+	init(SrcPos pos, Block block, Expr env, SExpr create) {
 		init(create.pos, block);
 		var atoms = create.allChildren(named{PatternAtom});
+		var types = create.allChildren(named{PatternType});
 		var arrays = findArrays(create);
 
-		// PatternBlock exprs(<env>, atoms.count, actuals.count);
+		Type? tag;
+
+		// PatternBlock exprs(<env>, <tag>, atoms.count, types.count, actuals.count);
 		Actuals params;
 		params.add(env);
+
+		if (types.any) {
+			PatternTag t(pos);
+			params.add(ReferNamed(pos, t));
+			tag = t;
+		} else {
+			params.add(NullExpr(pos));
+		}
+
 		params.add(NumLiteral(pos, atoms.count.long));
+		params.add(NumLiteral(pos, types.count.long));
 		params.add(NumLiteral(pos, arrays.count.long));
 
 		Var exprVars(this, Value(named{PatternBlock}), SStr("block"), params);
@@ -23,15 +36,25 @@ class TemplateExpr extends ExprBlock {
 
 		for (id, node in atoms) {
 			if (node as PatternAtom) {
-				addExpr(block, exprs, node.pattern, "push");
+				addExpr(block, exprs, node.pattern, "pushExpr", "Expr");
 				node.pattern = PatternExprSrc(id);
 			} else {
 				throw SyntaxError(pos, "Internal error!");
 			}
 		}
 
+		for (id, node in types) {
+			if (node as PatternType) {
+				addExpr(block, exprs, node.pattern, "pushType", "Named");
+				if (tag)
+					node.pattern = PatternTypeSrc(tag, id);
+			} else {
+				throw SyntaxError(pos, "Internal error!");
+			}
+		}
+
 		for (node in arrays) {
-			addExpr(block, exprs, node, "pushArray");
+			addExpr(block, exprs, node, "pushArray", "Array<Expr>");
 		}
 
 		// Call transform on the stored syntax tree.
@@ -70,22 +93,34 @@ private:
 		result;
 	}
 
-	void addExpr(Block parent, LocalVarAccess exprs, SPatternExpr node, Str member) {
+	void addExpr(Block parent, LocalVarAccess exprs, SPatternExpr node, Str member, Str expected) {
 		if (var = node as PatternVar) {
-			addExpr(member, exprs, namedExpr(parent, var.name.transform, Actuals()));
+			addExpr(member, expected, exprs, namedExpr(parent, var.name.transform, Actuals()));
 		} else if (expr = node as PatternExpr) {
-			addExpr(member, exprs, expr.expr.transform(parent));
+			addExpr(member, expected, exprs, expr.expr.transform(parent));
 		} else {
 			throw SyntaxError(pos, "Unexpected subtype of SPatternExpr found. Can not continue.");
 		}
 	}
 
-	void addExpr(Str member, LocalVarAccess exprs, Expr insert) {
+	void addExpr(Str member, Str expected, LocalVarAccess exprs, Expr insert) {
 		var insertExpr = namedExpr(this, SStr(member), exprs, Actuals(insert));
 		if (insertExpr as UnresolvedName) {
-			throw SyntaxError(insert.pos, "The expression " + insert.toS + " in the pattern does not evaluate to an Expr or Array<Expr> as expected.");
+			throw SyntaxError(insert.pos, "The expression ${insert.toS} in the pattern does not evaluate to ${expected} as needed from its context.");
 		}
 		add(insertExpr);
+	}
+}
+
+
+/**
+ * Unique tag for a pattern block. We put this as a parameter of the first part of our name lookup
+ * to be able to distinguish between different pattern blocks during name lookup. Never intended to
+ * be instantiated.
+ */
+package class PatternTag extends Type {
+	init(SrcPos pos) {
+		init("<pattern tag>", TypeFlags:typeValue) {}
 	}
 }
 
@@ -99,8 +134,14 @@ class PatternBlock extends Block {
 	// Expressions to be inserted later.
 	Array<Expr> exprs;
 
+	// Types to be inserted later.
+	Array<Named> types;
+
 	// Actuals to be inserted later.
 	Array<Array<Expr>> actuals;
+
+	// Pattern tag type, if we need one.
+	private Type? tag;
 
 	// Parent block.
 	private Block parent;
@@ -108,20 +149,33 @@ class PatternBlock extends Block {
 	// Contained expr.
 	private Expr data;
 
-	init(Block parent, Nat atomCount, Nat actualsCount) {
+	init(Block parent, Type? tag, Nat atomCount, Nat typesCount, Nat actualsCount) {
 		init(parent.pos, parent) {
 			parent = parent;
+			tag = tag;
 			// Create a dummy object for now.
 			data(parent.pos);
 		}
 
 		exprs.reserve(atomCount);
+		types.reserve(typesCount);
 		actuals.reserve(actualsCount);
+
+		// Create a custom lookup for this object:
+		if (parent = lookup.parent) {
+			lookup = PatternLookup(this, parent);
+			scope = scope.child(lookup);
+		}
 	}
 
 	// Add an expression.
-	void push(Expr expr) {
+	void pushExpr(Expr expr) {
 		exprs.push(expr);
+	}
+
+	// Add a type.
+	void pushType(Named type) {
+		types.push(type);
 	}
 
 	// Add a set of actual parameters.
@@ -152,6 +206,50 @@ class PatternBlock extends Block {
 	// To string.
 	void toS(StrBuf to) {
 		to << data;
+	}
+
+	// Find a named that was captured.
+	Named? findNamed(SimplePart part) {
+		unless (part.params.count == 1)
+			return null;
+		unless (part.params[0].type is tag)
+			return null;
+
+		// Now we know that it is for us!
+		// Extract the ID:
+		var lastSpace = part.name.findLast(' ');
+		Str number = part.name.cut(lastSpace + 1);
+
+		if (!number.isNat)
+			return null;
+
+		Nat index = number.toNat;
+		if (index >= types.count)
+			return null;
+
+		return types[index];
+	}
+}
+
+
+/**
+ * Custom block lookup for pattern blocks.
+ */
+package class PatternLookup extends BlockLookup {
+	// Create.
+	init(PatternBlock block, NameLookup parent) {
+		init(block, parent) {}
+	}
+
+	// Override the code to find things here.
+	Named? find(SimplePart part, Scope source) : override {
+		if (found = super:find(part, source))
+			return found;
+
+		if (block as PatternBlock)
+			return block.findNamed(part);
+
+		null;
 	}
 }
 
@@ -215,6 +313,37 @@ class PatternExprSrc extends SPatternExpr {
 }
 
 
+/**
+ * Subclass to the SPatternExpr used to tell the transformation what name to emit in cases of type
+ * names.
+ */
+class PatternTypeSrc extends SPatternExpr {
+	// Tag we are going to use.
+	private Type tag;
+
+	// Index we wish to fetch.
+	private Nat id;
+
+	// Create.
+	init(Type tag, Nat id) {
+		init { tag = tag; id = id; }
+	}
+
+	// To string.
+	void toS(StrBuf to) {
+		to << "Captured expression " << id;
+	}
+
+	// Create a name.
+	SrcName name(SrcPos pos) {
+		SrcName name(pos);
+		name.add("@pattern type " + id.toS, Value[](1, tag));
+		print(name.toS);
+		return name;
+	}
+}
+
+
 // Insert a previously generated Expr here.
 Expr insertExpr(SrcPos pos, Block block, SPatternExpr pattern) on Compiler {
 	if (pattern as PatternExprSrc) {
@@ -223,6 +352,15 @@ Expr insertExpr(SrcPos pos, Block block, SPatternExpr pattern) on Compiler {
 		throw SyntaxError(pos, "Can not use \${} syntax outside of pattern blocks.");
 		// When we have exceptions, we can ignore this.
 		Expr(pos);
+	}
+}
+
+// Insert a type.
+SrcName insertType(SrcPos pos, SPatternExpr pattern) on Compiler {
+	if (pattern as PatternTypeSrc) {
+		pattern.name(pos);
+	} else {
+		throw SyntaxError(pos, "Can not use \${} syntax outside of pattern blocks.");
 	}
 }
 
@@ -257,7 +395,6 @@ void insertExprs(SrcPos pos, ExprBlock block, SPatternExpr pattern) on Compiler 
 		throw SyntaxError(pos, "Can not use @{} syntax outside of pattern blocks.");
 	}
 }
-
 
 /**
  * Refer to a SExpr object.

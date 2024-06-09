@@ -122,7 +122,7 @@ namespace storm {
 			// Create.
 			STORM_CTOR BlockLookup(Block *block, NameLookup *prev);
 
-			// Risk of cycles, no ref.
+			// Associated block.
 			Block *block;
 
 			// Find a variable here.

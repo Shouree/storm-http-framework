@@ -49,7 +49,7 @@ SClassItem => Generate(owner, name, param, body) :
     SName name #fnName, ":", "generate" #keyword, "(", SName param #varName, ")", "{", SFunctionBody@ body, "}";
 
 // Pattern-based block- and expr generation. TODO: It would be nice to have whole function generation as well!
-SExpr => TemplateExpr(block, env, body) : "pattern" #keyword, "(", SExpr(block) env, ")", SPatternBody body;
+SExpr => TemplateExpr(pos, block, env, body) : "pattern" #keyword, "(", SExpr(block) env, ")", SPatternBody body;
 
 // Expression inside a pattern. We only allow the special syntax inside here!
 SExpr SPatternBody();
@@ -57,6 +57,9 @@ SPatternBody => e : SExpr @e;
 
 // Inserting expressions into templates.
 SPatternBody..SAtom => insertExpr(pos, block, pattern) : "$" #keyword - SPatternExpr @pattern = PatternAtom;
+
+// Inserting types into templates.
+SPatternBody..SType => insertType(pos, pattern) : "$" #keyword - SPatternExpr @pattern = PatternType;
 
 // Insert zero or more expressions into a parameter list...
 SPatternBody..SActual => insertActuals(pos, to, block, pattern) : "@" #keyword - SPatternExpr @pattern = PatternActual;

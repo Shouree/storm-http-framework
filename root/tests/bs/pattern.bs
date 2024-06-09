@@ -2,7 +2,7 @@ use core:lang;
 use lang:bs;
 use lang:bs:macro;
 
-Expr patternExpr(Block block, Expr param) {
+Expr patternExpr(Block block, Expr param) on Compiler {
 	// Note if-else is to ensure that ()? are handled correctly!
 	var e = pattern(block) {
 		Int z = 1;
@@ -26,7 +26,7 @@ Int testPatternNames() {
 	p!z!p;
 }
 
-Expr patternSpliceExpr(Block block, Expr[] params) {
+Expr patternSpliceExpr(Block block, Expr[] params) on Compiler {
 	var e = pattern(block) {
 		spliceTest(1, @params);
 	};
@@ -48,4 +48,21 @@ Int testPatternSplice1() {
 
 Int testPatternSplice2() {
 	s!2,3!s;
+}
+
+Expr patternTypeExpr(Block block, Expr base, SrcName type) on Compiler {
+	unless (found = block.scope.find(type))
+		throw InternalError("Incorrect name!");
+
+	var e = pattern(block) {
+		if (x = ${base} as ${found})
+			return 1;
+	};
+	e;
+}
+
+Int testPatternType() {
+	CloneBase b = CloneDerived();
+	t!b,CloneDerived!t;
+	0;
 }
