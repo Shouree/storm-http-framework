@@ -10,12 +10,21 @@ namespace storm {
 		vars = new (this) Array<MemberVar *>();
 	}
 
-	void Layout::add(Named *n) {
+	void Layout::add(Named *n, Type *into) {
 		if (MemberVar *v = as<MemberVar>(n))
-			add(v);
+			add(v, into);
 	}
 
-	void Layout::add(MemberVar *v) {
+	void Layout::add(MemberVar *v, Type *into) {
+		if (v->owner() != into) {
+			StrBuf *msg = new (this) StrBuf();
+			*msg << S("The member variable ") << v << S(" is not defined as ");
+			*msg << S("a member of the type ") << into->identifier() << S(" to ");
+			*msg << S("which it is being added. It is defined to be a member of ");
+			*msg << v->owner()->identifier() << S(".");
+			throw new (this) TypedefError(v->pos, msg->toS());
+		}
+
 		vars->push(v);
 		// The layout is lazily created. 'v' will ask us when we need to lay it out.
 	}

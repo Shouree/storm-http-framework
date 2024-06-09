@@ -19,8 +19,8 @@ namespace storm {
 		STORM_CTOR Layout();
 
 		// Add a variable to the layout.
-		void STORM_FN add(MemberVar *var);
-		void STORM_FN add(Named *n);
+		void STORM_FN add(MemberVar *var, Type *into);
+		void STORM_FN add(Named *n, Type *into);
 
 		// Lay out all variables in memory. Returns the total size of the creation.
 		Size STORM_FN doLayout(Size parentSize);

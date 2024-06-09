@@ -480,7 +480,7 @@ namespace storm {
 			// Tell the layout we found a new variable!
 			if (!layout)
 				layout = new (engine) Layout();
-			layout->add(item);
+			layout->add(item, this);
 		}
 	}
 
