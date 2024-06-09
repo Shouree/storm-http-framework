@@ -338,7 +338,6 @@ class PatternTypeSrc extends SPatternExpr {
 	SrcName name(SrcPos pos) {
 		SrcName name(pos);
 		name.add("@pattern type " + id.toS, Value[](1, tag));
-		print(name.toS);
 		return name;
 	}
 }
