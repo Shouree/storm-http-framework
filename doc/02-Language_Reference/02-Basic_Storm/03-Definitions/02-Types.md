@@ -214,7 +214,9 @@ following options are provided by Basic Storm. Extensions may add more options b
 
   Only usable with classes. Makes the class into an actor that runs on the specified, named, thread.
   All members of the class need to execute on the specified thread. If called by other threads, the
-  system automatically sends a message to the appropriate thread.
+  system automatically sends a message to the appropriate thread. Note that it is possible to use
+  both `on` and `extends` in order to specify that this subclass of the actor always needs to execute
+  on a specific thread, while superclasses may not obey the same restriction.
 
 - `on ?`
 
@@ -233,5 +235,5 @@ following options are provided by Basic Storm. Extensions may add more options b
   of the type. Only supported for values and classes.
 
 
-Two options are special: `extends` and `on`. If these are the only options, they may be specified
+Two options are special: `extends` and `on`. If one of these is the only option, it may be specified
 without the colon.
