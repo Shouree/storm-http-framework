@@ -17,7 +17,6 @@ using std::endl;
 #define PNN(str) util::debugStream() << str
 #define PLN(str) util::debugStream() << str << std::endl
 #define PLN_IF(str, cond) if (cond) PLN(str)
-#define PLN_LINES(str) util::printLines(str)
 #define PVAR(expr) PLN(#expr << "=" << (expr))
 
 // Good way of making TODO: comments (only displays 5 times).
@@ -46,16 +45,8 @@ using std::endl;
 #endif
 
 namespace util {
-	// set output target (default is automatic depending on configuration)
-	enum DebugTarget { debugToAuto, debugToVS, debugToConsole, debugToStdOut };
-	void setDebugTarget(DebugTarget target);
-
-	// get the default debug output
+	// Get the debug stream.
 	std::wostream &debugStream();
-
-	// print line-numbers on string
-	void printLines(const std::string &str);
-	void printLines(const String &str);
 }
 
 
