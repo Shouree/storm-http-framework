@@ -677,6 +677,12 @@ namespace storm {
 
 		// We might as well compute our size while we're at it!
 		mySize = layout->doLayout(superSize());
+
+		// Since we have computed our size, it means that we can be instantiated. Because of that,
+		// make sure that the destructor is compiled now. Otherwise, it might be compiled during
+		// shutdown, which is likely to fail:
+		if (Function *dtor = destructor())
+			dtor->compile();
 	}
 
 	Array<MemberVar *> *Type::variables() const {
@@ -726,6 +732,13 @@ namespace storm {
 			// If we do not have a layout, we do not have any variables.
 			mySize = layout->doLayout(mySize);
 		}
+
+		// Since we have computed our size, it means that we can be instantiated. Because of that,
+		// make sure that the destructor is compiled now. Otherwise, it might be compiled during
+		// shutdown, which is likely to fail:
+		if (Function *dtor = destructor())
+			dtor->compile();
+
 		return mySize;
 	}
 
