@@ -32,6 +32,17 @@ namespace storm {
 
 		void Class::lookupTypes() {
 			allowLazyLoad = false;
+
+			// Lookup super-types and threads relative to the *parent* of the current scope,
+			// otherwise we resolve them relative to the body of the class we are defining, which
+			// does not make sense. It also unneccessary triggers the 'loadAll' in the parent in
+			// case we have both a super-class and a thread set (e.g. when one does 'on Compiler:'
+			// globally in the file). This could make loading happen in an incorrect order, and
+			// cause issues that are difficult to track down.
+			Scope scope = this->scope;
+			if (scope.top)
+				scope.top = scope.top->parent();
+
 			try {
 				// Set the super class first, this makes 'setThread' return true or false as appropriate:
 				if (superName) {
@@ -69,6 +80,7 @@ namespace storm {
 				}
 
 				threadName = null;
+				threadMeaning = threadNone;
 				superName = null;
 			} catch (...) {
 				allowLazyLoad = true;
@@ -126,6 +138,11 @@ namespace storm {
 		bool Class::loadAll() {
 			if (!allowLazyLoad)
 				return false;
+
+			// Make sure that 'lookupTypes' was called. This might not be true in case some type
+			// refers to this type inside its super type or something like that. It is fine to do
+			// this, since 'lookupTypes' is a no-op if it was called already.
+			lookupTypes();
 
 			ClassBody *body = syntax::transformNode<ClassBody, Class *>(this->body, this);
 			body->prepareItems();

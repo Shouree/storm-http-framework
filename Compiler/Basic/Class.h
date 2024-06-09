@@ -25,7 +25,7 @@ namespace storm {
 			// The scope used for this class.
 			Scope scope;
 
-			// Lookup any additional types needed.
+			// Lookup any additional types needed. Note: Must be reentrant!
 			void lookupTypes();
 
 			// Set the super class from a decorator.
