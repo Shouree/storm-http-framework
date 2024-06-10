@@ -74,12 +74,11 @@ namespace gui {
 		return out->toS();
 	}
 
-	StrBuf &operator <<(StrBuf &to, MnemonicStr s) {
-		if (s.hasPrefixes)
-			to << S("Mnemonic: ") << s.value;
+	void MnemonicStr::toS(StrBuf *to) const {
+		if (hasPrefixes)
+			*to << S("Mnemonic: ") << value;
 		else
-			to << s.value;
-		return to;
+			*to << value;
 	}
 
 	MnemonicStr mnemonic(Str *value) {

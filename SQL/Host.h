@@ -27,6 +27,9 @@ namespace sql {
 		// Check if the connection is a local pipe.
 		MAYBE(Str *) STORM_FN isLocal() const;
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
 	private:
 		// Create a default initialized connection.
 		Host();
@@ -37,8 +40,5 @@ namespace sql {
 		// - null   : connect to localhost.
 		Object *data;
 	};
-
-	// Output.
-	StrBuf *operator <<(StrBuf *to, const Host &c);
 
 }

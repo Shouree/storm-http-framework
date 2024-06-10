@@ -37,8 +37,8 @@ namespace storm {
 			return to << L"(" << s.x << L", " << s.y << L", " << s.z << L")";
 		}
 
-		StrBuf &operator <<(StrBuf &to, const Vector &s) {
-			return to << L"(" << s.x << L", " << s.y << L", " << s.z << L")";
+		void Vector::toS(StrBuf *to) const {
+			*to << S("(") << x << S(", ") << y << S(", ") << z << S(")");
 		}
 
 		Vector operator +(Vector a, Vector b) {

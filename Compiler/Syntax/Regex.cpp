@@ -279,11 +279,10 @@ namespace storm {
 			return to << s->toS()->c_str();
 		}
 
-		StrBuf &operator <<(StrBuf &to, Regex r) {
-			for (nat i = 0; i < r.states->count; i++) {
-				r.states->v[i].output(&to);
+		void Regex::toS(StrBuf *to) const {
+			for (Nat i = 0; i < states->count; i++) {
+				states->v[i].output(to);
 			}
-			return to;
 		}
 
 

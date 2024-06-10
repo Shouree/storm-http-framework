@@ -1274,16 +1274,15 @@ namespace storm {
 		return new (str) Str(begin, end);
 	}
 
-	StrBuf *operator <<(StrBuf *to, Str::Iter iter) {
+	void Str::Iter::toS(StrBuf *to) const {
 		*to << S("Iterator: ");
-		if (const Str *data = iter.data()) {
-			*to << data->substr(data->begin(), iter);
+		if (const Str *data = this->data()) {
+			*to << data->substr(data->begin(), *this);
 			*to << S("|>");
-			*to << data->substr(iter);
+			*to << data->substr(*this);
 		} else {
 			*to << S("<none>");
 		}
-		return to;
 	}
 
 }

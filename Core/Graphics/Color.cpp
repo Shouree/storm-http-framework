@@ -47,8 +47,8 @@ namespace storm {
 		return to << L"(" << s.r << L", " << s.g << L", " << s.b << L", " << s.a << L")";
 	}
 
-	StrBuf &operator <<(StrBuf &to, Color s) {
-		return to << L"(" << s.r << L", " << s.g << L", " << s.b << L", " << s.a << L")";
+	void Color::toS(StrBuf *to) const {
+		*to << S("(") << r << S(", ") << g << S(", ") << b << S(", ") << a << S(")");
 	}
 
 	Color transparent() { return Color(0.0f, 0.0f, 0.0f, 0.0f); }

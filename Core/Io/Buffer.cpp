@@ -91,31 +91,30 @@ namespace storm {
 		return r;
 	}
 
-	StrBuf &operator <<(StrBuf &to, Buffer b) {
-		outputMark(to, b, b.count() + 1);
-		return to;
+	void Buffer::toS(StrBuf *to) const {
+		outputMark(to, count() + 1);
 	}
 
-	void outputMark(StrBuf &to, Buffer b, Nat mark) {
+	void Buffer::outputMark(StrBuf *to, Nat mark) const {
 		const Nat width = 16;
-		for (Nat i = 0; i <= b.count(); i++) {
+		for (Nat i = 0; i <= count(); i++) {
 			if (i % width == 0) {
 				if (i > 0)
-					to << S("\n");
-				to << hex(i) << S(" ");
+					*to << S("\n");
+				*to << hex(i) << S(" ");
 			}
 
-			if (i == b.filled() && i == mark)
-				to << S("|>");
-			else if (i == b.filled())
-				to << S("| ");
+			if (i == filled() && i == mark)
+				*to << S("|>");
+			else if (i == filled())
+				*to << S("| ");
 			else if (i == mark)
-				to << S(" >");
+				*to << S(" >");
 			else
-				to << S("  ");
+				*to << S("  ");
 
-			if (i < b.count())
-				to << hex(b[i]);
+			if (i < count())
+				*to << hex((*this)[i]);
 		}
 	}
 

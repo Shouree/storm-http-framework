@@ -543,4 +543,15 @@ namespace storm {
 	Indent::~Indent() {
 		buf->dedent();
 	}
+
+
+	/**
+	 * Save/restore format.
+	 */
+
+	SaveFormat::SaveFormat(StrBuf *buf) : buf(buf), fmt(buf->format()) {}
+
+	SaveFormat::~SaveFormat() {
+		buf->format(fmt);
+	}
 }

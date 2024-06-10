@@ -61,13 +61,12 @@ namespace storm {
 		return to;
 	}
 
-	StrBuf &operator <<(StrBuf &to, StackTrace trace) {
-		for (Nat i = 0; i < trace.count(); i++) {
+	void StackTrace::toS(StrBuf *to) const {
+		for (Nat i = 0; i < count(); i++) {
 			if (i > 0)
-				to << S("\n");
-			to << width(3) << i << S(": at 0x") << hex(trace[i].ptr());
+				*to << S("\n");
+			*to << width(3) << i << S(": at 0x") << hex((*this)[i].ptr());
 		}
-		return to;
 	}
 
 	class StormGen : public TraceGen {

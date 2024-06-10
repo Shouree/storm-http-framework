@@ -115,6 +115,9 @@ namespace storm {
 
 		// Deep copy.
 		void STORM_FN deepCopy(CloneEnv *env);
+
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
 	};
 
 	// Get the root scope.
@@ -122,7 +125,6 @@ namespace storm {
 
 	// Output.
 	wostream &operator <<(wostream &to, const Scope &scope);
-	StrBuf &STORM_FN operator <<(StrBuf &to, Scope scope);
 
 	/**
 	 * Lookup with extra top-level finders.

@@ -264,15 +264,14 @@ namespace storm {
 		return code::Operand();
 	}
 
-	StrBuf &operator <<(StrBuf &to, Value v) {
-		if (v.type) {
-			to << v.type->identifier();
-			if (v.ref)
-				to << S("&");
+	void Value::toS(StrBuf *to) const {
+		if (type) {
+			*to << type->identifier();
+			if (ref)
+				*to << S("&");
 		} else {
-			to << S("void");
+			*to << S("void");
 		}
-		return to;
 	}
 
 	wostream &operator <<(wostream &to, const Value &v) {

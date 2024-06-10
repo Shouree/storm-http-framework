@@ -324,7 +324,7 @@ namespace storm {
 
 			void Item::outputToken(StrBuf *to, Production *p, Nat pos) const {
 				if (pos == specialPos) {
-					*to << p->rule()->identifier() << L"'";
+					*to << p->rule()->identifier() << S("'");
 				} else {
 					p->tokens->at(pos)->toS(to, false);
 				}
@@ -339,13 +339,13 @@ namespace storm {
 						currentDelim = p->tokens->at(i)->asDelim() != null;
 
 					if (i != firstId && !currentDelim && !prevDelim)
-						*to << L" - ";
+						*to << S(" - ");
 
 					if (i == mark)
-						*to << L"<>";
+						*to << S("<>");
 
 					if (currentDelim)
-						*to << L", ";
+						*to << S(", ");
 					else
 						outputToken(to, p, i);
 
@@ -361,24 +361,24 @@ namespace storm {
 					*to << id;
 					break;
 				case Syntax::prodRepeat:
-					*to << Syntax::baseProd(id) << L"'";
+					*to << Syntax::baseProd(id) << S("'");
 					break;
 				case Syntax::prodEpsilon:
-					*to << Syntax::baseProd(id) << L"''";
+					*to << Syntax::baseProd(id) << S("''");
 					break;
 				case Syntax::prodESkip:
-					*to << L"red" << Syntax::baseProd(id) << L" ->";
+					*to << S("red") << Syntax::baseProd(id) << S(" ->");
 					return to->toS();
 				}
-				*to << L": ";
+				*to << S(": ");
 
 				Production *p = syntax->production(id);
 				*to << p->rule()->identifier();
 				if (Syntax::specialProd(id))
-					*to << L"'";
+					*to << S("'");
 				else if (p->priority != 0)
-					*to << L"[" << p->priority << L"]";
-				*to << L" -> ";
+					*to << S("[") << p->priority << S("]");
+				*to << S(" -> ");
 
 				switch (Syntax::specialProd(id)) {
 				case 0:
@@ -390,13 +390,13 @@ namespace storm {
 				}
 
 				if (pos == endPos)
-					*to << L"<>";
+					*to << S("<>");
 
 				return to->toS();
 			}
 
-			StrBuf &operator <<(StrBuf &to, Item item) {
-				return to << L"(" << item.id << L", " << item.pos << L")";
+			void Item::toS(StrBuf *to) const {
+				*to << S("(") << id << S(", ") << pos << S(")");
 			}
 
 
@@ -540,16 +540,15 @@ namespace storm {
 				return to.push(e.v, item);
 			}
 
-			StrBuf &operator <<(StrBuf &to, ItemSet s) {
-				to << L"{\n";
+			void ItemSet::toS(StrBuf *to) const {
+				*to << S("{\n");
 				{
-					Indent z(&to);
-					for (Nat i = 0; i < s.count(); i++) {
-						to << s.at(i) << L"\n";
+					Indent z(to);
+					for (Nat i = 0; i < count(); i++) {
+						*to << at(i) << S("\n");
 					}
 				}
-				to << L"}";
-				return to;
+				*to << S("}");
 			}
 
 		}

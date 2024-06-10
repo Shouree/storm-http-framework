@@ -23,8 +23,8 @@ namespace storm {
 			return to << L"(" << s.w << L", " << s.h << L")";
 		}
 
-		StrBuf &operator <<(StrBuf &to, Size s) {
-			return to << L"(" << s.w << L", " << s.h << L")";
+		void Size::toS(StrBuf *to) const {
+			*to << S("(") << w << S(", ") << h << S(")");
 		}
 
 		Size STORM_FN operator +(Size a, Size b) {

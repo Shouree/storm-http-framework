@@ -42,19 +42,18 @@ namespace storm {
 		return to;
 	}
 
-	StrBuf &operator <<(StrBuf &to, RunOn v) {
-		switch (v.state) {
+	void RunOn::toS(StrBuf *to) const {
+		switch (state) {
 		case RunOn::any:
-			to << L"any";
+			*to << S("any");
 			break;
 		case RunOn::runtime:
-			to << L"runtime";
+			*to << S("runtime");
 			break;
 		case RunOn::named:
-			to << L"named: " << v.thread->identifier();
+			*to << S("named: ") << thread->identifier();
 			break;
 		}
-		return to;
 	}
 
 }

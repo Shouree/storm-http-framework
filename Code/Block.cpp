@@ -16,10 +16,12 @@ namespace code {
 		return to << L"Block" << l.id;
 	}
 
-	StrBuf &operator <<(StrBuf &to, Block l) {
-		if (l.id == Block().id)
-			return to << S("invalid block");
-		return to << S("Block") << l.id;
+	void Block::toS(StrBuf *to) const {
+		if (id == Block().id) {
+			*to << S("invalid block");
+		} else {
+			*to << S("Block") << id;
+		}
 	}
 
 }

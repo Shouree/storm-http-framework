@@ -14,8 +14,8 @@ namespace code {
 		return to << l.id;
 	}
 
-	StrBuf &operator <<(StrBuf &to, Label l) {
-		return to << l.id;
+	void Label::toS(StrBuf *to) const {
+		*to << id;
 	}
 
 }

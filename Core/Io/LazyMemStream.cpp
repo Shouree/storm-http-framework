@@ -62,7 +62,7 @@ namespace storm {
 	}
 
 	void LazyMemIStream::toS(StrBuf *to) const {
-		outputMark(*to, data, pos);
+		data.outputMark(to, pos);
 	}
 
 	void LazyMemIStream::fill() {

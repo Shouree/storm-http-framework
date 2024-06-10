@@ -105,6 +105,9 @@ namespace code {
 
 			// Add a label here.
 			void add(Engine &e, Label label);
+
+			// Output.
+			void STORM_FN toS(StrBuf *to) const;
 		};
 
 		// Add instructions and labels.
@@ -430,8 +433,6 @@ namespace code {
 		void putBlock(StrBuf &to, Nat block) const;
 		void putVar(StrBuf &to, Nat var) const;
 	};
-
-	StrBuf &STORM_FN operator <<(StrBuf &to, Listing::Entry e);
 
 	// Insert a nop instruction if the last instruction was a call instruction.
 	// This is needed on some backends because the function return addresses are

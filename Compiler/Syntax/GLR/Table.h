@@ -23,10 +23,11 @@ namespace storm {
 
 				// Go to this state, or reduce this production.
 				Nat action;
+
+				// Output.
+				void STORM_FN toS(StrBuf *to) const;
 			};
 
-			// To string.
-			StrBuf &STORM_FN operator <<(StrBuf &to, Action action);
 
 			/**
 			 * One row in the LR table.

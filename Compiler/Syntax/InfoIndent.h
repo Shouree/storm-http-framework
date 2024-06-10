@@ -95,6 +95,9 @@ namespace storm {
 			inline Bool STORM_FN operator ==(TextIndent o) const { return (value & ~indentMask) == (o.value & ~indentMask); }
 			inline Bool STORM_FN operator !=(TextIndent o) const { return !(*this == o); }
 
+			// Output.
+			void STORM_FN toS(StrBuf *to) const;
+
 		private:
 			// Store the result as follows:
 			// topmost bit indicates that we have seen a indentIncrease or indentDecrease.
@@ -111,7 +114,6 @@ namespace storm {
 		};
 
 		// Output.
-		StrBuf &operator <<(StrBuf &to, TextIndent i);
 		wostream &operator <<(wostream &to, TextIndent i);
 
 		// Create initialized TextIndent instances.

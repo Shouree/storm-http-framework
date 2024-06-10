@@ -348,70 +348,83 @@ namespace code {
 		}
 	}
 
-	StrBuf &operator <<(StrBuf &to, Operand o) {
-		if (o.type() != opRegister
-			&& o.type() != opCondFlag
-			&& o.type() != opNone
-			&& o.type() != opBlock
-			&& o.type() != opSrcPos) {
+	void Operand::toS(StrBuf *to) const {
+		if (type() != opRegister
+			&& type() != opCondFlag
+			&& type() != opNone
+			&& type() != opBlock
+			&& type() != opSrcPos) {
 
-			Size s = o.size();
+			Size s = size();
 			if (s == Size::sPtr)
-				to << S("p");
+				*to << S("p");
 			else if (s == Size::sByte)
-				to << S("b");
+				*to << S("b");
 			else if (s == Size::sInt)
-				to << S("i");
+				*to << S("i");
 			else if (s == Size::sLong)
-				to << S("l");
+				*to << S("l");
 			else
-				to << S("(") << s << S(")");
+				*to << S("(") << s << S(")");
 		}
 
-		switch (o.type()) {
+		switch (type()) {
 		case opNone:
-			return to << S("<none>");
+			*to << S("<none>");
+			return;
 		case opConstant:
-			if (o.opType == opDualConstant) {
-				return to << o.opOffset;
+			if (opType == opDualConstant) {
+				*to << opOffset;
 			} else {
-				if (o.size() == Size::sPtr) {
-					return to << S("0x") << hex(o.constant());
+				if (size() == Size::sPtr) {
+					*to << S("0x") << hex(constant());
 				} else {
-					return to << o.constant();
+					*to << constant();
 				}
 			}
+			return;
 		case opRegister:
-			return to << code::name(o.reg());
+			*to << code::name(reg());
+			return;
 		case opRelative:
-			return to << S("[") << code::name(o.reg()) << o.offset() << S("]");
+			*to << S("[") << code::name(reg()) << offset() << S("]");
+			return;
 		case opRelativeLbl:
-			return to << S("[") << L"Label" << o.opNum << o.offset() << S("]");
+			*to << S("[") << L"Label" << opNum << offset() << S("]");
+			return;
 		case opVariable:
-			if (o.offset() != Offset()) {
-				return to << S("[Var") << o.opNum << o.offset() << S("]");
+			if (offset() != Offset()) {
+				*to << S("[Var") << opNum << offset() << S("]");
 			} else {
-				return to << S("[Var") << o.opNum << S("]");
+				*to << S("[Var") << opNum << S("]");
 			}
+			return;
 		case opLabel:
-			return to << S("Label") << o.opNum;
+			*to << S("Label") << opNum;
+			return;
 		case opBlock:
-			return to << S("Block") << o.opNum;
+			*to << S("Block") << opNum;
+			return;
 		case opReference:
-			return to << S("@") << o.ref().title();
+			*to << S("@") << ref().title();
+			return;
 		case opObjReference:
 			TODO(L"Make sure to call on the correct OS thread!");
-			if (o.object()) {
-				return to << S("&") << o.object()->toS();
+			if (object()) {
+				*to << S("&") << object()->toS();
 			} else {
-				return to << S("&null");
+				*to << S("&null");
 			}
+			return;
 		case opCondFlag:
-			return to << code::name(o.condFlag());
+			*to << code::name(condFlag());
+			return;
 		case opSrcPos:
-			return to << o.srcPos();
+			*to << srcPos();
+			return;
 		default:
-			return to << S("<invalid>");
+			*to << S("<invalid>");
+			return;
 		}
 	}
 

@@ -78,32 +78,31 @@ namespace sound {
 		return r;
 	}
 
-	StrBuf &operator <<(StrBuf &to, Buffer b) {
-		outputMark(to, b, b.count());
-		return to;
+	void Buffer::toS(StrBuf *to) const {
+		outputMark(to, count());
 	}
 
-	void outputMark(StrBuf &to, Buffer b, Nat mark) {
+	void Buffer::outputMark(StrBuf *to, Nat mark) const {
 		const Nat width = 16;
-		for (Nat i = 0; i <= b.count(); i++) {
+		for (Nat i = 0; i <= count(); i++) {
 			if (i % width == 0) {
 				if (i > 0)
-					to << L"\n";
-				to << hex(i) << L":";
+					*to << L"\n";
+				*to << hex(i) << L":";
 			}
 
-			if (i == b.filled() && i == mark)
-				to << L"|>";
-			else if (i == b.filled())
-				to << L"| ";
+			if (i == filled() && i == mark)
+				*to << L"|>";
+			else if (i == filled())
+				*to << L"| ";
 			else if (i == mark)
-				to << L" >";
+				*to << L" >";
 			else
-				to << L"  ";
+				*to << L"  ";
 
 			// TODO: Better formatting!
-			if (i < b.count())
-				to << b[i];
+			if (i < count())
+				*to << (*this)[i];
 		}
 	}
 

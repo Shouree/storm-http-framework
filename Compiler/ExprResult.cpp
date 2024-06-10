@@ -52,13 +52,12 @@ namespace storm {
 		return to;
 	}
 
-	StrBuf &operator <<(StrBuf &to, ExprResult r) {
-		if (r.nothing()) {
-			to << S("nothing");
+	void ExprResult::toS(StrBuf *to) const {
+		if (nothing()) {
+			*to << S("nothing");
 		} else {
-			to << r.type();
+			*to << type();
 		}
-		return to;
 	}
 
 	void ExprResult::deepCopy(CloneEnv *env) {

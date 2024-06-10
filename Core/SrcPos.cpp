@@ -76,11 +76,11 @@ namespace storm {
 			return to << p.file << L"(" << p.start << L"-" << p.end << L")";
 	}
 
-	StrBuf &operator <<(StrBuf &to, SrcPos p) {
-		if (p.unknown())
-			return to << S("<unknown location>");
+	void SrcPos::toS(StrBuf *to) const {
+		if (unknown())
+			*to << S("<unknown location>");
 		else
-			return to << p.file << S("(") << p.start << S("-") << p.end << S(")");
+			*to << file << S("(") << start << S("-") << end << S(")");
 	}
 
 }

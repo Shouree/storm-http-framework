@@ -41,8 +41,8 @@ namespace code {
 		STORM_CTOR Param(Nat id, Size size, Bool use64, Nat offset, Bool inMemory);
 
 		// Any contents?
-		Bool STORM_FN any() { return !empty(); }
-		Bool STORM_FN empty();
+		Bool STORM_FN any() const { return !empty(); }
+		Bool STORM_FN empty() const;
 
 		// Make empty.
 		void STORM_FN clear();
@@ -100,6 +100,9 @@ namespace code {
 			return data != o.data;
 		}
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
 	private:
 		// Stored as follows:
 
@@ -117,7 +120,6 @@ namespace code {
 
 	// Output.
 	wostream &operator <<(wostream &to, Param p);
-	StrBuf &STORM_FN operator <<(StrBuf &to, Param p);
 
 
 	/**
@@ -167,6 +169,9 @@ namespace code {
 			return Offset(regs->v[id].offset);
 		}
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
 	private:
 		// Register to store return address in.
 		Reg memReg;
@@ -185,7 +190,6 @@ namespace code {
 
 	// Output.
 	wostream &operator <<(wostream &to, Result p);
-	StrBuf &STORM_FN operator <<(StrBuf &to, Result p);
 
 
 	/**

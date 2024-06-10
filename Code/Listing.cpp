@@ -95,25 +95,23 @@ namespace code {
 			labels->push(l);
 	}
 
-	StrBuf &operator <<(StrBuf &to, Listing::Entry e) {
-		if (e.labels != null && e.labels->any()) {
-			StrBuf *tmp = new (&to) StrBuf();
-			*tmp << e.labels->at(0);
+	void Listing::Entry::toS(StrBuf *to) const {
+		if (labels != null && labels->any()) {
+			StrBuf *tmp = new (to) StrBuf();
+			*tmp << labels->at(0);
 
-			for (nat i = 1; i < e.labels->count(); i++)
-				*tmp << L", " << width(3) << e.labels->at(i);
+			for (nat i = 1; i < labels->count(); i++)
+				*tmp << S(", ") << width(3) << labels->at(i);
 
-			*tmp << L": ";
+			*tmp << S(": ");
 
-			to << width(20) << tmp->toS();
+			*to << width(20) << tmp->toS();
 		} else {
-			to << width(20) << L" ";
+			*to << width(20) << S(" ");
 		}
 
-		if (e.instr)
-			to << e.instr;
-
-		return to;
+		if (instr)
+			*to << instr;
 	}
 
 	/**

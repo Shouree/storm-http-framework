@@ -89,9 +89,9 @@ namespace storm {
 
 			Name *type;
 			Str *name;
-		};
 
-		StrBuf &STORM_FN operator <<(StrBuf &to, ParamDecl decl);
+			void STORM_FN toS(StrBuf *to) const;
+		};
 
 
 		/**

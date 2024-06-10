@@ -22,7 +22,6 @@ namespace code {
 		friend class Reference;
 		friend class Operand;
 		friend wostream &operator <<(wostream &to, const Ref &r);
-		friend StrBuf &operator <<(StrBuf &to, Ref r);
 	public:
 		STORM_CAST_CTOR Ref(RefSource *to);
 		STORM_CAST_CTOR Ref(Reference *ref);
@@ -41,13 +40,15 @@ namespace code {
 		// Get the source.
 		inline RefSource *STORM_FN source() const { return to; }
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const ON(Compiler);
+
 	private:
 		// Referring to:
 		RefSource *to;
 	};
 
 	wostream &operator <<(wostream &to, const Ref &r);
-	StrBuf &STORM_FN operator <<(StrBuf &to, Ref r) ON(Compiler);
 
 	/**
 	 * Robust reference.

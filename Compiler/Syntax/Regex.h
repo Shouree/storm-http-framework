@@ -75,6 +75,9 @@ namespace storm {
 			// Hash this regex.
 			Nat STORM_FN hash() const;
 
+			// Output.
+			void STORM_FN toS(StrBuf *to) const;
+
 		private:
 			// Character set.
 			class Set {
@@ -197,12 +200,10 @@ namespace storm {
 			Nat matchComplex(const T *str, Nat len, Nat start) const;
 
 			// Output friends.
-			friend StrBuf &operator <<(StrBuf &to, Regex r);
 			friend wostream &operator <<(wostream &to, Regex r);
 		};
 
 		// Output.
-		StrBuf &STORM_FN operator <<(StrBuf &to, Regex r);
 		wostream &operator <<(wostream &to, Regex r);
 
 		/**

@@ -55,10 +55,12 @@ namespace storm {
 		// Compare.
 		Bool STORM_FN operator ==(SrcPos o) const;
 		Bool STORM_FN operator !=(SrcPos o) const;
+
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
 	};
 
 	// Output.
 	wostream &operator <<(wostream &to, const SrcPos &p);
-	StrBuf &STORM_FN operator <<(StrBuf &to, SrcPos p);
 
 }

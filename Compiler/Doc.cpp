@@ -16,11 +16,11 @@ namespace storm {
 
 	DocParam::DocParam(Str *name, Value type) : name(name), type(type) {}
 
-	StrBuf &operator <<(StrBuf &to, DocParam p) {
-		if (p.name->any())
-			return to << p.type << S(" ") << p.name;
+	void DocParam::toS(StrBuf *to) const {
+		if (name->any())
+			*to << type << S(" ") << name;
 		else
-			return to << p.type;
+			*to << type;
 	}
 
 	wostream &operator <<(wostream &to, DocParam p) {
@@ -41,19 +41,18 @@ namespace storm {
 
 	DocNote::DocNote(Str *note) : note(note), named(null), ref(false), showType(false) {}
 
-	StrBuf &operator <<(StrBuf &to, DocNote n) {
-		to << n.note;
-		if (n.showType) {
-			to << S(" ");
-			if (n.named) {
-				to << n.named->identifier();
-				if (n.ref)
-					to << S("&");
+	void DocNote::toS(StrBuf *to) const {
+		*to << note;
+		if (showType) {
+			*to << S(" ");
+			if (named) {
+				*to << named->identifier();
+				if (ref)
+					*to << S("&");
 			} else {
-				to << S("void");
+				*to << S("void");
 			}
 		}
-		return to;
 	}
 
 	wostream &operator <<(wostream &to, DocNote n) {

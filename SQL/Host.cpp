@@ -29,14 +29,13 @@ namespace sql {
 		return as<Str>(data);
 	}
 
-	StrBuf *operator <<(StrBuf *to, const Host &c) {
-		if (Address *a = c.isSocket())
+	void Host::toS(StrBuf *to) const {
+		if (Address *a = isSocket())
 			*to << S("socket: ") << a;
-		else if (Str *l = c.isLocal())
+		else if (Str *l = isLocal())
 			*to << S("local socket/pipe: ") << l;
 		else
 			*to << S("local, default");
-		return to;
 	}
 
 

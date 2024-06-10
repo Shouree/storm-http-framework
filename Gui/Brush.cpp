@@ -41,8 +41,8 @@ namespace gui {
 		return to << s.color << L"@" << s.pos;
 	}
 
-	StrBuf &operator <<(StrBuf &to, GradientStop s) {
-		return to << s.color << L"@" << s.pos;
+	void GradientStop::toS(StrBuf *to) const {
+		*to << color << S("@") << pos;
 	}
 
 

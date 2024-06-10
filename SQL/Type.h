@@ -58,6 +58,9 @@ namespace sql {
 		// Is there any type (i.e. not `void`).
 		Bool STORM_FN any() const { return type != 0; }
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
 	private:
 		// Create a custom type.
 		QueryType(Nat typeId);
@@ -72,8 +75,5 @@ namespace sql {
 		friend class QueryStr;
 		friend class QueryStrBuilder;
 	};
-
-	// Output.
-	StrBuf &STORM_FN operator <<(StrBuf &to, const QueryType &t);
 
 }

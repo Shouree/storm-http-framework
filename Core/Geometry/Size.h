@@ -38,6 +38,9 @@ namespace storm {
 
 			// Component-wise maximum of two sizes.
 			Size STORM_FN max(Size o) const;
+
+			// Output.
+			void STORM_FN toS(StrBuf *to) const;
 		};
 
 		Size STORM_FN operator +(Size a, Size b);
@@ -62,6 +65,5 @@ namespace storm {
 		Float STORM_FN min(Size x);
 
 		wostream &operator <<(wostream &to, const Size &s);
-		StrBuf &STORM_FN operator <<(StrBuf &to, Size s);
 	}
 }

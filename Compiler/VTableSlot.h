@@ -30,6 +30,9 @@ namespace storm {
 		// Compare.
 		Bool STORM_FN operator ==(VTableSlot o) const;
 		inline Bool STORM_FN operator !=(VTableSlot o) const { return !(*this == o); }
+
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
 	};
 
 	// Helpers:
@@ -38,6 +41,5 @@ namespace storm {
 
 	// To string.
 	wostream &operator <<(wostream &to, const VTableSlot &pos);
-	StrBuf &STORM_FN operator <<(StrBuf &to, VTableSlot pos);
 
 }

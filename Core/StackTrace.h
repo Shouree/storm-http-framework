@@ -66,6 +66,8 @@ namespace storm {
 		Str *STORM_FN format() const;
 		void STORM_FN format(StrBuf *to) const;
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
 	private:
 		// Data.
 		Array<Frame> *frames;
@@ -73,7 +75,6 @@ namespace storm {
 
 	// Output the stack trace.
 	wostream &operator <<(wostream &to, const StackTrace &trace);
-	StrBuf &STORM_FN operator <<(StrBuf &to, StackTrace trace);
 
 	// Collect a stack trace.
 	StackTrace STORM_FN collectStackTrace(EnginePtr e);

@@ -339,12 +339,11 @@ namespace storm {
 			return to << b->toS()->c_str();
 		}
 
-		StrBuf &operator <<(StrBuf &to, ProductionIter i) {
-			if (!i.valid())
-				to << L"<invalid>";
+		void ProductionIter::toS(StrBuf *to) const {
+			if (!valid())
+				*to << S("<invalid>");
 			else
-				i.p->toS(&to, i.pos, false);
-			return to;
+				p->toS(to, pos, false);
 		}
 
 

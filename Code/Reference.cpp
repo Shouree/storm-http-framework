@@ -29,8 +29,8 @@ namespace code {
 		return to << r.to->title()->c_str();
 	}
 
-	StrBuf &operator <<(StrBuf &to, Ref r) {
-		return to << r.to->title();
+	void Ref::toS(StrBuf *to) const {
+		*to << this->to->title();
 	}
 
 }

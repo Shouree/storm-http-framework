@@ -20,8 +20,8 @@ namespace storm {
 			return to << a.deg() << L" deg";
 		}
 
-		StrBuf &operator <<(StrBuf &to, Angle a) {
-			return to << a.deg() << L" deg";
+		void Angle::toS(StrBuf *to) const {
+			*to << deg() << S(" deg");
 		}
 
 		Angle deg(Float v) {

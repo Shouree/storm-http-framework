@@ -52,6 +52,9 @@ namespace storm {
 				// Compare.
 				Bool STORM_FN operator ==(const ParentReq &o) const;
 
+				// Output.
+				void STORM_FN toS(StrBuf *to) const;
+
 			private:
 				// Create, explicitly specifying the data.
 				ParentReq(GcArray<Nat> *data);
@@ -62,7 +65,6 @@ namespace storm {
 			};
 
 			wostream &operator <<(wostream &to, const ParentReq &r);
-			StrBuf &STORM_FN operator <<(StrBuf &to, const ParentReq &r);
 
 		}
 	}

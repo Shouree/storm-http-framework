@@ -50,7 +50,7 @@ namespace storm {
 		}
 
 		void BufStream::toS(StrBuf *to) const {
-			outputMark(*to, data, pos);
+			data.outputMark(to, pos);
 		}
 
 		Nat BufStream::findByte(Byte b) const {

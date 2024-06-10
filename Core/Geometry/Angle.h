@@ -32,6 +32,9 @@ namespace storm {
 			// Convert to degrees.
 			inline Float STORM_FN deg() const { return float(v * 180.0 / M_PI); }
 
+			// Output.
+			void STORM_FN toS(StrBuf *to) const;
+
 		private:
 			// Value (intentionally not visible to Storm).
 			Float v;
@@ -50,7 +53,6 @@ namespace storm {
 
 		// To String.
 		wostream &operator <<(wostream &to, Angle a);
-		StrBuf &STORM_FN operator <<(StrBuf &to, Angle a);
 
 		// Create an angle in degrees.
 		Angle STORM_FN deg(Float v);

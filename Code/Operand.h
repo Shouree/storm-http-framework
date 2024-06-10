@@ -192,6 +192,9 @@ namespace code {
 
 		void dbg_dump() const;
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
 	private:
 		// Create constants.
 		Operand(Word c, Size size);
@@ -235,12 +238,10 @@ namespace code {
 		friend Operand xRel(Size size, Var v, Offset offset);
 		friend Operand xRel(Size size, Label l, Offset offset);
 		friend wostream &operator <<(wostream &to, const Operand &o);
-		friend StrBuf &operator <<(StrBuf &to, Operand o);
 	};
 
 	// Output.
 	wostream &operator <<(wostream &to, const Operand &o);
-	StrBuf &STORM_FN operator <<(StrBuf &to, Operand o);
 
 	// Create constants. Note: Do not try to create a pointer to a Gc:d object using xConst. That
 	// will fail miserably, as the pointer will not be updated whenever the Gc moves the object.

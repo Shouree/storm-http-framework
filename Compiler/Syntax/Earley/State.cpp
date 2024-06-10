@@ -10,8 +10,8 @@ namespace storm {
 
 			StatePtr::StatePtr(Nat step, Nat index) : step(step), index(index) {}
 
-			StrBuf &operator <<(StrBuf &to, StatePtr p) {
-				return to << L"(" << p.step << L", " << p.index << L")";
+			void StatePtr::toS(StrBuf *to) const {
+				*to << S("(") << step << S(", ") << index << S(")");
 			}
 
 			wostream &operator <<(wostream &to, StatePtr p) {
@@ -28,8 +28,8 @@ namespace storm {
 			State::State(ProductionIter pos, Nat from, StatePtr prev, StatePtr completed)
 				: pos(pos), from(from), prev(prev), completed(completed) {}
 
-			StrBuf &operator <<(StrBuf &to, State s) {
-				return to << L"{" << s.pos << L", " << s.from << L", " << s.prev << L", " << s.completed << L"}";
+			void State::toS(StrBuf *to) const {
+				*to << S("{") << pos << S(", ") << from << S(", ") << prev << S(", ") << completed << S("}");
 			}
 
 			wostream &operator <<(wostream &to, State s) {

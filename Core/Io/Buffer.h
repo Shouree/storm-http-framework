@@ -74,6 +74,18 @@ namespace storm {
 		// Is the buffer full, according to the `filled` member?
 		inline Bool STORM_FN full() const { return filled() == count(); }
 
+		// Output the buffer to a string buffer. Since a buffer is an unformatted sequence of bytes, it
+		// is outputted as a hex dump. The location of filled is marked with a pipe (`|`). As such,
+		// buffers are a convenient way to output data in hexadecimal form.
+		//
+		// The system provides an overload of `toS` for buffers, so it is possible to call
+		// `Buffer().toS()`.
+		void STORM_FN toS(StrBuf *to) const;
+
+		// Output the buffer, like `toS`, but including a second mark at the specified location. This
+		// location is indicated with a `>` character.
+		void STORM_FN outputMark(StrBuf *to, Nat markAt) const;
+
 	private:
 		// Data.
 		GcArray<Byte> *data;
@@ -103,18 +115,6 @@ namespace storm {
 	// Analogous to the `cut` functions in `Str`. Extracts a range of bytes from a buffer.
 	Buffer STORM_FN cut(EnginePtr e, Buffer src, Nat from);
 	Buffer STORM_FN cut(EnginePtr e, Buffer src, Nat from, Nat to);
-
-	// Output the buffer to a string buffer. Since a buffer is an unformatted sequence of bytes, it
-	// is outputted as a hex dump. The location of filled is marked with a pipe (`|`). As such,
-	// buffers are a convenient way to output data in hexadecimal form.
-	//
-	// The system provides an overload of `toS` for buffers, so it is possible to call
-	// `Buffer().toS()`.
-	StrBuf &STORM_FN operator <<(StrBuf &to, Buffer b);
-
-	// Output the buffer, like `<<`, but including a second mark at the specified location. This
-	// location is indicated with a `>` character.
-	void STORM_FN outputMark(StrBuf &to, Buffer b, Nat markAt);
 
 	// Conversion to/from UTF-8 strings. This is possible through the memory streams and text
 	// interface as well, but this is more convenient in some cases.

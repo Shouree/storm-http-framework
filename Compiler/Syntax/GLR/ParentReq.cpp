@@ -128,17 +128,16 @@ namespace storm {
 				return to;
 			}
 
-			StrBuf &operator <<(StrBuf &to, const ParentReq &r) {
-				if (r.empty()) {
-					to << S("{}");
+			void ParentReq::toS(StrBuf *to) const {
+				if (empty()) {
+					*to << S("{}");
 				} else {
-					to << S("{");
-					for (Nat i = 0; i < r.max(); i++)
-						if (r.get(i))
-							to << S(" ") << i;
-					to << S(" }");
+					*to << S("{");
+					for (Nat i = 0; i < max(); i++)
+						if (get(i))
+							*to << S(" ") << i;
+					*to << S(" }");
 				}
-				return to;
 			}
 
 		}

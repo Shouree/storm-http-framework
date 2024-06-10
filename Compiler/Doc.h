@@ -23,10 +23,12 @@ namespace storm {
 
 		// Parameter type.
 		Value type;
+
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
 	};
 
 	// To string.
-	StrBuf &STORM_FN operator <<(StrBuf &to, DocParam p);
 	wostream &operator <<(wostream &to, DocParam p);
 
 
@@ -56,10 +58,12 @@ namespace storm {
 
 		// Show the type at all?
 		Bool showType;
+
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
 	};
 
 	// To string.
-	StrBuf &STORM_FN operator <<(StrBuf &to, DocNote n);
 	wostream &operator <<(wostream &to, DocNote n);
 
 

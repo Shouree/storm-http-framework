@@ -93,12 +93,18 @@ namespace gui {
 	public:
 		STORM_CTOR GradientStop(Float position, Color color);
 
+		// Position.
 		Float pos;
+
+		// Color.
 		Color color;
+
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
 	};
 
+	// C++ version.
 	wostream &operator <<(wostream &to, const GradientStop &s);
-	StrBuf &STORM_FN operator <<(StrBuf &to, GradientStop s);
 
 
 	/**

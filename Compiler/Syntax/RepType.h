@@ -15,9 +15,6 @@ namespace storm {
 			repZeroPlus,
 		};
 
-		// Output.
-		StrBuf &STORM_FN operator <<(StrBuf &to, RepType r);
-
 		// Skippable?
 		Bool STORM_FN skippable(RepType rep);
 

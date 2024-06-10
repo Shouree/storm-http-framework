@@ -75,6 +75,9 @@ namespace code {
 		nat align64() const;
 
 		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
+		// Output.
 		friend wostream &operator <<(wostream &to, const Size &s);
 	private:
 		// Initialize to specific values.
@@ -102,7 +105,6 @@ namespace code {
 	 * Output.
 	 */
 	wostream &operator <<(wostream &to, const Size &s);
-	StrBuf &STORM_FN operator <<(StrBuf &to, Size s);
 
 
 	/**
@@ -173,6 +175,9 @@ namespace code {
 		inline int v64() const { return o64; }
 
 		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
+		// Output.
 		friend wostream &operator <<(wostream &to, const Offset &s);
 
 		// Absolute value.
@@ -190,7 +195,6 @@ namespace code {
 	 * Output.
 	 */
 	wostream &operator <<(wostream &to, const Offset &s);
-	StrBuf &STORM_FN operator <<(StrBuf &to, Offset s);
 
 	// Min/max operations.
 	using std::min;

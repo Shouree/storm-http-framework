@@ -38,10 +38,12 @@ namespace storm {
 
 		// Get a variant with a different alpha value.
 		Color STORM_FN withAlpha(Float f) const;
+
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
 	};
 
 	wostream &operator <<(wostream &to, const Color &s);
-	StrBuf &STORM_FN operator <<(StrBuf &to, Color s);
 
 	// Some default colors.
 	Color STORM_FN transparent(); // Based on black.

@@ -60,6 +60,9 @@ namespace storm {
 		// Get the type of the value in the variant. Returns `null` if it is empty.
 		MAYBE(Type *) STORM_FN type() const;
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
 	public:
 
 		/**
@@ -143,11 +146,9 @@ namespace storm {
 		// Find an Engine instance. Assumes we're not empty.
 		Engine &engine() const;
 
-		friend StrBuf &operator <<(StrBuf &to, const Variant &v);
 		friend wostream &operator <<(wostream &to, const Variant &v);
 	};
 
 	// Output.
-	StrBuf &STORM_FN operator <<(StrBuf &to, const Variant &v);
 	wostream &operator <<(wostream &to, const Variant &v);
 }

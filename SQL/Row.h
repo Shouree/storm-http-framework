@@ -49,6 +49,9 @@ namespace sql {
 		// Check if a column is null.
 		Bool STORM_FN isNull(Nat index) const;
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
 	private:
 		// Primitive types. Stored in the object value as pointers.
 		enum ColType {
@@ -125,8 +128,5 @@ namespace sql {
 
 	// Get a column. Creates a Variant, so is slower than using typed accessors.
 	Variant STORM_FN at(EnginePtr e, const Row &row, Nat index);
-
-	// Print a row, for convenience.
-	StrBuf &STORM_FN operator <<(StrBuf &to, const Row &row);
 
 }

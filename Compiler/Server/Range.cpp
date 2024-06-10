@@ -36,8 +36,8 @@ namespace storm {
 
 		void Range::deepCopy(CloneEnv *env) {}
 
-		StrBuf &operator <<(StrBuf &to, Range r) {
-			return to << L"(" << r.from << L" - " << r.to << L")";
+		void Range::toS(StrBuf *to) const {
+			*to << S("(") << from << S(" - ") << to << S(")");
 		}
 
 		wostream &operator <<(wostream &to, Range r) {
@@ -56,8 +56,8 @@ namespace storm {
 		ColoredRange::ColoredRange(Range r, TokenColor c)
 			: range(r), color(c) {}
 
-		StrBuf &operator <<(StrBuf &to, ColoredRange r) {
-			return to << r.range << L"#" << name(to.engine(), r.color);
+		void ColoredRange::toS(StrBuf *to) const {
+			*to << range << S("#") << name(to->engine(), color);
 		}
 
 	}

@@ -41,8 +41,8 @@ namespace storm {
 			return to << L"(" << p.x << L", " << p.y << L")";
 		}
 
-		StrBuf &operator <<(StrBuf &to, Point p) {
-			return to << L"(" << p.x << L", " << p.y << L")";
+		void Point::toS(StrBuf *to) const {
+			*to << S("(") << x << S(", ") << y << S(")");
 		}
 
 		Point operator +(Point a, Size b) {

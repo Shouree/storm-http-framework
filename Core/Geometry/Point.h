@@ -41,10 +41,12 @@ namespace storm {
 
 			// Compute the taxicab/manhattan length (i.e. x + y).
 			Float STORM_FN taxiLength() const;
+
+			// Output.
+			void STORM_FN toS(StrBuf *to) const;
 		};
 
 		wostream &operator <<(wostream &to, const Point &s);
-		StrBuf &STORM_FN operator <<(StrBuf &to, Point s);
 
 		// Operations.
 		Point STORM_FN operator +(Point a, Size b);

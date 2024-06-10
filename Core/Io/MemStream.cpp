@@ -53,7 +53,7 @@ namespace storm {
 	}
 
 	void MemIStream::toS(StrBuf *to) const {
-		outputMark(*to, data, pos);
+		data.outputMark(to, pos);
 	}
 
 

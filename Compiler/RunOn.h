@@ -38,10 +38,12 @@ namespace storm {
 		// Assuming we're running on a thread represented by 'this', may we run a function declared
 		// to run on 'other' without sending messages?
 		Bool STORM_FN canRun(RunOn other) const;
+
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
 	};
 
 	// Output.
 	wostream &operator <<(wostream &to, const RunOn &v);
-	StrBuf &STORM_FN operator <<(StrBuf &to, RunOn v);
 
 }

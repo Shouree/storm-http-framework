@@ -59,6 +59,12 @@ namespace sound {
 		// Is the buffer full, according to the `filled` member?
 		inline Bool STORM_FN full() const { return filled() == count(); }
 
+		// Output. A toS() is generated automatically.
+		void STORM_FN toS(StrBuf *to) const;
+
+		// Output the buffer, specifying an additional mark.
+		void STORM_FN outputMark(StrBuf *to, Nat markAt) const;
+
 	private:
 		// Data.
 		GcArray<Float> *data;
@@ -90,10 +96,4 @@ namespace sound {
 	// Cut buffers into smaller pieces.
 	Buffer cut(EnginePtr e, Buffer src, Nat from);
 	Buffer cut(EnginePtr e, Buffer src, Nat from, Nat count);
-
-	// Output the buffer, specifying an additional mark.
-	void STORM_FN outputMark(StrBuf &to, Buffer b, Nat markAt);
-
-	// Output the buffer. The system generates a `toS` function as well.
-	StrBuf &STORM_FN operator <<(StrBuf &to, Buffer b);
 }

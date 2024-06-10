@@ -127,13 +127,14 @@ namespace gui {
 		static TextEffect STORM_FN family(Str::Iter begin, Str::Iter end, Str *family);
 		static TextEffect STORM_FN scaleSize(Str::Iter begin, Str::Iter end, Float size);
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
 	private:
 		// Constructor for all factory methods.
 		TextEffect(Type type, Str::Iter begin, Str::Iter end, Float d0, Float d1, Float d2, Float d3, void *ptr);
 	};
 
-	// Output an effect.
-	StrBuf &STORM_FN operator <<(StrBuf &to, const TextEffect &effect);
 
 	/**
 	 * Pre-formatted text prepared for rendering.

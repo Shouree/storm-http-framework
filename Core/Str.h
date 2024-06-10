@@ -180,6 +180,9 @@ namespace storm {
 			// Peek at the string.
 			inline const Str *data() const { return owner; }
 
+			// Output, for convenience.
+			void STORM_FN toS(StrBuf *to) const;
+
 		private:
 			friend class Str;
 
@@ -292,9 +295,6 @@ namespace storm {
 
 	// Strip whitespace from a string.
 	Str *STORM_FN trimWhitespace(Str *src);
-
-	// Output for iterators for convenience.
-	StrBuf *STORM_FN operator <<(StrBuf *to, Str::Iter iter);
 
 #ifdef POSIX
 	// Low-level string operations for UTF-16.

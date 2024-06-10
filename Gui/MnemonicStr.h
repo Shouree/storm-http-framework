@@ -41,6 +41,9 @@ namespace gui {
 		// For Win32: convert underscores to ampersands as needed.
 		Str *win32Mnemonic() const { return mnemonic(Char('&')); }
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
 	private:
 		// The original string.
 		Str *value;
@@ -48,12 +51,8 @@ namespace gui {
 		// Shall we interpret prefixes in the string?
 		Bool hasPrefixes;
 
-		friend StrBuf &STORM_FN operator <<(StrBuf &to, MnemonicStr s);
 		friend MnemonicStr STORM_FN mnemonic(Str *value);
 	};
-
-	// Output.
-	StrBuf &STORM_FN operator <<(StrBuf &to, MnemonicStr s);
 
 	// Create a MnemonicStr instance, indicating that we do want underscores to be interpreted as a mnemonic.
 	MnemonicStr STORM_FN mnemonic(Str *value);

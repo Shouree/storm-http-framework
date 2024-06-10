@@ -95,6 +95,9 @@ namespace storm {
 				// To string.
 				Str *STORM_FN toS(Syntax *syntax) const;
 
+				// Output.
+				void STORM_FN toS(StrBuf *to) const;
+
 			private:
 				// Create with raw id and position.
 				Item(Nat id, Nat pos);
@@ -122,9 +125,6 @@ namespace storm {
 
 			// Get an item representing the special position in 'production'. Assumes there is one such production.
 			Item STORM_FN special(Nat production);
-
-			// Plain to string (no syntax lookup possible).
-			StrBuf &STORM_FN operator <<(StrBuf &to, Item item);
 
 
 			/**
@@ -166,6 +166,9 @@ namespace storm {
 				// To string.
 				Str *STORM_FN toS(Syntax *syntax) const;
 
+				// Output.
+				void STORM_FN toS(StrBuf *to) const;
+
 			private:
 				// Data. Might be null.
 				GcArray<Item> *data;
@@ -181,9 +184,6 @@ namespace storm {
 
 			// Push items.
 			Bool STORM_FN push(EnginePtr e, ItemSet &to, Item item);
-
-			// Plain to string (no syntax lookup possible).
-			StrBuf &STORM_FN operator <<(StrBuf &to, ItemSet itemSet);
 
 		}
 	}

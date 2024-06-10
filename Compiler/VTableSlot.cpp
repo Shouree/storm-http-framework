@@ -53,20 +53,19 @@ namespace storm {
 		return to;
 	}
 
-	StrBuf &operator <<(StrBuf &to, VTableSlot pos) {
-		switch (pos.type) {
+	void VTableSlot::toS(StrBuf *to) const {
+		switch (type) {
 		case VTableSlot::tNone:
-			to << L"invalid";
-			return to;
+			*to << S("invalid");
+			return;
 		case VTableSlot::tStorm:
-			to << L"storm";
+			*to << S("storm");
 			break;
 		case VTableSlot::tCpp:
-			to << L"c++";
+			*to << S("c++");
 			break;
 		}
-		to << L":" << pos.offset;
-		return to;
+		*to << S(":") << offset;
 	}
 
 }

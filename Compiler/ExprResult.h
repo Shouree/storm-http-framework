@@ -45,6 +45,9 @@ namespace storm {
 		// Convert the result to a by-reference value.
 		ExprResult STORM_FN asRef(Bool v) const;
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
 	private:
 		// Return type.
 		Value result;
@@ -61,7 +64,6 @@ namespace storm {
 
 	// Output.
 	wostream &operator <<(wostream &to, const ExprResult &r);
-	StrBuf &STORM_FN operator <<(StrBuf &to, ExprResult r);
 
 	// Get the 'no return' value.
 	ExprResult STORM_FN noReturn();

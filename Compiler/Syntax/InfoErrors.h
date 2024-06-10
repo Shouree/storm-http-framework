@@ -46,6 +46,9 @@ namespace storm {
 			static Nat getData(InfoErrors e);
 			static InfoErrors fromData(Nat v);
 
+			// Output.
+			void STORM_FN toS(StrBuf *to) const;
+
 		private:
 			// Low-level create.
 			InfoErrors(Nat data);
@@ -76,7 +79,6 @@ namespace storm {
 		InfoErrors STORM_FN infoChars(Nat chars);
 
 		// Output.
-		StrBuf &STORM_FN operator <<(StrBuf &to, InfoErrors e);
 		wostream &operator <<(wostream &to, InfoErrors e);
 
 	}

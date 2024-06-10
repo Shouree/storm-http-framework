@@ -3,11 +3,10 @@
 
 namespace gui {
 
-	StrBuf &operator <<(StrBuf &to, KeyChord a) {
-		if (a.modifiers)
-			to << name(to.engine(), a.modifiers) << S("+");
-		to << c_name(a.key);
-		return to;
+	void KeyChord::toS(StrBuf *to) const {
+		if (modifiers)
+			*to << name(to->engine(), modifiers) << S("+");
+		*to << c_name(key);
 	}
 
 }

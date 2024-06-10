@@ -44,9 +44,10 @@ namespace gui {
 		Nat STORM_FN hash() const {
 			return natHash((Nat(key) << 4) | Nat(modifiers));
 		}
-	};
 
-	StrBuf &STORM_FN operator <<(StrBuf &to, KeyChord a);
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+	};
 
 	// Create a key chord with Ctrl.
 	inline KeyChord STORM_FN ctrlChord(key::Key key) {

@@ -47,6 +47,9 @@ namespace storm {
 		Bool STORM_FN operator ==(Value o) const;
 		Bool STORM_FN operator !=(Value o) const;
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
 		// Check if a value of this type may refer to a value of type `x`. As the name implies, this
 		// check is performed with references in mind. As such, this is used to determine if formal
 		// parameters of a function matches actual parameters, or when figuring out if a (copy)
@@ -149,7 +152,6 @@ namespace storm {
 
 	// Output.
 	wostream &operator <<(wostream &to, const Value &v);
-	StrBuf &STORM_FN operator <<(StrBuf &to, Value v);
 
 	// Generate a list of values.
 #ifdef VISUAL_STUDIO

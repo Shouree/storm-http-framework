@@ -95,19 +95,17 @@ namespace storm {
 			return InfoErrors(v);
 		}
 
-		StrBuf &operator <<(StrBuf &to, InfoErrors e) {
-			if (e.success()) {
-				if (!e.any()) {
-					to << S("success");
+		void InfoErrors::toS(StrBuf *to) const {
+			if (success()) {
+				if (!any()) {
+					*to << S("success");
 				} else {
-					to << e.chars() << (e.chars() == 1 ? S(" char") : S(" chars")) << L", ";
-					to << e.shifts() << (e.shifts() == 1 ? S(" correction") : S(" corrections"));
+					*to << chars() << (chars() == 1 ? S(" char") : S(" chars")) << L", ";
+					*to << shifts() << (shifts() == 1 ? S(" correction") : S(" corrections"));
 				}
 			} else {
-				to << S("failure");
+				*to << S("failure");
 			}
-
-			return to;
 		}
 
 		wostream &operator <<(wostream &to, InfoErrors e) {

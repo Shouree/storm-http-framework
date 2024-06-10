@@ -78,6 +78,9 @@ namespace storm {
 
 			// Grow the rectangle in all dimensions based on the height and width in `rate`.
 			Rect STORM_FN grow(Size rate) const;
+
+			// Output.
+			void STORM_FN toS(StrBuf *to) const;
 		};
 
 		// Check if the point `pt` is inside the rectangle `r`. Same as `r.contains(pt)`.
@@ -85,7 +88,6 @@ namespace storm {
 
 		// ToS.
 		wostream &operator <<(wostream &to, Rect r);
-		StrBuf &STORM_FN operator <<(StrBuf &to, Rect r);
 
 		inline Bool STORM_FN operator ==(Rect a, Rect b) { return a.p0 == b.p0 && a.p1 == b.p1; }
 		inline Bool STORM_FN operator !=(Rect a, Rect b) { return !(a == b); }

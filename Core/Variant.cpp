@@ -169,19 +169,20 @@ namespace storm {
 		return runtime::allocEngine((RootObject *)t->type);
 	}
 
-	StrBuf &operator <<(StrBuf &to, const Variant &v) {
-		if (v.empty())
-			return to << S("<empty>");
+	void Variant::toS(StrBuf *to) const {
+		if (empty()) {
+			*to << S("<empty>");
+			return;
+		}
 
-		const GcType *t = runtime::gcTypeOf(v.data);
+		const GcType *t = runtime::gcTypeOf(data);
 		const Handle &h = runtime::typeHandle(t->type);
 		if (t->kind == GcType::tArray) {
-			GcArray<Byte> *alloc = (GcArray<Byte> *)v.data;
-			(*h.toSFn)(alloc->v, &to);
+			GcArray<Byte> *alloc = (GcArray<Byte> *)data;
+			(*h.toSFn)(alloc->v, to);
 		} else {
-			(*h.toSFn)(&v.data, &to);
+			(*h.toSFn)(&data, to);
 		}
-		return to;
 	}
 
 	wostream &operator <<(wostream &to, const Variant &v) {

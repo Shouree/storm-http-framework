@@ -23,7 +23,7 @@ namespace code {
 		return copy;
 	}
 
-	Bool Param::empty() {
+	Bool Param::empty() const {
 		return data == 0xFFFFFFFE;
 	}
 
@@ -52,15 +52,14 @@ namespace code {
 		return to;
 	}
 
-	StrBuf &operator <<(StrBuf &to, Param p) {
-		if (p.empty()) {
-			to << S("empty");
+	void Param::toS(StrBuf *to) const {
+		if (empty()) {
+			*to << S("empty");
 		} else {
-			to << S("#") << p.id() << S("+") << p.offset() << S(",") << p.size();
+			*to << S("#") << id() << S("+") << offset() << S(",") << size();
 		}
-		if (p.inMemory())
-			to << S("(in memory)");
-		return to;
+		if (inMemory())
+			*to << S("(in memory)");
 	}
 
 
@@ -304,15 +303,14 @@ namespace code {
 		return to;
 	}
 
-	StrBuf &operator <<(StrBuf &to, Result r) {
-		if (r.memoryRegister() != noReg) {
-			to << S("in memory: ") << name(r.memoryRegister());
-		} else if (r.registerCount() > 0) {
-			for (Nat i = 0; i < r.registerCount(); i++)
-				to << name(r.registerAt(i)) << S(": @") << r.registerOffset(i) << S("\n");
+	void Result::toS(StrBuf *to) const {
+		if (memoryRegister() != noReg) {
+			*to << S("in memory: ") << name(memoryRegister());
+		} else if (registerCount() > 0) {
+			for (Nat i = 0; i < registerCount(); i++)
+				*to << name(registerAt(i)) << S(": @") << registerOffset(i) << S("\n");
 		} else {
-			to << S("(empty)");
+			*to << S("(empty)");
 		}
-		return to;
 	}
 }

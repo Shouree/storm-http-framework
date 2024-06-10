@@ -109,6 +109,7 @@ namespace storm {
 			unit = units[i].name;
 		}
 
+		SaveFormat save(to);
 		*to << fixed(2) << (v / double(div)) << L" " << unit;
 	}
 

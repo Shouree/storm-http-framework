@@ -76,8 +76,8 @@ namespace storm {
 
 		ParamDecl::ParamDecl(Name *type, Str *name) : type(type), name(name) {}
 
-		StrBuf &operator <<(StrBuf &to, ParamDecl decl) {
-			return to << decl.type << L" " << decl.name;
+		void ParamDecl::toS(StrBuf *to) const {
+			*to << type << S(" ") << name;
 		}
 
 

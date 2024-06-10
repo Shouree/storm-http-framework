@@ -95,24 +95,22 @@ namespace sql {
 		return result;
 	}
 
-	StrBuf &operator <<(StrBuf &to, const QueryType &t) {
-		if (t.sameType(QueryType())) {
-			to << S("VOID");
-		} else if (t.sameType(QueryType::text())) {
-			to << S("TEXT");
-		} else if (t.sameType(QueryType::integer())) {
-			to << S("INTEGER");
-		} else if (t.sameType(QueryType::real())) {
-			to << S("REAL");
+	void QueryType::toS(StrBuf *to) const {
+		if (sameType(QueryType())) {
+			*to << S("VOID");
+		} else if (sameType(QueryType::text())) {
+			*to << S("TEXT");
+		} else if (sameType(QueryType::integer())) {
+			*to << S("INTEGER");
+		} else if (sameType(QueryType::real())) {
+			*to << S("REAL");
 		} else {
-			to << S("<invalid type>");
+			*to << S("<invalid type>");
 		}
 
-		Maybe<Nat> size = t.size();
+		Maybe<Nat> size = this->size();
 		if (size.any())
-			to << S("(") << size.value() << S(")");
-
-		return to;
+			*to << S("(") << size.value() << S(")");
 	}
 
 }

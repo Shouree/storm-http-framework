@@ -14,11 +14,12 @@ namespace code {
 		return to << L"Var" << v.id << L":" << v.sz;
 	}
 
-	StrBuf &operator <<(StrBuf &to, Var v) {
-		if (v == Var())
-			return to << L"invalid var";
-		return to << L"Var" << v.id << L":" << v.sz;
+	void Var::toS(StrBuf *to) const {
+		if (*this == Var()) {
+			*to << S("invalid var");
+		} else {
+			*to << S("Var") << id << S(":") << sz;
+		}
 	}
-
 
 }

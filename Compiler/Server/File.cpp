@@ -8,9 +8,8 @@ namespace storm {
 
 		Node::Node(InfoInternal *node, Range range) : node(node), range(range) {}
 
-		StrBuf &operator <<(StrBuf &to, Node node) {
-			to << node.range << L", length " << node.node->length();
-			return to;
+		void Node::toS(StrBuf *to) const {
+			*to << range << S(", length ") << node->length();
 		}
 
 		static Nat strlen(Str *s) {

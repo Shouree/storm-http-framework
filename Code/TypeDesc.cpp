@@ -46,8 +46,8 @@ namespace code {
 		return to << primitive::name(p.kind()) << ":" << p.size() << L"@" << p.offset();
 	}
 
-	StrBuf &operator <<(StrBuf &to, Primitive p) {
-		return to << primitive::name(p.kind()) << S(":") << p.size() << S("@") << p.offset();
+	void Primitive::toS(StrBuf *to) const {
+		*to << primitive::name(kind()) << S(":") << size() << S("@") << offset();
 	}
 
 	Size TypeDesc::size() const {

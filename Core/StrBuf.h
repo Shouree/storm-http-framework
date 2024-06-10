@@ -254,6 +254,19 @@ namespace storm {
 		StrBuf *buf;
 	};
 
+	/**
+	 * Save the format in an StrBuf. Restores the format when it goes out of scope.
+	 */
+	class SaveFormat {
+		STORM_VALUE;
+	public:
+		STORM_CTOR SaveFormat(StrBuf *buf);
+		~SaveFormat();
+
+	private:
+		StrBuf *buf;
+		StrFmt fmt;
+	};
 
 	/**
 	 * Template magic for making it possible to output value types using a toS member, just as for

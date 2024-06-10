@@ -43,9 +43,11 @@ namespace storm {
 			inline Bool STORM_FN operator !=(const Range &o) const {
 				return !(*this == o);
 			}
+
+			// Output.
+			void STORM_FN toS(StrBuf *to) const;
 		};
 
-		StrBuf &STORM_FN operator <<(StrBuf &to, Range r);
 		wostream &operator <<(wostream &to, Range r);
 
 		// Compute the union of two ranges.
@@ -63,9 +65,10 @@ namespace storm {
 
 			// TODO: Use strings or symbols here?
 			syntax::TokenColor color;
-		};
 
-		StrBuf &STORM_FN operator <<(StrBuf &to, ColoredRange r);
+			// Output.
+			void STORM_FN toS(StrBuf *to) const;
+		};
 
 	}
 }

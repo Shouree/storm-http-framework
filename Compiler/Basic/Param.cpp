@@ -15,12 +15,12 @@ namespace storm {
 			return to << b->toS();
 		}
 
-		StrBuf &operator <<(StrBuf &to, NameParam p) {
-			return to << p.type << L" " << p.name;
+		void NameParam::toS(StrBuf *to) const {
+			*to << type << S(" ") << name;
 		}
 
 		NameParam nameless(SrcName *type) {
-			return NameParam(type, new (type) Str(L""));
+			return NameParam(type, new (type) Str(S("")));
 		}
 
 		ValParam::ValParam(Value type, Str *name)
@@ -38,11 +38,10 @@ namespace storm {
 			return to << b->toS();
 		}
 
-		StrBuf &operator <<(StrBuf &to, ValParam p) {
-			to << p.type() << S(" ") << p.name;
-			if (p.thisParam())
-				to << S(" (this param)");
-			return to;
+		void ValParam::toS(StrBuf *to) const {
+			*to << type() << S(" ") << name;
+			if (thisParam())
+				*to << S(" (this param)");
 		}
 
 		ValParam thisParam(Type *me) {

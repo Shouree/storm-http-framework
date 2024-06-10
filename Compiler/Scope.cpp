@@ -208,7 +208,7 @@ namespace storm {
 			bool first = true;
 			for (NameLookup *at = s.top; at; at = ScopeLookup::nextCandidate(at)) {
 				if (!first)
-					to << " -> ";
+					to << L" -> ";
 				first = false;
 
 				if (Named *n = as<Named>(at)) {
@@ -224,8 +224,29 @@ namespace storm {
 		return to;
 	}
 
-	StrBuf &operator <<(StrBuf &to, Scope s) {
-		return to << ::toS(s).c_str();
+	void Scope::toS(StrBuf *to) const {
+		if (!lookup) {
+			*to << S("<empty>");
+		} else {
+			*to << S("<using ");
+			*to << lookup->type()->identifier();
+			*to << S("> ");
+
+			bool first = true;
+			for (NameLookup *at = top; at; at = ScopeLookup::nextCandidate(at)) {
+				if (!first)
+					*to << S(" -> ");
+				first = false;
+
+				if (Named *n = as<Named>(at)) {
+					*to << n->identifier();
+				} else if (LookupPos *p = as<LookupPos>(at)) {
+					*to << p->pos;
+				} else {
+					*to << at->type()->identifier();
+				}
+			}
+		}
 	}
 
 

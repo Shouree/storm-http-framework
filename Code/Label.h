@@ -18,13 +18,15 @@ namespace code {
 
 		void STORM_FN deepCopy(CloneEnv *env);
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
 	private:
 		friend class Listing;
 		friend class Output;
 		friend class Operand;
 		friend class Binary;
 		friend wostream &operator <<(wostream &to, Label l);
-		friend StrBuf &operator <<(StrBuf &to, Label l);
 
 		explicit Label(Nat id);
 
@@ -32,6 +34,5 @@ namespace code {
 	};
 
 	wostream &operator <<(wostream &to, Label l);
-	StrBuf &operator <<(StrBuf &to, Label l);
 
 }

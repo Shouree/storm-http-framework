@@ -130,12 +130,11 @@ namespace storm {
 				alignAs(alignAs() + n);
 		}
 
-		StrBuf &operator <<(StrBuf &to, TextIndent i) {
-			if (i.isAlign())
-				to << L"align as " << i.alignAs();
+		void TextIndent::toS(StrBuf *to) const {
+			if (isAlign())
+				*to << S("align as ") << alignAs();
 			else
-				to << L"indent " << i.level() << L" levels";
-			return to;
+				*to << S("indent ") << level() << S(" levels");
 		}
 
 		wostream &operator <<(wostream &to, TextIndent i) {

@@ -59,6 +59,9 @@ namespace code {
 		// Move to another offset.
 		Primitive STORM_FN move(Offset to) const;
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
 	private:
 		// We store these fields inside 'dataA' and 'dataB'.
 		// A0, B0: kind (A0 is LSB).
@@ -71,7 +74,6 @@ namespace code {
 	};
 
 	wostream &operator <<(wostream &to, const Primitive &p);
-	StrBuf &STORM_FN operator <<(StrBuf &to, Primitive p);
 
 	// Create primitive types easily.
 	inline Primitive STORM_FN bytePrimitive() { return Primitive(primitive::integer, Size::sByte, Offset()); }

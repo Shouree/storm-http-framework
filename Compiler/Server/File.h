@@ -26,10 +26,10 @@ namespace storm {
 
 			syntax::InfoInternal *node;
 			Range range;
+
+			void STORM_FN toS(StrBuf *to) const;
 		};
 
-		// Output.
-		StrBuf &STORM_FN operator <<(StrBuf &to, Node node);
 
 		/**
 		 * Represents a part of an open file in the language server. Corresponds to one of the parts

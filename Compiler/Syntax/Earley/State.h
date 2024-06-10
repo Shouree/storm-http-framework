@@ -36,9 +36,11 @@ namespace storm {
 				inline Bool STORM_FN operator !=(const StatePtr &o) const {
 					return !(*this == o);
 				}
+
+				// Output.
+				void STORM_FN toS(StrBuf *to) const;
 			};
 
-			StrBuf &STORM_FN operator <<(StrBuf &to, StatePtr p);
 			wostream &operator <<(wostream &to, StatePtr p);
 
 			/**
@@ -109,10 +111,12 @@ namespace storm {
 				inline Bool STORM_FN operator !=(const State &o) const {
 					return !(*this == o);
 				}
+
+				// Output.
+				void STORM_FN toS(StrBuf *to) const;
 			};
 
 			// To string.
-			StrBuf &STORM_FN operator <<(StrBuf &to, State s);
 			wostream &operator <<(wostream &to, State s);
 
 

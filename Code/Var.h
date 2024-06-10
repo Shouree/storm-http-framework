@@ -22,11 +22,13 @@ namespace code {
 		// Get our id. Mainly for use in backends.
 		inline Nat STORM_FN key() const { return id; }
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
 	private:
 		friend class Listing;
 		friend class Operand;
 		friend wostream &operator <<(wostream &to, Var v);
-		friend StrBuf &operator <<(StrBuf &to, Var l);
 
 		Var(Nat id, Size size);
 
@@ -35,5 +37,4 @@ namespace code {
 	};
 
 	wostream &operator <<(wostream &to, Var v);
-	StrBuf &STORM_FN operator <<(StrBuf &to, Var l);
 }

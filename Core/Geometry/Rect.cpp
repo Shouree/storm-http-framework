@@ -106,8 +106,8 @@ namespace storm {
 			return to << r.p0 << L"-" << r.p1;
 		}
 
-		StrBuf &operator <<(StrBuf &to, Rect r) {
-			return to << r.p0 << L"-" << r.p1;
+		void Rect::toS(StrBuf *to) const {
+			*to << p0 << S("-") << p1;
 		}
 
 	}

@@ -59,6 +59,9 @@ namespace storm {
 			// Get the current token.
 			MAYBE(Token *) STORM_FN token() const;
 
+			// Output.
+			void STORM_FN toS(StrBuf *to) const;
+
 		private:
 			// Create.
 			ProductionIter(Production *p, Nat pos);
@@ -68,13 +71,9 @@ namespace storm {
 
 			// Position into the option's tokens.
 			Nat pos;
-
-			// Output.
-			friend StrBuf &operator <<(StrBuf &to, ProductionIter i);
 		};
 
 		wostream &operator <<(wostream &to, const ProductionIter &o);
-		StrBuf &STORM_FN operator <<(StrBuf &to, ProductionIter i);
 
 
 		/**

@@ -56,28 +56,37 @@ namespace gui {
 		return TextEffect(tScaleSize, begin, end, size, 0, 0, 0, null);
 	}
 
-	StrBuf &STORM_FN operator <<(StrBuf &to, const TextEffect &e) {
-		to << e.from << S("-") << e.to << S(" ");
+	void TextEffect::toS(StrBuf *to) const {
+		*to << from << S("-") << to << S(" ");
 
-		switch (e.type) {
+		switch (type) {
 		case TextEffect::tNone:
-			return to << S("<no effect>");
+			*to << S("<no effect>");
+			break;
 		case TextEffect::tColor:
-			return to << S("color: ") << e.color();
+			*to << S("color: ") << color();
+			break;
 		case TextEffect::tUnderline:
-			return to << S("underline: ") << e.boolean();
+			*to << S("underline: ") << boolean();
+			break;
 		case TextEffect::tStrikeOut:
-			return to << S("strike out: ") << e.boolean();
+			*to << S("strike out: ") << boolean();
+			break;
 		case TextEffect::tItalic:
-			return to << S("italic: ") << e.boolean();
+			*to << S("italic: ") << boolean();
+			break;
 		case TextEffect::tWeight:
-			return to << S("weight: ") << e.integer();
+			*to << S("weight: ") << integer();
+			break;
 		case TextEffect::tFamily:
-			return to << S("family: ") << e.family();
+			*to << S("family: ") << family();
+			break;
 		case TextEffect::tScaleSize:
-			return to << S("scale size: ") << e.d0;
+			*to << S("scale size: ") << d0;
+			break;
 		default:
-			return to << S("<unknown effect>");
+			*to << S("<unknown effect>");
+			break;
 		}
 	}
 

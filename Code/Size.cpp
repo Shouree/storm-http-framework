@@ -158,8 +158,8 @@ namespace code {
 		return to;
 	}
 
-	StrBuf &operator <<(StrBuf &to, Size s) {
-		return to << ::toS(s).c_str();
+	void Size::toS(StrBuf *to) const {
+		*to << ::toS(*this).c_str();
 	}
 
 	Size Size::aligned() const {
@@ -308,8 +308,8 @@ namespace code {
 		return to;
 	}
 
-	StrBuf &operator <<(StrBuf &to, Offset s) {
-		return to << ::toS(s).c_str();
+	void Offset::toS(StrBuf *to) const {
+		*to << ::toS(*this).c_str();
 	}
 
 	Offset Offset::alignAs(const Size &s) const {

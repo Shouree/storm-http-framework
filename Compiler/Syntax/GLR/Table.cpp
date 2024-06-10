@@ -12,8 +12,8 @@ namespace storm {
 
 			Action::Action(Regex regex, Nat action) : regex(regex), action(action) {}
 
-			StrBuf &operator <<(StrBuf &to, Action action) {
-				return to << L"\"" << action.regex << L"\" -> " << action.action;
+			void Action::toS(StrBuf *to) const {
+				*to << S("\"") << regex << S("\" -> ") << action;
 			}
 
 			/**
