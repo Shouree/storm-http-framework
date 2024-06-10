@@ -51,6 +51,11 @@
 	enum { value = false };												\
 	};																	\
 	template <>															\
+	class detect_##suffix<wchar_t> {									\
+	public:																\
+	enum { value = false };												\
+	};																	\
+	template <>															\
 	class detect_##suffix<bool> {										\
 	public:																\
 	enum { value = false };												\

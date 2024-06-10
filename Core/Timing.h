@@ -23,6 +23,9 @@ namespace storm {
 
 		// The time value, measured in us from some point in time.
 		Long v;
+
+		// To string.
+		void STORM_FN toS(StrBuf *to) const;
 	};
 
 	/**
@@ -54,6 +57,9 @@ namespace storm {
 
 		// Get the duration in hours.
 		inline Long STORM_FN inH() const { return inMin() / 60; }
+
+		// To string.
+		void STORM_FN toS(StrBuf *to) const;
 	};
 
 	namespace time {
@@ -76,8 +82,6 @@ namespace storm {
 	// Output.
 	wostream &operator <<(wostream &to, Moment m);
 	wostream &operator <<(wostream &to, Duration d);
-	StrBuf &STORM_FN operator <<(StrBuf &to, Moment m);
-	StrBuf &STORM_FN operator <<(StrBuf &to, Duration d);
 
 	// Arithmetic operations between durations and moments.
 	inline Duration STORM_FN operator -(Moment a, Moment b) { return Duration(a.v - b.v); }

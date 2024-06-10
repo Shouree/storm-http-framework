@@ -91,13 +91,25 @@ namespace storm {
 		return to << std::fixed << std::setprecision(2) << (d.v / double(div)) << L" " << unit;
 	}
 
-	StrBuf &operator <<(StrBuf &to, Moment m) {
-		return to << L"@" << m.v << L" us";
+	void Moment::toS(StrBuf *to) const {
+		*to << L"@" << v << L" us";
 	}
 
-	StrBuf &operator <<(StrBuf &to, Duration d) {
-		// TODO: Use StrBuf here!
-		return to << ::toS(d).c_str();
+	void Duration::toS(StrBuf *to) const {
+		Long t = abs(v);
+
+		Long div = units[0].factor;
+		const wchar_t *unit = units[0].name;
+
+		for (Nat i = 1; i < ARRAY_COUNT(units); i++) {
+			if ((t / div) < units[i].factor)
+				break;
+
+			div *= units[i].factor;
+			unit = units[i].name;
+		}
+
+		*to << fixed(2) << (v / double(div)) << L" " << unit;
 	}
 
 	Duration::Duration() : v(0) {}

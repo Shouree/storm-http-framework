@@ -4,6 +4,8 @@
 #include "Char.h"
 #include "GcArray.h"
 
+#include "Utils/Templates.h"
+
 namespace storm {
 	STORM_PKG(core);
 
@@ -251,4 +253,84 @@ namespace storm {
 	private:
 		StrBuf *buf;
 	};
+
+
+	/**
+	 * Template magic for making it possible to output value types using a toS member, just as for
+	 * objects.
+	 */
+	namespace tos_impl {
+		typedef char Failure[1];
+		typedef char Success[2];
+
+		// Usage: check<T>(T::toS, static_cast<short>(1)) - gives if there is a toS function that we
+		// can call.
+		template <class T>
+		static Success &check(void (T::*)(StrBuf *) const, short);
+		template <class T>
+		static Success &check(void (T::*)(StrBuf *), int);
+		template <class T>
+		static Success &check(Str *(T::*)() const, float);
+		template <class T>
+		static Success &check(Str *(T::*)(), ...);
+		template <class T>
+		static Failure &check(...);
+
+		// Like above, but only accepts cases that work with const objects.
+		template <class T>
+		static Success &checkConst(void (T::*)(StrBuf *) const, short);
+		template <class T>
+		static Success &checkConst(Str *(T::*)() const, float);
+		template <class T>
+		static Failure &checkConst(...);
+
+		// Actually call the implementation:
+		template <class T>
+		void call(StrBuf *to, T &value, void (T::*)(StrBuf *) const, short) {
+			value.toS(to);
+		}
+		template <class T>
+		void call(StrBuf *to, T &value, void (T::*)(StrBuf *), int) {
+			value.toS(to);
+		}
+		template <class T>
+		void call(StrBuf *to, T &value, Str *(T::*)() const, float) {
+			*to << value.toS();
+		}
+		template <class T>
+		void call(StrBuf *to, T &value, Str *(T::*)(), ...) {
+			*to << value.toS();
+		}
+
+		// Version for const:
+		template <class T>
+		void callConst(StrBuf *to, const T &value, void (T::*)(StrBuf *) const, short) {
+			value.toS(to);
+		}
+		template <class T>
+		void callConst(StrBuf *to, const T &value, Str *(T::*)() const, float) {
+			*to << value.toS();
+		}
+
+	}
+
+	// Operator <<, for non-const variants:
+	template <class T>
+	typename EnableIf<
+		sizeof(tos_impl::check<T>(&T::toS, static_cast<short>(1))) == sizeof(tos_impl::Success),
+		StrBuf &>::t
+	operator <<(StrBuf &to, T &value) {
+		tos_impl::call(&to, value, &T::toS, static_cast<short>(1));
+		return to;
+	}
+
+	// Operator <<, for const variants:
+	template <class T>
+	typename EnableIf<
+		sizeof(tos_impl::checkConst<T>(&T::toS, static_cast<short>(1))) == sizeof(tos_impl::Success),
+		StrBuf &>::t
+	operator <<(StrBuf &to, const T &value) {
+		tos_impl::callConst(&to, value, &T::toS, static_cast<short>(1));
+		return to;
+	}
 }
