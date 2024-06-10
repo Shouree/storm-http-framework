@@ -254,6 +254,7 @@ namespace storm {
 		StrBuf *buf;
 	};
 
+
 	/**
 	 * Save the format in an StrBuf. Restores the format when it goes out of scope.
 	 */
@@ -268,82 +269,149 @@ namespace storm {
 		StrFmt fmt;
 	};
 
+
 	/**
-	 * Template magic for making it possible to output value types using a toS member, just as for
-	 * objects.
+	 * Template magic for making it possible to output value types using a toS member, just like
+	 * with class-types.
 	 */
 	namespace tos_impl {
-		typedef char Failure[1];
-		typedef char Success[2];
+		// Marker for success/failure. Size needs to be different.
+		typedef int Success;
+		typedef char Failure;
 
-		// Usage: check<T>(T::toS, static_cast<short>(1)) - gives if there is a toS function that we
-		// can call.
-		template <class T>
-		static Success &check(void (T::*)(StrBuf *) const, short);
-		template <class T>
-		static Success &check(void (T::*)(StrBuf *), int);
-		template <class T>
-		static Success &check(Str *(T::*)() const, float);
-		template <class T>
-		static Success &check(Str *(T::*)(), ...);
-		template <class T>
-		static Failure &check(...);
+		// Helper to see if the value U matches the type U.
+		template <class U, U> struct Check;
 
-		// Like above, but only accepts cases that work with const objects.
-		template <class T>
-		static Success &checkConst(void (T::*)(StrBuf *) const, short);
-		template <class T>
-		static Success &checkConst(Str *(T::*)() const, float);
-		template <class T>
-		static Failure &checkConst(...);
+		// Function overloads, similar to those in ToSCall, that checks for the overloads we are after.
+		// Priority is carefully selected so that only one is the best match. Need to be a separate
+		// template to utilize SFINAE when extracting 'toS'.
+		template <class U>
+		Success r(Check<void (U::*)(StrBuf *) const, &U::toS> *, short); // exact match
+		template <class U>
+		Success r(Check<void (U::*)(StrBuf *), &U::toS> *, int); // integer promotion
+		template <class U>
+		Success r(Check<Str *(U::*)() const, &U::toS> *, float); // float promotion
+		template <class U>
+		Success r(Check<Str *(U::*)(), &U::toS> *, ...); // varargs
+#ifdef CODECALL_OVERLOAD
+		// In case CODECALL means something. Note: if this causes errors on GCC, then it should
+		// probably not be defined in Utils/Platform.h for that combination.
+		template <class U>
+		Success r(Check<void (CODECALL U::*)(StrBuf *) const, &U::toS> *, short); // exact match
+		template <class U>
+		Success r(Check<void (CODECALL U::*)(StrBuf *), &U::toS> *, int); // integer promotion
+		template <class U>
+		Success r(Check<Str *(CODECALL U::*)() const, &U::toS> *, float); // float promotion
+		template <class U>
+		Success r(Check<Str *(CODECALL U::*)(), &U::toS> *, ...); // varargs
+#endif
+		template <class U>
+		Failure r(...); // all varargs, last resort to avoid errors
 
-		// Actually call the implementation:
+		// Version that only accepts 'const' versions.
+		template <class U>
+		Success c(Check<void (U::*)(StrBuf *) const, &U::toS> *, short);
+		template <class U>
+		Success c(Check<Str *(U::*)() const, &U::toS> *, float);
+#ifdef CODECALL_OVERLOAD
+		template <class U>
+		Success c(Check<void (CODECALL U::*)(StrBuf *) const, &U::toS> *, short);
+		template <class U>
+		Success c(Check<Str *(CODECALL U::*)() const, &U::toS> *, float);
+#endif
+		template <class U>
+		Failure c(...); // all varargs, last resort to avoid errors
+
+		// Helper to check for whether we have an overload for const or non-const versions:
 		template <class T>
-		void call(StrBuf *to, T &value, void (T::*)(StrBuf *) const, short) {
+		struct HasToS {
+			enum {
+				regular = sizeof(r<T>(0, static_cast<short>(1))) == sizeof(Success),
+				onlyConst = sizeof(c<T>(0, static_cast<short>(1))) == sizeof(Success),
+			};
+		};
+
+		// Functions that actually call the implementation. Works like above:
+		template <class T>
+		void callRegularI(StrBuf *to, T &value, void (T::*)(StrBuf *) const, short) {
 			value.toS(to);
 		}
 		template <class T>
-		void call(StrBuf *to, T &value, void (T::*)(StrBuf *), int) {
+		void callRegularI(StrBuf *to, T &value, void (T::*)(StrBuf *), int) {
 			value.toS(to);
 		}
 		template <class T>
-		void call(StrBuf *to, T &value, Str *(T::*)() const, float) {
+		void callRegularI(StrBuf *to, T &value, Str *(T::*)() const, float) {
 			*to << value.toS();
 		}
 		template <class T>
-		void call(StrBuf *to, T &value, Str *(T::*)(), ...) {
+		void callRegularI(StrBuf *to, T &value, Str *(T::*)(), ...) {
 			*to << value.toS();
 		}
+#ifdef CODECALL_OVERLOAD
+		template <class T>
+		void callRegularI(StrBuf *to, T &value, void (CODECALL T::*)(StrBuf *) const, short) {
+			value.toS(to);
+		}
+		template <class T>
+		void callRegularI(StrBuf *to, T &value, void (CODECALL T::*)(StrBuf *), int) {
+			value.toS(to);
+		}
+		template <class T>
+		void callRegularI(StrBuf *to, T &value, Str *(CODECALL T::*)() const, float) {
+			*to << value.toS();
+		}
+		template <class T>
+		void callRegularI(StrBuf *to, T &value, Str *(CODECALL T::*)(), ...) {
+			*to << value.toS();
+		}
+#endif
 
 		// Version for const:
 		template <class T>
-		void callConst(StrBuf *to, const T &value, void (T::*)(StrBuf *) const, short) {
+		void callConstI(StrBuf *to, const T &value, void (T::*)(StrBuf *) const, short) {
 			value.toS(to);
 		}
 		template <class T>
-		void callConst(StrBuf *to, const T &value, Str *(T::*)() const, float) {
+		void callConstI(StrBuf *to, const T &value, Str *(T::*)() const, float) {
 			*to << value.toS();
 		}
+#ifdef CODECALL_OVERLOAD
+		template <class T>
+		void callConstI(StrBuf *to, const T &value, void (CODECALL T::*)(StrBuf *) const, short) {
+			value.toS(to);
+		}
+		template <class T>
+		void callConstI(StrBuf *to, const T &value, Str *(CODECALL T::*)() const, float) {
+			*to << value.toS();
+		}
+#endif
 
+		// Entry-point:
+		template <class T>
+		void callRegular(StrBuf *to, T &value) {
+			callRegularI(to, value, &T::toS, static_cast<short>(1));
+		}
+		template <class T>
+		void callConst(StrBuf *to, const T &value) {
+			callConstI(to, value, &T::toS, static_cast<short>(1));
+		}
 	}
+
 
 	// Operator <<, for non-const variants:
 	template <class T>
-	typename EnableIf<
-		sizeof(tos_impl::check<T>(&T::toS, static_cast<short>(1))) == sizeof(tos_impl::Success),
-		StrBuf &>::t
+	typename EnableIf<tos_impl::HasToS<T>::regular, StrBuf &>::t
 	operator <<(StrBuf &to, T &value) {
-		tos_impl::call(&to, value, &T::toS, static_cast<short>(1));
+		tos_impl::callRegular(&to, value);
 		return to;
 	}
 
 	// Operator <<, for const variants:
 	template <class T>
-	typename EnableIf<
-		sizeof(tos_impl::checkConst<T>(&T::toS, static_cast<short>(1))) == sizeof(tos_impl::Success),
-		StrBuf &>::t
+	typename EnableIf<tos_impl::HasToS<T>::onlyConst, StrBuf &>::t
 	operator <<(StrBuf &to, const T &value) {
-		tos_impl::callConst(&to, value, &T::toS, static_cast<short>(1));
+		tos_impl::callConst(&to, value);
 		return to;
 	}
 }

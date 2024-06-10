@@ -50,6 +50,8 @@
  * CODECALL:
  * Calling convention used in the Code lib. This is not inside the Code lib, since it will make
  * mymake think that Code is dependent on almost all projects, since they only need the CODECALL macro.
+ *
+ * If CODECALL is important to overload resolution, then CODECALL_OVERLOAD is defined.
  */
 
 /**
@@ -174,10 +176,12 @@
 
 #if defined(VISUAL_STUDIO) && defined(X86)
 #define CODECALL __cdecl
+#define CODECALL_OVERLOAD
 #endif
 
 #if defined(GCC) && defined(X86)
 #define CODECALL __attribute__((cdecl))
+#define CODECALL_OVERLOAD // Note: Might not be needed on GCC.
 #endif
 
 #if defined(VISUAL_STUDIO) && defined(X64)
