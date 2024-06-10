@@ -108,6 +108,7 @@ namespace storm {
 
 		add(inlinedFunction(engine, nat, S("v"), v, fnPtr(engine, &enumGet))->makePure());
 		add(nativeFunction(engine, nat, S("hash"), v, address(&intHash))->makePure());
+		add(createToS()->makePure());
 
 		// Serialization:
 		Function *readCtor = createReadCtor();
@@ -328,6 +329,32 @@ namespace storm {
 		return fn;
 	}
 
+	Function *Enum::createToS() {
+		using namespace code;
+
+		Value me = thisPtr(this);
+		Value strBuf = Value(StrBuf::stormType(engine));
+
+		TypeDesc *ptr = engine.ptrDesc();
+
+		Listing *l = new (this) Listing(true, ptr);
+		Var in = l->createParam(me.desc(engine));
+		Var out = l->createParam(ptr);
+
+		*l << prolog();
+
+		*l << mov(ptrA, in);
+		*l << mov(eax, intRel(ptrA));
+		*l << fnParam(ptr, this->typeRef());
+		*l << fnParam(ptr, out);
+		*l << fnParam(intDesc(engine), eax);
+		*l << fnCall(engine.ref(builtin::enumToS), true);
+
+		*l << fnRet(out);
+
+		return dynamicFunction(engine, Value(), S("toS"), valList(engine, 2, me, strBuf), l);
+	}
+
 	EnumValue::EnumValue(Enum *owner, Str *name, Nat value)
 		: Function(Value(owner), name, new (name) Array<Value>()),
 		  value(value) {
@@ -345,39 +372,6 @@ namespace storm {
 
 		Operand result = p.result->location(p.state);
 		*p.state->l << mov(result, natConst(value));
-	}
-
-	EnumOutput::EnumOutput() : Template(new (engine()) Str(S("<<"))) {}
-
-	MAYBE(Named *) EnumOutput::generate(SimplePart *part) {
-		Array<Value> *params = part->params;
-		if (params->count() != 2)
-			return null;
-
-		Value strBuf = Value(StrBuf::stormType(engine()));
-		if (params->at(0).type != strBuf.type)
-			return null;
-
-		Value e = params->at(1).asRef(false);
-		Enum *type = as<Enum>(e.type);
-		if (!type)
-			return null;
-
-		TypeDesc *ptr = engine().ptrDesc();
-		Listing *l = new (this) Listing(true, ptr);
-		Var out = l->createParam(ptr);
-		Var in = l->createParam(intDesc(engine()));
-
-		*l << prolog();
-
-		*l << fnParam(ptr, type->typeRef());
-		*l << fnParam(ptr, out);
-		*l << fnParam(intDesc(engine()), in);
-		*l << fnCall(engine().ref(builtin::enumToS), true);
-
-		*l << fnRet(out);
-
-		return dynamicFunction(engine(), strBuf, S("<<"), valList(engine(), 2, strBuf, e), l);
 	}
 
 }

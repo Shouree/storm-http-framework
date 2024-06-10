@@ -60,6 +60,9 @@ namespace storm {
 
 		// Create the read ctor required for serialization.
 		Function *createReadCtor();
+
+		// Create the toS function.
+		Function *createToS();
 	};
 
 	/**
@@ -81,18 +84,6 @@ namespace storm {
 	private:
 		// Generate code.
 		void CODECALL generate(InlineParams p);
-	};
-
-	/**
-	 * Provide a non-member output operator for enums.
-	 */
-	class EnumOutput : public Template {
-		STORM_CLASS;
-	public:
-		// Create.
-		STORM_CTOR EnumOutput();
-
-		virtual MAYBE(Named *) STORM_FN generate(SimplePart *part);
 	};
 
 }

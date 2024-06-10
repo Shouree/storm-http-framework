@@ -92,7 +92,7 @@ namespace storm {
 		// Get the return type.
 		Value STORM_FN result() const;
 
-		// Return the value stored in 'value'. Generates an epilog and a ret instruction (ie. a fnRet instruction).
+		// Return the value stored in 'value'. Generates an epilog and a ret instruction (i.e. a fnRet instruction).
 		void STORM_FN returnValue(code::Var value);
 
 		/**

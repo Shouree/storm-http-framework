@@ -40,7 +40,7 @@ namespace code {
 	BITMASK_OPERATORS(FreeOpt);
 
 	wostream &operator <<(wostream &to, FreeOpt o);
-	StrBuf &operator <<(StrBuf &to, FreeOpt o);
+	StrBuf &STORM_FN operator <<(StrBuf &to, FreeOpt o);
 
 
 	/**

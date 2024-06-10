@@ -68,11 +68,11 @@ namespace storm {
 		loader.loadFunctions();
 		loader.loadMeta();
 
-		// Load the system-wide toS implementation.
+		// Load the system-wide toS implementation and other global templates.
 		Package *core = e.package(S("core"));
 		core->add(new (e) CloneTemplate());
 		core->add(new (e) ToSTemplate());
-		core->add(new (e) EnumOutput());
+		core->add(new (e) OutputOperatorTemplate());
 		core->add(new (e) JoinTemplate());
 
 		// Add the GC license, if any.

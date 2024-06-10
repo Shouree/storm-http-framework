@@ -1,6 +1,11 @@
 TODO:
 
 - Rename things in C++: find . -name "*.h" | xargs grep -rI "operator *<<.*StrBuf"
+  - Done! The remaining ones are enums and C++ internals.
 - Update logic to find toS() in Type for the Handles
 - Update logic in Basic Storm that uses toS.
 - Update enum (and other types in lib/ to follow the new convention)
+  - Enum done, but needs to be tested.
+  - Default logic for adding toS to core needs to be replaced with two parts:
+    - one that adds toS() that calls StrBuf (ok, but untested)
+    - one that adds << operator as needed (ok, but untested)
