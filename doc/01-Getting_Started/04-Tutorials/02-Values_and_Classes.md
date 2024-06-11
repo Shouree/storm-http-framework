@@ -398,10 +398,10 @@ address in memory. We can, however, see one thing from the output: all printed o
 the *same object* since they have the same address. We can already at this point conclude that the
 behavior will be different from the version that uses value types.
 
-To define the string representation for classes, we simply override the `toS(StrBuf)` function. This
-makes both the `toS` function and the `<<` operator work as expected, as they both call the
-`toS(StrBuf)` function eventually. We do this by adding the following definition to the `ClassPair`
-class:
+To define the string representation for classes, we simply override the `toS(StrBuf)` function.
+Similarly to the situation for value types, this makes both the `toS` function and the `<<` operator
+work as we would expect, since they both call the `toS(StrBuf)` function eventually. We do this by
+adding the following definition to the `ClassPair` class:
 
 ```bsclass
 void toS(StrBuf to) : override {

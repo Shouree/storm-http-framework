@@ -42,6 +42,8 @@ Member Functions
 - .full()
 - .push(*)
 - .shift(*)
+- .toS(core.StrBuf)
+- .outputMark(core.StrBuf, Nat)
 ```
 
 Free Functions
@@ -56,8 +58,6 @@ be considered proper member functions of the `Buffer` type.
 - .cut(core.io.Buffer, Nat)
 - .cut(core.io.Buffer, Nat, Nat)
 - .grow(core.io.Buffer, Nat)
-- .<<(core.StrBuf, core.io.Buffer)
-- .outputMark(core.StrBuf, core.io.Buffer, Nat)
 - .toUtf8(core.Str)
 - .fromUtf8(core.io.Buffer)
 ```

@@ -211,9 +211,9 @@ namespace tutorial {
         STORM_CTOR ValueType();
 
         Int val;
-    };
 
-    StrBuf *STORM_FN operator <<(StrBuf *to, ValueType t);
+        void STORM_FN toS(StrBuf *to) const;
+    };
 
     class ClassType : public Object {
         STORM_CLASS;
@@ -249,10 +249,10 @@ possible to inherit from other class- or value-types instead of inheriting direc
 `TObject`.
 
 The example above also shows that constructors need to be exposed to Storm using `STORM_CTOR`. The
-exception to this rule is the copy constructor, that is exposed automatically for value
-types. Finally, we can also see how to create a string representation for the types: for value
-types, we overload the `<<` operator for `StrBuf`. For class- and actor-types, we simply override
-`toS`.
+exception to this rule is the copy constructor, that is exposed automatically for value types. We
+can also see that it is possible to simply override `toS(StrBuf *)` to create a string
+representation that works in both Storm and C++. One limitation exists: the output of value types
+from C++ requires using the `StrBuf` class. It will not work with standard C++ IO-streams.
 
 Finally, we need to implement the functions in the `Types.cpp` file as follows:
 
@@ -264,8 +264,8 @@ namespace tutorial {
 
     ValueType::ValueType() : val(1) {}
 
-    StrBuf *operator <<(StrBuf *to, ValueType t) {
-        *to << S("Value type: ") << t.val;
+    void ValueType::(StrBuf *to) const {
+        *to << S("Value type: ") << val;
         return to;
     }
 

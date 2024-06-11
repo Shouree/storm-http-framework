@@ -94,14 +94,14 @@ The `Buffer` has the following members:
 - .[](*)
 - .empty()
 - .full()
+- .toS(core.StrBuf)
+- .outputMark(core.StrBuf, core.Nat)
 ```
 
-The buffer also has the following free functions:
+The buffer also has the following free function `buffer` to create buffers:
 
 ```stormdoc
 - sound.buffer(core.Nat)
-- sound.<<(core.StrBuf, sound.Buffer)
-- sound.outputMark(core.StrBuf, sound.Buffer, core.Nat)
 ```
 
 

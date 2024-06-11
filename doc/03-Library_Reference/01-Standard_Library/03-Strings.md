@@ -102,9 +102,10 @@ The String Buffer
 -----------------
 
 The string buffer, `StrBuf`, is a mutable string that is able to build strings efficiently. The
-`toS` function in `Object` and `TObject` actually calls an overloaded `toS` function that accepts a
-`StrBuf` as a parameter, so that objects can construct their string representation efficiently. For
-example, it is possible to implement a `toS` method as follows:
+`toS` member function that exists for all types usually calls an overloaded version of `toS` that
+accepts a [stormname:core.StrBuf] as a parameter. This makes it possible for objects to create their
+string representation efficiently, rather than relying on string concatenation. For example, a `toS`
+implementation for a simple class could look like below:
 
 ```bs
 class MyClass {
