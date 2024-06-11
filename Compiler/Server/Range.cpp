@@ -37,7 +37,7 @@ namespace storm {
 		void Range::deepCopy(CloneEnv *env) {}
 
 		void Range::toS(StrBuf *to) const {
-			*to << S("(") << from << S(" - ") << to << S(")");
+			*to << S("(") << this->from << S(" - ") << this->to << S(")");
 		}
 
 		wostream &operator <<(wostream &to, Range r) {

@@ -2,6 +2,7 @@
 #include "Char.h"
 #include "Utf.h"
 #include "Str.h"
+#include "StrBuf.h"
 
 namespace storm {
 
@@ -44,6 +45,10 @@ namespace storm {
 	}
 
 	void Char::deepCopy(CloneEnv *env) {}
+
+	void Char::toS(StrBuf *to) const {
+		*to << *this;
+	}
 
 	Str *toS(EnginePtr e, Char ch) {
 		return new (e.v) Str(ch);

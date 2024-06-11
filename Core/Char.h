@@ -52,6 +52,9 @@ namespace storm {
 		// Get the codepoint.
 		inline Nat STORM_FN codepoint() const { return value; }
 
+		// Output.
+		void STORM_FN toS(StrBuf *to) const;
+
 	private:
 		Nat value;
 	};

@@ -44,6 +44,10 @@ namespace storm {
 		Serialize<Long>::write(v, to);
 	}
 
+	static void longToS(Long &v, StrBuf *to) {
+		*to << v;
+	}
+
 	LongType::LongType(Str *name, GcType *type) : Type(name, typeValue | typeFinal, Size::sLong, type, null) {}
 
 	Bool LongType::loadAll() {
@@ -100,6 +104,10 @@ namespace storm {
 		add(inlinedFunction(engine, Value(this), S("max"), vv, fnPtr(engine, &numMax<Long>))->makePure());
 		add(inlinedFunction(engine, Value(this), S("delta"), vv, fnPtr(engine, &numDelta<Long>))->makePure());
 
+		Array<Value> *rs = new (this) Array<Value>(2, Value(this, true));
+		rs->at(1) = StormInfo<StrBuf>::type(engine);
+		add(nativeFunction(engine, Value(), S("toS"), rs, address(&longToS)));
+
 		Array<Value> *is = new (this) Array<Value>(1, Value(StormInfo<IStream>::type(engine)));
 		add(nativeFunction(engine, Value(this), S("read"), is, address(&longRead)));
 
@@ -148,6 +156,10 @@ namespace storm {
 
 	static void wordWriteS(Word v, ObjOStream *to) {
 		Serialize<Word>::write(v, to);
+	}
+
+	static void wordToS(Word &v, StrBuf *to) {
+		*to << v;
 	}
 
 	WordType::WordType(Str *name, GcType *type) : Type(name, typeValue | typeFinal, Size::sWord, type, null) {}
@@ -223,6 +235,10 @@ namespace storm {
 		add(inlinedFunction(engine, Value(this), S("min"), vv, fnPtr(engine, &numMin<Word>))->makePure());
 		add(inlinedFunction(engine, Value(this), S("max"), vv, fnPtr(engine, &numMax<Word>))->makePure());
 		add(inlinedFunction(engine, Value(this), S("delta"), vv, fnPtr(engine, &numDelta<Word>))->makePure());
+
+		Array<Value> *rs = new (this) Array<Value>(2, Value(this, true));
+		rs->at(1) = StormInfo<StrBuf>::type(engine);
+		add(nativeFunction(engine, Value(), S("toS"), rs, address(&wordToS)));
 
 		Array<Value> *is = new (this) Array<Value>(1, Value(StormInfo<IStream>::type(engine)));
 		add(nativeFunction(engine, Value(this), S("read"), is, address(&wordRead)));

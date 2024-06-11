@@ -35,7 +35,7 @@ namespace storm {
 		toFind->params->push(StrBuf::stormType(engine()));
 
 		// We only examine member functions of the type:
-		if (Function *found = as<Function>(type.type->find(toFind, engine().scope())))
+		if (Function *found = as<Function>(type.type->findHere(toFind, engine().scope())))
 			return new (this) ToSFunction(found);
 
 		// Otherwise, nothing to generate.
@@ -57,7 +57,7 @@ namespace storm {
 	}
 
 	void ToSFunction::notifyAdded(NameSet *to, Named *added) {
-		if (*added->name == S("toS") && added->params->count() == 1 && added->params->at(0).type == to) {
+		if (*added->name == S("toS") && added->params->count() == 1 && added->params->at(0).type == to && as<Function>(added)) {
 			// Found a toS function that was added. Remove ourselves from our parent:
 			if (NameSet *inside = as<NameSet>(parentLookup)) {
 				inside->remove(this);
@@ -116,9 +116,6 @@ namespace storm {
 		if (!Value(strBufType).mayStore(params->at(0).asRef(false)))
 			return null;
 
-		if (params->at(0) != strBufType)
-			return null;
-
 		// Only needed for value types:
 		Value type = params->at(1);
 		if (!type.type || !type.isValue())
@@ -130,12 +127,12 @@ namespace storm {
 		toFind->params->push(Value(strBufType));
 
 		// We only need to look inside the type:
-		if (Function *found = as<Function>(type.type->find(toFind, engine().scope())))
+		if (Function *found = as<Function>(type.type->findHere(toFind, engine().scope())))
 			return new (this) OutputOperator(found);
 
 		// If we did not find it, try without the StrBuf parameter:
 		toFind->params->pop();
-		if (Function *found = as<Function>(type.type->find(toFind, engine().scope())))
+		if (Function *found = as<Function>(type.type->findHere(toFind, engine().scope())))
 			return new (this) OutputOperator(found);
 
 		// Otherwise, give up.
@@ -161,6 +158,8 @@ namespace storm {
 		CodeGen *to = new (this) CodeGen(runOn(), isMember(), strBuf);
 		Var strBufParam = to->createParam(strBuf);
 		Var srcParam = to->createParam(srcType);
+
+		*to->l << prolog();
 
 		// Two options, either 'toS()' or 'toS(StrBuf)':
 		if (use->params->count() == 2) {

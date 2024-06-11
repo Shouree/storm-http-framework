@@ -6,7 +6,7 @@
 namespace storm {
 	using namespace code;
 
-	const void *makeRefParams(Function *wrap) {
+	code::Binary *makeRefParams(Function *wrap) {
 		assert(wrap->result.returnInReg(), L"Currently, returning values is not supported.");
 
 		CodeGen *s = new (wrap) CodeGen(wrap->runOn(), wrap->isMember(), wrap->result);
@@ -72,8 +72,7 @@ namespace storm {
 
 		*s->l << fnRet(result);
 
-		Binary *b = new (wrap) Binary(wrap->engine().arena(), s->l);
-		return b->address();
+		return new (wrap) Binary(wrap->engine().arena(), s->l);
 	}
 
 	Bool allRefParams(Function *fn) {
@@ -82,6 +81,40 @@ namespace storm {
 				return false;
 
 		return true;
+	}
+
+	code::Binary *makeToSThunk(Function *fn) {
+		assert(fn->params->count() == 1);
+
+		Type *strBufT = StrBuf::stormType(fn->engine());
+		SimplePart *part = new (fn) SimplePart(S("<<"));
+		part->params->push(thisPtr(strBufT));
+		part->params->push(Str::stormType(fn->engine()));
+		Function *strBufAppend = as<Function>(strBufT->find(part, Scope()));
+		if (!strBufAppend)
+			throw new (fn) InternalError(S("Failed to find <<(StrBuf, Str)!"));
+
+		Engine &e = fn->engine();
+		TypeDesc *ptr = e.ptrDesc();
+		Listing *l = new (fn) Listing(false, e.voidDesc());
+
+		Var valRef = l->createParam(ptr);
+		Var strBuf = l->createParam(ptr);
+
+		*l << prolog();
+
+		// Call 'fn' (i.e. toS()):
+		*l << fnParam(ptr, valRef);
+		*l << fnCall(fn->ref(), true, ptr, ptrA);
+
+		// Call '<<' to add it to the string buffer:
+		*l << fnParam(ptr, strBuf);
+		*l << fnParam(ptr, ptrA);
+		*l << fnCall(strBufAppend->ref(), true);
+
+		*l << fnRet();
+
+		return new (fn) code::Binary(fn->engine().arena(), l);
 	}
 
 }

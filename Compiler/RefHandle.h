@@ -20,30 +20,35 @@ namespace storm {
 
 		// Set copy ctor.
 		void STORM_FN setCopyCtor(code::Ref ref);
+		void STORM_FN setCopyCtor(code::Binary *thunk);
 
 		// Set destructor.
 		void STORM_FN setDestroy(code::Ref ref);
+		void STORM_FN setDestroy(code::Binary *thunk);
 
 		// Set deep copy function.
 		void STORM_FN setDeepCopy(code::Ref ref);
+		void STORM_FN setDeepCopy(code::Binary *thunk);
 
 		// Set to string function.
 		void STORM_FN setToS(code::Ref ref);
-
-		// Set to string function using a thunk.
-		void STORM_FN setToS(Function *fn);
+		void STORM_FN setToS(code::Binary *thunk);
 
 		// Set hash function.
 		void STORM_FN setHash(code::Ref ref);
+		void STORM_FN setHash(code::Binary *thunk);
 
 		// Set equality function.
 		void STORM_FN setEqual(code::Ref ref);
+		void STORM_FN setEqual(code::Binary *thunk);
 
 		// Set less-than function.
 		void STORM_FN setLess(code::Ref ref);
+		void STORM_FN setLess(code::Binary *thunk);
 
 		// Set the type-info function.
 		void STORM_FN setSerializedType(code::Ref ref);
+		void STORM_FN setSerializedType(code::Binary *thunk);
 
 	private:
 		// Content to use when creating references.
@@ -73,11 +78,6 @@ namespace storm {
 		// Ref to type-info fn.
 		code::MemberRef *serializedTypeRef;
 	};
-
-
-	// Generate machine code to adapt a operator << function to be callable from a toS function
-	// pointer inside a handle.
-	code::Binary *STORM_FN toSThunk(Function *fn);
 
 
 	// Manual population of functions for some of the handles in the system. Will only fill in

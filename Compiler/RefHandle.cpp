@@ -15,10 +15,26 @@ namespace storm {
 		copyRef = new (this) code::MemberRef(this, OFFSET_OF(RefHandle, copyFn), ref, content);
 	}
 
+	void RefHandle::setCopyCtor(code::Binary *thunk) {
+		if (copyRef)
+			copyRef->disable();
+		// No need to use references for this to work. The code and metadata is kept alive by just
+		// storing a pointer in the appropriate variable:
+		copyFn = (Handle::CopyFn)thunk->address();
+	}
+
 	void RefHandle::setDestroy(code::Ref ref) {
 		if (destroyRef)
 			destroyRef->disable();
 		destroyRef = new (this) code::MemberRef(this, OFFSET_OF(RefHandle, destroyFn), ref, content);
+	}
+
+	void RefHandle::setDestroy(code::Binary *thunk) {
+		if (copyRef)
+			copyRef->disable();
+		// No need to use references for this to work. The code and metadata is kept alive by just
+		// storing a pointer in the appropriate variable:
+		destroyFn = (Handle::DestroyFn)thunk->address();
 	}
 
 	void RefHandle::setDeepCopy(code::Ref ref) {
@@ -27,20 +43,26 @@ namespace storm {
 		deepCopyRef = new (this) code::MemberRef(this, OFFSET_OF(RefHandle, deepCopyFn), ref, content);
 	}
 
+	void RefHandle::setDeepCopy(code::Binary *thunk) {
+		if (copyRef)
+			copyRef->disable();
+		// No need to use references for this to work. The code and metadata is kept alive by just
+		// storing a pointer in the appropriate variable:
+		deepCopyFn = (Handle::DeepCopyFn)thunk->address();
+	}
+
 	void RefHandle::setToS(code::Ref ref) {
 		if (toSRef)
 			toSRef->disable();
 		toSRef = new (this) code::MemberRef(this, OFFSET_OF(RefHandle, toSFn), ref, content);
 	}
 
-	void RefHandle::setToS(Function *fn) {
-		if (toSRef)
-			toSRef->disable();
-
-		// We do not need references for this to work. The code and all its metadata will be kept
-		// alive if we store a pointer to the code in the 'toSFn' variable.
-		code::Binary *code = toSThunk(fn);
-		toSFn = (ToSFn)code->address();
+	void RefHandle::setToS(code::Binary *thunk) {
+		if (copyRef)
+			copyRef->disable();
+		// No need to use references for this to work. The code and metadata is kept alive by just
+		// storing a pointer in the appropriate variable:
+		toSFn = (Handle::ToSFn)thunk->address();
 	}
 
 	void RefHandle::setHash(code::Ref ref) {
@@ -49,10 +71,26 @@ namespace storm {
 		hashRef = new (this) code::MemberRef(this, OFFSET_OF(RefHandle, hashFn), ref, content);
 	}
 
+	void RefHandle::setHash(code::Binary *thunk) {
+		if (copyRef)
+			copyRef->disable();
+		// No need to use references for this to work. The code and metadata is kept alive by just
+		// storing a pointer in the appropriate variable:
+		hashFn = (Handle::HashFn)thunk->address();
+	}
+
 	void RefHandle::setEqual(code::Ref ref) {
 		if (equalRef)
 			equalRef->disable();
 		equalRef = new (this) code::MemberRef(this, OFFSET_OF(RefHandle, equalFn), ref, content);
+	}
+
+	void RefHandle::setEqual(code::Binary *thunk) {
+		if (copyRef)
+			copyRef->disable();
+		// No need to use references for this to work. The code and metadata is kept alive by just
+		// storing a pointer in the appropriate variable:
+		equalFn = (Handle::EqualFn)thunk->address();
 	}
 
 	void RefHandle::setLess(code::Ref ref) {
@@ -61,35 +99,26 @@ namespace storm {
 		lessRef = new (this) code::MemberRef(this, OFFSET_OF(RefHandle, lessFn), ref, content);
 	}
 
+	void RefHandle::setLess(code::Binary *thunk) {
+		if (copyRef)
+			copyRef->disable();
+		// No need to use references for this to work. The code and metadata is kept alive by just
+		// storing a pointer in the appropriate variable:
+		lessFn = (Handle::LessFn)thunk->address();
+	}
+
 	void RefHandle::setSerializedType(code::Ref ref) {
 		if (serializedTypeRef)
 			serializedTypeRef->disable();
 		serializedTypeRef = new (this) code::MemberRef(this, OFFSET_OF(RefHandle, serializedTypeFn), ref, content);
 	}
 
-	code::Binary *toSThunk(Function *fn) {
-		assert(fn->params->count() == 2);
-		Value valParam = fn->params->at(1);
-
-		using namespace code;
-		Engine &e = fn->engine();
-		TypeDesc *ptr = e.ptrDesc();
-		Listing *l = new (fn) Listing(false, ptr);
-
-		code::Var valRef = l->createParam(ptr);
-		code::Var strBuf = l->createParam(ptr);
-
-		*l << prolog();
-		*l << fnParam(ptr, strBuf);
-		if (valParam.ref) {
-			*l << fnParam(valParam.desc(e), valRef);
-		} else {
-			*l << fnParamRef(valParam.desc(e), valRef);
-		}
-		*l << fnCall(Ref(fn->ref()), true, ptr, ptrA);
-		*l << fnRet(ptrA);
-
-		return new (fn) code::Binary(fn->engine().arena(), l);
+	void RefHandle::setSerializedType(code::Binary *thunk) {
+		if (copyRef)
+			copyRef->disable();
+		// No need to use references for this to work. The code and metadata is kept alive by just
+		// storing a pointer in the appropriate variable:
+		serializedTypeFn = (Handle::SerializedTypeFn)thunk->address();
 	}
 
 	template <class T>

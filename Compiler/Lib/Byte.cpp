@@ -35,6 +35,9 @@ namespace storm {
 		Serialize<Byte>::write(b, to);
 	}
 
+	void byteToS(Byte &b, StrBuf *to) {
+		*to << b;
+	}
 
 	ByteType::ByteType(Str *name, GcType *type) : Type(name, typeValue | typeFinal, Size::sByte, type, null) {}
 
@@ -86,7 +89,6 @@ namespace storm {
 		add(inlinedFunction(engine, Value(this), S("<<="), rv, fnPtr(engine, &numShlEq<Byte>))->makePure());
 		add(inlinedFunction(engine, Value(this), S(">>="), rv, fnPtr(engine, &numShrEq<Byte>))->makePure());
 
-
 		add(inlinedFunction(engine, Value(), Type::CTOR, rr, fnPtr(engine, &numCopyCtor<Byte>))->makePure());
 		add(inlinedFunction(engine, Value(), Type::CTOR, r, fnPtr(engine, &numInit<Byte>))->makePure());
 
@@ -101,6 +103,10 @@ namespace storm {
 		add(inlinedFunction(engine, Value(this), S("min"), vv, fnPtr(engine, &numMin<Byte>))->makePure());
 		add(inlinedFunction(engine, Value(this), S("max"), vv, fnPtr(engine, &numMax<Byte>))->makePure());
 		add(inlinedFunction(engine, Value(this), S("delta"), vv, fnPtr(engine, &numDelta<Byte>))->makePure());
+
+		Array<Value> *rs = new (this) Array<Value>(2, Value(this, true));
+		rs->at(1) = StormInfo<StrBuf>::type(engine);
+		add(nativeFunction(engine, Value(), S("toS"), rs, address(&byteToS)));
 
 		Array<Value> *is = new (this) Array<Value>(1, Value(StormInfo<IStream>::type(engine)));
 		add(nativeFunction(engine, Value(this), S("read"), is, address(&byteRead)));

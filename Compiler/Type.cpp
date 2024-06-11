@@ -498,12 +498,6 @@ namespace storm {
 			return null;
 	}
 
-	void Type::notifyAdded(NameSet *, Named *what) {
-		if (Function *f = as<Function>(what)) {
-			updateHandleToS(false, f);
-		}
-	}
-
 	void Type::notifyThread(NamedThread *thread) {
 		useThread = thread;
 
@@ -773,13 +767,12 @@ namespace storm {
 	}
 
 	static void defToS(const void *obj, StrBuf *to) {
-		*to << S("<operator << not found>");
+		*to << S("<no member toS(StrBuf) or toS()>");
 	}
 
 	const Handle &Type::handle() {
 		// If we're completely done with the handle, return it immediatly.
-		// If it is 'toSMissing', there is nothing we can do but wait until we get notified by the parent.
-		if (tHandle && (handleToS == toSFound || handleToS == toSMissing))
+		if (tHandle)
 			return *tHandle;
 
 		// We need to create the handle. Switch threads.
@@ -795,9 +788,6 @@ namespace storm {
 
 		if (!tHandle)
 			buildHandle();
-		if (handleToS != toSFound)
-			// NOTE: This does not really help when 'handleToS == toSMissing'...
-			updateHandleToS(false, null);
 		return *tHandle;
 	}
 
@@ -1093,6 +1083,7 @@ namespace storm {
 			h->copyFn = null; // Memcpy is OK.
 			h->deepCopyFn = &objDeepCopy;
 			h->toSFn = &objToS;
+			handleToS = toSWithParam;
 		}
 
 		// Populate the handle for some types manually. Otherwise, we will not be able to boot
@@ -1120,7 +1111,18 @@ namespace storm {
 			if (Function *f = deepCopyFn())
 				updateHandle(f);
 
-			updateHandleToS(true, null);
+			// Find toS.
+			Array<Value> *rb = new (engine) Array<Value>(2, thisPtr(this));
+			rb->at(1) = Value(StormInfo<StrBuf>::type(engine));
+
+			if (Function *f = as<Function>(find(S("toS"), rb, scope))) {
+				updateHandle(f);
+			} else {
+				// Fall back to a version without the StrBuf parameter:
+				rb->pop();
+				if (Function *f = as<Function>(find(S("toS"), rb, scope)))
+					updateHandle(f);
+			}
 		}
 
 		// Find hash function.
@@ -1143,84 +1145,6 @@ namespace storm {
 	}
 
 	void Type::modifyHandle(Handle *) {}
-
-	void Type::updateHandleToS(bool first, Function *newFn) {
-		if (!value())
-			return;
-
-		if (newFn) {
-			if (*newFn->name != S("<<"))
-				return;
-
-			if (newFn->params->count() != 2)
-				return;
-
-			Type *strBufT = StrBuf::stormType(engine);
-			if (newFn->params->at(0) != Value(strBufT))
-				return;
-
-			if (newFn->params->at(1).type != this)
-				return;
-
-			RefHandle *h = (RefHandle *)tHandle;
-			h->setToS(newFn);
-			handleToS = toSFound;
-
-			// TODO: Remove the notification now?
-
-			return;
-		}
-
-		if (!first && handleToS == toSFound)
-			return;
-
-		if (first || handleToS == toSNoParent) {
-			handleToS = toSMissing;
-
-			RefHandle *h = (RefHandle *)tHandle;
-
-			if (parentLookup) {
-				Array<Value> *bv = new (engine) Array<Value>(2, Value(this));
-				Type *strBufT = StrBuf::stormType(engine);
-				bv->at(0) = Value(strBufT);
-
-				Scope s = engine.scope().child(parentLookup);
-				if (Function *f = as<Function>(s.find(S("<<"), bv))) {
-					h->setToS(f);
-					handleToS = toSFound;
-				}
-			} else {
-				handleToS = toSNoParent;
-			}
-
-			if (first && handleToS != toSFound) {
-				Array<Value> *bv = new (engine) Array<Value>(2, Value(this));
-				Type *strBufT = StrBuf::stormType(engine);
-				bv->at(0) = thisPtr(strBufT);
-
-				if (Function *f = as<Function>(strBufT->find(S("<<"), bv, engine.scope()))) {
-					h->setToS(f);
-					handleToS = toSFound;
-				} else {
-					// Probably too early for this... Wait for notifications from StrBuf.
-					strBufT->watchAdd(this);
-				}
-			}
-
-			if (handleToS == toSMissing) {
-				// Find our parent...
-				NameSet *firstSet = null;
-				for (NameLookup *at = parent(); at != null && firstSet == null; at = at->parentLookup)
-					firstSet = as<NameSet>(at);
-
-				if (!firstSet)
-					return;
-
-				// Ask our parent to keep an eye out for us!
-				firstSet->watchAdd(this);
-			}
-		}
-	}
 
 	void Type::updateHandle(Function *fn) {
 		bool val = value();
@@ -1253,21 +1177,33 @@ namespace storm {
 					if (allRefParams(fn))
 						h->setHash(fn->ref());
 					else
-						h->hashFn = (Handle::HashFn)makeRefParams(fn);
+						h->setHash(makeRefParams(fn));
 				}
 			} else if (*name == S("==")) {
+				TODO(L"Check values!");
 				if (params->count() == 2) {
 					if (allRefParams(fn))
 						h->setEqual(fn->ref());
 					else
-						h->equalFn = (Handle::EqualFn)makeRefParams(fn);
+						h->setEqual(makeRefParams(fn));
 				}
 			} else if (*name == S("<")) {
+				TODO(L"Check values!");
 				if (params->count() == 2) {
 					if (allRefParams(fn))
 						h->setLess(fn->ref());
 					else
-						h->lessFn = (Handle::LessFn)makeRefParams(fn);
+						h->setLess(makeRefParams(fn));
+				}
+			} else if (val && *name == S("toS")) {
+				if (refThis && params->count() == 2) {
+					if (Value(StrBuf::stormType(engine)).mayStore(params->at(1)) && !params->at(1).ref) {
+						h->setToS(fn->ref());
+						handleToS = toSWithParam;
+					}
+				} else if (refThis && params->count() == 1 && handleToS != toSWithParam) {
+					h->setToS(makeToSThunk(fn));
+					handleToS = toSNoParam;
 				}
 			}
 		} else {

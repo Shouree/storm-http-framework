@@ -119,6 +119,10 @@ namespace storm {
 		Serialize<Float>::write(v, to);
 	}
 
+	static void floatToS(Float &v, StrBuf *to) {
+		*to << v;
+	}
+
 	FloatType::FloatType(Str *name, GcType *type) : Type(name, typeValue | typeFinal, Size::sFloat, type, null) {}
 
 	Bool FloatType::loadAll() {
@@ -159,6 +163,10 @@ namespace storm {
 
 		add(nativeFunction(engine, Value(this), S("min"), vv, address(&floatMin))->makePure());
 		add(nativeFunction(engine, Value(this), S("max"), vv, address(&floatMax))->makePure());
+
+		Array<Value> *rs = new (this) Array<Value>(2, Value(this, true));
+		rs->at(1) = StormInfo<StrBuf>::type(engine);
+		add(nativeFunction(engine, Value(), S("toS"), rs, address(&floatToS)));
 
 		Array<Value> *is = new (this) Array<Value>(1, Value(StormInfo<IStream>::type(engine)));
 		add(nativeFunction(engine, Value(this), S("read"), is, address(&floatRead)));
@@ -227,6 +235,10 @@ namespace storm {
 		Serialize<Double>::write(v, to);
 	}
 
+	static void doubleToS(Double &v, StrBuf *to) {
+		*to << v;
+	}
+
 	DoubleType::DoubleType(Str *name, GcType *type) : Type(name, typeValue | typeFinal, Size::sDouble, type, null) {}
 
 	Bool DoubleType::loadAll() {
@@ -270,6 +282,10 @@ namespace storm {
 
 		add(nativeFunction(engine, Value(this), S("min"), vv, address(&doubleMin))->makePure());
 		add(nativeFunction(engine, Value(this), S("max"), vv, address(&doubleMax))->makePure());
+
+		Array<Value> *rs = new (this) Array<Value>(2, Value(this, true));
+		rs->at(1) = StormInfo<StrBuf>::type(engine);
+		add(nativeFunction(engine, Value(), S("toS"), rs, address(&doubleToS)));
 
 		Array<Value> *is = new (this) Array<Value>(1, Value(StormInfo<IStream>::type(engine)));
 		add(nativeFunction(engine, Value(this), S("read"), is, address(&doubleRead)));

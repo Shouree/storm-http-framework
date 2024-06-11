@@ -96,6 +96,10 @@ namespace storm {
 		to->end();
 	}
 
+	static void boolToS(Bool &v, StrBuf *to) {
+		*to << v;
+	}
+
 
 	BoolType::BoolType(Str *name, GcType *type) : Type(name, typeValue | typeFinal, Size::sByte, type, null) {}
 
@@ -116,6 +120,10 @@ namespace storm {
 		add(inlinedFunction(engine, Value(), Type::CTOR, rr, fnPtr(engine, &boolCopyCtor))->makePure());
 		add(inlinedFunction(engine, Value(), Type::CTOR, r, fnPtr(engine, &boolInit))->makePure());
 		add(inlinedFunction(engine, Value(this, true), S("="), rv, fnPtr(engine, &boolAssign))->makePure());
+
+		Array<Value> *rs = new (this) Array<Value>(2, Value(this, true));
+		rs->at(1) = StormInfo<StrBuf>::type(engine);
+		add(nativeFunction(engine, Value(), S("toS"), rs, address(&boolToS)));
 
 		Array<Value> *is = new (this) Array<Value>(1, Value(StormInfo<IStream>::type(engine)));
 		add(nativeFunction(engine, Value(this), S("read"), is, address(&boolRead)));

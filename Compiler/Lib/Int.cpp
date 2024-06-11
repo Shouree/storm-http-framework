@@ -39,6 +39,10 @@ namespace storm {
 		Serialize<Int>::write(v, to);
 	}
 
+	static void intToS(Int &v, StrBuf *to) {
+		*to << v;
+	}
+
 	IntType::IntType(Str *name, GcType *type) : Type(name, typeValue | typeFinal, Size::sInt, type, null) {}
 
 	Bool IntType::loadAll() {
@@ -92,6 +96,10 @@ namespace storm {
 		add(inlinedFunction(engine, Value(this), S("max"), vv, fnPtr(engine, &numMax<Int>))->makePure());
 		add(inlinedFunction(engine, Value(this), S("delta"), vv, fnPtr(engine, &numDelta<Int>))->makePure());
 
+		Array<Value> *rs = new (this) Array<Value>(2, Value(this, true));
+		rs->at(1) = StormInfo<StrBuf>::type(engine);
+		add(nativeFunction(engine, Value(), S("toS"), rs, address(&intToS)));
+
 		Array<Value> *is = new (this) Array<Value>(1, Value(StormInfo<IStream>::type(engine)));
 		add(nativeFunction(engine, Value(this), S("read"), is, address(&intRead)));
 
@@ -142,6 +150,9 @@ namespace storm {
 		Serialize<Nat>::write(v, to);
 	}
 
+	static void natToS(Nat &v, StrBuf *to) {
+		*to << v;
+	}
 
 	NatType::NatType(Str *name, GcType *type) : Type(name, typeValue | typeFinal, Size::sNat, type, null) {}
 
@@ -214,6 +225,10 @@ namespace storm {
 		add(inlinedFunction(engine, Value(this), S("min"), vv, fnPtr(engine, &numMin<Nat>))->makePure());
 		add(inlinedFunction(engine, Value(this), S("max"), vv, fnPtr(engine, &numMax<Nat>))->makePure());
 		add(inlinedFunction(engine, Value(this), S("delta"), vv, fnPtr(engine, &numDelta<Nat>))->makePure());
+
+		Array<Value> *rs = new (this) Array<Value>(2, Value(this, true));
+		rs->at(1) = StormInfo<StrBuf>::type(engine);
+		add(nativeFunction(engine, Value(), S("toS"), rs, address(&natToS)));
 
 		Array<Value> *is = new (this) Array<Value>(1, Value(StormInfo<IStream>::type(engine)));
 		add(nativeFunction(engine, Value(this), S("read"), is, address(&natRead)));

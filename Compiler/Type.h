@@ -120,9 +120,6 @@ namespace storm {
 		virtual MAYBE(Named *) STORM_FN find(SimplePart *part, Scope source);
 		using NameSet::find;
 
-		// Receive notification of new additions.
-		virtual void STORM_FN notifyAdded(NameSet *to, Named *what);
-
 		// Get a reference to this object that can be used in code generation.
 		virtual code::Ref STORM_FN typeRef();
 
@@ -256,13 +253,17 @@ namespace storm {
 		code::Content *refContent();
 
 		enum {
-			toSFound,
-			toSMissing,
-			toSNoParent,
+			// No toS function has been found yet.
+			toSMissing = 0,
+			// A toS function of the form toS() is used.
+			toSNoParam = 1,
+			// A toS function of the form toS(StrBuf) is used.
+			toSWithParam = 2,
 		};
 
-		// How is the update of the toS function going?
-		Nat handleToS;
+		// What is the status of the toS function in the handle? Only valid whenever the handle has
+		// been initialized.
+		Byte handleToS;
 
 		enum {
 			abstractUnknown = 0,
@@ -271,7 +272,7 @@ namespace storm {
 		};
 
 		// Cache for the 'abstract' function.
-		Nat isAbstract;
+		Byte isAbstract;
 
 		// Thread we should be running on if we indirectly inherit from TObject.
 		NamedThread *useThread;
@@ -334,9 +335,6 @@ namespace storm {
 
 		// Update the handle with the potentially relevant function 'fn'.
 		void updateHandle(Function *fn);
-
-		// Update the toS function in the handle if neccessary.
-		void updateHandleToS(bool first, Function *newFn);
 
 		// Notify that the thread changed.
 		void notifyThread(NamedThread *t);
