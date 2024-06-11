@@ -1146,6 +1146,18 @@ namespace storm {
 
 	void Type::modifyHandle(Handle *) {}
 
+	// Check if the parameters follow the constraints required for comparison functions (i.e. < and ==) to work.
+	static Bool comparisonParams(Type *me, Array<Value> *params) {
+		if (params->count() != 2)
+			return false;
+
+		Value lhs = params->at(0).asRef();
+		Value rhs = params->at(1).asRef();
+
+		return lhs.mayReferTo(me)
+			&& rhs.mayReferTo(me);
+	}
+
 	void Type::updateHandle(Function *fn) {
 		bool val = value();
 		RefHandle *h = (RefHandle *)tHandle;
@@ -1180,16 +1192,14 @@ namespace storm {
 						h->setHash(makeRefParams(fn));
 				}
 			} else if (*name == S("==")) {
-				TODO(L"Check values!");
-				if (params->count() == 2) {
+				if (comparisonParams(this, params)) {
 					if (allRefParams(fn))
 						h->setEqual(fn->ref());
 					else
 						h->setEqual(makeRefParams(fn));
 				}
 			} else if (*name == S("<")) {
-				TODO(L"Check values!");
-				if (params->count() == 2) {
+				if (comparisonParams(this, params)) {
 					if (allRefParams(fn))
 						h->setLess(fn->ref());
 					else
