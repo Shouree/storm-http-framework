@@ -188,13 +188,13 @@ Can not convert types.Pair& to string by calling 'toS'.
 ```
 
 As we can see, the system complains that it does not know how to create a string representation of
-our `Pair` type. The best way to do this is to define the `<<` operator for the `StrBuf` type. This
-makes Storm able to generate a `toS` function for us automatically. We do this by defining a free
-function (i.e. outside of the `Pair` type) named `<<` as follows:
+our `Pair` type. The best way to do this is by defining a `toS` member function that accepts a
+`StrBuf`. This makes Storm able to generate a `toS` function and a `<<` operator for the type
+automatically. As such, we do this by defining a member function as follows:
 
 ```bs
-StrBuf <<(StrBuf to, Pair p) {
-    to << "{ key: " << p.key << ", value: " << p.value << " }";
+void toS(StrBuf to) {
+    to << "{ key: " << key << ", value: " << value << " }";
 }
 ```
 
@@ -207,20 +207,6 @@ defining this function, we can run our program to get the following output:
 Key: 5
 Value: test
 Pair: { key: 5, value: test }
-```
-
-Since the `<<` function is not a member of the `Pair` class, we need to access `key` and `value` by
-typing `p.key` and `p.value`. Since we think about the `<<` function as belonging to the `Pair`
-class, it would be nice if we could treat it as such. Luckily, Basic Storm allows naming parameters
-of non-member functions `this` to make the function behave more like a member function. Since Basic
-Storm will attempt to resolve unqualified names as `this.<name>`, even for nonmember functions, this
-makes it possible to write `key` instead of `p.value`. As such, we can update the `<<` function
-into:
-
-```bs
-StrBuf <<(StrBuf to, Pair this) {
-    to << "{ key: " << key << ", value: " << value << " }";
-}
 ```
 
 ### Value Semantics

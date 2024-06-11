@@ -1,14 +1,6 @@
 use core;
 use core:lang;
 
-// Generate the SrcName for the StrBuf type.
-SrcName strBufType() {
-	SrcName t;
-	t.add("core");
-	t.add("StrBuf");
-	t;
-}
-
 // Implementation of the string concatenation operator (#).
 class ConcatOperator extends OpInfo {
 	init(SStr op, Int prio) {
@@ -51,14 +43,30 @@ class ConcatExpr extends Expr {
 	// Saved state, if any.
 	Var? savedState;
 
+	// Resolved string buffer type.
+	Type strBufType;
+
 	// Create the root node.
 	init(SrcPos pos, Block parent) {
 		ExprBlock outer(pos, parent);
 		ExprBlock inner(pos, outer);
+
+		Type strBufT = {
+			Name t;
+			t.add("core");
+			t.add("StrBuf");
+
+			if (found = rootScope.find(t) as Type)
+				found;
+			else
+				throw InternalError("Failed to find the StrBuf type.");
+		};
+
 		init(pos) {
 			outer = outer;
 			inner = inner;
-			strBufVar(outer, strBufType, SStr("b"), Actuals());
+			strBufType = strBufT;
+			strBufVar(outer, Value(strBufT), SStr("b"), Actuals());
 		}
 
 		// Generate the outer parts.
@@ -90,69 +98,73 @@ class ConcatExpr extends Expr {
 
 	// Append a node to the end of the concatenation.
 	void append(Expr e) {
-		// Does the StrBuf class have a member 'add(T)'?
-		if (appendStrBuf(e)) {
-		} else if (appendToS(e)) {
-		} else {
-			StrBuf msg;
-			msg << "Can not convert " << e.result << " to string by calling 'toS'.";
-			throw SyntaxError(pos, msg.toS);
-		}
+		// First, check if StrBuf has an operator << inside itself. If so, use that.
+		// TODO: If we ever move the << operator for values in StrBuf to be generated in StrBuf
+		// rather than in core, we should probably revise this logic in order to avoid generating
+		// many << overloads.
+		if (appendStrBuf(e))
+			return;
+
+		// Then, try to use the toS(StrBuf) function in the target type.
+		if (appendToSParam(e))
+			return;
+
+		// Then, try to use the toS() function in the target type.
+		if (appendToSNoParam(e))
+			return;
+
+		StrBuf msg;
+		msg << "Can not convert " << e.result << " to string by calling 'toS'.";
+		throw SyntaxError(pos, msg.toS);
 	}
 
-	// Append a node, trying to use a << operator directly.
+	// Append a node, trying to use a << operator inside the StrBuf directly.
 	private Bool appendStrBuf(Expr e) {
-		// Try to find an << operator in our current scope.
-		Scope s = outer.scope;
-		if (appendStrBuf(e, s))
-			return true;
+		var part = SimplePart("<<", Value:[thisPtr(strBufType), e.result.type]);
+		unless (member = strBufType.find(part, outer.scope) as Function)
+			return false;
 
-		// Try findin it in the parent scope of 'e'.
-		if (in = e.result.type.type) {
-			if (appendStrBuf(e, s.child(in)))
-				return true;
-		}
-
-		// Try to find in StrBuf explicitly.
-		if (in = rootScope.find(strBufType)) {
-			if (appendStrBuf(e, s.child(in)))
-				return true;
-		}
-
-		false;
+		Actuals params;
+		params.add(LocalVarAccess(pos, strBufVar.var));
+		params.add(e);
+		inner.add(FnCall(pos, outer.scope, member, params));
+		return true;
 	}
 
-	// Append a node, trying to call add on the StrBuf using a << operator found using 'scope'.
-	private Bool appendStrBuf(Expr e, Scope scope) {
-		Value v = rootScope.value(strBufType);
-		var part = SimplePart("<<", Value:[v, e.result.type]);
-		if (member = scope.find(Name(part)) as Function) {
-			Actuals params;
-			params.add(LocalVarAccess(pos, strBufVar.var));
-			params.add(e);
-			inner.add(FnCall(pos, scope, member, params));
-			true;
-		} else {
-			false;
-		}
-	}
-
-	// Append a node, trying to call toS on the object first.
-	private Bool appendToS(Expr e) {
+	// Append a node, try to call toS(StrBuf) on the object.
+	private Bool appendToSParam(Expr e) {
 		Value r = e.result.type;
-		if (t = r.type) {
-			Scope findIn = outer.scope.child(t);
-			var part = SimplePart("toS", Value:[r]);
-			Named? member = findIn.find(Name(part));
-			if (member as Function) {
-				FnCall call(pos, outer.scope, member, Actuals(e));
-				appendStrBuf(call);
-			} else {
-				false;
-			}
-		} else {
-			false;
-		}
+		unless (type = r.type)
+			return false;
+
+		Scope findIn = outer.scope.child(type);
+		var part = SimplePart("toS", Value:[r, Value(strBufType)]);
+		unless (member = findIn.find(Name(part)) as Function)
+			return false;
+
+		Actuals params;
+		params.add(e);
+		params.add(LocalVarAccess(pos, strBufVar.var));
+		inner.add(FnCall(pos, outer.scope, member, params));
+
+		return true;
+	}
+
+	// Append a node, try to call toS() on the object.
+	private Bool appendToSNoParam(Expr e) {
+		Value r = e.result.type;
+		unless (type = r.type)
+			return false;
+
+		Scope findIn = outer.scope.child(type);
+		var part = SimplePart("toS", Value:[r]);
+		unless (member = findIn.find(Name(part)) as Function)
+			return false;
+
+		FnCall call(pos, outer.scope, member, Actuals(e));
+		appendStrBuf(call);
+
+		return true;
 	}
 
 	// Relay code generation and type info to the blocks.

@@ -59,7 +59,7 @@
     but the scale of the issue should be assessed first.
   - [ ] Parsing core.lang.syntax.bnf takes about 80 ms, which is a bit on the high end when compiling code...
 
-* Loose ends so far [62/113]
+* Loose ends so far [63/113]
   - [ ] Relative imports in Basic Storm?
   - [ ] The Compiler thread should probably wait for all UThreads to terminate. Otherwise any UThreads
     that are sleeping will not block the system from terminating properly.
@@ -77,8 +77,6 @@
   - [ ] We want to allocate threads in some kind of pool. since the minimum alignment for VirtualAlloc on Windows
     is 64k, we might waste quite a lot of memory when allocating small stacks.
   - [ ] Rename "StrBuf::add" to "StrBuf::push" to be consistent with "Array".
-  - [ ] Interestingly: "strBuf << maybe<Str>" calls via Variant. This is since Maybe<Str> does not have
-    an "<<" operator.
   - [ ] Cyclic dependencies between packages are not always handled nicely. One idea to solve this
     would be to have Package only load stages that correspond to the ones loaded by the package that
     is currently loading, and then hold off remaining loading until a later point, for example when
@@ -157,6 +155,8 @@
   - [ ] Move the 'assign' declaration to being purely a decorator (ie. Foo field(Foo v) : assign)?
   - [ ] If a type has a '==' or '<' outside the type itself, the corresponding operator will not be present in
     a Handle, like '<<' at the moment.
+  - [X] Interestingly: "strBuf << maybe<Str>" calls via Variant. This is since Maybe<Str> does not have
+    an "<<" operator. Note: solved by reworking how toS works for value types.
   - [X] Lambda functions can not infer their proper type when being assigned to Maybe<T>.
   - [X] If a class contains a variable "center", and the layout library is imported, the class
     "center" in the library takes precedence over the class-local variable. This should probably not

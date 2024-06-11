@@ -19,10 +19,10 @@ value Pair {
 	void add(Nat toAdd) {
 		key += toAdd;
 	}
-}
 
-StrBuf <<(StrBuf to, Pair this) {
-	to << "{ key: " << key << ", value: " << value << " }";
+	void toS(StrBuf to) {
+		to << "{ key: " << key << ", value: " << value << " }";
+	}
 }
 
 void valueFunction(Pair p) {

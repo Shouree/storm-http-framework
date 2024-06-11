@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Compiler/Package.h"
 
-BEGIN_TEST_FN(callStormSuite, Package *pkg) {
+BEGIN_TEST_FN(callStormSuite, Package *pkg, Bool recursive) {
 	Engine &e = gEngine();
 
 	VERIFY(pkg != null);
@@ -16,7 +16,7 @@ BEGIN_TEST_FN(callStormSuite, Package *pkg) {
 
 	Type *resultType = f->result.type;
 	bool verbose = false;
-	bool recurse = true;
+	bool recurse = recursive;
 	os::FnCall<RootObject *> c = os::fnCall().add(pkg).add(verbose).add(recurse);
 	RootObject *resultVal = c.call(f->ref().address(), false);
 
@@ -41,12 +41,21 @@ BEGIN_TEST_FN(callStormSuite, Package *pkg) {
 	__result__ += our;
 } END_TEST_FN
 
-// Run any test suites found in tests/suites
-BEGIN_TEST(StormSuites, BS) {
+BEGIN_TEST(CoreSuites, BSSuites) {
 	Engine &e = gEngine();
 
-	CALL_TEST_FN(callStormSuite, e.package(S("tests.suites")));
-	CALL_TEST_FN(callStormSuite, e.package(S("sql.tests")));
-	CALL_TEST_FN(callStormSuite, e.package(S("parser.tests")));
+	CALL_TEST_FN(callStormSuite, e.package(S("tests.bs")), false);
+
+} END_TEST
+
+
+
+// Run any test suites found in tests/suites
+BEGIN_TEST(Libraries, BSSuites) {
+	Engine &e = gEngine();
+
+	CALL_TEST_FN(callStormSuite, e.package(S("tests.suites")), true);
+	CALL_TEST_FN(callStormSuite, e.package(S("sql.tests")), true);
+	CALL_TEST_FN(callStormSuite, e.package(S("parser.tests")), true);
 
 } END_TEST

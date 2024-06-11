@@ -730,6 +730,7 @@ BEGIN_TEST(JoinTest, BS) {
 	CHECK_EQ(::toS(runFn<Str *>(S("tests.bs.joinTfmSep"), input)), L"test-A, test-B, test-Ctest2-A, test2-B, test2-C");
 } END_TEST
 
+
 /**
  * Heavy tests.
  */

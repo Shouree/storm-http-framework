@@ -1,30 +1,46 @@
-use core:debug;
-use core:lang;
+use test;
 
-class ToSDbg extends Dbg {
+value ToSFull {
+	Int v;
+
 	init(Int v) {
-		init(v) {}
+		init { v = v; }
+	}
+
+	void toS(StrBuf to) {
+		to << "strbuf:" << v;
 	}
 
 	Str toS() {
-		StrBuf b;
-		b.add(get);
-		b.toS;
+		"str:" # v;
 	}
 }
 
-Dbg toSDbg(Int v) {
-	if (v == 0) {
-		Dbg(0);
-	} else {
-		ToSDbg(1);
+value ToSLimited {
+	Int v;
+
+	init(Int v) {
+		init { v = v; }
+	}
+
+	Str toS() {
+		"str:" # v;
 	}
 }
 
-Int[] createIntArray() {
-    Int:[1, 2, 3];
-}
+suite ToSImpl {
+	ToSFull full(1);
+	ToSLimited limited(2);
 
-Value[] createValueArray() {
-	Value:[];
+	test full.toS() == "str:1";
+	test (StrBuf() << full).toS == "strbuf:1";
+	test ("!" # full) == "!strbuf:1";
+	test "!${full}" == "!strbuf:1";
+	test ToSFull:[full].toS == "[strbuf:1]";
+
+	test limited.toS() == "str:2";
+	test (StrBuf() << limited).toS == "str:2";
+	test ("!" # limited) == "!str:2";
+	test "!${limited}" == "!str:2";
+	test ToSLimited:[limited].toS == "[str:2]";
 }
