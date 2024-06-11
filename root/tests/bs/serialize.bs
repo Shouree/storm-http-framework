@@ -187,11 +187,12 @@ value Salary : serializable {
 	Bool ==(Salary other) {
 		amount == other.amount & currency == other.currency;
 	}
+
+	void toS(StrBuf to) {
+		to << amount << " " << currency;
+	}
 }
 
-StrBuf <<(StrBuf to, Salary c) {
-	to << c.amount << " " << c.currency;
-}
 
 /**
  * Another serializable class.

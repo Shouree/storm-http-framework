@@ -25,7 +25,3 @@ value Action {
 			thread.toS();
 	}
 }
-
-StrBuf <<(StrBuf to, Action a) {
-	to << a.toS;
-}
