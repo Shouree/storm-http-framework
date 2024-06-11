@@ -13,22 +13,37 @@ SrcName arrayType(SrcName t) on Compiler {
 }
 
 Expr arrayInit(Block block, SrcName type, Array<Expr> list) on Compiler {
-	ExprBlock b(type.pos, block);
-
-	SStr arrayName("tmp", type.pos);
-	Var array(b, arrayName, namedExpr(b, arrayType(type), Actuals()));
-	b.add(array);
-
-	Expr varAccess = namedExpr(b, arrayName, Actuals());
-	SStr push("push", type.pos);
-	for (Nat i = 0; i < list.count; i++) {
+	if (list.empty) {
+		// Empty, just create the array.
+		namedExpr(block, arrayType(type), Actuals());
+	} else if (list.count == 1) {
+		// One element, just use the constructor directly.
 		Actuals params;
-		params.add(list[i]);
-		b.add(namedExpr(b, push, varAccess, params));
-	}
+		params.add(NumLiteral(type.pos, 1));
+		params.add(list[0]);
+		namedExpr(block, arrayType(type), params);
+	} else {
+		// General case:
+		ExprBlock b(type.pos, block);
 
-	b.add(varAccess);
-	b;
+		SStr arrayName("tmp", type.pos);
+		Var array(b, arrayName, namedExpr(b, arrayType(type), Actuals()));
+		b.add(array);
+
+		LocalVarAccess varAccess(type.pos, array.var);
+		NumLiteral size(type.pos, list.count.long);
+		b.add(namedExpr(b, SStr("reserve", type.pos), varAccess, Actuals(size)));
+
+		SStr push("push", type.pos);
+		for (Nat i = 0; i < list.count; i++) {
+			Actuals params;
+			params.add(list[i]);
+			b.add(namedExpr(b, push, varAccess, params));
+		}
+
+		b.add(varAccess);
+		b;
+	}
 }
 
 class ArrayInit extends Expr {
