@@ -5,33 +5,75 @@ use core:geometry;
 
 dialog LicenseDialog {
 	layout Grid {
-		expandCol: 1;
+		expandCol: 3;
 		expandRow: 3;
+		normalizeCols;
 
-		Label b("Author:") {}
-		Label author("") {}
-		nextLine;
+		// Navigation:
+		Label proginfo("Program") { row: 0; col: 0; }
+		Label progauthor("By:") { row: 0; col: 1; }
 
-		Label a("Package:") {}
-		Label pkg("") {}
-		nextLine;
+		Label("Components currently used by the system:") { row: 1; col: 0; colspan: 2; }
 
-		Label c("License:") {}
-		Label title("") {}
-		nextLine;
+		ListView licenseList(["Component", "License"]) { row: 2; col: 0; colspan: 2; rowspan: 2; }
+		FillBox(250, 200) { row: 3; col: 0; colspan: 2; }
 
-		ScrollWindow scroll(Label(""), Size(100, 200)) { col: 0; colspan: 2; }
+		FillBox(8, 0) { row: 0; col: 2; }
+
+		// License viewer:
+		Label lPackage("Package:") { row: 0; col: 3; }
+		Label lAuthor("Author:") { row: 1; col: 3; }
+		Label("License:") { row: 2; col: 3; }
+
+		ScrollWindow scroll(Label(""), Size(200, 200)) { vertical; row: 3; col: 3; }
 	}
 
-	init(License license) {
-		init("About ${license.name}") {}
+	private ProgramInfo info;
+	private License[] licenses;
 
-		pkg.text = license.identifier();
-		author.text = license.author();
-		title.text = license.title();
-
-		if (l = scroll.content as Label) {
-			l.text = license.body();
+	init(ProgramInfo info) {
+		init("About ${info.name}", Size(600, 300)) {
+			info = info;
 		}
+
+		proginfo.text = if (version = info.version) {
+			"${info.name} ${info.version}";
+		} else {
+			info.name;
+		};
+		progauthor.text = "By: " + info.author;
+
+		if (license = info.license) {
+			licenses << license;
+			licenseList.add([info.name, license.title]);
+		}
+
+		for (license in core:info:licenses()) {
+			if (license !is info.license) {
+				addLicense(license);
+			}
+		}
+
+		// Set callback last.
+		licenseList.onSelect = &this.onListSelect;
+		licenseList.selection = 0;
+	}
+
+	private void addLicense(License license) {
+		licenses << license;
+		licenseList.add([license.name, license.title]);
+	}
+
+	private void onListSelect(Nat id, Bool selected) {
+		if (!selected)
+			return;
+
+		var l = licenses[id];
+		lPackage.text = "Package: " + l.path.toS();
+		lAuthor.text = "Author: " + l.author;
+		scroll.content = Label(l.body);
+
+		// Update the size/layout if necessary.
+		size = max(pos.size(), minSize());
 	}
 }

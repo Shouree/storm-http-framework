@@ -40,6 +40,10 @@ namespace gui {
 		if (created())
 			child->parentCreated(1);
 		resized(Size());
+
+#ifdef GUI_WIN32
+		repaint();
+#endif
 	}
 
 

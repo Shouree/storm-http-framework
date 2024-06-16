@@ -36,6 +36,6 @@ class ProgramInfo {
 
 // Show an about dialog, containing all software licenses currently active.
 void showLicenseDialog(Frame owner, ProgramInfo info) on Ui {
-	licenses:OverviewDialog d(info);
+	licenses:LicenseDialog d(info);
 	d.show(owner);
 }
