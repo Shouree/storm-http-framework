@@ -13,7 +13,8 @@ ifeq ($(GCC_VERSION),old)
 # Compatibility on older GCC:
 # SK_CPU_SSE_LEVEL -- disable SSE things that fail to compile.
 # JUMPER_IS_SCALAR -- to disable SSE intrinsics for older GCC that don't support it.
-DEFINES := $(DEFINES) SK_CPU_SSE_LEVEL=0 JUMPER_IS_SCALAR
+# SK_OLD_COMPILER -- custom flag that disables some unsupported intrinsics.
+DEFINES := $(DEFINES) SK_OLD_COMPILER SK_CPU_SSE_LEVEL=0 JUMPER_IS_SCALAR
 endif
 
 # These are only needed if SkShaper and/or SkParagraph are used.
