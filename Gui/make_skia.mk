@@ -8,6 +8,14 @@
 # SK_SHAPER_HARFBUZZ_AVAILABLE=1 for harfbuzz support
 DEFINES := SK_R32_SHIFT=16 SK_ASSUME_GL_ES=1 SK_GAMMA_APPLY_TO_A8 GR_OP_ALLOCATE_USE_NEW SKIA_IMPLEMENTATION=1 SK_SUPPORT_GPU=1 SK_GL=1 SK_GANESH=1 SK_DISABLE_LEGACY_PNG_WRITEBUFFER=1
 
+GCC_VERSION := $(shell [ $$(g++ -dumpversion) -gt 10 ] || echo old)
+ifeq ($(GCC_VERSION),old)
+# Compatibility on older GCC:
+# SK_CPU_SSE_LEVEL -- disable SSE things that fail to compile.
+# JUMPER_IS_SCALAR -- to disable SSE intrinsics for older GCC that don't support it.
+DEFINES := $(DEFINES) SK_CPU_SSE_LEVEL=0 JUMPER_IS_SCALAR
+endif
+
 # These are only needed if SkShaper and/or SkParagraph are used.
 #DEFINES := $(DEFINES) SK_UNICODE_AVAILABLE=1 SK_SHAPER_HARFBUZZ_AVAILABLE=1
 
