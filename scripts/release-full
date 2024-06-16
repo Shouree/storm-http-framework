@@ -10,11 +10,12 @@ ARCHLIST=(
     "mps_win32:mps"
     "smm_win32:smm"
     "mps_win64:mps 64"
-    "filip@192.168.0.105"
+    "build@192.168.0.105"
     "mps_arm64:mps"
-    "filip-www@fprg.se"
+    "build@192.168.0.10"
     "mps_amd64:mps"
     "smm_amd64:smm"
+    "filip-www@fprg.se"
 )
 function join_array { local IFS=","; echo "$*"; }
 ARCHLIST=$(join_array "${ARCHLIST[@]}")
