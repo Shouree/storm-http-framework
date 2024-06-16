@@ -45,7 +45,11 @@ do
 	archlist=""
     fi
 
-    if [[ $first == *@* ]]
+    if [[ $first == done ]]
+    then
+	# Used only as a placeholder since we don't always handle empty parameters correctly.
+	exit 0
+    elif [[ $first == *@* ]]
     then
 	echo "Continuing build at ${first}..."
 	tar_files | ssh "$first" '~/build-storm.sh' "$archlist" "$version" "$date" "$hash" || exit 1;

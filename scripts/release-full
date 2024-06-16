@@ -16,6 +16,7 @@ ARCHLIST=(
     "mps_amd64:mps"
     "smm_amd64:smm"
     "filip-www@fprg.se"
+    "done"
 )
 function join_array { local IFS=","; echo "$*"; }
 ARCHLIST=$(join_array "${ARCHLIST[@]}")
