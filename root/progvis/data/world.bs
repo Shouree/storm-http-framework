@@ -16,6 +16,9 @@ class World on Render {
 	// Lock for the traversal.
 	private Lock traverseLock;
 
+	// Cache for looking up the contents of types.
+	private TypeInfoCache typeCache;
+
 	// All allocations in this world. The order of these is not stable.
 	private Allocation[] allocations;
 
@@ -216,6 +219,11 @@ class World on Render {
 			for (t in world.program.sortedThreads) {
 				memory.add(t.threadId, t.memory);
 			}
+		}
+
+		// Find members of a type.
+		MemberOffset[] findMembers(core:lang:Type t) {
+			owner.typeCache.find(t);
 		}
 
 		// Add special data for some object.

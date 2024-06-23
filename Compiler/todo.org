@@ -307,17 +307,21 @@
     all usages of that token with the corresponding color.
   - [X] In Array.get(), do not create the exception in getRaw() since it takes up a lot of valuable space in
     the i-cache. Instead, call a separate function or reverse the logic.
-* Bugs in Progvis [1/2]
-  - [ ] Rendering is very flickering when resizing the Progvis window.
-    Probably due to repaints from the window system fail to ensure that
-    a new frame is rendered for some reason. Most notably visible on Linux,
-    but also on high-refresh displays on Windows in some situations.
+* Bugs/improvements in Progvis [1/3]
+  - [ ] Make it possible for the model checker to check for memory leaks -- just check if there
+    is anything left in all leaf nodes at the end of model checking.
+  - [ ] Rendering is very flickering when resizing the Progvis window. Probably due to repaints from
+    the window system fail to ensure that a new frame is rendered for some reason. Most notably
+    visible on Linux, but also on high-refresh displays on Windows in some situations. (At least
+    partially fixed by not moving the window incorrectly in Gtk).
   - [X] The program below does not behave correctly in Progvis, the call
     to "thread_main" is skipped, and Progvis seems generally confused about
     what is happening: root/progvis_demo/test/step_error.c
 
-* C++ front-end (in Progvis) [7/15]
-  - [ ] Global arrays (e.g. int x[2])
+* C++ front-end (in Progvis) [8/18]
+  - [ ] Fix the for-loop to allow for ( ; ; ) and other variants.
+  - [ ] Allow multiple variables to be declared on the same line.
+  - [ ] Allow type-checked casts between pointer types? We could cache the layout to make this relatively cheap.
   - [ ] Ability to make const member functions.
   - [ ] Check if function resolution works somewhat properly with const parameters etc.
   - [ ] Ability to declare member functions outside the class.
@@ -325,6 +329,7 @@
   - [ ] Some kind of standard library for C++?
   - [ ] Check so that we don't overwrite pointers with something weird.
   - [ ] sizeof() for an array probably don't work correctly.
+  - [X] Global arrays (e.g. int x[2])
   - [X] Threading constructs.
   - [X] Strings.
   - [X] malloc/free

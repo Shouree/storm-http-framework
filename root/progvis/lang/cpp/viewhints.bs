@@ -116,7 +116,7 @@ class CppViewHints extends ViewHints {
 	// wraps the allocation in a SyncData type that exposes the queue of waiting threads to the
 	// model checker (but not to the user of the visualization).
 	private Data createSync(World:Traversal t, TypeInfo info) {
-		var members = findMembers(info.type);
+		var members = t.findMembers(info.type);
 		Str impl = "impl";
 
 		// Find the "impl" member.

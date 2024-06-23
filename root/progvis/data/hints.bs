@@ -73,7 +73,7 @@ class DefaultViewHints extends ViewHints {
 
 	// Create a composite object.
 	private Data createComposite(World:Traversal t, core:lang:Type type) {
-		var members = findMembers(type);
+		var members = t.findMembers(type);
 		if (members.empty)
 			return Unknown();
 

@@ -84,7 +84,7 @@ value MemberOffset {
 	}
 }
 
-void appendMembers(Type t, MemberOffset[] result) on Compiler {
+private void appendMembers(Type t, MemberOffset[] result) on Compiler {
 	if (super = t.super) {
 		// Don't add members from TObject...
 		if (super !is named{TObject})
@@ -120,9 +120,33 @@ void appendMembers(Type t, MemberOffset[] result) on Compiler {
 		result << h;
 }
 
-MemberOffset[] findMembers(Type t) on Compiler {
+private MemberOffset[] findMembers(Type t) on Compiler {
 	t.forceLoad();
 	MemberOffset[] result;
 	appendMembers(t, result);
 	result;
+}
+
+
+/**
+ * Cache for the 'findMembers' function.
+ */
+class TypeInfoCache {
+	// The cache itself.
+	private Type->Array<MemberOffset> cache;
+
+	// Create.
+	init() {}
+
+	// Get information about members.
+	MemberOffset[] find(Type t) {
+		var i = cache.find(t);
+		if (i != cache.end)
+			return i.v;
+
+		// Slow path:
+		var data = findMembers(t);
+		cache.put(t, data);
+		return data;
+	}
 }
