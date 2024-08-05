@@ -184,8 +184,6 @@ namespace storm {
 			if ((typeFlags() & typeValue) && !added.assign)
 				add(new (engine) TypeAssign(this));
 
-			// TODO: Add a default toS for values somehow.
-
 			for (Nat i = 0; i < body->templates->count(); i++) {
 				add(body->templates->at(i));
 			}
