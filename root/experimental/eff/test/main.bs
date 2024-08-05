@@ -44,6 +44,8 @@ handler PickOne(Array<Int> -> Maybe<Array<Int>>) for Backtrack {
 }
 
 suite BacktrackTest {
+	Backtrack x;
+
 	var r = handle (x = PickOne) {
 		// TODO: Make sure that it is not possible to save 'x' anywhere.
 		Int a = x.choose(1, 6);

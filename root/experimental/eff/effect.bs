@@ -10,6 +10,19 @@ class EffectType extends Class {
 	init(SrcPos pos, Scope scope, Str name, SEffectTypeBody body) {
 		init(TypeFlags:typeClass, pos, scope, name, body);
 	}
+
+	protected Bool loadAll() : override {
+		if (!super:loadAll())
+			return false;
+
+		for (x in this) {
+			if (x as EffectFun) {
+				print(x.toS);
+			}
+		}
+
+		true;
+	}
 }
 
 
@@ -35,3 +48,34 @@ class EffectTypeDecl extends NamedDecl {
 		return EffectType(pos, fileScope(scope, pos), name, body);
 	}
 }
+
+
+/**
+ * An actual effect function.
+ */
+class EffectFun extends Function {
+	init(SrcPos pos, Class memberOf, Bool unsafe, Str name, Value result, ValParam[] params) {
+		if (unsafe)
+			throw InternalError("Unsafe effects are not implemented yet!");
+
+		var vals = params.values();
+
+		// Make us a member function if we should be that.
+		if (!unsafe)
+			vals.insert(0, thisPtr(memberOf));
+
+		init(pos, result, name, vals) {}
+
+		// Make us static if we are an unsafe effect.
+		if (unsafe)
+			make(FnFlags:static);
+	}
+}
+
+// Helper:
+EffectFun effectFun(SrcPos pos, Class memberOf, Bool unsafe, SStr name, SrcName result, NameParam[] params) on Compiler {
+	var res = memberOf.scope.value(result);
+	var par = params.resolve(memberOf.scope);
+	return EffectFun(pos, memberOf, unsafe, name.v, res, par);
+}
+

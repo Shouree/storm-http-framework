@@ -11,16 +11,21 @@ SPlainFileItem => EffectTypeDecl(env, name, body)
 
 // Note: We aim for compatibility with SClassBody so we accept "Class" rather than "EffectType".
 ClassBody SEffectTypeBody(Class effectType);
-SEffectTypeBody => EffectType.Body(effectType) : (SEffectBodyDoc(handler) -> add)* - SDelimiter;
+SEffectTypeBody => ClassBody(effectType) : (SEffectBodyDoc(effectType) -> add)* - SDelimiter;
 
 TObject SEffectBodyDoc(Class effectType);
 SEffectBodyDoc[0] => item : SDelimiter - SEffectBodyItem(effectType) item;
 SEffectBodyDoc[5] => applyDoc(c, item) : SFindDoc c - SEffectBodyItem(effectType) item;
 
 TObject SEffectBodyItem(Class effectType);
-SEffectBodyItem[-10] => x : SClassAccessItem(effectType); // Allow regular class members.
-SEffectBodyItem => EffectFunDecl()
+SEffectBodyItem[-10] => x : SClassAccessItem(effectType) x; // Allow regular class members.
+SEffectBodyItem => MemberWrap(captured) : SEffect @captured;
+
+Named SEffect(Class memberOf);
+SEffect => effectFun(pos, memberOf, false, name, result, params)
   : "effect" #keyword ~ SType result ~ SName name #fnName, "(", SFormals params, ")", ";";
+SEffect => effectFun(pos, memberOf, true, name, result, params)
+  : "unsafe" #keyword ~ "effect" #keyword ~ SType result ~ SName name #fnName, "(", SFormals params, ")", ";";
 
 
 
