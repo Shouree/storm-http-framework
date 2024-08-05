@@ -1,0 +1,48 @@
+use core:lang;
+use lang:bs;
+use lang:bs:macro;
+use core:sync;
+
+/**
+ * Definition of an effect handler.
+ */
+class HandlerType extends Class {
+	init(SrcPos pos, Scope scope, Str name, Value result, Value param, EffectType effect, SHandlerBody body) {
+		init(TypeFlags:typeClass, pos, scope, name, body);
+	}
+}
+
+
+/**
+ * Decl object for handler types.
+ */
+class HandlerDecl extends NamedDecl {
+	SrcPos pos;
+	Scope scope;
+	Str name;
+	SrcName result;
+	SrcName param;
+	SrcName effect;
+	SHandlerBody body;
+
+	init(Scope scope, SStr name, SrcName result, SrcName param, SrcName effect, SHandlerBody body) {
+		init {
+			scope = scope;
+			name = name.v;
+			pos = name.pos;
+			body = body;
+			result = result;
+			param = param;
+			effect = effect;
+		}
+	}
+
+	protected Named doCreate() : override {
+		Scope fScope = fileScope(scope, pos);
+
+		unless (e = fScope.find(effect) as EffectType)
+			throw SyntaxError(effect.pos, "The name ${effect} does not refer to an effect.");
+
+		return HandlerType(pos, fScope, name, fScope.value(result), fScope.value(param), e, body);
+	}
+}

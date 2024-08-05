@@ -1,0 +1,37 @@
+use core:lang;
+use lang:bs;
+use lang:bs:macro;
+use core:sync;
+
+/**
+ * Definition of an effect type.
+ */
+class EffectType extends Class {
+	init(SrcPos pos, Scope scope, Str name, SEffectTypeBody body) {
+		init(TypeFlags:typeClass, pos, scope, name, body);
+	}
+}
+
+
+/**
+ * Decl object for effect types.
+ */
+class EffectTypeDecl extends NamedDecl {
+	SrcPos pos;
+	Scope scope;
+	Str name;
+	SEffectTypeBody body;
+
+	init(Scope scope, SStr name, SEffectTypeBody body) {
+		init {
+			scope = scope;
+			name = name.v;
+			pos = name.pos;
+			body = body;
+		}
+	}
+
+	protected Named doCreate() : override {
+		return EffectType(pos, fileScope(scope, pos), name, body);
+	}
+}

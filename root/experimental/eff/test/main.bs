@@ -1,0 +1,57 @@
+use experimental:eff;
+use test;
+use lang:bs:macro;
+
+// TODO: make sure Backtrack is not possible to create outside of handle blocks.
+effect Backtrack {
+	// TODO: Allow effects to be marked "unchecked" or similarly - that makes them static and not checked.
+	// TODO: Also provide a top-level convenience for cases where we only want a single one?
+	effect Bool choose();
+	effect void fail();
+
+	Nat choose(Nat first, Nat last) {
+		if (first >= last) {
+			fail();
+			return 0; // NB. Will never be executed.
+		} else if (choose()) {
+			return first;
+		} else {
+			return choose(first + 1, last);
+		}
+	}
+
+	Int choose(Array<Int> from) {
+		return from[choose(0, from.count)];
+	}
+}
+
+// TODO: Make sure PickOne is not possible to create outside of handle blocks.
+handler PickOne(Array<Int> -> Maybe<Array<Int>>) for Backtrack {
+	handle choose(), k {
+		var first = k.call(true);
+		if (first.empty)
+			first = k.call(false);
+		return first;
+	}
+
+	handle fail(), k {
+		return null;
+	}
+
+	handle return x {
+		return x;
+	}
+}
+
+suite BacktrackTest {
+	var r = handle (x = PickOne) {
+		// TODO: Make sure that it is not possible to save 'x' anywhere.
+		Int a = x.choose(1, 6);
+		Int b = x.choose(1, 6);
+		Int c = x.choose(1, 6);
+		if (a*a + b*b != c*c)
+			x.fail();
+		[a, b, c];
+	};
+	print("Result: ${r}");
+}

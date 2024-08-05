@@ -1,0 +1,20 @@
+use core:lang;
+use lang:bs;
+use lang:bs:macro;
+use core:asm;
+
+class HandleExpr extends Expr {
+	init(SrcPos pos) {
+		init(pos) {}
+	}
+
+	ExprResult result() : override {
+		Value(named{Int});
+	}
+
+	void code(CodeGen gen, CodeResult r) : override {
+		if (r.needed) {
+			gen.l << mov(r.location(gen), intConst(0));
+		}
+	}
+}

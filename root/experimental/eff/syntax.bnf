@@ -1,0 +1,63 @@
+use lang.bs;
+use core.lang;
+
+optional delimiter = SDelimiter;
+required delimiter = SRequiredDelimiter;
+
+
+// Effect declaration:
+SPlainFileItem => EffectTypeDecl(env, name, body)
+  : "effect" #keyword ~ SName name #typeName, "{" [ - SEffectTypeBody@ body - ]+ "}";
+
+// Note: We aim for compatibility with SClassBody so we accept "Class" rather than "EffectType".
+ClassBody SEffectTypeBody(Class effectType);
+SEffectTypeBody => EffectType.Body(effectType) : (SEffectBodyDoc(handler) -> add)* - SDelimiter;
+
+TObject SEffectBodyDoc(Class effectType);
+SEffectBodyDoc[0] => item : SDelimiter - SEffectBodyItem(effectType) item;
+SEffectBodyDoc[5] => applyDoc(c, item) : SFindDoc c - SEffectBodyItem(effectType) item;
+
+TObject SEffectBodyItem(Class effectType);
+SEffectBodyItem[-10] => x : SClassAccessItem(effectType); // Allow regular class members.
+SEffectBodyItem => EffectFunDecl()
+  : "effect" #keyword ~ SType result ~ SName name #fnName, "(", SFormals params, ")", ";";
+
+
+
+// Handler declaration:
+SPlainFileItem => HandlerDecl(env, name, result, param, effect, body)
+  : "handler" #keyword ~ SName name #typeName, "(", SType param, "->", SType result, ")",
+    "for" #keyword ~ SType effect #typeName,
+    "{" [ - SHandlerBody@ body - ]+ "}";
+
+// Note: We wish this rule to be compatible with SClassBody. That is why we accept 'Class' rather than 'Handler'.
+ClassBody SHandlerBody(Class handler);
+SHandlerBody => Handler.Body(handler) : (SHandlerDoc(handler) -> add)* - SDelimiter;
+
+TObject SHandlerDoc(Class handler);
+SHandlerDoc[0] => item : SDelimiter - SHandlerItem(handler);
+SHandlerDoc[5] => applyDoc(c, item) : SFindDoc c - SHandlerItem(handler) item;
+
+TObject SHandlerItem(Class handler);
+SHandlerItem[-10] => x : SClassAccessItem(handler); // Allow regular class members.
+SHandlerItem => effectHandler()
+  : "handle" #keyword ~ SName name #fnName, "(", SFormals params, ")", ",", SName cont #varName, ClauseBody body;
+SHandlerItem => returnHandler()
+  : "handle" #keyword ~ "return" #keyword ~ SName param #varName, ClauseBody body;
+SHandlerItem => returnHandler()
+  : "handle" #keyword ~ "return" #keyword, ClauseBody body;
+
+SBlock ClauseBody();
+ClauseBody => x : SBlock@ x;
+
+
+// Handle blocks for using effects:
+SExpr => HandleExpr(pos)
+  : "handle" #keyword, "(", SName name #varName, "=", SCreateEffect(block) create, ")", SExpr@ body;
+SExpr => HandleExpr(pos)
+  : "handle" #keyword ~ SCreateEffect(block) create, SExpr@ body;
+
+// Creating effects:
+void SCreateEffect(Block block);
+SCreateEffect : SName name #typeName;
+SCreateEffect : SName name #typeName, "(", SActuals(block), ")";
