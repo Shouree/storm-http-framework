@@ -55,8 +55,12 @@ class EffectTypeDecl extends NamedDecl {
  */
 class EffectFun extends Function {
 	init(SrcPos pos, Class memberOf, Bool unsafe, Str name, Value result, ValParam[] params) {
-		if (unsafe)
+		if (unsafe) {
+			// TODO: Maybe, unsafe effects should simply provide a wrapper in addition to a "safe"
+			// effect? The wrapper could simply look up the first handler for the effect and then
+			// call it using the "safe" interface.
 			throw InternalError("Unsafe effects are not implemented yet!");
+		}
 
 		var vals = params.values();
 
@@ -78,4 +82,3 @@ EffectFun effectFun(SrcPos pos, Class memberOf, Bool unsafe, SStr name, SrcName 
 	var par = params.resolve(memberOf.scope);
 	return EffectFun(pos, memberOf, unsafe, name.v, res, par);
 }
-

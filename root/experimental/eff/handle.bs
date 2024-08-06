@@ -4,8 +4,17 @@ use lang:bs:macro;
 use core:asm;
 
 class HandleExpr extends Expr {
-	init(SrcPos pos) {
-		init(pos) {}
+	Expr handlerBody;
+	Str varName;
+
+	init(SrcPos pos, SStr varName, CreateHandler create, SExpr body) {
+		init(pos) {
+			varName = varName;
+		}
+	}
+
+	init(SrcPos pos, CreateHandler create, SExpr body) {
+		self(pos, SStr("@ handler"), body);
 	}
 
 	ExprResult result() : override {
@@ -15,6 +24,42 @@ class HandleExpr extends Expr {
 	void code(CodeGen gen, CodeResult r) : override {
 		if (r.needed) {
 			gen.l << mov(r.location(gen), intConst(0));
+		}
+	}
+}
+
+// Expression for creating an effect.
+class CreateHandler on Compiler {
+	// Which handler to create?
+	HandlerType toCreate;
+
+	// Constructor to call.
+	Function ctor;
+
+	// Parameters to the constructor?
+	Actuals params;
+
+	init(Block parent, SrcName name) {
+		self(parent, name, Actuals());
+	}
+
+	init(Block parent, SrcName name, Actuals params) {
+		HandlerType h = if (x = parent.scope.find(name) as HandlerType) {
+			x;
+		} else {
+			throw SyntaxError(name.pos, "${name} needs to refer to an effect handler.");
+		};
+
+		Function ctor = if (x = h.find(BSNamePart(SStr("__init"), params).withFirst(h), parent.scope) as Function) {
+			x;
+		} else {
+			throw SyntaxError(name.pos, "${name} does not have a constructor that accepts ${params}.");
+		};
+
+		init() {
+			toCreate = h;
+			ctor = ctor;
+			params = params;
 		}
 	}
 }
