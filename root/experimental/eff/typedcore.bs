@@ -1,0 +1,69 @@
+/**
+ * This file extends the constructs in "core.bs" with typed versions of the same constructs.
+ */
+use lang:bs;
+use lang:bs:macro;
+use core:lang;
+
+// Subclass of HandlerFrame that contains a "value" member of the proper type (unless "void"), and a
+// member "object" that refers to the actual handler to call when the member "main" is called.
+HandlerFrame : generate(params) {
+	if (params.count != 1)
+		return null;
+
+	unless (handler = params[0].type as HandlerType)
+		return null;
+
+	var retVal = handler.result;
+	var lambdaType = fnType([handler.result, handler]);
+
+	Type t("HandlerFrame", [handler], TypeFlags:typeClass);
+	t.flags += NamedFlags:namedMatchNoInheritance;
+
+	t.setSuper(named{HandlerFrame});
+	t.add(MemberVar("object", handler, t));
+	t.add(MemberVar("body", lambdaType, t));
+	if (retVal.any)
+		t.add(MemberVar("result", wrapMaybe(retVal), t));
+
+	// Create a constructor with two parameters: the object and a lambda. Note: We *could* make the
+	// HandlerFrame emulate a lambda to save on an indirection, but that is probably not worth the
+	// effort - effects are slow anyway.
+	{
+		SStr objName("object");
+		SStr lambdaName("body");
+
+		BSTreeCtor ctor([thisParam(t), ValParam(handler, objName), ValParam(lambdaType, lambdaName)], SrcPos());
+		CtorBody body(ctor, Scope());
+		ctor.body = body;
+
+		InitBlock init(SrcPos(), body, null);
+		init.init(Initializer(objName, LocalVarAccess(SrcPos(), body.parameters[1])));
+		init.init(Initializer(lambdaName, LocalVarAccess(SrcPos(), body.parameters[2])));
+		body.add(init);
+
+		t.add(ctor);
+	}
+
+	t.add(TypeCopyCtor(t));
+	t.add(TypeAssign(t));
+	if (needsDestructor(t))
+		t.add(TypeDefaultDtor(t));
+
+	{
+		ValParam[] paramList = [thisParam(t)];
+
+		BSTreeFn fn(Value(), SStr("callBody"), paramList, null);
+		FnBody body(fn, Scope(named{}, BSLookup()));
+		fn.body = body;
+		t.add(fn);
+
+		if (retVal.any) {
+			body.add(pattern(body) { this.result = this.body.call(this.object); });
+		} else {
+			body.add(pattern(body) { this.body.call(this.object); });
+		}
+	}
+
+	t;
+}
