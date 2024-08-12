@@ -21,6 +21,7 @@ class HandlerType extends Class {
 
 	// Return handler?
 	private HandlerClause? returnHandler;
+	HandlerClause? returnClause() { returnHandler; }
 
 	// Create.
 	init(SrcPos pos, Scope scope, Str name, Value result, Value param, EffectType effect, SHandlerBody body) {

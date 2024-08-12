@@ -20,8 +20,19 @@ effect Backtrack {
 		}
 	}
 
+	Int choose(Int first, Int last) {
+		if (first >= last) {
+			fail();
+			return 0; // NB. Will never be executed.
+		} else if (choose()) {
+			return first;
+		} else {
+			return choose(first + 1, last);
+		}
+	}
+
 	Int choose(Array<Int> from) {
-		return from[choose(0, from.count)];
+		return from[choose(0n, from.count)];
 	}
 }
 
@@ -44,9 +55,8 @@ handler PickOne(Array<Int> -> Maybe<Array<Int>>) for Backtrack {
 }
 
 suite BacktrackTest {
-	Backtrack x;
-
 	var r = handle (x = PickOne) {
+		print("In the handler with ${x}");
 		// TODO: Make sure that it is not possible to save 'x' anywhere.
 		Int a = x.choose(1, 6);
 		Int b = x.choose(1, 6);

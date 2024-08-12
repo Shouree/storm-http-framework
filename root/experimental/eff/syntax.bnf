@@ -64,9 +64,9 @@ ClauseBody => x : SBlock@ x;
 
 
 // Handle blocks for using effects:
-SExpr => HandleExpr(pos, name, create, body)
+SExpr => HandleExpr(pos, block, name, create, body)
   : "handle" #keyword, "(", SName name #varName, "=", SCreateHandler(block) create, ")", SExpr@ body;
-SExpr => HandleExpr(pos, create, body)
+SExpr => HandleExpr(pos, block, create, body)
   : "handle" #keyword ~ SCreateHandler(block) create, SExpr@ body;
 
 // Creating effects:
