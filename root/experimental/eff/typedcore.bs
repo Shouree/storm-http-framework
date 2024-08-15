@@ -67,3 +67,71 @@ HandlerFrame : generate(params) {
 
 	t;
 }
+
+
+// Custom subclass of the ResumeHandler class that contains an arbitrary list of members that
+// corresponds to members in an effect. Not visible from the name tree. Each effect has its own
+// instance.
+package class ResumeHandlerType extends Type {
+	// Create.
+	init(Value[] members) {
+		init("HandlerResume(typed)", TypeFlags:typeClass) {}
+		setSuper(named{ResumeHandler});
+
+		for (i, m in members) {
+			MemberVar v("member" + i.toS, m, this);
+			vars << v;
+			add(v);
+		}
+	}
+
+	// Member variables, easily accessible in the original order.
+	MemberVar[] vars;
+
+	// Load functions.
+	Bool loadAll() : override {
+		Function callFn(Value(), "callHandler", [this, named{HandlerFrame}]);
+		callFn.setCode(LazyCode(&this.createCall));
+		add(callFn);
+
+		true;
+	}
+
+	// Create the body to 'callHandler'.
+	private CodeGen createCall() {
+		CodeGen gen(this);
+
+		var me = gen.l.createParam(ptrDesc);
+
+		gen.l << prolog();
+
+		// TODO!
+
+		gen.l << fnRet();
+
+		gen;
+	}
+}
+
+
+// Effect result with a specific return type.
+EffectResult : generate(params) {
+	if (params.count != 1)
+		return null;
+
+	var retVal = params[0].asRef(false);
+
+	Type t("EffectResult", [retVal], TypeFlags:typeClass);
+	t.flags += NamedFlags:namedMatchNoInheritance;
+
+	t.setSuper(named{EffectResult});
+	if (retVal.any)
+		t.add(MemberVar("result", wrapMaybe(retVal), t));
+	t.add(TypeDefaultCtor(t));
+	t.add(TypeCopyCtor(t));
+	t.add(TypeAssign(t));
+	if (needsDestructor(t))
+		t.add(TypeDefaultDtor(t));
+
+	t;
+}
