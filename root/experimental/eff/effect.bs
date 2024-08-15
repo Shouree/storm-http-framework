@@ -2,6 +2,7 @@ use core:lang;
 use lang:bs;
 use lang:bs:macro;
 use core:sync;
+use core:asm;
 
 /**
  * Definition of an effect type.
@@ -68,11 +69,105 @@ class EffectFun extends Function {
 		if (!unsafe)
 			vals.insert(0, thisPtr(memberOf));
 
-		init(pos, result, name, vals) {}
+		var resultType = if(found = named{}.find("EffectResult", result, Scope()) as Type) {
+			found;
+		} else {
+			throw InternalError("Could not find EffectFrame!");
+		};
+
+		init(pos, result, name, vals) {
+			resumeType(params.values()); // Note: we intentionally ignore the possible this parameter.
+			resultType = resultType;
+		}
 
 		// Make us static if we are an unsafe effect.
 		if (unsafe)
 			make(FnFlags:static);
+
+		setCode(LazyCode(&this.generate()));
+	}
+
+	// Custom type used to store the parameters to this effect.
+	private ResumeHandlerType resumeType;
+
+	// Type used for results. Points to a subclass of EffectResult.
+	private Type resultType;
+
+	private CodeGen generate() {
+		CodeGen gen(this);
+
+		// The 'this' parameter. Specifies the handler to invoke.
+		var me = gen.l.createParam(ptrDesc);
+
+		core:asm:Var[] actuals;
+		for (i, x in params) {
+			// Skip param #0, its the this param.
+			if (i > 0)
+				actuals << gen.l.createParam(x.desc);
+		}
+
+		gen.l << prolog();
+
+		// Create our effect result object.
+		var resultObj = gen.allocObject(resultType);
+
+		// Create a handler resume object and store the parameters we received:
+		var resumeObj = gen.l.createVar(gen.block, sPtr);
+		gen.l << fnParam(ptrDesc, resumeType.typeRef);
+		gen.l << fnCall(BuiltIn:alloc.ref, false, ptrDesc, resumeObj);
+
+		// Call the base class' constructor:
+		var ctorParams = Value:[named{ResumeHandler}];
+		if (ctor = named{ResumeHandler}.find("__init", ctorParams, Scope()) as Function) {
+			gen.l << fnParam(ptrDesc, resumeObj);
+			gen.l << fnCall(ctor.ref, true);
+		} else {
+			throw InternalError("Failed to find resume type ctor!");
+		}
+
+		// Now, copy the parameters:
+		for (i, actual in actuals) {
+			print("${i}: ${actual} -- ${resumeType.vars}");
+			var v = resumeType.vars[i];
+			if (v.type.isAsmType) {
+				gen.l << mov(ptrA, resumeObj);
+				gen.l << mov(xRel(v.type.size, ptrA, v.offset), actual);
+			} else {
+				gen.l << mov(ptrA, resumeObj);
+				gen.l << add(ptrA, ptrConst(v.offset));
+				gen.l << lea(ptrC, actual);
+				gen.l << fnParam(ptrDesc, ptrA);
+				gen.l << fnParam(ptrDesc, ptrC);
+				gen.l << fnCall(v.type.copyCtor, true);
+			}
+		}
+
+		// Finally, set the vtable properly!
+		if (vtable = resumeType.vtable)
+			vtable.insert(gen.l, resumeObj);
+
+		// Call 'post' on the resume handler to make it ready to capture the continuation.
+		gen.l << fnParam(ptrDesc, resumeObj);
+		gen.l << fnCall(named{ResumeHandler:post<ResumeHandler>}.ref, true);
+
+		// Call 'wait' to make things happen!
+		gen.l << fnParam(ptrDesc, resultObj);
+		gen.l << fnCall(named{EffectResult:wait<EffectResult>}.ref, true);
+
+		// If we have a result, find the result and return it. Note, we abuse the fact that a Maybe
+		// type has the same representation as an instance of an ordinary type when it is non-null
+		// (except for the possibility of a few additional bytes).
+		if (result.any) {
+			unless (resultVar = resultType.find("result", resultType, Scope()) as MemberVar)
+				throw InternalError("Failed to find 'result' in EffectFrame!");
+
+			gen.l << add(resultObj, ptrConst(resultVar.offset));
+			gen.l << fnRetRef(resultObj);
+		} else {
+			gen.l << fnRet();
+		}
+
+		gen;
 	}
 }
 

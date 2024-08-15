@@ -127,11 +127,11 @@ package class HandlerFrame {
 		if (error)
 			throw error;
 
-		// // Resume by calling a handler?
-		// if (r = resume) {
-		// 	resume = null;
-		// 	r.call(this);
-		// }
+		// Resume by calling a handler?
+		if (r = resume) {
+			resume = null;
+			r.call();
+		}
 	}
 
 	// Indicate that a result is available.
@@ -139,16 +139,16 @@ package class HandlerFrame {
 		sema.up();
 	}
 
-	// // Should we resume by calling a handler?
-	// private HandlerResume? resume;
+	// Was a handler invoked?
+	private ResumeHandler? resume;
 
-	// // Called to resume from an HandlerResume object.
-	// void resume(HandlerResume r) {
-	// 	resume = r;
-	// 	signal();
-	// }
+	// Called to invoke a handler when resumed.
+	void callHandler(ResumeHandler r) {
+		resume = r;
+		signal();
+	}
 
-	// Called when the thread has been re-scheduled and have to wait again.
+	// Called when the thread has been re-scheduled and has to wait again.
 	void resurrected() {
 		waitAgain = true;
 	}
@@ -183,6 +183,77 @@ package class HandlerFrame {
 		}
 
 		removeHandlerFrame();
+		signal();
+	}
+}
+
+
+/**
+ * Class representing an effect having been invoked. It stores the parameters passed to the effect,
+ * so that they can be retrieved later when the stack has been unwound.
+ *
+ * This is the generic part of the interface. Each effect makes a separate subtype that stores the
+ * appropriate parameters.
+ */
+package class ResumeHandler {
+	// Create.
+	init() {}
+
+	// Call to invoke the handler. Should be done on the UThread that called 'spawn()' on 'frame'.
+	// i.e. not from the UThread spawned from 'spawn()'.
+	void call() {
+		// TODO: Save the continuation, so that we can pass it along.
+		callHandler();
+	}
+
+	// Helper, overridden by derived classes to actually call the handler.
+	protected void callHandler() : abstract;
+
+	// Called when the handler is set-up and ready to be posted to the caller.
+	void post() {
+		print("TODO: Call 'resume()' on the proper frame!");
+	}
+}
+
+
+/**
+ * Class that stores a value that should be returned to the invocation of an effect, if the captured
+ * continuation is resumed. Also contains logic to pause execution in preparation of the effect
+ * being captured.
+ *
+ * Contains the generic part, there is a typed version that stores the actual value.
+ */
+package class EffectResult {
+	// Create.
+	init() {
+		init { sema(0); }
+	}
+
+	// Semaphore to wait for being resumed more reliably than simply calling 'yield'.
+	private Sema sema;
+
+	// Should we throw an error to clean up?
+	private Exception? throwError;
+
+	// Wait for a result to arrive.
+	void wait() {
+		// sema.down();
+		print("Should wait!");
+
+		if (e = throwError) {
+			throwError = null;
+			throw e;
+		}
+	}
+
+	// Indicate that a result is available.
+	void signal() {
+		sema.up();
+	}
+
+	// Signal that we should throw an exception and exit.
+	void terminate(Exception e) {
+		throwError = e;
 		signal();
 	}
 }
