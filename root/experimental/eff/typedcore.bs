@@ -4,9 +4,10 @@
 use lang:bs;
 use lang:bs:macro;
 use core:lang;
+use core:asm;
 
 // Subclass of HandlerFrame that contains a "value" member of the proper type (unless "void"), and a
-// member "object" that refers to the actual handler to call when the member "main" is called.
+// member "body" that refers to the actual handler to call when the member "main" is called.
 HandlerFrame : generate(params) {
 	if (params.count != 1)
 		return null;
@@ -20,6 +21,9 @@ HandlerFrame : generate(params) {
 	Type t("HandlerFrame", [handler], TypeFlags:typeClass);
 	t.flags += NamedFlags:namedMatchNoInheritance;
 
+	// Note: the 'object' here is just a properly typed version of the 'handler' in HandlerFrame.
+	// This redundancy could be removed at the cost of e.g. unsafe type casts or abstract function
+	// calls. This is, however, easier overall and does not cost that much memory.
 	t.setSuper(named{HandlerFrame});
 	t.add(MemberVar("object", handler, t));
 	t.add(MemberVar("body", lambdaType, t));
@@ -37,7 +41,7 @@ HandlerFrame : generate(params) {
 		CtorBody body(ctor, Scope());
 		ctor.body = body;
 
-		InitBlock init(SrcPos(), body, null);
+		InitBlock init(SrcPos(), body, Actuals(LocalVarAccess(SrcPos(), body.parameters[1])));
 		init.init(Initializer(objName, LocalVarAccess(SrcPos(), body.parameters[1])));
 		init.init(Initializer(lambdaName, LocalVarAccess(SrcPos(), body.parameters[2])));
 		body.add(init);
@@ -74,10 +78,16 @@ HandlerFrame : generate(params) {
 // instance.
 package class ResumeHandlerType extends Type {
 	// Create.
-	init(Value[] members) {
-		init("HandlerResume(typed)", TypeFlags:typeClass) {}
+	init(EffectType handlerType, Str effectName, Value[] members) {
+		super("HandlerResume(for ${effectName})", TypeFlags:typeClass);
+
+		init {
+			handler("handler", handlerType, this);
+			effectName = effectName;
+		}
 		setSuper(named{ResumeHandler});
 
+		add(handler);
 		for (i, m in members) {
 			MemberVar v("member" + i.toS, m, this);
 			vars << v;
@@ -88,9 +98,15 @@ package class ResumeHandlerType extends Type {
 	// Member variables, easily accessible in the original order.
 	MemberVar[] vars;
 
+	// Variable that stores the handler that should be called.
+	MemberVar handler;
+
+	// Effect name.
+	private Str effectName;
+
 	// Load functions.
 	Bool loadAll() : override {
-		Function callFn(Value(), "callHandler", [this, named{HandlerFrame}]);
+		Function callFn(Value(), "callHandler", [this, named{HandlerFrame}, named{Continuation}]);
 		callFn.setCode(LazyCode(&this.createCall));
 		add(callFn);
 
@@ -99,13 +115,38 @@ package class ResumeHandlerType extends Type {
 
 	// Create the body to 'callHandler'.
 	private CodeGen createCall() {
-		CodeGen gen(this);
+		CodeGen gen(RunOn(), true, Value());
 
 		var me = gen.l.createParam(ptrDesc);
+		var resultFrame = gen.l.createParam(ptrDesc);
+		var cont = gen.l.createParam(ptrDesc);
 
 		gen.l << prolog();
 
-		// TODO!
+		// Note: We *could* pass ourselves to the handler directly instead of decomposing ourselves
+		// into pieces. Then the handler itself would have to find the variables instead.
+
+		// Find the function to call. This will find the abstract function in the effect object,
+		// that is then overloaded by the handler.
+		unless (handlerType = handler.type.type)
+			throw InternalError("Invalid handler type.");
+
+		SimplePart toFind("handle-" + effectName, [
+							thisPtr(handlerType),
+							named{HandlerFrame},
+							named{Continuation},
+							Value(this),
+							]);
+		unless (handlerFn = handlerType.find(toFind, Scope()) as Function)
+			throw InternalError("Failed to find the handler for ${effectName}.");
+
+		// Call it!
+		gen.l << mov(ptrA, me);
+		gen.l << fnParam(ptrDesc, ptrRel(ptrA, handler.offset));
+		gen.l << fnParam(ptrDesc, resultFrame);
+		gen.l << fnParam(ptrDesc, cont);
+		gen.l << fnParam(ptrDesc, me);
+		gen.l << fnCall(handlerFn.ref, true);
 
 		gen.l << fnRet();
 

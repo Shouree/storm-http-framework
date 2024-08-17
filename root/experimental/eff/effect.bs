@@ -16,9 +16,10 @@ class EffectType extends Class {
 		if (!super:loadAll())
 			return false;
 
+		// For each effect function, also add a corresponding handler that the handler can override.
 		for (x in this) {
 			if (x as EffectFun) {
-				print(x.toS);
+				add(x.handlerFn);
 			}
 		}
 
@@ -63,6 +64,12 @@ class EffectFun extends Function {
 			throw InternalError("Unsafe effects are not implemented yet!");
 		}
 
+		var effect = if (memberOf as EffectType) {
+			memberOf;
+		} else {
+			throw InternalError("EffectFun must be a member of an effect!");
+		};
+
 		var vals = params.values();
 
 		// Make us a member function if we should be that.
@@ -75,9 +82,18 @@ class EffectFun extends Function {
 			throw InternalError("Could not find EffectFrame!");
 		};
 
+		// Note: we intentionally ignore the possible this parameter.
+		var resumeType = ResumeHandlerType(effect, name, params.values());
+
 		init(pos, result, name, vals) {
-			resumeType(params.values()); // Note: we intentionally ignore the possible this parameter.
+			resumeType = resumeType;
 			resultType = resultType;
+			handlerFn = BSAbstractFn(Value(), SStr("handle-" + name), [
+										thisParam(memberOf),
+										ValParam(named{HandlerFrame}, "@result"),
+										ValParam(named{Continuation}, "@continuation"),
+										ValParam(resumeType, "@params")
+									]);
 		}
 
 		// Make us static if we are an unsafe effect.
@@ -88,10 +104,13 @@ class EffectFun extends Function {
 	}
 
 	// Custom type used to store the parameters to this effect.
-	private ResumeHandlerType resumeType;
+	package ResumeHandlerType resumeType;
 
 	// Type used for results. Points to a subclass of EffectResult.
 	private Type resultType;
+
+	// Store the function that handles this effect in the parent class.
+	package Function handlerFn;
 
 	private CodeGen generate() {
 		CodeGen gen(this);
@@ -117,17 +136,21 @@ class EffectFun extends Function {
 		gen.l << fnCall(BuiltIn:alloc.ref, false, ptrDesc, resumeObj);
 
 		// Call the base class' constructor:
-		var ctorParams = Value:[named{ResumeHandler}];
+		var ctorParams = Value:[named{ResumeHandler}, named{EffectResult}];
 		if (ctor = named{ResumeHandler}.find("__init", ctorParams, Scope()) as Function) {
 			gen.l << fnParam(ptrDesc, resumeObj);
+			gen.l << fnParam(ptrDesc, resultObj);
 			gen.l << fnCall(ctor.ref, true);
 		} else {
 			throw InternalError("Failed to find resume type ctor!");
 		}
 
+		// Store the handler.
+		gen.l << mov(ptrA, resumeObj);
+		gen.l << mov(ptrRel(ptrA, resumeType.handler.offset), me);
+
 		// Now, copy the parameters:
 		for (i, actual in actuals) {
-			print("${i}: ${actual} -- ${resumeType.vars}");
 			var v = resumeType.vars[i];
 			if (v.type.isAsmType) {
 				gen.l << mov(ptrA, resumeObj);
@@ -148,7 +171,8 @@ class EffectFun extends Function {
 
 		// Call 'post' on the resume handler to make it ready to capture the continuation.
 		gen.l << fnParam(ptrDesc, resumeObj);
-		gen.l << fnCall(named{ResumeHandler:post<ResumeHandler>}.ref, true);
+		gen.l << fnParam(ptrDesc, me);
+		gen.l << fnCall(named{ResumeHandler:post<ResumeHandler, Object>}.ref, true);
 
 		// Call 'wait' to make things happen!
 		gen.l << fnParam(ptrDesc, resultObj);
@@ -172,7 +196,7 @@ class EffectFun extends Function {
 }
 
 // Helper:
-EffectFun effectFun(SrcPos pos, Class memberOf, Bool unsafe, SStr name, SrcName result, NameParam[] params) on Compiler {
+package EffectFun effectFun(SrcPos pos, Class memberOf, Bool unsafe, SStr name, SrcName result, NameParam[] params) on Compiler {
 	var res = memberOf.scope.value(result);
 	var par = params.resolve(memberOf.scope);
 	return EffectFun(pos, memberOf, unsafe, name.v, res, par);
