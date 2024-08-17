@@ -6,6 +6,7 @@
 
 use core:lang;
 use core:sync;
+use core:unsafe;
 use lang:bs;
 use lang:bs:unsafe;
 use lang:bs:macro;
@@ -85,8 +86,10 @@ package void removeHandlerFrame() {
  * previous active handler at runtime, to form a linked list of handlers.
  */
 package class HandlerFrame {
-	// Which effect is handled at this location.
-	// EffectType handledEffect;
+	// The handler that is active at this location. Note, there is no common base class for
+	// handlers, so we have to use Object. That is fine, we will just do "isA" calls on its type
+	// anyway.
+	Object handler;
 
 	// UThread associated with us.
 	Word threadId;
@@ -98,9 +101,10 @@ package class HandlerFrame {
 	Exception? error;
 
 	// Ctor.
-	init() {
+	init(Object handler) {
 		init {
 			sema(0);
+			handler = handler;
 			waitAgain = false;
 		}
 	}
@@ -197,21 +201,51 @@ package class HandlerFrame {
  */
 package class ResumeHandler {
 	// Create.
-	init() {}
+	init(EffectResult result) {
+		init { result = result; }
+	}
+
+	// Object storing where to place the result whenever the continuation is invoked.
+	private EffectResult result;
+
+	// Handler frames saved when 'post' was called. These are used to capture a continuation when
+	// 'call' is eventually called.
+	private HandlerFrame[] activeHandlers;
 
 	// Call to invoke the handler. Should be done on the UThread that called 'spawn()' on 'frame'.
 	// i.e. not from the UThread spawned from 'spawn()'.
 	void call() {
-		// TODO: Save the continuation, so that we can pass it along.
-		callHandler();
+		// Handler frame that stores the result of the handler. The last element in 'activeHandlers':
+		HandlerFrame lastFrame = activeHandlers.last;
+
+		// Create a continuation!
+		Continuation cont(activeHandlers, result);
+		activeHandlers.clear();
+
+		// Call the handler.
+		callHandler(lastFrame, cont);
 	}
 
 	// Helper, overridden by derived classes to actually call the handler.
-	protected void callHandler() : abstract;
+	protected void callHandler(HandlerFrame lastFrame, Continuation cont) : abstract;
 
 	// Called when the handler is set-up and ready to be posted to the caller.
-	void post() {
-		print("TODO: Call 'resume()' on the proper frame!");
+	void post(Object handler) {
+		activeHandlers.clear();
+
+		// Store the handler frames we encountered on the way. We need them to capture the continuation!
+		HandlerFrame? current = currentHandlerFrame();
+		while (c = current) {
+			activeHandlers << c;
+
+			if (c.handler is handler) {
+				// Found the handler we were looking for!
+				c.callHandler(this);
+				return;
+			}
+		}
+
+		throw InternalError("The requested handler does not seem to be active.");
 	}
 }
 
@@ -237,8 +271,7 @@ package class EffectResult {
 
 	// Wait for a result to arrive.
 	void wait() {
-		// sema.down();
-		print("Should wait!");
+		sema.down();
 
 		if (e = throwError) {
 			throwError = null;
@@ -256,4 +289,35 @@ package class EffectResult {
 		throwError = e;
 		signal();
 	}
+}
+
+
+/**
+ * The data needed to store a continuation.
+ *
+ * A continuation is essentially an array of stored stacks that we can resume.
+ */
+package class Continuation {
+	// Create a continuation by storing stacks for handler frames.
+	init(HandlerFrame[] frames, EffectResult result) {
+		init {
+			handlerFrames(frames);
+			result = result;
+		}
+
+		// Store all stacks. Should be safe now!
+		for (f in frames)
+			mirrors << StackMirror:save(f.threadId);
+	}
+
+	// All handler frames.
+	private HandlerFrame[] handlerFrames;
+
+	// All captured stacks.
+	private StackMirror[] mirrors;
+
+	// Where to post the result when resuming the continuation.
+	private EffectResult result;
+
+
 }

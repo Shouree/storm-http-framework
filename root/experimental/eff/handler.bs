@@ -17,6 +17,7 @@ class HandlerType extends Class {
 	Value param;
 
 	// Effects handled here. We know that all effects in the "base" class are handled here.
+	// TODO: We could likely remove this.
 	private EffectHandlerClause[] handles;
 
 	// Return handler?
@@ -73,6 +74,7 @@ class HandlerType extends Class {
 
 					handled.put(toAdd.effect);
 					handler.handles << toAdd;
+					handler.add(toAdd.handler);
 				} else {
 					if (handler.returnHandler.any)
 						throw SyntaxError(toAdd.pos, "The 'return' handler may only occur once.");
@@ -211,7 +213,7 @@ EffectHandlerClause effectHandler(SrcPos pos, HandlerType handler, SStr effect, 
 	SimplePart effectSig(effect.v, resolvedParams.values());
 	effectSig.params.insert(0, thisPtr(handler.handledEffect));
 
-	unless (found = handler.handledEffect.find(effectSig, handler.scope) as EffectFun) {
+	unless (foundEffect = handler.handledEffect.find(effectSig, handler.scope) as EffectFun) {
 		throw SyntaxError(effect.pos, "Unable to find an effect named ${effect.v} in ${handler.handledEffect.identifier}.");
 	}
 
@@ -223,11 +225,21 @@ EffectHandlerClause effectHandler(SrcPos pos, HandlerType handler, SStr effect, 
 	// // anyway, we just do everything there.
 	// resolvedParams << ValParam(named{Continuation}, "@continuation");
 
-	BSTreeFn f(Value(), SStr("handle-" + found.name, bodyBlock.pos), resolvedParams, null);
+	BSTreeFn f(Value(), SStr(foundEffect.handlerFn.name, bodyBlock.pos), [
+				thisParam(handler),
+				ValParam(named{HandlerFrame}, "@result"),
+				ValParam(named{Continuation}, "@continuation"),
+				ValParam(foundEffect.resumeType, "@params")
+			], null);
+
 	f.parentLookup = handler;
 
 	FnBody body(f, scope);
 	f.body = body;
+
+	body.add(pattern(body) { print("IN THE HANDLER!"); });
+
+	// TODO: Need to rewrite this to put all variables from the @params parameter into scope.
 
 	// var resultVar = body.parameters[0];
 	// var contVar = body.parameters.last;
@@ -272,5 +284,5 @@ EffectHandlerClause effectHandler(SrcPos pos, HandlerType handler, SStr effect, 
 
 	// body.add(check);
 
-	EffectHandlerClause(pos, f, found);
+	EffectHandlerClause(pos, f, foundEffect);
 }
