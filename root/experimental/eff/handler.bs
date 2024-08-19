@@ -217,14 +217,6 @@ EffectHandlerClause effectHandler(SrcPos pos, HandlerType handler, SStr effect, 
 		throw SyntaxError(effect.pos, "Unable to find an effect named ${effect.v} in ${handler.handledEffect.identifier}.");
 	}
 
-	// // Add a HandlerFrame as the first parameter. That is where we store our result.
-	// resolvedParams.insert(0, ValParam(named{HandlerFrame}, "@result"));
-
-	// // We accept the continuation as Continuation, since the effect will not know the actual
-	// // type of the result. We could parameterize it on the result, but since we need a wrapper
-	// // anyway, we just do everything there.
-	// resolvedParams << ValParam(named{Continuation}, "@continuation");
-
 	BSTreeFn f(Value(), SStr(foundEffect.handlerFn.name, bodyBlock.pos), [
 				thisParam(handler),
 				ValParam(named{HandlerFrame}, "@result"),
@@ -237,52 +229,53 @@ EffectHandlerClause effectHandler(SrcPos pos, HandlerType handler, SStr effect, 
 	FnBody body(f, scope);
 	f.body = body;
 
-	body.add(pattern(body) { print("IN THE HANDLER!"); });
+	LocalVarAccess paramsAccess(SrcPos(), body.parameters[3]);
 
-	// TODO: Need to rewrite this to put all variables from the @params parameter into scope.
+	// Extract the parameters from @params into local variables:
+	for (i, p in resolvedParams) {
+		Expr initTo = MemberVarAccess(SrcPos(), paramsAccess, foundEffect.resumeType.vars[i]);
+		// TODO: Use references if possible to save on copies? Ideally, we make Var support this
+		// use-case, then we can just replace 'p.type' with 'p.type.asRef' below.
+		body.add(Var(body, p.type, SStr(p.name), initTo));
+	}
 
-	// var resultVar = body.parameters[0];
-	// var contVar = body.parameters.last;
+	unless (typedFrame = named{}.find("HandlerFrame", handler, Scope()) as Type)
+		throw InternalError("Failed to find a handler frame.");
 
-	// unless (typedFrame = named{}.find("HandlerFrame", handler, Scope()) as Type) {
-	// 	throw InternalError("Failed to find a handler frame.");
-	// }
+	// Create a typed wrapper for the continuation.
+	Function contWrapper = typedContinuation(pos, scope, handler, foundEffect.result);
+	contWrapper.parentLookup = handler;
 
-	// Function contWrapper = wrapContinuation(pos, scope, handler, found.result);
-	// contWrapper.parentLookup = handler;
+	// Cast "result" to the proper type:
+	WeakDowncast cast(body, LocalVarAccess(pos, body.parameters[1]), typedFrame);
+	If check(body, cast);
 
-	// WeakDowncast cast(body, LocalVarAccess(pos, resultVar), typedFrame);
-	// If check(body, cast);
+	if (var = cast.result) {
+		LocalVarAccess varAccess(pos, var);
 
-	// if (var = cast.result) {
-	// 	LocalVarAccess varAccess(pos, var);
+		ExprBlock inSuccess(bodyBlock.pos, check.successBlock);
+		check.success(inSuccess);
 
-	// 	ExprBlock inSuccess(bodyBlock.pos, check.successBlock);
-	// 	check.success(inSuccess);
+		// Variable for the continuation:
+		LocalVarAccess contAccess(SrcPos(), body.parameters[2]);
+		inSuccess.add(Var(body, contParam, FnPtr(contAccess, contWrapper, pos)));
 
-	// 	// Variable for 'this' (from 'object' in the block). Note that scoping is a little bit off,
-	// 	// but that is fine. It should also be marked as a "this"-variable.
-	// 	inSuccess.add(Var(body, handler, SStr("this"), namedExpr(body, pos, "object", varAccess)));
+		// The body, wrapped in a return point to allow return statements to work properly.
+		ReturnPoint bodyWrap(bodyBlock.pos, inSuccess, handler.result);
+		bodyWrap.body = bodyBlock.transform(bodyWrap);
 
-	// 	// Variable for the continuation:
-	// 	inSuccess.add(Var(body, contParam, FnPtr(LocalVarAccess(pos, contVar), contWrapper, pos)));
+		if (handler.result.any) {
+			inSuccess.add(pattern(inSuccess) { ${varAccess}.result = ${bodyWrap}; });
+		} else {
+			inSuccess.add(bodyWrap);
+		}
+	}
 
-	// 	// The body, wrapped in a return point to allow return statements to work properly.
-	// 	ReturnPoint bodyWrap(bodyBlock.pos, inSuccess, handler.result);
-	// 	bodyWrap.body = bodyBlock.transform(bodyWrap);
+	check.fail(pattern(body) {
+						throw InternalError("Invalid types!");
+					});
 
-	// 	if (handler.result.any) {
-	// 		inSuccess.add(pattern(inSuccess) { ${varAccess}.result = ${bodyWrap}; });
-	// 	} else {
-	// 		inSuccess.add(bodyWrap);
-	// 	}
-	// }
-
-	// check.fail(pattern(body) {
-	// 					throw InternalError("Invalid types!");
-	// 				});
-
-	// body.add(check);
+	body.add(check);
 
 	EffectHandlerClause(pos, f, foundEffect);
 }
