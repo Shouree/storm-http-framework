@@ -54,13 +54,28 @@ handler PickOne(Array<Int> -> Maybe<Array<Int>>) for Backtrack {
 	}
 }
 
+handler PickAll(Array<Int> -> Array<Array<Int>>) for Backtrack {
+	handle choose(), k {
+		var first = k.call(true);
+		first.append(k.call(false));
+		return first;
+	}
+
+	handle fail(), k {
+		return [];
+	}
+
+	handle return x {
+		return [x];
+	}
+}
+
 suite BacktrackTest {
-	var r = handle (x = PickOne) {
-		print("In the handler with ${x}");
+	var r = handle (x = PickAll) {
 		// TODO: Make sure that it is not possible to save 'x' anywhere.
-		Int a = x.choose(1, 6);
-		Int b = x.choose(1, 6);
-		Int c = x.choose(1, 6);
+		Int a = x.choose(1, 11);
+		Int b = x.choose(1, 11);
+		Int c = x.choose(1, 11);
 		if (a*a + b*b != c*c)
 			x.fail();
 		[a, b, c];

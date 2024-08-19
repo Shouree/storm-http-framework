@@ -15,32 +15,3 @@ class NoHandlerFor extends RuntimeError {
 		to << "No handler for the effect: " << effect;
 	}
 }
-
-
-/**
- * Used internally.
- *
- * Signals 'signal' when caught by the specified handler frame.
- */
-class EffectUnwind extends Exception {
-	private core:sync:Sema signal;
-	private HandlerFrame at;
-
-	init(core:sync:Sema signal, HandlerFrame at) {
-		init { signal = signal; at = at; }
-	}
-
-	void message(StrBuf to) {
-		to << "Internal exception";
-	}
-
-	Bool forMe(HandlerFrame f) {
-		if (f is at) {
-			removeHandlerFrame();
-			signal.up();
-			return true;
-		} else {
-			return false;
-		}
-	}
-}

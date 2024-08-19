@@ -164,7 +164,10 @@ package class HandlerFrame {
 	void spawn() {
 		// Link us into the chain, so that 'main' can link us into the proper place.
 		prev = currentHandlerFrame();
-		(spawn main()).detach();
+		// NOTE: Important to *not* use the result from here. That causes the compiler to use a
+		// version of the spawn function that does not use futures at all. We need that to avoid
+		// confusing the system, since futures can not be posted more than once.
+		spawn main();
 		wait();
 	}
 
@@ -222,6 +225,15 @@ package class ResumeHandler {
 		Continuation cont(activeHandlers, result);
 		activeHandlers.clear();
 
+		// Now that we have captured the continuation we can ask the active stack frames to
+		// terminate properly. This avoids the "main thread terminated before UThreads exited" error
+		// if the continuation is never resumed.
+		Sema wait(0);
+		result.terminate(EffectUnwind(wait, lastFrame));
+
+		// Wait for it to be handled.
+		wait.down();
+
 		// Call the handler.
 		callHandler(lastFrame, cont);
 	}
@@ -246,6 +258,35 @@ package class ResumeHandler {
 		}
 
 		throw InternalError("The requested handler does not seem to be active.");
+	}
+}
+
+
+/**
+ * Used internally to unwind the call stacks when an effect is invoked.
+ *
+ * Signals 'signal' when caught by the specified handler frame.
+ */
+package class EffectUnwind extends Exception {
+	private core:sync:Sema signal;
+	private HandlerFrame at;
+
+	init(core:sync:Sema signal, HandlerFrame at) {
+		init { signal = signal; at = at; }
+	}
+
+	void message(StrBuf to) {
+		to << "Internal exception";
+	}
+
+	Bool forMe(HandlerFrame f) {
+		if (f is at) {
+			removeHandlerFrame();
+			signal.up();
+			return true;
+		} else {
+			return false;
+		}
 	}
 }
 
@@ -319,5 +360,40 @@ package class Continuation {
 	// Where to post the result when resuming the continuation.
 	private EffectResult result;
 
+	// Get the result frame.
+	package EffectResult effectResult() { result; }
 
+	// Resume the continuation. Returns the location of the result.
+	package HandlerFrame resume() {
+		if (handlerFrames.empty)
+			throw InternalError("Trying to resume an empty continuation!");
+
+		// Previous handler on this thread:
+		HandlerFrame? prevFrame = currentHandlerFrame();
+
+		// Resume all stacks. For all but the last, we need to ask the HandlerFrame object to wait
+		// once more. Otherwise, the thread will start too early.
+		Bool last = true;
+		for (Nat i = handlerFrames.count; i > 0; i--) {
+			HandlerFrame frame = handlerFrames[i - 1];
+			if (!last)
+				frame.resurrected();
+
+			// Link it into the chain of handlers to make nested invocations work as expected.
+			frame.prev = prevFrame;
+			setHandlerFrame(frame.threadId, frame);
+
+			// Now, we can resume the thread!
+			mirrors[i - 1].restore();
+
+			// Bookkeeping...
+			prevFrame = frame;
+			last = false;
+		}
+
+		// Finally, wait for the last frame and return it.
+		HandlerFrame lastFrame = handlerFrames.last;
+		lastFrame.wait();
+		return lastFrame;
+	}
 }
