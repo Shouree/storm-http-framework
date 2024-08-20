@@ -228,3 +228,15 @@ package Function typedContinuation(SrcPos pos, Scope scope, HandlerType handler,
 
 	f;
 }
+
+NonMovable : generate(params) {
+	if (params.any)
+		return null;
+
+	Type t("NonMovable", TypeFlags:typeValue);
+
+	t.add(MemberVar("x", named{Str}, t));
+	t.add(TypeDefaultCtor(t));
+
+	t;
+}
