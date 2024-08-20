@@ -206,7 +206,7 @@ package Function typedContinuation(SrcPos pos, Scope scope, HandlerType handler,
 	}
 
 	// Call resume and get the result:
-	{
+	if (handler.result.any) {
 		unless (typedHandler = named{}.find("HandlerFrame", handler, Scope()) as Type)
 			throw InternalError("Failed to find a handler frame.");
 
@@ -222,6 +222,8 @@ package Function typedContinuation(SrcPos pos, Scope scope, HandlerType handler,
 						throw InternalError("Invalid parameter type!");
 					}
 				});
+	} else {
+		body.add(pattern(body) { c.resume(); });
 	}
 
 	f;
