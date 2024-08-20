@@ -20,6 +20,8 @@ class EffectType extends Class {
 		for (x in this) {
 			if (x as EffectFun) {
 				add(x.handlerFn);
+				if (x.unsafe)
+					add(x.makeUnsafeWrapper);
 			}
 		}
 
@@ -57,13 +59,6 @@ class EffectTypeDecl extends NamedDecl {
  */
 class EffectFun extends Function {
 	init(SrcPos pos, Class memberOf, Bool unsafe, Str name, Value result, ValParam[] params) {
-		if (unsafe) {
-			// TODO: Maybe, unsafe effects should simply provide a wrapper in addition to a "safe"
-			// effect? The wrapper could simply look up the first handler for the effect and then
-			// call it using the "safe" interface.
-			throw InternalError("Unsafe effects are not implemented yet!");
-		}
-
 		var effect = if (memberOf as EffectType) {
 			memberOf;
 		} else {
@@ -72,9 +67,8 @@ class EffectFun extends Function {
 
 		var vals = params.values();
 
-		// Make us a member function if we should be that.
-		if (!unsafe)
-			vals.insert(0, thisPtr(memberOf));
+		// Make us a member function.
+		vals.insert(0, thisPtr(memberOf));
 
 		var resultType = if(found = named{}.find("EffectResult", result, Scope()) as Type) {
 			found;
@@ -86,6 +80,7 @@ class EffectFun extends Function {
 		var resumeType = ResumeHandlerType(effect, name, params.values());
 
 		init(pos, result, name, vals) {
+			unsafe = unsafe;
 			resumeType = resumeType;
 			resultType = resultType;
 			handlerFn = BSAbstractFn(Value(), SStr("handle-" + name), [
@@ -95,10 +90,6 @@ class EffectFun extends Function {
 										ValParam(resumeType, "@params")
 									]);
 		}
-
-		// Make us static if we are an unsafe effect.
-		if (unsafe)
-			make(FnFlags:static);
 
 		setCode(LazyCode(&this.generate()));
 	}
@@ -111,6 +102,10 @@ class EffectFun extends Function {
 
 	// Store the function that handles this effect in the parent class.
 	package Function handlerFn;
+
+	// Is this effect an unsafe effect? This just means that we should generate a wrapper that don't
+	// accept a 'this' parameter.
+	package Bool unsafe;
 
 	private CodeGen generate() {
 		CodeGen gen(this);
@@ -192,6 +187,42 @@ class EffectFun extends Function {
 		}
 
 		gen;
+	}
+
+	// Make a wrapper for an unsafe effect that calls this effect.
+	Function makeUnsafeWrapper() {
+		unless (effect = this.params[0].type as EffectType)
+			throw InternalError("Inconsistent types!");
+
+		Array<Value> params(this.params);
+		params.remove(0);
+		Function f(pos, result, name, params);
+		f.make(FnFlags:static);
+
+		var resultDesc = result.desc;
+		Listing l(false, resultDesc);
+
+		l << prolog();
+		l << fnParam(ptrDesc, effect.typeRef);
+		l << fnCall(named{findEffectHandler<EffectType>}.ref, false, ptrDesc, ptrA);
+
+		l << fnParam(ptrDesc, ptrA);
+
+		// Forward parameters:
+		for (x in params) {
+			var desc = x.desc;
+			var v = l.createParam(desc);
+			l << fnParam(desc, v);
+		}
+
+		var resultVar = l.createVar(l.root, resultDesc);
+		l << fnCall(this.ref, true, resultDesc, resultVar);
+
+		l << fnRet(resultVar);
+
+		f.setCode(DynamicCode(l));
+
+		f;
 	}
 }
 

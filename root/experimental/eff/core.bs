@@ -195,6 +195,21 @@ package class HandlerFrame {
 }
 
 
+// Helper to find the topmost handler for an effect, or throw an exception.
+package Object findEffectHandler(EffectType for) {
+	HandlerFrame? current = currentHandlerFrame();
+	while (c = current) {
+		Object handler = c.handler;
+		if (handler.typeOf.isA(for)) {
+			return handler;
+		}
+
+		current = c.prev;
+	}
+
+	throw NoHandlerFor(for.name);
+}
+
 /**
  * Class representing an effect having been invoked. It stores the parameters passed to the effect,
  * so that they can be retrieved later when the stack has been unwound.
