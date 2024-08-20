@@ -1,0 +1,21 @@
+use experimental:eff;
+use test;
+
+effect Fork {
+	unsafe effect void fork();
+}
+
+handler ForkHandler(void->void) for Fork {
+	handle fork(), k {
+		k.call();
+		k.call();
+	}
+}
+
+suite ForkTest {
+	handle ForkHandler {
+		print("Before");
+		Fork:fork();
+		print("After");
+	};
+}
