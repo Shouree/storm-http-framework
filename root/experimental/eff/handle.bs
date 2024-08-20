@@ -26,8 +26,8 @@ class HandleExpr extends Expr {
 		}
 	}
 
-	init(SrcPos pos, CreateHandler create, SExpr body) {
-		self(pos, SStr("@handler"), body);
+	init(SrcPos pos, Block parent, CreateHandler create, SExpr body) {
+		self(pos, parent, SStr("@handler"), create, body);
 	}
 
 	ExprResult result() : override {
