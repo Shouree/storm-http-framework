@@ -17,7 +17,7 @@ class HandleExpr extends Expr {
 
 		// Inject the return clause and a return point into the lambda:
 		body = WrapLambda(body, varName, handler.result, handler.returnClause);
-		LambdaExpr lambdaBody(body.pos, parent, [ValParam(handler, varName)], body);
+		LambdaExpr lambdaBody(body.pos, parent, [ValParam(create.outerType, varName)], body);
 
 		init(pos) {
 			create = create;
@@ -149,6 +149,9 @@ class HandleExpr extends Expr {
 
 // Expression for creating an effect.
 class CreateHandler on Compiler {
+	// Which wrapper was used?
+	Nonmovable outerType;
+
 	// Which handler to create?
 	HandlerType toCreate;
 
@@ -163,7 +166,13 @@ class CreateHandler on Compiler {
 	}
 
 	init(Block parent, SrcName name, Actuals params) {
-		HandlerType h = if (x = parent.scope.find(name) as HandlerType) {
+		Nonmovable outer = if (x = parent.scope.find(name) as Nonmovable) {
+			x;
+		} else {
+			throw SyntaxError(name.pos, "${name} needs to refer to an effect handler.");
+		};
+
+		HandlerType h = if (x = outer.wrapped as HandlerType) {
 			x;
 		} else {
 			throw SyntaxError(name.pos, "${name} needs to refer to an effect handler.");
@@ -176,6 +185,7 @@ class CreateHandler on Compiler {
 		};
 
 		init() {
+			outerType = outer;
 			toCreate = h;
 			ctor = ctor;
 			params = params;
