@@ -13,17 +13,25 @@ class EffectType extends Class {
 	}
 
 	protected Bool loadAll() : override {
+		print("LoadAll in ${identifier}");
+
 		if (!super:loadAll())
 			return false;
 
+		print("Inspecting...");
+
 		// For each effect function, also add a corresponding handler that the handler can override.
+		Named[] toAdd;
 		for (x in this) {
 			if (x as EffectFun) {
-				add(x.handlerFn);
+				toAdd << x.handlerFn;
 				if (x.unsafe)
-					add(x.makeUnsafeWrapper);
+					toAdd << x.makeUnsafeWrapper();
 			}
 		}
+
+		for (x in toAdd)
+			add(x);
 
 		true;
 	}
@@ -49,7 +57,8 @@ class EffectTypeDecl extends NamedDecl {
 	}
 
 	protected Named doCreate() : override {
-		return EffectType(pos, fileScope(scope, pos), name, body);
+		EffectType t(pos, fileScope(scope, pos), name, body);
+		return Nonmovable(null, t);
 	}
 }
 

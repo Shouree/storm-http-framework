@@ -134,10 +134,14 @@ class HandlerDecl extends NamedDecl {
 	protected Named doCreate() : override {
 		Scope fScope = fileScope(scope, pos);
 
-		unless (e = fScope.find(effect) as EffectType)
+		unless (wrapper = fScope.find(effect) as Nonmovable)
 			throw SyntaxError(effect.pos, "The name ${effect} does not refer to an effect.");
 
-		return HandlerType(pos, fScope, name, fScope.value(result), fScope.value(param), e, body);
+		unless (e = wrapper.wrapped as EffectType)
+			throw SyntaxError(effect.pos, "The name ${effect} does not refer to an effect.");
+
+		HandlerType handler(pos, fScope, name, fScope.value(result), fScope.value(param), e, body);
+		return Nonmovable(wrapper, handler);
 	}
 }
 

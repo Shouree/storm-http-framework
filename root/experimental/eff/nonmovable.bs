@@ -1,0 +1,99 @@
+use core:lang;
+use core:asm;
+use lang:bs;
+
+/**
+ * Wrapper for a class-type that should not be moveable.
+ *
+ * This is achieved by creating a wrapper that is a pointer-sized value type without a copy
+ * constructor. Since it is still a "simple" type, it may still be used in function calls. We don't
+ * include an explicit member for the contained pointer, so it is not possible to extract either.
+ *
+ * This also prohibits binding it to a function pointer and in a lambda. The second is problematic,
+ * as we need that to be able to nest handlers. We can probably work around that somehow.
+ */
+class Nonmovable extends Type {
+	init(Nonmovable? parent, Type toWrap) {
+		init(toWrap.name, toWrap.params, TypeFlags:typeValue, sPtr) {
+			wrapped = toWrap;
+		}
+		toWrap.parentLookup = this;
+		if (parent)
+			setSuper(parent);
+	}
+
+	// Store the wrapped type so that others can access the type conveniently.
+	Type wrapped;
+
+	// Generate a type description:
+	protected TypeDesc createTypeDesc() : override {
+		// Create a suitable type description.
+		SimpleDesc desc(sPtr, 1);
+		desc.at(0) = Primitive(PrimitiveKind:pointer, sPtr, Offset());
+		return desc;
+	}
+
+	// Populate ourselves when necessary to do so.
+	protected Bool loadAll() : override {
+		if (!super:loadAll())
+			return false;
+
+		// TODO: Do this using a watch from the wrapped class instead. That avoids dependency cycles!
+
+		// Note: We don't have a constructor either. That makes it impossible to create instances of
+		// Nonmovable as well.
+
+		// Wrap all members:
+		print("Asking to load: ${wrapped.identifier}");
+		wrapped.forceLoad();
+		print("Loaded: ${wrapped.identifier}");
+		for (member in wrapped) {
+			print("... ${member}");
+			if (member as Function) {
+				// We can skip the "handle-" internal functions. They are not intended to be callable anyway.
+				if (member.name.startsWith("handle-"))
+					add(wrapFunction(member));
+			} else if (member as MemberVar) {
+				add(wrapMemberVar(member));
+			}
+		}
+
+		true;
+	}
+
+	// Helpers to wrap a function from the wrapped type.
+	private Function wrapFunction(Function member) {
+		print("Wrapping fn: ${member}");
+		Function wrap(member.result, member.name, member.params);
+		InlineCode code((InlineParams p) => {
+							Listing l = p.state.l;
+							for (i, param in member.params)
+								l << fnParam(param.desc, p.param(i));
+							l << fnCall(member.ref, true, member.result.desc, p.result.safeLocation(p.state, member.result));
+							p.result.created(p.state);
+				});
+		wrap.setCode(code);
+		return wrap;
+	}
+
+	// Helpers to wrap a member variable in the wrapped type.
+	private Function wrapMemberVar(MemberVar member) {
+		print("Wrapping var: ${member}");
+		Function wrap(member.type.asRef, member.name, [Value(this)]);
+		InlineCode code((InlineParams p) => {
+							if (p.result.needed(p.state)) {
+								p.allocRegs(0);
+								Listing l = p.state.l;
+								// Read the pointer to the wrapped object.
+								l << mov(ptrA, ptrRel(regParam(0)));
+								// Offset the pointer.
+								l << add(ptrA, member.offset);
+								// Save it.
+								l << mov(p.result.location(), ptrA);
+								p.result.created(p.state);
+							}
+						});
+		wrap.setCode(code);
+		return wrap;
+	}
+}
