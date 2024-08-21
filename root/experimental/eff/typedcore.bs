@@ -233,10 +233,22 @@ NonMovable : generate(params) {
 	if (params.any)
 		return null;
 
-	Type t("NonMovable", TypeFlags:typeValue);
+	NonMovableType t("NonMovable");
 
 	t.add(MemberVar("x", named{Str}, t));
 	t.add(TypeDefaultCtor(t));
 
 	t;
+}
+
+class NonMovableType extends Type {
+	init(Str name) {
+		init(name, [], TypeFlags:typeValue, sPtr) {}
+	}
+
+	protected TypeDesc createTypeDesc() {
+		SimpleDesc desc(sPtr, 1);
+		desc.at(0) = Primitive(PrimitiveKind:pointer, sPtr, Offset());
+		return desc;
+	}
 }

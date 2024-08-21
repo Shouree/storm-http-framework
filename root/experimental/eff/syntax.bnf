@@ -48,7 +48,7 @@ SHandlerDoc[0] => item : SDelimiter - SHandlerItem(handler) item;
 SHandlerDoc[5] => applyDoc(c, item) : SFindDoc c - SHandlerItem(handler) item;
 
 TObject SHandlerItem(Class handler);
-SHandlerItem[-10] => x : SClassAccessItem(handler); // Allow regular class members.
+SHandlerItem[-10] => x : SClassAccessItem(handler) x; // Allow regular class members.
 SHandlerItem => x : SHandlerClause@ x;
 
 HandlerClause SHandlerClause(HandlerType handler);

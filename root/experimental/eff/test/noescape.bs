@@ -1,0 +1,43 @@
+use experimental:eff;
+use test;
+
+effect NoEscape {
+	effect Int eff(Int x);
+
+	Int base;
+}
+
+handler NoEscapeHandler(Int->Int) for NoEscape {
+	Int derived;
+
+	init(Int start) {
+		init { derived = start; }
+	}
+
+	handle eff(Int x), k {
+		base += x;
+		k.call(derived);
+	}
+
+	Int get() {
+		base + derived;
+	}
+}
+
+// This should work: it is perfectly fine to pass the effect as a parameter.
+void noEscapeFn(NoEscape eff) {
+	eff.eff(10);
+}
+
+suite NoEscapeTest {
+	handle (h = NoEscapeHandler(10)) {
+		// This should not work (h is a value):
+		var x = &h.eff(Int);
+		// This should not work (h has no copy ctor):
+		var y = h;
+		// This should work:
+		noEscapeFn(h);
+		print("Info: ${h.base} - ${h.derived}");
+		5;
+	};
+}
