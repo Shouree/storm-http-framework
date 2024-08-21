@@ -719,19 +719,26 @@ namespace storm {
 			return f.result();
 		}
 
-		// Recompute!
-		forceLoad();
-		mySize = superSize();
-		if (layout) {
-			// If we do not have a layout, we do not have any variables.
-			mySize = layout->doLayout(mySize);
-		}
+		mySize = createSize();
 
 		// Since we have computed our size, it means that we can be instantiated. Because of that,
 		// make sure that the destructor is compiled now. Otherwise, it might be compiled during
 		// shutdown, which is likely to fail:
 		if (Function *dtor = destructor())
 			dtor->compile();
+
+		return mySize;
+	}
+
+	Size Type::createSize() {
+		// Recompute the size!
+		forceLoad();
+		mySize = superSize();
+
+		// If we do not have a layout, we do not have any variables.
+		if (layout) {
+			mySize = layout->doLayout(mySize);
+		}
 
 		return mySize;
 	}
