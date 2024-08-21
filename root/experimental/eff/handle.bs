@@ -13,11 +13,13 @@ class HandleExpr extends Expr {
 
 		var handler = create.toCreate;
 
-		var bodyFnType = fnType([handler.result, create.outerType]);
+		var bodyFnType = fnType([handler.result, handler]);
+
+		SStr paramName("@handler");
 
 		// Inject the return clause and a return point into the lambda:
-		body = WrapLambda(body, varName, handler.result, handler.returnClause);
-		LambdaExpr lambdaBody(body.pos, parent, [ValParam(create.outerType, varName)], body);
+		body = WrapLambda(body, paramName, varName, create.outerType, handler.result, handler.returnClause);
+		LambdaExpr lambdaBody(body.pos, parent, [ValParam(handler, paramName)], body);
 
 		init(pos) {
 			create = create;
@@ -94,14 +96,18 @@ class HandleExpr extends Expr {
 		SExpr body;
 		HandlerClause? wrap;
 		SStr paramName;
+		SStr effectName;
 		Value finalResult;
+		Nonmovable outer;
 
-		init(SExpr body, SStr paramName, Value result, HandlerClause? wrap) {
+		init(SExpr body, SStr paramName, SStr effectName, Nonmovable outer, Value result, HandlerClause? wrap) {
 			init() {
 				body = body;
 				wrap = wrap;
 				paramName = paramName;
+				effectName = effectName;
 				finalResult = result;
+				outer = outer;
 			}
 			pos = body.pos;
 		}
@@ -117,31 +123,37 @@ class HandleExpr extends Expr {
 					result = Value();
 			}
 
+			// Find the parameter, wrap it into its wrapper type:
+			unless (paramVar = block.variable(SimplePart(paramName.v)))
+				throw InternalError("Failed to find the effect parameter.");
+
+			ExprBlock innerBlock(SrcPos(), block);
+
+			Var effectVar(innerBlock, effectName, ToNonmovable(outer, LocalVarAccess(pos, paramVar)));
+			innerBlock.add(effectVar); // Not entirely kosher to add to the parent, but it will work here.
+
 			// Wrap in a return point to make returns work as we would expect.
-			ReturnPoint p(pos, block, result);
+			ReturnPoint p(pos, innerBlock, result);
 			p.body = body.transform(p);
 
 
 			if (wrap) {
 				// A function to wrap:
-				unless (effectVar = block.variable(SimplePart(paramName.v)))
-					throw InternalError("Failed to find effect variable.");
-
-				Actuals actuals(LocalVarAccess(pos, effectVar));
+				Actuals actuals(LocalVarAccess(pos, paramVar));
 
 				if (result.any) {
 					actuals.add(p);
-					return FnCall(pos, block.scope, wrap.handler, actuals);
+					innerBlock.add(FnCall(pos, innerBlock.scope, wrap.handler, actuals));
 				} else {
-					ExprBlock seq(pos, block);
-					seq.add(p);
-					seq.add(FnCall(pos, block.scope, wrap.handler, actuals));
-					return seq;
+					innerBlock.add(p);
+					innerBlock.add(FnCall(pos, innerBlock.scope, wrap.handler, actuals));
 				}
 			} else {
-				// No function to wrap:
-				return p;
+				// Nothing to wrap:
+				innerBlock.add(p);
 			}
+
+			innerBlock;
 		}
 	}
 
@@ -193,8 +205,7 @@ class CreateHandler on Compiler {
 	}
 
 	CodeResult create(CodeGen gen) {
-		// Note: We lie about the type here. It works since we know that Nonmovable is pointer-sized!
-		CodeResult out(outerType, gen.block);
+		CodeResult out(toCreate, gen.block);
 
 		CtorCall call(SrcPos(), Scope(), ctor, params);
 		call.code(gen, out);

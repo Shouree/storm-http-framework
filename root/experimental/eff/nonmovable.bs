@@ -81,7 +81,11 @@ class Nonmovable extends Type {
 
 	// Helpers to wrap a function from the wrapped type.
 	private Function wrapFunction(Function member) {
-		Function wrap(member.result, member.name, member.params);
+		var params = member.params.clone();
+		// Replace this pointer if member function:
+		if (member.isMember)
+			params[0] = Value(this);
+		Function wrap(member.result, member.name, params);
 		InlineCode code((InlineParams p) => {
 							Listing l = p.state.l;
 							for (i, param in member.params)
@@ -101,9 +105,7 @@ class Nonmovable extends Type {
 								p.allocRegs(0);
 								Listing l = p.state.l;
 								// Read the pointer to the wrapped object.
-								l << mov(ptrA, ptrRel(p.regParam(0)));
-								// Offset the pointer.
-								l << add(ptrA, member.offset);
+								l << lea(ptrA, ptrRel(p.regParam(0), member.offset));
 								// Save it.
 								l << mov(p.result.location(p.state), ptrA);
 								p.result.created(p.state);
@@ -111,5 +113,55 @@ class Nonmovable extends Type {
 						});
 		wrap.setCode(code);
 		return wrap;
+	}
+}
+
+
+/**
+ * Expression used to convert to Nonmovable types.
+ */
+package class ToNonmovable extends Expr {
+	// Create.
+	init(Nonmovable to, Expr from) {
+		if (outType = from.result.type.type) {
+			if (!to.wrapped.isA(outType)) {
+				throw InternalError("Trying to convert to a nonmovable of an incompatible type!");
+			}
+		} else {
+			throw InternalError("Cannot convert 'void' to nonmovable type!");
+		}
+
+		init(SrcPos()) {
+			to = to;
+			from = from;
+		}
+	}
+
+	// Type to convert to.
+	private Nonmovable to;
+
+	// Type to convert from.
+	private Expr from;
+
+	// Report the resulting type.
+	ExprResult result() : override {
+		Value(to);
+	}
+
+	// Generate code.
+	void code(CodeGen state, CodeResult result) : override {
+		// We can just forward to the expr in general. Breaks down if it examines the type inside
+		// 'result', but we only ever have variables here, so it should be fine.
+		from.code(state, result);
+	}
+
+	// Isolation?
+	Bool isolate() : override {
+		from.isolate();
+	}
+
+	// To string:
+	void toS(StrBuf to) : override {
+		to << "<to nonmovable>(" << from << ")";
 	}
 }

@@ -194,7 +194,7 @@ HandlerClause returnHandler(SrcPos pos, HandlerType handler, SStr? param, SBlock
 			throw SyntaxError(pos, "You need to specify a parameter for a handler that accepts a value.");
 	}
 
-	BSTreeFn f(handler.result, SStr("handle-return", bodyBlock.pos), fnParams, null);
+	BSTreeFn f(handler.result, SStr("@handle-return", bodyBlock.pos), fnParams, null);
 	f.parentLookup = handler;
 
 	FnBody body(f, handler.scope);

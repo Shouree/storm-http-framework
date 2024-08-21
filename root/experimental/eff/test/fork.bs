@@ -12,10 +12,19 @@ handler ForkHandler(void->void) for Fork {
 	}
 }
 
+class Counter {
+	Int count;
+}
+
 suite ForkTest {
+	Counter c;
+
 	handle ForkHandler {
 		print("Before");
 		Fork:fork();
 		print("After");
+		c.count++;
 	};
+
+	test c.count == 2;
 }
