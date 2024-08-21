@@ -5,7 +5,7 @@ effect Fork {
 	unsafe effect void fork();
 }
 
-handler ForkHandler(void->void) for Fork {
+handler ForkHandler for Fork {
 	handle fork(), k {
 		k.call();
 		k.call();

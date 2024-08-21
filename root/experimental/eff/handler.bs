@@ -106,6 +106,54 @@ class HandlerType extends Class {
 	}
 }
 
+/**
+ * Container for the types in a handler. Used with the grammar.
+ */
+class HandlerParams on Compiler {
+	// Resulting type from the handler.
+	SrcName result;
+
+	// Parameter type to the handler (i.e. the return type from the effect).
+	SrcName param;
+
+	// Create type representing (from -> to).
+	init(SrcName param, SrcName result) {
+		init {
+			param = param;
+			result = result;
+		}
+	}
+
+	// Create type representing (t -> t)
+	init(SrcName type) {
+		init {
+			param = type;
+			result = type;
+		}
+	}
+
+	// Create type representing (void -> void)
+	init() {
+		init {}
+	}
+
+	// Resolve result.
+	Value result(Scope scope) {
+		if (result.empty)
+			Value();
+		else
+			scope.value(result);
+	}
+
+	// Resolve param.
+	Value param(Scope scope) {
+		if (param.empty)
+			Value();
+		else
+			scope.value(param);
+	}
+}
+
 
 /**
  * Decl object for handler types.
@@ -114,19 +162,17 @@ class HandlerDecl extends NamedDecl {
 	SrcPos pos;
 	Scope scope;
 	Str name;
-	SrcName result;
-	SrcName param;
+	HandlerParams params;
 	SrcName effect;
 	SHandlerBody body;
 
-	init(Scope scope, SStr name, SrcName result, SrcName param, SrcName effect, SHandlerBody body) {
+	init(Scope scope, SStr name, HandlerParams params, SrcName effect, SHandlerBody body) {
 		init {
 			scope = scope;
 			name = name.v;
 			pos = name.pos;
 			body = body;
-			result = result;
-			param = param;
+			params = params;
 			effect = effect;
 		}
 	}
@@ -140,7 +186,7 @@ class HandlerDecl extends NamedDecl {
 		unless (e = wrapper.wrapped as EffectType)
 			throw SyntaxError(effect.pos, "The name ${effect} does not refer to an effect.");
 
-		HandlerType handler(pos, fScope, name, fScope.value(result), fScope.value(param), e, body);
+		HandlerType handler(pos, fScope, name, params.result(fScope), params.param(fScope), e, body);
 		return Nonmovable(wrapper, handler);
 	}
 }

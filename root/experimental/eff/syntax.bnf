@@ -30,14 +30,16 @@ SEffect => effectFun(pos, memberOf, true, name, result, params)
 
 
 // Handler declaration:
-SPlainFileItem => HandlerDecl(env, name, result, param, effect, body)
-  : "handler" #keyword ~ SName name #typeName, "(", SType param, "->", SType result, ")",
+SPlainFileItem => HandlerDecl(env, name, params, effect, body)
+  : "handler" #keyword ~ SName name #typeName, SHandlerParams params,
     "for" #keyword ~ SType effect #typeName,
     "{" [ - SHandlerBody@ body - ]+ "}";
-SPlainFileItem => HandlerDecl(env, name, type, type, effect, body)
-  : "handler" #keyword ~ SName name #typeName, "(", SType type, ")",
-    "for" #keyword ~ SType effect #typeName,
-    "{" [ - SHandlerBody@ body - ]+ "}";
+
+// Types for a handler:
+HandlerParams SHandlerParams();
+SHandlerParams => HandlerParams(param, result) : "(", SType param, "->", SType result, ")";
+SHandlerParams => HandlerParams(type) : "(", SType type, ")";
+SHandlerParams => HandlerParams() : ;
 
 // Note: We wish this rule to be compatible with SClassBody. That is why we accept 'Class' rather than 'Handler'.
 ClassBody SHandlerBody(Class handler);

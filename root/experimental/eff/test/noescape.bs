@@ -7,7 +7,7 @@ effect NoEscape {
 	Int base;
 }
 
-handler NoEscapeHandler(Int->Int) for NoEscape {
+handler NoEscapeHandler(Int) for NoEscape {
 	Int derived;
 
 	init(Int start) {
