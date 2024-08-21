@@ -13,12 +13,8 @@ class EffectType extends Class {
 	}
 
 	protected Bool loadAll() : override {
-		print("LoadAll in ${identifier}");
-
 		if (!super:loadAll())
 			return false;
-
-		print("Inspecting...");
 
 		// For each effect function, also add a corresponding handler that the handler can override.
 		Named[] toAdd;
