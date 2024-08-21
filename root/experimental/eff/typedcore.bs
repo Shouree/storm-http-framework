@@ -131,7 +131,7 @@ package class ResumeHandlerType extends Type {
 		unless (handlerType = handler.type.type)
 			throw InternalError("Invalid handler type.");
 
-		SimplePart toFind("handle-" + effectName, [
+		SimplePart toFind("@handle-" + effectName, [
 							thisPtr(handlerType),
 							named{HandlerFrame},
 							named{Continuation},

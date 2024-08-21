@@ -30,14 +30,24 @@ void noEscapeFn(NoEscape eff) {
 }
 
 suite NoEscapeTest {
-	handle (h = NoEscapeHandler(10)) {
+	// Should not work:
+	// NoEscapeHandler x(10);
+
+	var result = handle (h = NoEscapeHandler(10)) {
 		// This should not work (h is a value):
 		// var x = &h.eff(Int);
+
 		// This should not work (h has no copy ctor):
-		var y = h;
+		// var y = h;
+
 		// This should work:
 		noEscapeFn(h);
-		print("Info: ${h.base} - ${h.derived}");
-		5;
+
+		var a = h.get;
+		var b = h.base;
+		var c = h.derived;
+
+		a + b + c;
 	};
+	test result == 40;
 }
