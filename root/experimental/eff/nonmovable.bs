@@ -38,32 +38,49 @@ class Nonmovable extends Type {
 		if (!super:loadAll())
 			return false;
 
-		// TODO: Do this using a watch from the wrapped class instead. That avoids dependency cycles!
+		// Note: We don't have a regular constructor nor a copy constructor. This makes it so that
+		// we only can be created from the 'handle' block (or other custom code), and only copied in
+		// function calls.
 
-		// Note: We don't have a constructor either. That makes it impossible to create instances of
-		// Nonmovable as well.
+		// Note: We might be in the process of a circular dependency when loading ourselves (the
+		// wrapped type will do name lookups throuhg us while it is loading itself). Therefore, we
+		// add all members we can find currently, and add a watch for any remaining ones.
 
-		// Wrap all members:
-		print("Asking to load: ${wrapped.identifier}");
+		// Wrap all current members:
 		wrapped.forceLoad();
-		print("Loaded: ${wrapped.identifier}");
+		wrapped.watchAdd(this);
 		for (member in wrapped) {
-			print("... ${member}");
-			if (member as Function) {
-				// We can skip the "handle-" internal functions. They are not intended to be callable anyway.
-				if (member.name.startsWith("handle-"))
-					add(wrapFunction(member));
-			} else if (member as MemberVar) {
-				add(wrapMemberVar(member));
-			}
+			addWrap(member);
 		}
 
 		true;
 	}
 
+	// Called when new things are added to the parent class to let us add wrapper members. This is
+	// fine to do at any time, since value types don't have vtables that need to be updated.
+	void notifyAdded(NameSet to, Named added) : override {
+		addWrap(added);
+	}
+
+	// Add a wrap for a Named.
+	private void addWrap(Named member) {
+		// Ignore constructors:
+		if (member.name == "__init")
+			return;
+
+		// Ignore obviously temporary names:
+		if (member.name.startsWith("@"))
+			return;
+
+		if (member as Function) {
+			add(wrapFunction(member));
+		} else if (member as MemberVar) {
+			add(wrapMemberVar(member));
+		}
+	}
+
 	// Helpers to wrap a function from the wrapped type.
 	private Function wrapFunction(Function member) {
-		print("Wrapping fn: ${member}");
 		Function wrap(member.result, member.name, member.params);
 		InlineCode code((InlineParams p) => {
 							Listing l = p.state.l;
@@ -78,18 +95,17 @@ class Nonmovable extends Type {
 
 	// Helpers to wrap a member variable in the wrapped type.
 	private Function wrapMemberVar(MemberVar member) {
-		print("Wrapping var: ${member}");
 		Function wrap(member.type.asRef, member.name, [Value(this)]);
 		InlineCode code((InlineParams p) => {
-							if (p.result.needed(p.state)) {
+							if (p.result.needed()) {
 								p.allocRegs(0);
 								Listing l = p.state.l;
 								// Read the pointer to the wrapped object.
-								l << mov(ptrA, ptrRel(regParam(0)));
+								l << mov(ptrA, ptrRel(p.regParam(0)));
 								// Offset the pointer.
 								l << add(ptrA, member.offset);
 								// Save it.
-								l << mov(p.result.location(), ptrA);
+								l << mov(p.result.location(p.state), ptrA);
 								p.result.created(p.state);
 							}
 						});

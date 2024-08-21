@@ -13,7 +13,7 @@ class HandleExpr extends Expr {
 
 		var handler = create.toCreate;
 
-		var bodyFnType = fnType([handler.result, handler]);
+		var bodyFnType = fnType([handler.result, create.outerType]);
 
 		// Inject the return clause and a return point into the lambda:
 		body = WrapLambda(body, varName, handler.result, handler.returnClause);
@@ -193,7 +193,8 @@ class CreateHandler on Compiler {
 	}
 
 	CodeResult create(CodeGen gen) {
-		CodeResult out(toCreate, gen.block);
+		// Note: We lie about the type here. It works since we know that Nonmovable is pointer-sized!
+		CodeResult out(outerType, gen.block);
 
 		CtorCall call(SrcPos(), Scope(), ctor, params);
 		call.code(gen, out);
