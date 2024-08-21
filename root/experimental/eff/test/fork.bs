@@ -19,15 +19,3 @@ suite ForkTest {
 		print("After");
 	};
 }
-
-
-void f(NonMovable x) {
-	print(x.x);
-}
-
-suite A {
-	print("Creating value.");
-	NonMovable x;
-	x.x = "hej";
-	f(x);
-}
