@@ -106,6 +106,7 @@ class HandlerType extends Class {
 	}
 }
 
+
 /**
  * Container for the types in a handler. Used with the grammar.
  */
