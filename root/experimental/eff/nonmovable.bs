@@ -197,7 +197,6 @@ package class FromNonmovable extends Expr {
 
 	// Generate code.
 	void code(CodeGen state, CodeResult result) : override {
-		print("From? ${result.type.ref}");
 		from.code(state, result);
 	}
 

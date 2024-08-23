@@ -12,19 +12,18 @@ handler ForkHandler for Fork {
 	}
 }
 
-class Counter {
-	Int count;
-}
-
 suite ForkTest {
-	Counter c;
+	Counter before;
+	Counter after;
 
 	handle ForkHandler {
-		print("Before");
+		// print("Before");
+		before.count++;
 		Fork:fork();
-		print("After");
-		c.count++;
+		// print("After");
+		after.count++;
 	};
 
-	test c.count == 2;
+	test before.count == 1;
+	test after.count == 2;
 }

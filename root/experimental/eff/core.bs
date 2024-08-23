@@ -119,6 +119,7 @@ package class HandlerFrame {
 	void wait() {
 		do {
 			sema.down();
+			// print("Woke from sema: ${this} ${waitAgain} ${error}");
 
 			// If we were re-scheduled we might need to wait once more.
 			if (waitAgain)
@@ -127,9 +128,11 @@ package class HandlerFrame {
 				break;
 		}
 
-		// Report error:
-		if (error)
-			throw error;
+		// Report error. Note, we need to clear the exception since we might be restarted.
+		if (e = error) {
+			error = null;
+			throw e;
+		}
 
 		// Resume by calling a handler?
 		if (r = resume) {
@@ -140,6 +143,7 @@ package class HandlerFrame {
 
 	// Indicate that a result is available.
 	void signal() {
+		// print("Signalled ${this}");
 		sema.up();
 	}
 
@@ -183,6 +187,7 @@ package class HandlerFrame {
 			if (u.forMe(this)) {
 				return;
 			} else {
+				// print("Exiting: ${this}");
 				this.error = u;
 			}
 		} catch (Exception e) {
@@ -190,6 +195,7 @@ package class HandlerFrame {
 		}
 
 		removeHandlerFrame();
+		// print("main finished: ${this}");
 		signal();
 	}
 }
@@ -391,6 +397,7 @@ package class Continuation {
 		// Resume all stacks. For all but the last, we need to ask the HandlerFrame object to wait
 		// once more. Otherwise, the thread will start too early.
 		Bool last = true;
+		// print(handlerFrames.toS);
 		for (Nat i = handlerFrames.count; i > 0; i--) {
 			HandlerFrame frame = handlerFrames[i - 1];
 			if (!last)
@@ -410,7 +417,9 @@ package class Continuation {
 
 		// Finally, wait for the last frame and return it.
 		HandlerFrame lastFrame = handlerFrames.last;
+		// print("Starting to wait... ${lastFrame}");
 		lastFrame.wait();
+		// print("Done waiting! ${lastFrame}");
 		return lastFrame;
 	}
 }
