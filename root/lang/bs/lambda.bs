@@ -400,7 +400,8 @@ class LambdaCaptureStrategy {
 	// an object. The function returns the type that should be used to store the variable inside the
 	// lambda object.
 	Value storeAs(Value original) {
-		original;
+		// Note: Never store things as references. That won't work.
+		original.asRef(false);
 	}
 
 	// Customize how to initialize a variable.
