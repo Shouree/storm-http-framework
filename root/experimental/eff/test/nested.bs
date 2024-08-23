@@ -2,28 +2,69 @@ use experimental:eff;
 use test;
 
 effect NestedEff {
-	effect Int fork(Int x);
+	effect Int fork();
 }
 
 handler NestedHandler(Int) for NestedEff {
-	handle fork(Int x), k {
-		Int a = k.call(x);
+	handle fork(), k {
+		Int a = k.call(1);
 		Int b = k.call(10);
 		a + b;
 	}
 }
 
-suite NestedTest {
-	Int result = handle (a = NestedHandler) {
+handler OuterHandler(Int) for NestedEff {
+	handle fork(), k {
+		Int a = k.call(5);
+		Int b = k.call(50);
+		a + b;
+	}
+}
+
+suite NestedTest1 {
+	Counter innerTimes;
+	Counter outerTimes;
+
+	// This is fairly logical:
+
+	Int result = handle (a = OuterHandler) {
 		Int intermediate = handle (b = NestedHandler) {
-			Int x = a.fork(0);
-			Int y = b.fork(5);
-			print("Inner!");
-			x + 1000;
+			Int x = a.fork();
+			Int y = b.fork();
+			innerTimes.count++;
+			// print("Inner: ${x} ${y}");
+			x + y + 1000;
 		};
-		print("Outer!");
+		outerTimes.count++;
+		// print("Outer!");
 		intermediate + 10;
 	};
 
-	print("Result: ${result}");
+	test result == 4152;
+	test innerTimes.count == 4;
+	test outerTimes.count == 2;
+}
+
+suite NestedTest2 {
+	Counter innerTimes;
+	Counter outerTimes;
+
+	// Good luck tracing this. I do, however, believe it behaves correctly (verified in Pyret).
+
+	Int result = handle (a = OuterHandler) {
+		Int intermediate = handle (b = NestedHandler) {
+			Int x = b.fork();
+			Int y = a.fork();
+			innerTimes.count++;
+			// print("Inner: ${x} ${y}");
+			x + y + 1000;
+		};
+		outerTimes.count++;
+		// print("Outer!");
+		intermediate + 10;
+	};
+
+	test result == 8304;
+	test innerTimes.count == 6; // !
+	test outerTimes.count == 4;
 }

@@ -360,7 +360,6 @@ private class LambdaBody extends ReturnPoint {
 			}
 			InitBlock s(pos, b, Actuals(), init);
 			b.add(s);
-			b.add(lang:bs:macro:PrintAsm(SrcPos()));
 			b;
 		};
 		type.add(ctor);
