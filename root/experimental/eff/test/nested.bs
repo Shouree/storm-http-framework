@@ -1,0 +1,29 @@
+use experimental:eff;
+use test;
+
+effect NestedEff {
+	effect Int fork(Int x);
+}
+
+handler NestedHandler(Int) for NestedEff {
+	handle fork(Int x), k {
+		Int a = k.call(x);
+		Int b = k.call(10);
+		a + b;
+	}
+}
+
+suite NestedTest {
+	Int result = handle (a = NestedHandler) {
+		Int intermediate = handle (b = NestedHandler) {
+			Int x = a.fork(0);
+			Int y = b.fork(5);
+			print("Inner!");
+			x + 1000;
+		};
+		print("Outer!");
+		intermediate + 10;
+	};
+
+	print("Result: ${result}");
+}

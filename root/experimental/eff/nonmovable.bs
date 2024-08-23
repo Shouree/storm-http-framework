@@ -165,3 +165,49 @@ package class ToNonmovable extends Expr {
 		to << "<to nonmovable>(" << from << ")";
 	}
 }
+
+/**
+ * Expression used to convert from a nonmovable type to the contained type.
+ */
+package class FromNonmovable extends Expr {
+	// Create.
+	init(Expr from) {
+		var to = if (x = from.result.type.type as Nonmovable) {
+			x.wrapped;
+		} else {
+			throw InternalError("Source type for 'FromNonmovable' is not a nonmovable type!");
+		};
+
+		init(SrcPos()) {
+			from = from;
+			to = to;
+		}
+	}
+
+	// Source expression.
+	private Expr from;
+
+	// Type to convert to.
+	private Type to;
+
+	// Report the resulting type.
+	ExprResult result() : override {
+		Value(to);
+	}
+
+	// Generate code.
+	void code(CodeGen state, CodeResult result) : override {
+		print("From? ${result.type.ref}");
+		from.code(state, result);
+	}
+
+	// Isolation?
+	Bool isolate() : override {
+		from.isolate();
+	}
+
+	// To string:
+	void toS(StrBuf to) : override {
+		to << "<from nonmovable>(" << from << ")";
+	}
+}

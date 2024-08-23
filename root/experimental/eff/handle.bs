@@ -19,7 +19,7 @@ class HandleExpr extends Expr {
 
 		// Inject the return clause and a return point into the lambda:
 		body = WrapLambda(body, paramName, varName, create.outerType, handler.result, handler.returnClause);
-		LambdaExpr lambdaBody(body.pos, parent, [ValParam(handler, paramName)], body);
+		LambdaExpr lambdaBody(body.pos, parent, [ValParam(handler, paramName)], body, CustomCapture());
 
 		init(pos) {
 			create = create;
@@ -157,6 +157,47 @@ class HandleExpr extends Expr {
 		}
 	}
 
+	/**
+	 * Custom behavior for lambdas to allow them to store nonmovable types.
+	 */
+	class CustomCapture extends LambdaCaptureStrategy {
+		// Customize shadowing. Shadow as value types.
+		Value shadowAs(Value original) {
+			if (original.type as Nonmovable) {
+				original.asRef(false);
+			} else {
+				super:shadowAs(original);
+			}
+		}
+
+		// Customize types to store in the lambda.
+		Value storeAs(Value original) {
+			if (nonmovable = original.type as Nonmovable) {
+				Value(nonmovable.wrapped);
+			} else {
+				super:storeAs(original);
+			}
+		}
+
+		// Compute a initializer.
+		Expr storeInitializer(Value type, Expr original) {
+			if (nonmovable = original.result.type.type as Nonmovable) {
+				FromNonmovable(original);
+			} else {
+				super:storeInitializer(type, original);
+			}
+		}
+
+		// Load from a stored variable.
+		Bool restore(CodeGen gen, LocalVar init, MemberVar member, Reg baseReg) {
+			if (nonmovable = init.result.type as Nonmovable) {
+				gen.l << mov(init.var.v, ptrRel(baseReg, member.offset));
+				false;
+			} else {
+				super:restore(gen, init, member, baseReg);
+			}
+		}
+	}
 }
 
 // Expression for creating an effect.
