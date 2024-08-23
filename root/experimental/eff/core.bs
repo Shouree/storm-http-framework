@@ -270,6 +270,8 @@ package class ResumeHandler {
 				c.callHandler(this);
 				return;
 			}
+
+			current = c.prev;
 		}
 
 		throw InternalError("The requested handler does not seem to be active.");
