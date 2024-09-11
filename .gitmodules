@@ -1,24 +1,25 @@
 [submodule "mps"]
 	path = mps
-	url = ../mps.git
+    url = git://storm-lang.org/mps.git
 [submodule "SoundLib/vorbis"]
 	path = SoundLib/vorbis
-	url = ../sound/vorbis.git
+    url = git://storm-lang.org/sound/vorbis.git
 [submodule "SoundLib/ogg"]
 	path = SoundLib/ogg
-	url = ../sound/ogg.git
+    url = git://storm-lang.org/sound/ogg.git
 [submodule "SoundLib/flac"]
 	path = SoundLib/flac
-	url = ../sound/flac.git
+    url = git://storm-lang.org/sound/flac.git
 [submodule "SoundLib/mpg123"]
 	path = SoundLib/mpg123
-	url = ../sound/mpg123.git
+    url = git://storm-lang.org/sound/mpg123.git
 [submodule "Linux/backtrace"]
 	path = Linux/backtrace
-	url = ../linux/backtrace.git
+    url = git://storm-lang.org/linux/backtrace.git
 [submodule "Linux/cairo"]
 	path = Linux/cairo
-	url = ../linux/cairo.git
+    url = git://storm-lang.org/linux/cairo.git
 [submodule "Linux/skia"]
 	path = Linux/skia
-	url = ../linux/skia.git
+    url = git://storm-lang.org/linux/skia.git
+
