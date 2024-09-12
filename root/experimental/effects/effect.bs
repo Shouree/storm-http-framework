@@ -36,6 +36,8 @@ class EffectType extends Class {
 
 /**
  * Decl object for effect types.
+ *
+ * TODO: Effects should be managed as types, i.e. not through decls!
  */
 class EffectTypeDecl extends NamedDecl {
 	SrcPos pos;

@@ -1,0 +1,131 @@
+use core:lang;
+use lang:bs;
+
+/**
+ * Wrappers for "simple and unsafe effects". Simply expands to equivalent usage of the "regular"
+ * effect vocabulary.
+ *
+ * See "simple_fork.bs" in the examples for usage.
+ */
+
+
+/**
+ * Definition of a simple effect.
+ */
+class SimpleEffectDecl extends NamedDecl {
+	SrcPos pos;
+	Scope scope;
+	SStr name;
+	SrcName result;
+	NameParam[] params;
+
+	init(SrcPos pos, Scope scope, SStr name, SrcName result, NameParam[] params) {
+		init {
+			pos = pos;
+			scope = scope;
+			name = name;
+			result = result;
+			params = params;
+		}
+	}
+
+	protected Named doCreate() : override {
+		Scope fScope = fileScope(scope, pos);
+		SimpleEffect(
+			pos, fScope, name.v,
+			fScope.value(result),
+			params.resolve(fScope));
+	}
+}
+
+/**
+ * Definition of a simple effect. Essentially only a wrapper for a "real" effect.
+ */
+class SimpleEffect extends Function {
+	EffectType type;
+	EffectFun fun;
+
+	init(SrcPos pos, Scope scope, Str name, Value result, ValParam[] params) {
+		CustomBody body;
+		EffectType type(pos, scope, name, body);
+		EffectFun fun(pos, type, false, name, result, params);
+		body.toAdd = fun;
+
+		init(result, name, params.values) {
+			type = type;
+			fun = fun;
+		}
+
+		// TODO: Make *us* the unsafe wrapper!
+	}
+
+	private class CustomBody extends SEffectTypeBody {
+		Named? toAdd;
+
+		ClassBody transform(Class memberOf) : override {
+			ClassBody body(memberOf);
+			if (toAdd)
+				body.add(toAdd);
+			body;
+		}
+	}
+}
+
+
+/**
+ * Definition of a simple handler.
+ */
+class SimpleHandlerDecl extends NamedDecl {
+	SrcPos pos;
+	Scope scope;
+	SStr name;
+	SrcName? paramType;
+	SrcName function;
+	NameParam[] formals;
+
+	init(SrcPos pos, Scope scope, SStr name, SrcName? paramType, SrcName function, NameParam[] formals) {
+		init {
+			pos = pos;
+			scope = scope;
+			name = name;
+			paramType = paramType;
+			function = function;
+			formals = formals;
+		}
+	}
+
+	protected Named doCreate() : override {
+		Scope fScope = fileScope(scope, pos);
+
+		Value param = if (paramType) {
+			fScope.value(paramType);
+		} else {
+			Value();
+		};
+		ValParam[] formals = this.formals.resolve(fScope);
+
+		SrcName fnName(function);
+		fnName.last = SimplePart(fnName.last.name, formals.values());
+		unless (simpleEffect = scope.find(fnName) as SimpleEffect)
+			throw SyntaxError(pos, "The name ${fnName} does not refer to a simple effect!");
+
+		CustomBody body;
+
+		HandlerType handler(pos, fScope, name.v, param, param, simpleEffect.type, body);
+
+		// Insert clause.
+
+		return Nonmovable(null, handler);
+	}
+
+	private class CustomBody extends SHandlerBody {
+		Named? toAdd;
+
+		ClassBody transform(Class memberOf) : override {
+			ClassBody body(memberOf);
+			if (toAdd)
+				body.add(toAdd);
+			body;
+		}
+	}
+}
