@@ -16,10 +16,6 @@ class HandlerType extends Class {
 	// What type is expected from the body of the handler clause (i.e. input to the return clause)?
 	Value param;
 
-	// Effects handled here. We know that all effects in the "base" class are handled here.
-	// TODO: We could likely remove this.
-	private EffectHandlerClause[] handles;
-
 	// Return handler?
 	private HandlerClause? returnHandler;
 	HandlerClause? returnClause() { returnHandler; }
@@ -73,7 +69,6 @@ class HandlerType extends Class {
 						throw SyntaxError(toAdd.pos, "This effect has already been handled.");
 
 					handled.put(toAdd.effect);
-					handler.handles << toAdd;
 					handler.add(toAdd.handler);
 				} else {
 					if (handler.returnHandler.any)
@@ -264,7 +259,7 @@ EffectHandlerClause effectHandler(SrcPos pos, HandlerType handler, SStr effect, 
 	SimplePart effectSig(effect.v, resolvedParams.values());
 	effectSig.params.insert(0, thisPtr(handler.handledEffect));
 
-	unless (foundEffect = handler.handledEffect.find(effectSig, handler.scope) as EffectFun) {
+	unless (foundEffect = handler.handledEffect.find(effectSig, scope) as EffectFun) {
 		throw SyntaxError(effect.pos, "Unable to find an effect named ${effect.v} in ${handler.handledEffect.identifier}.");
 	}
 
