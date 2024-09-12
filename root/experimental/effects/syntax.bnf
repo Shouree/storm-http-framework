@@ -28,7 +28,6 @@ SEffect => effectFun(pos, memberOf, true, name, result, params)
   : "unsafe" #keyword ~ "effect" #keyword ~ SType result ~ SName name #fnName, "(", SFormals params, ")", ";";
 
 
-
 // Handler declaration:
 SPlainFileItem => HandlerDecl(env, name, params, effect, body)
   : "handler" #keyword ~ SName name #typeName, SHandlerParams params,
@@ -64,12 +63,26 @@ SHandlerClause => returnHandler(pos, handler, body)
 SBlock ClauseBody();
 ClauseBody => x : SBlock@ x;
 
+// Wrapper for "simple effects":
+SPlainFileItem => SimpleEffectDecl(pos, env, name, result, params)
+  : "unsafe" #keyword ~ "effect" #keyword ~ SType result ~ SName name #fnName, "(", SFormals params, ")", ";";
+
+SPlainFileItem => SimpleHandlerDecl(pos, env, name, paramType, effect, formals)
+  : "handler" #keyword ~ SName name #typeName, ("(", SType paramType, ")", )? -
+    "for" #keyword, ~ SType effect #fnName, "(", SFormals formals, ")",
+    ",", SName cont #varName, ClauseBody body;
+
 
 // Handle blocks for using effects:
-SExpr => HandleExpr(pos, block, name, create, body)
+Expr SHandleExpr(Block block);
+SHandleExpr => HandleExpr(pos, block, name, create, body)
   : "handle" #keyword, "(", SName name #varName, "=", SCreateHandler(block) create, ")", SExpr@ body;
-SExpr => HandleExpr(pos, block, create, body)
+SHandleExpr => HandleExpr(pos, block, create, body)
   : "handle" #keyword ~ SCreateHandler(block) create, SExpr@ body;
+
+// Make them usable both as exprs and as stmts.
+SExpr => e : SHandleExpr(block) e;
+SStmt => e : SHandleExpr(block) e;
 
 // Creating effects:
 CreateHandler SCreateHandler(Block block);
