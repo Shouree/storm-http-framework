@@ -6,7 +6,7 @@ required delimiter = SRequiredDelimiter;
 
 
 // Effect declaration:
-SPlainFileItem => EffectTypeDecl(env, name, body)
+SPlainFileItem => createEffectType(env, name, body)
   : "effect" #keyword ~ SName name #typeName, "{" [ - SEffectTypeBody@ body - ]+ "}";
 
 // Note: We aim for compatibility with SClassBody so we accept "Class" rather than "EffectType".
