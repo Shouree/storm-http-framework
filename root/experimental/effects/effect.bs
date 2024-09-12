@@ -33,31 +33,12 @@ class EffectType extends Class {
 	}
 }
 
-
-/**
- * Decl object for effect types.
- *
- * TODO: Effects should be managed as types, i.e. not through decls!
- */
-class EffectTypeDecl extends NamedDecl {
-	SrcPos pos;
-	Scope scope;
-	Str name;
-	SEffectTypeBody body;
-
-	init(Scope scope, SStr name, SEffectTypeBody body) {
-		init {
-			scope = scope;
-			name = name.v;
-			pos = name.pos;
-			body = body;
-		}
-	}
-
-	protected Named doCreate() : override {
-		EffectType t(pos, fileScope(scope, pos), name, body);
-		return Nonmovable(null, t);
-	}
+// Create effect types. Note: we don't need a Decl for this, we can just create it directly since we
+// want it to be created before someone might need it!
+Named createEffectType(Scope scope, SStr name, SEffectTypeBody body) {
+	SrcPos pos = name.pos;
+	EffectType t(pos, fileScope(scope, pos), name.v, body);
+	return Nonmovable(null, t);
 }
 
 
