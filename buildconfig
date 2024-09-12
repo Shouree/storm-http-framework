@@ -28,8 +28,7 @@
 #Main -a -f progvis.debugServer
 #Main -a -f progvis.testCpp
 #Main -a -f trees.main
-#Main -a -t experimental.effects.test
-Main -a -t experimental.eff.test
+Main -a -t experimental.effects.test
 #Main -a -t experimental.templates.test
 #Main -a -f tests.syntax.extension.main
 
