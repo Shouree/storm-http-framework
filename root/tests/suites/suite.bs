@@ -1,8 +1,8 @@
 use test;
 
 // Simple test suite for testing integration with the C++ test suite.
-suite Example {
-	test 10 < 20;
-	test 0w - 1w > 0w;
-	test 0 - 1 < 0;
+test Example {
+	check 10 < 20;
+	check 0w - 1w > 0w;
+	check 0 - 1 < 0;
 }

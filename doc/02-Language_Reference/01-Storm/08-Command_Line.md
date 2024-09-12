@@ -58,12 +58,12 @@ supported modes are as follows:
 
 - `-t <name>`
 
-  Run the test suite in the package referred to by `<name>` and exit. The test suite is expected to
+  Run all tests in the package referred to by `<name>` and exit. The tests are expected to
   be defined using the [test library](md:/Library_Reference/Unit_Tests).
 
 - `-T <name>`
 
-  Run the test suite in the package referred to by `<name>` and exit. In contrast to `-t`, this mode
+  Run the tests in the package referred to by `<name>` and exit. In contrast to `-t`, this mode
   recursively traverses all packages inside `<name>` and executes any tests found there as well.
 
 - `--version`

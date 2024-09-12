@@ -12,7 +12,7 @@ handler ForkHandler for Fork {
 	}
 }
 
-suite ForkTest {
+test ForkTest {
 	Counter before;
 	Counter after;
 
@@ -24,6 +24,6 @@ suite ForkTest {
 		after.count++;
 	};
 
-	test before.count == 1;
-	test after.count == 2;
+	check before.count == 1;
+	check after.count == 2;
 }

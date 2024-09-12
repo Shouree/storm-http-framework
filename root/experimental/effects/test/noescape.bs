@@ -29,7 +29,7 @@ void noEscapeFn(NoEscape eff) {
 	eff.eff(10);
 }
 
-suite NoEscapeTest {
+test NoEscapeTest {
 	// Should not work:
 	// NoEscapeHandler x(10);
 
@@ -49,5 +49,5 @@ suite NoEscapeTest {
 
 		a + b + c;
 	};
-	test result == 40;
+	check result == 40;
 }

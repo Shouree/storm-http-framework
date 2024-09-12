@@ -21,7 +21,7 @@ handler OuterHandler(Int) for NestedEff {
 	}
 }
 
-suite NestedTest1 {
+test NestedTest1 {
 	Counter innerTimes;
 	Counter outerTimes;
 
@@ -40,12 +40,12 @@ suite NestedTest1 {
 		intermediate + 10;
 	};
 
-	test result == 4152;
-	test innerTimes.count == 4;
-	test outerTimes.count == 2;
+	check result == 4152;
+	check innerTimes.count == 4;
+	check outerTimes.count == 2;
 }
 
-suite NestedTest2 {
+test NestedTest2 {
 	Counter innerTimes;
 	Counter outerTimes;
 
@@ -64,7 +64,7 @@ suite NestedTest2 {
 		intermediate + 10;
 	};
 
-	test result == 8304;
-	test innerTimes.count == 6; // !
-	test outerTimes.count == 4;
+	check result == 8304;
+	check innerTimes.count == 6; // !
+	check outerTimes.count == 4;
 }

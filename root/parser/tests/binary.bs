@@ -9,22 +9,22 @@ binaryParser : parser(recursive descent, binary) {
 	Start => Array<Buffer>() : "[^\n]*" -> push - ("\n" - "[^\n]*" -> push)*;
 }
 
-suite BinaryParser {
+test BinaryParser {
 	Buffer b = "ab\ncd\ne".toUtf8();
 
 	var result = binaryParser(b);
-	test result.value;
+	check result.value;
 	if (v = result.value) {
-		test v.count == 3.nat;
+		check v.count == 3.nat;
 	} else {
 		print("Error at ${result.end}, ${result.error}");
 	}
 
 	result = binaryParser(b, 2);
-	test result.value;
+	check result.value;
 	if (v = result.value) {
-		test v.count == 3.nat;
-		test v[0].filled == 0.nat;
+		check v.count == 3.nat;
+		check v[0].filled == 0.nat;
 	} else {
 		print("Error at ${result.end}, ${result.error}");
 	}
@@ -56,20 +56,20 @@ Nat toNat(Buffer b) {
 	b.fromUtf8.toNat;
 }
 
-suite PseudoRules {
+test PseudoRules {
 	Buffer b = "3abcde".toUtf8();
 	var r = pseudoParser(b);
-	test r.value;
-	test r.end == 4;
+	check r.value;
+	check r.end == 4;
 	if (x = r.value) {
-		test x.count == 3;
-		test x.fromUtf8 == "abc";
+		check x.count == 3;
+		check x.fromUtf8 == "abc";
 	}
 
 	var z = pseudoStr("3abcde");
-	test z.value;
+	check z.value;
 	if (x = z.value) {
-		test x == "abc";
+		check x == "abc";
 	}
 }
 
@@ -90,7 +90,7 @@ binNumParser : parser(recursive descent, binary) {
 	Start => BinData(a, b) : Nat16LE a - Int16BE b;
 }
 
-suite BinNumRules {
+test BinNumRules {
 	Buffer b = buffer(4);
 	b.push(0x01);
 	b.push(0x80);
@@ -98,9 +98,9 @@ suite BinNumRules {
 	b.push(0xFF);
 
 	var r = binNumParser(b);
-	test r.value;
+	check r.value;
 	if (x = r.value) {
-		test x.a == 0x8001_n;
-		test x.b == -1;
+		check x.a == 0x8001_n;
+		check x.b == -1;
 	}
 }

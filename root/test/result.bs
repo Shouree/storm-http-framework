@@ -4,10 +4,10 @@ use core:lang;
  * Results from running one or more tests.
  */
 class TestResult {
-	// Number of tests executed.
+	// Number of checks executed.
 	Nat total;
 
-	// Number of failed tests.
+	// Number of failed checks.
 	Nat failed;
 
 	// Number of crashed tests.
@@ -16,7 +16,7 @@ class TestResult {
 	// Did we abort the tests at some point?
 	Bool aborted;
 
-	// Number of passed tests.
+	// Number of passed checks.
 	Nat passed() {
 		total - failed - crashed;
 	}

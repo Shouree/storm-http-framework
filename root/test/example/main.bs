@@ -1,9 +1,9 @@
 use test;
 use lang:bs:macro;
 
-suite Demo on Compiler {
-	test "one" == "two";
-	test 1 + 3 == 5;
+test Demo on Compiler {
+	check "one" == "two";
+	check 1 + 3 == 5;
 	abort;
 }
 

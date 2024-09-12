@@ -56,10 +56,10 @@ Int fibonacci(Int n) {
 Some readers may already have noticed that the implementation above does indeed not work as we would
 expect. Let's create some tests to illustrate this!
 
-The unit test library is built around creating what is called test *suites*. Each suite is
-essentially a function that may contain `test` statements. A suite is defined using the `suite`
-keyword, followed by the name of a suite. To be able to use this syntax in Basic Storm, the `test`
-library must first be included. As such, we add the use statement to the top of our file:
+The unit test library is built around creating *tests*. Each test is essentially a function that may
+contain `check` statements. A test is defined using the `test` keyword, followed by a name for the
+test. To be able to use this syntax in Basic Storm, the `test` library must first be included. As
+such, we add the use statement to the top of our file:
 
 ```bs
 use test;
@@ -68,14 +68,14 @@ use test;
 And then we can define a suite towards the bottom of the file:
 
 ```bsfragment:SFile:use=test
-suite Fibonacci {
-    test fibonacci(1) == 1;
-    test fibonacci(2) == 1;
-    test fibonacci(3) == 2;
+test Fibonacci {
+    check fibonacci(1) == 1;
+    check fibonacci(2) == 1;
+    check fibonacci(3) == 2;
 }
 ```
 
-Now, we can run the test suite using `storm unit.bs -t unit` to see if our implementation works as
+Now, we can run the test using `storm unit.bs -t unit` to see if our implementation works as
 we expect. Sadly, this is not the case as Storm produces the following output:
 
 ```
@@ -86,7 +86,7 @@ Passed 1 of 3 tests
 Failed 2 tests!
 ```
 
-The output ends with a summary that states that only one of our three test statements succeeded, and
+The output ends with a summary that states that only one of our three check statements succeeded, and
 that 2 failed. Above, we see the lines `Failed:` that indicate which tests failed. These lines both
 start by reproducing the expression that was tested. Then it outputs a long arrow (`==>`), followed
 by a representation of what the left- and right-hand side of the operator evaluated to. In the case
@@ -131,14 +131,14 @@ for the case of `fibonacci`, so we accept `Int` as input to illustrate how to us
 test library.
 
 
-We can easy add a test for the case where `n` is zero as follows:
+We can easy add a check statement for the case where `n` is zero as follows:
 
 ```bsfragment:SFile:use=test
-suite Fibonacci {
-    test fibonacci(0) == 0;
-    test fibonacci(1) == 1;
-    test fibonacci(2) == 1;
-    test fibonacci(3) == 2;
+test Fibonacci {
+    check fibonacci(0) == 0;
+    check fibonacci(1) == 1;
+    check fibonacci(2) == 1;
+    check fibonacci(3) == 2;
 }
 ```
 
@@ -167,17 +167,17 @@ In the case where `n` is below zero, we expect `fibonacci` to throw the exceptio
 can test for this case using the keyword `throws` in a test statement as follows:
 
 ```bsfragment:SFile:use=test
-suite Fibonacci {
-    test fibonacci(0) == 0;
-    test fibonacci(1) == 1;
-    test fibonacci(2) == 1;
-    test fibonacci(3) == 2;
+test Fibonacci {
+    check fibonacci(0) == 0;
+    check fibonacci(1) == 1;
+    check fibonacci(2) == 1;
+    check fibonacci(3) == 2;
 
-    test fibonacci(-1) throws NotSupported;
+    check fibonacci(-1) throws NotSupported;
 }
 ```
 
-If we run the test suite currently, we will see that the new test fails with the following output:
+If we run the test currently, we will see that the new test fails with the following output:
 
 ```
 Running Fibonacci...
@@ -218,9 +218,9 @@ Running Tests Programmatically
 ------------------------------
 
 So far we have used the `-t` flag on the command line to run the tests. It is of course possible to
-interact with the test suites programmatically as well.
+interact with the tests programmatically as well.
 
-Each test suite is represented as a regular function in the name tree. As such, we can simply run
+Each test is represented as a regular function in the name tree. As such, we can simply run
 the function to run the tests inside of it:
 
 ```bs
@@ -274,26 +274,27 @@ Failed: 0
 Final Notes
 -----------
 
-It is worth noting that `test` statements can appear anywhere inside a test suite. This means that
-it is possible to use loops and if-statements to programmatically generate tests if desired. We
-could, for example, do the following to verify that `fibonacci` throws an exception for many
-negative numbers if we wished (the benefit is, however, debatable):
+It is worth noting that `check` statements can appear anywhere inside a test function. This means
+that it is possible to use loops and if-statements to programmatically determine which checks should
+be executed. We could, for example, do the following to verify that `fibonacci` throws an exception
+for many negative numbers if we wished to (the benefit is, however, debatable):
 
 ```bsfragment:SFile:use=test
-suite Negative {
+test Negative {
     for (Int i = -1; i > -10; i--) {
-        test fibonacci(i) throws NotSupported;
+        check fibonacci(i) throws NotSupported;
     }
 }
 ```
 
-In other cases, the code in a test suite might realize that the implementation is too broken to even
+In other cases, the code in a test might realize that the implementation is too broken to even
 execute tests. In situations like this, it is possible to use the `abort;` keyword to abort the test
-suite altogether.
+altogether.
 
-Finally, it is worth noting that it is not necessary to place the test suites in the same file as
-the code that is being tested. As with most things in Storm, the test suite can be placed anywhere
-that is convenient. As such, it is often beneficial to place tests in a sub-package named `tests`.
-This makes it so that Storm does not have to compile the tests whenever the tested code is used.
-Test cases can even be structured into a hierarcy of packages. In such cases, the `-t` flag has to
-be replaced by `-T` in order to instruct the system to traverse packages recursively.
+Finally, it is worth noting that it is not necessary to place the tests in the same file as the code
+that is being tested. As with most things in Storm, the test suite can be placed anywhere that is
+convenient. As such, it is often beneficial to place tests in a sub-package named `tests`. This
+makes it so that Storm does not have to compile the tests whenever the tested code is used. Test
+cases can even be structured into a hierarcy of packages, where each package represents a suite of
+tests. In such cases, the `-t` flag has to be replaced by `-T` in order to instruct the system to
+traverse packages recursively.
