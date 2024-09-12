@@ -70,7 +70,7 @@ handler PickAll(Array<Int> -> Array<Array<Int>>) for Backtrack {
 	}
 }
 
-suite BacktrackTest1 {
+test BacktrackTest1 {
 	var r = handle (x = PickOne) {
 		Int a = x.choose(1, 11);
 		Int b = x.choose(1, 11);
@@ -80,10 +80,10 @@ suite BacktrackTest1 {
 		[a, b, c];
 	};
 	// print("Result: ${r}");
-	test r.toS() == "[3, 4, 5]";
+	check r.toS() == "[3, 4, 5]";
 }
 
-suite BacktrackTest2 {
+test BacktrackTest2 {
 	var r = handle (x = PickAll) {
 		Int a = x.choose(1, 11);
 		Int b = x.choose(1, 11);
@@ -93,5 +93,5 @@ suite BacktrackTest2 {
 		[a, b, c];
 	};
 	// print("Result: ${r}");
-	test r.toS() == "[[3, 4, 5], [4, 3, 5], [6, 8, 10], [8, 6, 10]]";
+	check r.toS() == "[[3, 4, 5], [4, 3, 5], [6, 8, 10], [8, 6, 10]]";
 }

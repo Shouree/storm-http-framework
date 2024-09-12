@@ -9,7 +9,7 @@ handler SimpleFork for simpleFork(Nat t), k {
 }
 
 
-suite SimpleForkTest {
+test SimpleForkTest {
 	Counter before;
 	Counter after;
 
@@ -19,6 +19,6 @@ suite SimpleForkTest {
 		after.count++;
 	}
 
-	test before.count == 1;
-	test after.count == 3;
+	check before.count == 1;
+	check after.count == 3;
 }

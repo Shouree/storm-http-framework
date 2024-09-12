@@ -2,9 +2,10 @@ Unit Tests
 ==========
 
 The package `test` contains a library for unit tests, and a language extension for Basic Storm that
-allows easy creation of tests and test suites. According to the library, tests are individual assert
-statements, that are in turn organized into suites. The suites are simply functions that accept zero
-parameters and return a [stormname:test.TestResult]. Tests can be further organized into packages.
+allows easy creation of tests. Each test is essentially a function without parameters that may
+contain `check` statements. Each test is callable as a function that returns a
+[stormname:test.TestResult] that contains the result of the test-run. Tests that are located in the
+same package can be thought of as a test suite.
 
 As mentioned in the [language reference](md:/Language_Reference/Storm/Command_Line), it is possible
 to run test suites using the `-t` or `-T` parameter on the command line.
@@ -41,8 +42,9 @@ Language Extension
 ------------------
 
 As mentioned above, the package also contains a language extension for Basic Storm. It introduces
-the keyword `suite` for defining a test suite. Inside a test suite, the `test` keyword becomes
-available to test some behavior, and the `abort` statement to abort testing.
+the keyword `test` for defining a test. Inside a test, the `check` keyword becomes available to
+check some behavior (i.e. similar to `assert` in some libraries), and the `abort` statement to abort
+testing.
 
 Defining a test suite looks as follows:
 
@@ -50,15 +52,15 @@ Defining a test suite looks as follows:
 use test;
 
 // Create a test suite. Generates a function.
-suite MySuite {
+test MySuite {
     // Check for equality.
-    test f(1) == 3;
+    check f(1) == 3;
     // Check for inequality.
-    test f(2) < 8;
+    check f(2) < 8;
     // Test boolean expressions.
-    test true;
+    check true;
     // Test that a particular exception is thrown.
-    test f(3) throws InternalError;
+    check f(3) throws InternalError;
 }
 
 // Function to test, can be located elsewhere.

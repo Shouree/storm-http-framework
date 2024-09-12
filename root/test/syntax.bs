@@ -3,15 +3,15 @@ use lang:bs;
 use lang:bs:macro;
 
 /**
- * Test-suite declaration.
+ * Test declaration.
  */
-package class SuiteDecl extends NamedDecl {
+package class TestDecl extends NamedDecl {
 	SStr name;
 	Scope scope;
 	SFreeOptions options;
-	SSuiteBody body;
+	STestBody body;
 
-	init(Scope scope, SStr name, SFreeOptions options, SSuiteBody body) {
+	init(Scope scope, SStr name, SFreeOptions options, STestBody body) {
 		init() {
 			name = name;
 			scope = scope;
@@ -22,7 +22,7 @@ package class SuiteDecl extends NamedDecl {
 
 	// Create.
 	Named doCreate() {
-		SuiteFn fn(scope, name, body);
+		TestFn fn(scope, name, body);
 		options.transform(fileScope(scope, name.pos), fn);
 		fn;
 	}
@@ -30,7 +30,7 @@ package class SuiteDecl extends NamedDecl {
 	// Update.
 	Named? update(Scope scope) {
 		var found = scope.find(Name(name.v));
-		if (found as SuiteFn) {
+		if (found as TestFn) {
 			found.update(scope, body);
 		} else if (found.empty) {
 			var c = create();
@@ -43,13 +43,13 @@ package class SuiteDecl extends NamedDecl {
 }
 
 /**
- * Test-suite function.
+ * Test function.
  */
-package class SuiteFn extends BSRawFn {
+package class TestFn extends BSRawFn {
 	Scope scope;
-	SSuiteBody body;
+	STestBody body;
 
-	init(Scope scope, SStr name, SSuiteBody body) {
+	init(Scope scope, SStr name, STestBody body) {
 		init(Value(named{TestResult}), name, ValParam[], null) {
 			scope = scope;
 			body = body;
@@ -57,14 +57,14 @@ package class SuiteFn extends BSRawFn {
 	}
 
 	// Update ourselves.
-	void update(Scope scope, SSuiteBody body) {
+	void update(Scope scope, STestBody body) {
 		this.scope = scope;
 		this.body = body;
 		reset();
 	}
 
 	FnBody createBody() {
-		SuiteBody body(this, scope);
+		TestBody body(this, scope);
 
 		this.body.transform(body);
 
@@ -79,7 +79,7 @@ package class SuiteFn extends BSRawFn {
 /**
  * Custom body block that stores the result variable for easier access.
  */
-package class SuiteBody extends FnBody {
+package class TestBody extends FnBody {
 	init(BSRawFn owner, Scope scope) {
 		super(owner, scope);
 
@@ -99,14 +99,14 @@ package class SuiteBody extends FnBody {
 package LocalVar findResult(Block block) {
 	BlockLookup lookup = block.lookup;
 	do {
-		if (suite = lookup.block as SuiteBody) {
-			return suite.resultVar;
+		if (test = lookup.block as TestBody) {
+			return test.resultVar;
 		}
 
 		if (p = lookup.parent as BlockLookup) {
 			lookup = p;
 		} else {
-			throw SyntaxError(block.pos, "Must be used inside a test-suite!");
+			throw SyntaxError(block.pos, "Must be used inside a test function!");
 		}
 	}
 }
@@ -141,8 +141,8 @@ private CatchBlock createCatch(SrcPos pos, Block parent, LocalVarAccess result, 
 }
 
 
-// Expression for a single test.
-package Expr testExpr(SrcPos pos, Block block, ExprText lhs, OpInfo op, ExprText rhs) on Compiler {
+// Expression for a single check expression.
+package Expr checkExpr(SrcPos pos, Block block, ExprText lhs, OpInfo op, ExprText rhs) on Compiler {
 	LocalVar resultVar = findResult(block);
 	LocalVarAccess result(pos, resultVar);
 
@@ -216,7 +216,7 @@ package Str reverseName(Str original) {
 	return "!" + original;
 }
 
-package Expr testExpr(SrcPos pos, Block block, Condition cond, Str text) on Compiler {
+package Expr checkExpr(SrcPos pos, Block block, Condition cond, Str text) on Compiler {
 	LocalVar resultVar = findResult(block);
 	LocalVarAccess result(pos, resultVar);
 
@@ -236,7 +236,7 @@ package Expr testExpr(SrcPos pos, Block block, Condition cond, Str text) on Comp
 
 	// Generate a message. In some cases, we could be more specific (e.g. for downcasts).
 	text = text.trimWhitespace;
-	StrLiteral msg(pos, "Failed: ${text} ==> the test was false.");
+	StrLiteral msg(pos, "Failed: ${text} ==> the check was false.");
 	fail.add(FnCall(pos, fail.scope, named{print<Str>}, Actuals(msg)));
 
 	sub.addCatch(createCatch(pos, block, result, text));
@@ -244,7 +244,7 @@ package Expr testExpr(SrcPos pos, Block block, Condition cond, Str text) on Comp
 	sub;
 }
 
-package Expr testExpr(SrcPos pos, Block block, ExprText expr, SrcName exception) on Compiler {
+package Expr checkExpr(SrcPos pos, Block block, ExprText expr, SrcName exception) on Compiler {
 	LocalVar resultVar = findResult(block);
 	LocalVarAccess result(pos, resultVar);
 

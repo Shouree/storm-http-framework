@@ -45,7 +45,7 @@ JoinDB joinDB() {
 	return c;
 }
 
-suite JoinInner {
+test JoinInner {
 	var db = joinDB();
 	{
 		var res = WITH db: SELECT textA.id, textA.value, textB.id, textB.value
@@ -56,7 +56,7 @@ suite JoinInner {
 			rows++;
 			// print(row.toS);
 		}
-		test rows == 3;
+		check rows == 3;
 	}
 
 	{
@@ -69,11 +69,11 @@ suite JoinInner {
 			rows++;
 			// print(row.toS);
 		}
-		test rows == 2;
+		check rows == 2;
 	}
 }
 
-suite JoinLeft {
+test JoinLeft {
 	var db = joinDB();
 	{
 		var res = WITH db: SELECT textA.id, textA.value, textB.id, textB.value
@@ -87,8 +87,8 @@ suite JoinLeft {
 				rightNull++;
 			// print(row.toS);
 		}
-		test rows == 4;
-		test rightNull == 1;
+		check rows == 4;
+		check rightNull == 1;
 	}
 
 	{
@@ -107,13 +107,13 @@ suite JoinLeft {
 				cNull++;
 			// print(row.toS);
 		}
-		test rows == 4;
-		test bNull == 1;
-		test cNull == 2;
+		check rows == 4;
+		check bNull == 1;
+		check cNull == 2;
 	}
 }
 
-suite JoinRight {
+test JoinRight {
 	var db = joinDB();
 	{
 		var res = WITH db: SELECT textA.id, textA.value, textB.id, textB.value
@@ -127,8 +127,8 @@ suite JoinRight {
 				leftNull++;
 			// print(row.toS);
 		}
-		test rows == 4;
-		test leftNull == 1;
+		check rows == 4;
+		check leftNull == 1;
 	}
 
 	{
@@ -147,13 +147,13 @@ suite JoinRight {
 				bNull++;
 			// print(row.toS);
 		}
-		test rows == 4;
-		test aNull == 2;
-		test bNull == 1;
+		check rows == 4;
+		check aNull == 2;
+		check bNull == 1;
 	}
 }
 
-suite JoinFull {
+test JoinFull {
 	var db = joinDB();
 	{
 		var res = WITH db: SELECT textA.id, textA.value, textB.id, textB.value
@@ -170,9 +170,9 @@ suite JoinFull {
 				rightNull++;
 			// print(row.toS);
 		}
-		test rows == 5;
-		test leftNull == 1;
-		test rightNull == 1;
+		check rows == 5;
+		check leftNull == 1;
+		check rightNull == 1;
 	}
 
 	{
@@ -194,14 +194,14 @@ suite JoinFull {
 				cNull++;
 			// print(row.toS);
 		}
-		test rows == 6;
-		test aNull == 2;
-		test bNull == 2;
-		test cNull == 2;
+		check rows == 6;
+		check aNull == 2;
+		check bNull == 2;
+		check cNull == 2;
 	}
 }
 
-suite JoinMixed {
+test JoinMixed {
 	var db = joinDB();
 	{
 		var res = WITH db: SELECT textA.id, textA.value, textB.id, textB.value, textC.id, textC.value
@@ -220,9 +220,9 @@ suite JoinMixed {
 			// print(row.toS);
 		}
 
-		test rows == 4;
-		test aNull == 2;
-		test bNull == 2;
+		check rows == 4;
+		check aNull == 2;
+		check bNull == 2;
 	}
 
 	{
@@ -242,9 +242,9 @@ suite JoinMixed {
 			// print(row.toS);
 		}
 
-		test rows == 4;
-		test aNull == 1;
-		test cNull == 1;
+		check rows == 4;
+		check aNull == 1;
+		check cNull == 1;
 	}
 
 	{
@@ -264,8 +264,8 @@ suite JoinMixed {
 			// print(row.toS);
 		}
 
-		test rows == 4;
-		test aNull == 2;
-		test bNull == 1;
+		check rows == 4;
+		check aNull == 2;
+		check bNull == 1;
 	}
 }

@@ -2,7 +2,7 @@ use test;
 use sql;
 use core:io;
 
-suite Mixed {
+test Mixed {
 	SQLite db;
 
 	// To create tables.
@@ -17,19 +17,19 @@ suite Mixed {
 			names << row.getStr(1) << "|";
 		}
 
-		test names.toS == "test|test2|";
+		check names.toS == "test|test2|";
 	}
 }
 
-suite Exclusive {
+test Exclusive {
 	SQLite db;
 
 	WITH db: CREATE TABLE test(id INTEGER PRIMARY KEY, name TEXT);
 	WITH db: CREATE INDEX ON test(name);
 
-	test db.tables.count == 1;
+	check db.tables.count == 1;
 
 	WITH db: DROP TABLE test;
 
-	test db.tables.count == 0;
+	check db.tables.count == 0;
 }
