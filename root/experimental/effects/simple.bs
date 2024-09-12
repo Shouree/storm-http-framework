@@ -1,5 +1,7 @@
 use core:lang;
+use core:asm;
 use lang:bs;
+use lang:bs:macro;
 
 /**
  * Wrappers for "simple and unsafe effects". Simply expands to equivalent usage of the "regular"
@@ -47,7 +49,7 @@ class SimpleEffect extends Function {
 
 	init(SrcPos pos, Scope scope, Str name, Value result, ValParam[] params) {
 		CustomBody body;
-		EffectType type(pos, scope, name, body);
+		EffectType type(pos, scope, "type", body);
 		EffectFun fun(pos, type, false, name, result, params);
 		body.toAdd = fun;
 
@@ -56,7 +58,38 @@ class SimpleEffect extends Function {
 			fun = fun;
 		}
 
-		// TODO: Make *us* the unsafe wrapper!
+		type.parentLookup = this;
+
+		// Make us the wrapper for the effect function:
+		make(FnFlags:static);
+		setCode(LazyCode(&this.generate));
+	}
+
+	private CodeGen generate() {
+		CodeGen gen(this);
+		Listing l = gen.l;
+
+		var resultDesc = result.desc;
+
+		l << prolog();
+		l << fnParam(ptrDesc, type.typeRef);
+		l << fnCall(named{findEffectHandler<EffectType>}.ref, false, ptrDesc, ptrA);
+
+		l << fnParam(ptrDesc, ptrA);
+
+		// Forward parameters:
+		for (x in this.params) {
+			var desc = x.desc;
+			var v = l.createParam(desc);
+			l << fnParam(desc, v);
+		}
+
+		var resultVar = l.createVar(l.root, resultDesc);
+		l << fnCall(fun.ref, true, resultDesc, resultVar);
+
+		l << fnRet(resultVar);
+
+		gen;
 	}
 
 	private class CustomBody extends SEffectTypeBody {
@@ -82,8 +115,10 @@ class SimpleHandlerDecl extends NamedDecl {
 	SrcName? paramType;
 	SrcName function;
 	NameParam[] formals;
+	SStr contParam;
+	SBlock bodyBlock;
 
-	init(SrcPos pos, Scope scope, SStr name, SrcName? paramType, SrcName function, NameParam[] formals) {
+	init(SrcPos pos, Scope scope, SStr name, SrcName? paramType, SrcName function, NameParam[] formals, SStr contParam, SBlock bodyBlock) {
 		init {
 			pos = pos;
 			scope = scope;
@@ -91,6 +126,8 @@ class SimpleHandlerDecl extends NamedDecl {
 			paramType = paramType;
 			function = function;
 			formals = formals;
+			contParam = contParam;
+			bodyBlock = bodyBlock;
 		}
 	}
 
@@ -109,23 +146,31 @@ class SimpleHandlerDecl extends NamedDecl {
 		unless (simpleEffect = scope.find(fnName) as SimpleEffect)
 			throw SyntaxError(pos, "The name ${fnName} does not refer to a simple effect!");
 
-		CustomBody body;
-
+		CustomBody body(this);
 		HandlerType handler(pos, fScope, name.v, param, param, simpleEffect.type, body);
-
-		// Insert clause.
 
 		return Nonmovable(null, handler);
 	}
 
 	private class CustomBody extends SHandlerBody {
-		Named? toAdd;
+		SimpleHandlerDecl decl;
+
+		init(SimpleHandlerDecl decl) {
+			init { decl = decl; }
+		}
 
 		ClassBody transform(Class memberOf) : override {
-			ClassBody body(memberOf);
-			if (toAdd)
-				body.add(toAdd);
-			body;
+			unless (handler = memberOf as HandlerType)
+				throw InternalError("Expected a HandlerType!");
+
+			// Just add the handler straight away.
+			var effect = effectHandler(
+				decl.pos, handler, SStr(decl.function.last.name),
+				decl.formals, decl.contParam, decl.bodyBlock);
+			handler.add(effect.handler);
+
+			// And return an empty class body.
+			return ClassBody(memberOf);
 		}
 	}
 }

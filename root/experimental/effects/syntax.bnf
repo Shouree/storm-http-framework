@@ -67,7 +67,7 @@ ClauseBody => x : SBlock@ x;
 SPlainFileItem => SimpleEffectDecl(pos, env, name, result, params)
   : "unsafe" #keyword ~ "effect" #keyword ~ SType result ~ SName name #fnName, "(", SFormals params, ")", ";";
 
-SPlainFileItem => SimpleHandlerDecl(pos, env, name, paramType, effect, formals)
+SPlainFileItem => SimpleHandlerDecl(pos, env, name, paramType, effect, formals, cont, body)
   : "handler" #keyword ~ SName name #typeName, ("(", SType paramType, ")", )? -
     "for" #keyword, ~ SType effect #fnName, "(", SFormals formals, ")",
     ",", SName cont #varName, ClauseBody body;
