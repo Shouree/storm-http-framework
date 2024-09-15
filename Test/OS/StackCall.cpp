@@ -3,12 +3,21 @@
 
 static int *data;
 
+#ifdef GCC
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdangling-pointer"
+#endif
+
 int onStack(int val) {
 	int z = val;
 	// Note: We need to do an atomic write here, as this is technically undefined behavior.
 	atomicWrite(data, &z);
 	return z + 10;
 }
+
+#ifdef GCC
+#pragma GCC diagnostic pop
+#endif
 
 void stackThrow(int on) {
 	if (on > 0) {
