@@ -1,0 +1,39 @@
+use core:io;
+use http;
+
+/*This is a handler class and should contain no hot data*/
+class HTTP_Parser{
+  public:
+  init(){
+      init{}
+  }
+
+  /* FUNCTIONS FOR RECIEVING REQUESTS AND EXTRACTING DATA FROM REQUESTS*/
+  HTTP_Request parse_request(Buffer message){
+    /*
+      tmp = getLine(buf)
+      HTTP_Request ret;
+      parseFirstLine(ret, tmp)
+      while(tmp = getLine(buf)){
+          if(tmp == "\r\n")
+            break;
+          parseHeader(ret, tmp)
+        }
+    */
+  }
+
+  Buffer get_header(HTTP_Request message, HTTP_Header_Type header){}
+
+
+
+  /* FUNCTIONS FOR CREATING RESPONSES AND RESPONDING*/
+  Buffer parse_response(HTTP_Response response){}
+  
+  Bool set_header(HTTP_Response message, HTTP_Header_Type type, Str value){}
+
+ /* Str header_to_string(HTTP_General_Header_Type index){
+    static Array<Str> general_headers = ["cache-control", "connection", "date", "pragma", "trailer", "transfer-encoding", "upgrade", "via", "warning"];
+    return general_headers[index];
+  }*/
+}
+

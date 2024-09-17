@@ -1,0 +1,17 @@
+use core:io;
+use core:net;
+use http;
+
+class HTTP_Connection{
+
+}
+
+class HTTP_Server{
+  init(){
+      init{
+
+        }
+    }
+}
+
+

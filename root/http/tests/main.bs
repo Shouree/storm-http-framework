@@ -1,0 +1,18 @@
+use http;
+
+
+
+void main(){
+  print("Creating Server");
+  HTTP_Server server;
+  print("Creating Server");
+  HTTP_Parser parser;
+  print("Creating request");
+  HTTP_Request request;
+  print("Creating response");
+  HTTP_Response response;
+
+  response.status_code = HTTP_StatusCode:OK;
+
+  print("Namespace (tm)");
+}
