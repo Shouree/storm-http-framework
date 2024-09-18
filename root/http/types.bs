@@ -134,17 +134,18 @@ value HTTP_Headers{
 
 /*This is a data class and should contain no functions*/
 class HTTP_Request{
+public:
   HTTP_Method method;
   HTTP_Version version;
   Url path;
   Str->Str method_params;
-  HTTP_Headers headers;
+  Str->Str headers;
   Buffer data;
 }
 
 /*This is a data class and should contain no functions*/
 class HTTP_Response{
   HTTP_StatusCode status_code;
-  HTTP_Headers headers;
+  Str->Str headers;
   Buffer data;
 }

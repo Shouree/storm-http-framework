@@ -1,4 +1,6 @@
 use core:io;
+use core:io;
+use http;
 use http;
 
 /*This is a handler class and should contain no hot data*/
@@ -10,16 +12,51 @@ class HTTP_Parser{
 
   /* FUNCTIONS FOR RECIEVING REQUESTS AND EXTRACTING DATA FROM REQUESTS*/
   HTTP_Request parse_request(Buffer message){
-    /*
-      tmp = getLine(buf)
-      HTTP_Request ret;
-      parseFirstLine(ret, tmp)
-      while(tmp = getLine(buf)){
-          if(tmp == "\r\n")
-            break;
-          parseHeader(ret, tmp)
+    HTTP_Request req;
+    Str bufstr = message.fromUtf8();
+    Char space = " ".begin.v;
+    Str headersep = "\r\n";
+    Str:Iter current = bufstr.find(space);
+    Str methodstr = bufstr.cut(bufstr.begin(), current);
+
+    if (methodstr == "GET") {
+      req.method = HTTP_Method:GET;
+    }
+
+    Str:Iter next = bufstr.find(space, current + 1);
+    Str pathstr = bufstr.cut(current + 1, next);
+
+    req.path = parsePath(pathstr);
+
+    current = next;
+    next = bufstr.find(headersep, current + 1);
+    Str version = bufstr.cut(current + 1, next);
+
+    if (version == "HTTP/0.9") {
+        req.version = HTTP_Version:HTTP_0_9;
+    } else if (version == "HTTP/1.0") {
+        req.version = HTTP_Version:HTTP_1_0;
+    } else if (version == "HTTP/1.1") {
+        req.version = HTTP_Version:HTTP_1_1;
+    }
+
+    /* HEADERS */
+    Str header;
+    do {
+        current = next + 2;
+        next = bufstr.find(headersep, current);
+        header = bufstr.cut(current, next);
+        if (header.count > 1) {
+            Str:Iter colonsep = header.find(":".begin.v);
+            Str key = header.cut(header.begin(), colonsep);
+            Str val = header.cut(colonsep + 2);
+            if (key != "") {
+                req.headers.put(key, val);
+            }
         }
-    */
+    } while (next != bufstr.end());
+
+    return req;
   }
 
   Buffer get_header(HTTP_Request message, HTTP_Header_Type header){}
