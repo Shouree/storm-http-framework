@@ -4,12 +4,12 @@ use core:io;
 /* TODO(Christoffer): Use the testing framework */
 void main(){
   print("Creating Server");
-  HTTP_Server server;
+  //HTTP_Server server;
   print("Creating Server");
 
   HTTP_Parser parser;
   Buffer testbuf;
-  testbuf = "GET /resources/hello.htm HTTP/1.1\r\nUser-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\r\nHost: www.tutorialspoint.com\r\nAccept-Language: en-us\r\nAccept-Encoding: gzip, deflate\r\nConnection: Keep-Alive\r\n\r\n".toUtf8();
+  testbuf = "GET /resources/hello.htm?banana=true&feet=big HTTP/1.1\r\nUser-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\r\nHost: www.tutorialspoint.com\r\nAccept-Language: en-us\r\nAccept-Encoding: gzip, deflate\r\nConnection: Keep-Alive\r\n\r\n".toUtf8();
 
   HTTP_Request req = parser.parse_request(testbuf);
   if (req.method != HTTP_Method:GET) {

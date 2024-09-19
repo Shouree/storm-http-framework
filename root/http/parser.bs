@@ -10,6 +10,38 @@ class HTTP_Parser{
       init{}
   }
 
+  private void methodResolver(HTTP_Request req, Str methodstr)
+  {
+    if (methodstr == "GET") {
+      req.method = HTTP_Method:GET;
+    } 
+    else if (methodstr == "POST") {
+      req.method = HTTP_Method:POST;
+    } 
+    else if (methodstr == "PUT") {
+      req.method = HTTP_Method:PUT;
+    } 
+    else if (methodstr == "DELETE") {
+      req.method = HTTP_Method:DELETE;
+    } 
+    else if (methodstr == "OPTIONS") {
+      req.method = HTTP_Method:OPTIONS;
+    } 
+    else if (methodstr == "HEAD") {
+      req.method = HTTP_Method:HEAD;
+    } 
+    else if (methodstr == "TRACE") {
+      req.method = HTTP_Method:TRACE;
+    } 
+    else if (methodstr == "CONNECT") {
+      req.method = HTTP_Method:CONNECT;
+    } 
+    else {
+      //Handle invalid HTTP method
+      print("invalid method: ${methodstr}");            //TODO(Throw error)
+    }
+  }
+
   /* FUNCTIONS FOR RECIEVING REQUESTS AND EXTRACTING DATA FROM REQUESTS*/
   HTTP_Request parse_request(Buffer message){
     HTTP_Request req;
@@ -19,14 +51,36 @@ class HTTP_Parser{
     Str:Iter current = bufstr.find(space);
     Str methodstr = bufstr.cut(bufstr.begin(), current);
 
-    if (methodstr == "GET") {
-      req.method = HTTP_Method:GET;
-    }
+    // if (methodstr == "GET") {
+    //   req.method = HTTP_Method:GET;
+    // }
+
+    methodResolver(req, methodstr);
 
     Str:Iter next = bufstr.find(space, current + 1);
     Str pathstr = bufstr.cut(current + 1, next);
+    //================Extract query strings==============
+    //Str:Iter queryIter = pathstr.find("?");                   //reusing "current" Iterator
+    current = pathstr.find("?");
+    req.path = parsePath(pathstr.cut(pathstr.begin(), current));
+    print(req.path.toS());
+    pathstr = pathstr.cut(current + 1, pathstr.end());
 
-    req.path = parsePath(pathstr);
+    while(!pathstr.empty())                                     //Only enters if query strings present, empty otherwise
+    {
+      Str key;
+      Str value;
+      current = pathstr.find("=");
+      key = pathstr.cut(pathstr.begin(), current);
+      current = pathstr.find("&");
+      value = pathstr.cut(pathstr.begin()+key.count()+1, current);
+      pathstr = pathstr.cut(current+1,pathstr.end());
+      if(!value.empty())
+        req.method_params.put(key, value);
+      //print("not in here ${key}  -> ${value}");
+
+    }
+
 
     current = next;
     next = bufstr.find(headersep, current + 1);
