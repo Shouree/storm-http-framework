@@ -2,16 +2,104 @@ use core:io;
 use core:net;
 use http;
 
+private Byte to_lower(Byte b){
+  if(b >90){
+      return b;
+    }
+  if(b<65){
+    return b;
+  }
+  return b+32;
+}
+private 
 class HTTP_Connection{
-
+  Nat port; //id
+  Listener socket;
+  init(Nat init_port, Listener init_sock){
+      init{
+          port = init_port;
+          socket = init_sock;
+        }
+    }
 }
 
 class HTTP_Server{
-  init(){
-      init{
+  HTTP_Connection connection;
+  init(Nat port, Listener socket){
+    init{
+      connection = HTTP_Connection(port, socket);
+    }
+  }
+
+  HTTP_Request recieve(){
+    print("Waiting to recieve...");
+    Bool complete_message = false;
+    Int content_length = -1;
+    HTTP_Request request;
+    HTTP_Parser parser;
+    Buffer head_body_separation(toUtf8("\r\n\r\n"));
+    while(true){
+      Buffer rbuf = buffer(4096);
+      NetStream? ns = connection.socket.accept();
+      if(ns){//ns != null
+        NetIStream is = ns.input();
+        while(is.more()){
+          if(rbuf.free() == 0 ){
+            //TODO decide maximum size of rbuf
+            rbuf = grow(rbuf, rbuf.count() + 4069);
+          }
+          print("Reading the stream...");
+          Nat old_filled = rbuf.filled();
+          rbuf = is.read(rbuf);
+          if(rbuf.filled() == old_filled){
+              break; //recieved 0 bytes
+            }
+          request = parser.parse_request(rbuf);
+          Str len_str;
+          if(len_str = request.headers.get("content-length")){
+            content_length = len_str.toInt();
+          }
+          //recieve (header + content-length) bytes
+          if(content_length != -1){
+              //find body/header separation 
+              for(Nat i = 0; i< rbuf.filled(); i++){
+                for(Nat j=0; j<4; j++){
+                  if(rbuf[i+j] != head_body_separation[j]){
+                    break;
+                  }
+                }
+                print("found [rnrn] at: ${i.toS()}");
+              }
+            }
 
         }
+        print("Returning to main");
+        //TODO Check if we have a complete message (data = content-length)
+        //Call Parser function
+        //Check if HTTP_Request require immediate response (?)
+        //return request 
+        return request;
+      }
+      else{
+        print("Error! Netstream accept.");
+      }
     }
+    //This should never happen
+    print("Error! No proper request returned.");
+    return request;
+  }
+  
+  Bool send(HTTP_Response msg){
+    //call parser-function
+    //send buffer
+    //if connection: close ---> close the socket.
+    //return
+  }
+  Bool send(Buffer msg){
+    
+    //return
+  }
+
 }
 
 
