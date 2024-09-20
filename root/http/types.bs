@@ -67,7 +67,8 @@ enum HTTP_Method{
   PUT,
   DELETE,
   TRACE,
-  CONNECT
+  CONNECT,
+  BAD_METHOD
 }
 enum HTTP_Header_Type{
   //General header RFC2616(4.5)
@@ -98,7 +99,7 @@ enum HTTP_Header_Type{
   Max_Forwards,
   Proxy_Authorization,
   Range,
-  Referer,
+  Referrer,
   TE,
   User_Agent,
 
@@ -139,13 +140,13 @@ public:
   HTTP_Version version;
   Url path;
   Str->Str method_params;
-  Str->Str headers;
+  HTTP_Headers headers;
   Buffer data;
 }
 
 /*This is a data class and should contain no functions*/
 class HTTP_Response{
   HTTP_StatusCode status_code;
-  Str->Str headers;
+  HTTP_Headers headers;
   Buffer data;
 }

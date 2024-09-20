@@ -13,12 +13,33 @@ void main(){
 
   HTTP_Request req = parser.parse_request(testbuf);
   if (req.method != HTTP_Method:GET) {
-    print("TEST FAILED");
+    print("TEST FAILED method");
   }
   if (req.path != parsePath("/resources/hello.htm")) {
-    print("TEST FAILED");
+    print("TEST FAILED path");
   }
   if (req.version != HTTP_Version:HTTP_1_1) {
+    print("TEST FAILED version");
+  }
+  if (req.method_params["banana"] != "true") {
+    print("TEST FAILED method_params banana");
+  }
+  if (req.method_params["feet"] != "big") {
+    print("TEST FAILED method_params feet");
+  }
+  if (req.headers.types[0] != HTTP_Header_Type:User_Agent) {
+    print("TEST FAILED header type User-Agent");
+  }
+  if (req.headers.types[1] != HTTP_Header_Type:Host) {
+    print("TEST FAILED header type Host");
+  }
+  if (req.headers.types[2] != HTTP_Header_Type:Accept_Language) {
+    print("TEST FAILED");
+  }
+  if (req.headers.types[3] != HTTP_Header_Type:Accept_Encoding) {
+    print("TEST FAILED");
+  }
+  if (req.headers.types[4] != HTTP_Header_Type:Connection) {
     print("TEST FAILED");
   }
 

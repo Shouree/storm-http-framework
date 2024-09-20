@@ -10,35 +10,185 @@ class HTTP_Parser{
       init{}
   }
 
-  private void methodResolver(HTTP_Request req, Str methodstr)
-  {
+  private HTTP_Method stringToMethod(Str methodstr) {
     if (methodstr == "GET") {
-      req.method = HTTP_Method:GET;
+      return HTTP_Method:GET;
     } 
     else if (methodstr == "POST") {
-      req.method = HTTP_Method:POST;
+      return HTTP_Method:POST;
     } 
     else if (methodstr == "PUT") {
-      req.method = HTTP_Method:PUT;
+      return HTTP_Method:PUT;
     } 
     else if (methodstr == "DELETE") {
-      req.method = HTTP_Method:DELETE;
+      return HTTP_Method:DELETE;
     } 
     else if (methodstr == "OPTIONS") {
-      req.method = HTTP_Method:OPTIONS;
+      return HTTP_Method:OPTIONS;
     } 
     else if (methodstr == "HEAD") {
-      req.method = HTTP_Method:HEAD;
+      return HTTP_Method:HEAD;
     } 
     else if (methodstr == "TRACE") {
-      req.method = HTTP_Method:TRACE;
+      return HTTP_Method:TRACE;
     } 
     else if (methodstr == "CONNECT") {
-      req.method = HTTP_Method:CONNECT;
+      return HTTP_Method:CONNECT;
     } 
     else {
       //Handle invalid HTTP method
       print("invalid method: ${methodstr}");            //TODO(Throw error)
+      return HTTP_Method:BAD_METHOD;
+    }
+  }
+
+  private HTTP_Header_Type stringToHeaderType(Str headerkey) {
+    if (headerkey == "Cache_Control") {
+        return HTTP_Header_Type:Cache_Control;
+    }
+    else if(headerkey == "Connection") {
+        return HTTP_Header_Type:Connection;
+    }
+    else if(headerkey == "Date") {
+        return HTTP_Header_Type:Date;
+    }
+    else if(headerkey == "Pragma") {
+        return HTTP_Header_Type:Pragma;
+    }
+    else if(headerkey == "Trailer") {
+        return HTTP_Header_Type:Trailer;
+    }
+    else if(headerkey == "Transfer-Encoding") {
+        return HTTP_Header_Type:Transfer_Encoding;
+    }
+    else if(headerkey == "Upgrade") {
+        return HTTP_Header_Type:Upgrade;
+    }
+    else if(headerkey == "Via") {
+        return HTTP_Header_Type:Via;
+    }
+    else if(headerkey == "Warning") {
+        return HTTP_Header_Type:Warning;
+    }
+
+    else if(headerkey == "Accept") {
+        return HTTP_Header_Type:Accept;
+    }
+    else if(headerkey == "Accept-Charset") {
+        return HTTP_Header_Type:Accept_Charset;
+    }
+    else if(headerkey == "Accept-Encoding") {
+        return HTTP_Header_Type:Accept_Encoding;
+    }
+    else if(headerkey == "Accept-Language") {
+        return HTTP_Header_Type:Accept_Language;
+    }
+    else if(headerkey == "Authorization") {
+        return HTTP_Header_Type:Authorization;
+    }
+    else if(headerkey == "Expect") {
+        return HTTP_Header_Type:Expect;
+    }
+    else if(headerkey == "From") {
+        return HTTP_Header_Type:From;
+    }
+    else if(headerkey == "Host") {
+        return HTTP_Header_Type:Host;
+    }
+    else if(headerkey == "If-Match") {
+        return HTTP_Header_Type:If_Match;
+    }
+    else if(headerkey == "If-Modified-Since") {
+        return HTTP_Header_Type:If_Modified_Since;
+    }
+    else if(headerkey == "If-None-Match") {
+        return HTTP_Header_Type:If_None_Match;
+    }
+    else if(headerkey == "If-Range") {
+        return HTTP_Header_Type:If_Range;
+    }
+    else if(headerkey == "If-Unmodified-Since") {
+        return HTTP_Header_Type:If_Unmodified_Since;
+    }
+    else if(headerkey == "Max-Forwards") {
+        return HTTP_Header_Type:Max_Forwards;
+    }
+    else if(headerkey == "Proxy-Authorization") {
+        return HTTP_Header_Type:Proxy_Authorization;
+    }
+    else if(headerkey == "Range") {
+        return HTTP_Header_Type:Range;
+    }
+    else if(headerkey == "Referrer") {
+        return HTTP_Header_Type:Referrer;
+    }
+    else if(headerkey == "TE") {
+        return HTTP_Header_Type:TE;
+    }
+    else if(headerkey == "User-Agent") {
+        return HTTP_Header_Type:User_Agent;
+    }
+
+    else if(headerkey == "Accept-Ranges") {
+        return HTTP_Header_Type:Accept_Ranges;
+    }
+    else if(headerkey == "Age") {
+        return HTTP_Header_Type:Age;
+    }
+    else if(headerkey == "ETag") {
+        return HTTP_Header_Type:ETag;
+    }
+    else if(headerkey == "Location") {
+        return HTTP_Header_Type:Location;
+    }
+    else if(headerkey == "Proxy-Authenticate") {
+        return HTTP_Header_Type:Proxy_Authenticate;
+    }
+    else if(headerkey == "Retry-After") {
+        return HTTP_Header_Type:Retry_After;
+    }
+    else if(headerkey == "Server") {
+        return HTTP_Header_Type:Server;
+    }
+    else if(headerkey == "Vary") {
+        return HTTP_Header_Type:Vary;
+    }
+    else if(headerkey == "WWW-Authenticate") {
+        return HTTP_Header_Type:WWW_Authenticate;
+    }
+
+    else if(headerkey == "Allow") {
+        return HTTP_Header_Type:Allow;
+    }
+    else if(headerkey == "Content-Encoding") {
+        return HTTP_Header_Type:Content_Encoding;
+    }
+    else if(headerkey == "Content-Language") {
+        return HTTP_Header_Type:Content_Language;
+    }
+    else if(headerkey == "Content-Length") {
+        return HTTP_Header_Type:Content_Length;
+    }
+    else if(headerkey == "Content-Location") {
+        return HTTP_Header_Type:Content_Location;
+    }
+    else if(headerkey == "Content-MD5") {
+        return HTTP_Header_Type:Content_MD5;
+    }
+    else if(headerkey == "Content-Range") {
+        return HTTP_Header_Type:Content_Range;
+    }
+    else if(headerkey == "Content-Type") {
+        return HTTP_Header_Type:Content_Type;
+    }
+    else if(headerkey == "Expires") {
+        return HTTP_Header_Type:Expires;
+    }
+    else if(headerkey == "Last-Modified") {
+        return HTTP_Header_Type:Last_Modified;
+    }
+    else {
+        return HTTP_Header_Type:Extension_Header;
     }
   }
 
@@ -55,7 +205,7 @@ class HTTP_Parser{
     //   req.method = HTTP_Method:GET;
     // }
 
-    methodResolver(req, methodstr);
+    req.method = stringToMethod(methodstr);
 
     Str:Iter next = bufstr.find(space, current + 1);
     Str pathstr = bufstr.cut(current + 1, next);
@@ -95,6 +245,7 @@ class HTTP_Parser{
     }
 
     /* HEADERS */
+    HTTP_Headers headers;
     Str header;
     do {
         current = next + 2;
@@ -102,20 +253,21 @@ class HTTP_Parser{
         header = bufstr.cut(current, next);
         if (header.count > 1) {
             Str:Iter colonsep = header.find(":".begin.v);
-            Str key = header.cut(header.begin(), colonsep);
+            Str keystr = header.cut(header.begin(), colonsep);
             Str val = header.cut(colonsep + 2);
-            if (key != "") {
-                req.headers.put(key, val);
+            if (keystr != "") {
+                HTTP_Header_Type key = stringToHeaderType(keystr);
+                headers.types.push(key);
+                headers.contents.push(val.toUtf8());
             }
         }
     } while (next != bufstr.end());
+    req.headers = headers;
 
     return req;
   }
 
   Buffer get_header(HTTP_Request message, HTTP_Header_Type header){}
-
-
 
   /* FUNCTIONS FOR CREATING RESPONSES AND RESPONDING*/
   Buffer parse_response(HTTP_Response response){}
