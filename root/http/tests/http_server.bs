@@ -1,0 +1,31 @@
+use core:net;
+use core:io;
+use http;
+
+void main(){
+  //Listener? socket = listen(1234, true);
+  //unless(socket){
+   // print("Error! Cannot bind socket.");
+   // return;
+  //}
+  HTTP_Server server(1234);
+
+
+  while(true){
+    HTTP_Request req = server.recieve();
+    //Read requests here...
+    print("\n\nRecieved the following request:");
+    print("Method: ${req.method}");
+    print("HTTP Version: ${req.version}");
+    print("Path: ${req.path.toS()}");
+    print("\nMethod parameters:");
+    for(k, v in req.method_params){
+      print("${k} : ${v}");
+    }
+    for(Nat i=0; i< req.headers.types.count(); i++){
+      print("${req.headers.types[i]}: ${fromUtf8(req.headers.contents[i])}");
+    }
+    HTTP_Response res;
+    server.send(res);
+  }
+}

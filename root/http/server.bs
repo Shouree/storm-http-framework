@@ -14,34 +14,44 @@ private Byte to_lower(Byte b){
 private 
 class HTTP_Connection{
   Nat port; //id
-  Listener socket;
-  init(Nat init_port, Listener init_sock){
+  Array<Listener> socket;
+  Array<NetStream> ns;
+  init(Nat init_port){
       init{
-          port = init_port;
-          socket = init_sock;
-        }
+        port = init_port;
+      }
     }
 }
 
 class HTTP_Server{
   HTTP_Connection connection;
-  init(Nat port, Listener socket){
+  init(Nat port){
     init{
-      connection = HTTP_Connection(port, socket);
+      connection = HTTP_Connection(port);
     }
   }
 
   HTTP_Request recieve(){
     print("Waiting to recieve...");
     Bool complete_message = false;
-    Int content_length = -1;
+    Nat content_length = 0;
     HTTP_Request request;
     HTTP_Parser parser;
     Buffer head_body_separation(toUtf8("\r\n\r\n"));
+    Listener? socket = listen(connection.port, true);
+    if(connection.socket.empty()){
+      unless(socket){
+        print("Error! Cannot bind socket.");
+        return request;
+      }
+      connection.socket.push(socket);
+    }
+
     while(true){
       Buffer rbuf = buffer(4096);
-      NetStream? ns = connection.socket.accept();
+      NetStream? ns = connection.socket[0].accept();
       if(ns){//ns != null
+        connection.ns.push(ns);
         NetIStream is = ns.input();
         while(is.more()){
           if(rbuf.free() == 0 ){
@@ -53,37 +63,62 @@ class HTTP_Server{
           rbuf = is.read(rbuf);
           if(rbuf.filled() == old_filled){
               break; //recieved 0 bytes
-            }
-          request = parser.parse_request(rbuf);
-          Str len_str;
-          if(len_str = request.headers.get("content-length")){
-            content_length = len_str.toInt();
           }
-          //recieve (header + content-length) bytes
-          if(content_length != -1){
-              //find body/header separation 
-              for(Nat i = 0; i< rbuf.filled(); i++){
-                for(Nat j=0; j<4; j++){
-                  if(rbuf[i+j] != head_body_separation[j]){
-                    break;
-                  }
-                }
-                print("found [rnrn] at: ${i.toS()}");
+          //find body/header separation 
+          Nat sep_loc = 0;
+          for(Nat i = 0; i< rbuf.filled(); i++){
+            for(Nat j=0; j<4; j++){
+              if(rbuf[i+j] != head_body_separation[j]){
+                sep_loc = i;
+                break;
               }
             }
+          }
+          
+          if(sep_loc != 0){
+            Buffer header = cut(rbuf,0, sep_loc);
 
+            print("\n\nHeader is equal to: ${header.filled()}");
+            print(fromUtf8(header));
+
+            Buffer body = cut(rbuf, sep_loc+4, rbuf.filled());
+            request = parser.parse_request(header);
+            Str len_str;
+            for(Nat i=0; i< request.headers.types.count(); i++){
+              if(request.headers.types[i] == HTTP_Header_Type:Content_Length){
+                content_length = fromUtf8(request.headers.contents[i]).toNat();
+                break;
+              }
+            }
+            while(body.filled() < content_length){
+              if(rbuf.free() == 0 ){
+                //TODO decide maximum size of body
+                body = grow(body, body.count() + 4069);
+              }
+              old_filled = rbuf.filled();
+              body = is.read(body);
+              if(body.filled() == old_filled){
+                //TODO allow?
+                break; //recieved 0 bytes
+              }
+            }
+            // BODY COMPLETE
+            request.data = body;
+          }
+          break; //GOTO check valid message
         }
-        print("Returning to main");
-        //TODO Check if we have a complete message (data = content-length)
-        //Call Parser function
-        //Check if HTTP_Request require immediate response (?)
-        //return request 
-        return request;
+       
+        
+      print("Returning to main");
+      //TODO Check if we have a complete message (data = content-length)
+      //Check if HTTP_Request require immediate response (?)
+      return request;
       }
       else{
         print("Error! Netstream accept.");
+        return request;
       }
-    }
+    } 
     //This should never happen
     print("Error! No proper request returned.");
     return request;
@@ -94,6 +129,38 @@ class HTTP_Server{
     //send buffer
     //if connection: close ---> close the socket.
     //return
+    Buffer data = buffer(4096);
+    Str message = "HTTP/1.1 200 OK\r\n";
+    message += "Date: Sat, 21 Sep 2024 14:35:02 GMT\r\n";
+    message += "Server: Apache/2.4.62 (Debian)\r\n";
+    message += "Last-Modified: Sun, 16 Jun 2024 20:00:18 GMT\r\n";
+    message += "ETag: \"7242-61b074c3c3880\"\r\n";
+    message += "Accept-Ranges: bytes\r\n";
+    message += "Content-Length: 132\r\n";
+    message += "Vary: Accept-Encoding\r\n";
+    message += "Connection: close\r\n";
+    message += "Content-Type: text/html; charset=utf-8\r\n";
+    message += "\r\n\r\n";
+    data = toUtf8(message);
+
+    Url index_page = cwdUrl;
+    index_page = index_page / "index.html";
+    IStream data_stream = index_page.read();
+
+    NetOStream os = connection.ns[0].output();
+    os.write(data);
+    while(data_stream.more()){
+      os.write(data_stream.read(1024));
+    }
+    os.flush();
+
+
+    //remove netstream close socket 
+    connection.socket[0].close();
+    connection.ns.pop();
+    connection.socket.pop();
+    return true;
+
   }
   Bool send(Buffer msg){
     
