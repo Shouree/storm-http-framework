@@ -86,7 +86,7 @@ class HTTP_Server{
             Str len_str;
             for(Nat i=0; i< request.headers.types.count(); i++){
               if(request.headers.types[i] == HTTP_Header_Type:Content_Length){
-                content_length = fromUtf8(request.headers.contents[i]).toNat();
+                content_length = request.headers.contents[i].toNat();
                 break;
               }
             }

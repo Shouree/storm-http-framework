@@ -130,7 +130,7 @@ enum HTTP_Header_Type{
 
 value HTTP_Headers{
   Array<HTTP_Header_Type> types;
-  Array<Buffer> contents;
+  Array<Str> contents;
 }
 
 /*This is a data class and should contain no functions*/
@@ -146,6 +146,7 @@ public:
 
 /*This is a data class and should contain no functions*/
 class HTTP_Response{
+  HTTP_Version version;
   HTTP_StatusCode status_code;
   HTTP_Headers headers;
   Buffer data;

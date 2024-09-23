@@ -27,6 +27,21 @@ class HTTP_Parser{
     return fromUtf8(string);
   }
 
+
+  private Str underScoreToHyphen(Str b)
+  {
+    Str:Iter Iterator = b.find("_");
+    Str temp = b.cut(b.begin(), Iterator);
+    while(!temp.empty())
+    {
+        Iterator.v = "-";
+        Iterator = b.find("_");
+        temp = b.cut(b.begin(), Iterator);
+
+    }
+    return b;
+  }
+
   private HTTP_Method stringToMethod(Str methodstr) {
     if (methodstr == "GET") {
       return HTTP_Method:GET;
@@ -275,7 +290,7 @@ class HTTP_Parser{
             if (keystr != "") {
                 HTTP_Header_Type key = stringToHeaderType(keystr);
                 headers.types.push(key);
-                headers.contents.push(val.toUtf8());
+                headers.contents.push(val);
             }
         }
     } while (next != bufstr.end());
@@ -287,7 +302,37 @@ class HTTP_Parser{
   Buffer get_header(HTTP_Request message, HTTP_Header_Type header){}
 
   /* FUNCTIONS FOR CREATING RESPONSES AND RESPONDING*/
-  Buffer parse_response(HTTP_Response response){}
+  Buffer parse_response(HTTP_Response response){
+    Buffer responseBuf;
+    Str responseStr = "";
+    if(response.HTTP_Version == HTTP_0_9)
+    {
+        responseStr += "HTTP/0.9 ";
+    }
+    else if(response.HTTP_Version == HTTP_1_0)
+    {
+        responseStr += "HTTP/1.0 ";
+    }
+    else
+    {
+        responseStr += "HTTP/1.1 ";
+    }
+
+    responseStr += response.status_code.v.toS() + " ";
+    //add fuction so "_" becomes "-"
+    responseStr += underScoreToHyphen(response.status_code.toS()) + " \r\n";
+
+    for(Nat i = 0; i < response.headers.types.count(); i++)
+    {
+        responseStr += response.headers.types[i] + ":";
+        responseStr += underScoreToHyphen(response.headers.contents[i]) + "\r\n";
+    }
+
+    return toUtf8(responseStr);
+
+
+
+  }
   
   Bool set_header(HTTP_Response message, HTTP_Header_Type type, Str value){}
 

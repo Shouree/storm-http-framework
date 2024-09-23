@@ -23,7 +23,7 @@ void main(){
       print("${k} : ${v}");
     }
     for(Nat i=0; i< req.headers.types.count(); i++){
-      print("${req.headers.types[i]}: ${fromUtf8(req.headers.contents[i])}");
+      print("${req.headers.types[i]}: ${req.headers.contents[i]}");
     }
     HTTP_Response res;
     server.send(res);
