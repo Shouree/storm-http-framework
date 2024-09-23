@@ -26,6 +26,20 @@ void main(){
       print("${req.headers.types[i]}: ${req.headers.contents[i]}");
     }
     HTTP_Response res;
+    res.version = HTTP_Version:HTTP_1_1;
+    res.status_code = HTTP_StatusCode:OK;
+    
+    res.headers.types.push(HTTP_Header_Type:Content_Length);
+    res.headers.contents.push("132");
+
+    res.headers.types.push(HTTP_Header_Type:Content_Type);
+    res.headers.contents.push("text/html; charset=utf-8");
+
+    res.headers.types.push(HTTP_Header_Type:Connection);
+    res.headers.contents.push("close");
+
+
+
     server.send(res);
   }
 }

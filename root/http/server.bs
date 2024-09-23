@@ -129,26 +129,20 @@ class HTTP_Server{
     //send buffer
     //if connection: close ---> close the socket.
     //return
-    Buffer data = buffer(4096);
-    Str message = "HTTP/1.1 200 OK\r\n";
-    message += "Date: Sat, 21 Sep 2024 14:35:02 GMT\r\n";
-    message += "Server: Apache/2.4.62 (Debian)\r\n";
-    message += "Last-Modified: Sun, 16 Jun 2024 20:00:18 GMT\r\n";
-    message += "ETag: \"7242-61b074c3c3880\"\r\n";
-    message += "Accept-Ranges: bytes\r\n";
-    message += "Content-Length: 132\r\n";
-    message += "Vary: Accept-Encoding\r\n";
-    message += "Connection: close\r\n";
-    message += "Content-Type: text/html; charset=utf-8\r\n";
-    message += "\r\n\r\n";
-    data = toUtf8(message);
+    HTTP_Parser parser;
+    Buffer header = parser.parse_response(msg);
+    print("HEADER IS:\n");
+    print(fromUtf8(header));
+    //message += "\r\n";
+    //data = toUtf8(message);
 
     Url index_page = cwdUrl;
     index_page = index_page / "index.html";
     IStream data_stream = index_page.read();
 
     NetOStream os = connection.ns[0].output();
-    os.write(data);
+    os.write(header);
+    os.write(toUtf8("\r\n\r\n"));
     while(data_stream.more()){
       os.write(data_stream.read(1024));
     }
