@@ -1,6 +1,4 @@
 use core:io;
-use core:io;
-use http;
 use http;
 
 /*This is a handler class and should contain no hot data*/
@@ -213,7 +211,6 @@ class HTTP_Parser{
     //Str:Iter queryIter = pathstr.find("?");                   //reusing "current" Iterator
     current = pathstr.find("?");
     req.path = parsePath(pathstr.cut(pathstr.begin(), current));
-    print(req.path.toS());
     pathstr = pathstr.cut(current + 1, pathstr.end());
 
     while(!pathstr.empty())                                     //Only enters if query strings present, empty otherwise

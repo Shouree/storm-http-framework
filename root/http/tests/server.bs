@@ -1,0 +1,39 @@
+use test;
+use http;
+use core:io;
+/*
+ * Körs mha `Storm -T http`
+ */
+
+suite Parser {
+  HTTP_Parser parser;
+  Buffer testbuf;
+  testbuf = "GET /resources/hello.htm?banana=true&feet=big HTTP/1.1\r\nUser-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\r\nHost: www.tutorialspoint.com\r\nAccept-Language: en-us\r\nAccept-Encoding: gzip, deflate\r\nConnection: Keep-Alive\r\n\r\n".toUtf8();
+
+  HTTP_Request req = parser.parse_request(testbuf);
+  test req.method == HTTP_Method:GET;
+  test req.path == parsePath("/resources/hello.htm");
+  test req.version == HTTP_Version:HTTP_1_1;
+  test req.method_params["banana"] == "true";
+  test req.method_params["feet"] == "big";
+  test req.headers.types[0] == HTTP_Header_Type:User_Agent;
+  test req.headers.types[1] == HTTP_Header_Type:Host;
+  test req.headers.types[2] == HTTP_Header_Type:Accept_Language;
+  test req.headers.types[3] == HTTP_Header_Type:Accept_Encoding;
+  test req.headers.types[4] == HTTP_Header_Type:Connection;
+}
+
+suite Webserver {
+  print("Creating Server");
+  // HTTP_Server server;
+  print("Creating Parser");
+  HTTP_Parser parser;
+  print("Creating request");
+  HTTP_Request request;
+  print("Creating response");
+  HTTP_Response response;
+
+  response.status_code = HTTP_StatusCode:OK;
+
+  print("Namespace (tm)");
+}
