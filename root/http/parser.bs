@@ -1,93 +1,52 @@
+use core:lang;
 use core:io;
-use http;
+use lang:bs:macro;
 
-/*This is a handler class and should contain no hot data*/
-class HTTP_Parser{
-  public:
-  init(){
-      init{}
-  }
-
-  private Str toLower(Str b){                                      //Helper function to make a string lowercase
-    Buffer string = b.toUtf8;
-    Nat i = 0;
-    while(i < b.count()){
+Str toLower(Str b) {                                      //Helper function to make a string lowercase
+  Buffer string = b.toUtf8;
+  Nat i = 0;
+  while(i < b.count()){
     if(string[i] > 90){
-        string[i] = string[i];
-      }
+      string[i] = string[i];
+    }
     else if(string[i] <65 ){
-        string[i] = string[i];
+      string[i] = string[i];
     }
     else
     {
-        string[i] = string[i]+32;
+      string[i] = string[i]+32;
     }
     i++;
-    }
-    return fromUtf8(string);
   }
-
+  return fromUtf8(string);
+}
 /*
  * Content_Length
  * Content-
  * Length 
  * */
-  private Str underScoreToHyphen(Str b)
-  {
-    Str:Iter Iterator = b.find("_");
-    Str temp = b.cut(b.begin(), Iterator);
-    Str tmp = "";
-    if(temp == b)
-      return b;
-    while(!temp.empty())
-    {
-        tmp += temp + "-";
-        temp = b.cut(Iterator+1, b.end());
-        Iterator = temp.find("_");
-        if(temp.cut(Iterator, temp.end()).empty()){
-          tmp += temp;
-          print("tmp= " + tmp + "\n");
-          return tmp;
-        }
-        //Str:Iter it = b.find("_");
-        temp = temp.cut(Iterator);
-
-    }
-
+Str underScoreToHyphen(Str b)
+{
+  Str:Iter Iterator = b.find("_");
+  Str temp = b.cut(b.begin(), Iterator);
+  Str tmp = "";
+  if(temp == b)
     return b;
-  }
-
-  private HTTP_Method stringToMethod(Str methodstr) {
-    if (methodstr == "GET") {
-      return HTTP_Method:GET;
-    } 
-    else if (methodstr == "POST") {
-      return HTTP_Method:POST;
-    } 
-    else if (methodstr == "PUT") {
-      return HTTP_Method:PUT;
-    } 
-    else if (methodstr == "DELETE") {
-      return HTTP_Method:DELETE;
-    } 
-    else if (methodstr == "OPTIONS") {
-      return HTTP_Method:OPTIONS;
-    } 
-    else if (methodstr == "HEAD") {
-      return HTTP_Method:HEAD;
-    } 
-    else if (methodstr == "TRACE") {
-      return HTTP_Method:TRACE;
-    } 
-    else if (methodstr == "CONNECT") {
-      return HTTP_Method:CONNECT;
-    } 
-    else {
-      //Handle invalid HTTP method
-      print("invalid method: ${methodstr}");            //TODO(Throw error)
-      return HTTP_Method:BAD_METHOD;
+  while(!temp.empty())
+  {
+    tmp += temp + "-";
+    temp = b.cut(Iterator+1, b.end());
+    Iterator = temp.find("_");
+    if(temp.cut(Iterator, temp.end()).empty()){
+      tmp += temp;
+      print("tmp= " + tmp + "\n");
+      return tmp;
     }
+    //Str:Iter it = b.find("_");
+    temp = temp.cut(Iterator);
   }
+  return b;
+}
 
   private HTTP_Header_Type stringToHeaderType(Str headerKey) {
     headerKey = toLower(headerKey);
@@ -241,119 +200,249 @@ class HTTP_Parser{
   }
 
   /* FUNCTIONS FOR RECIEVING REQUESTS AND EXTRACTING DATA FROM REQUESTS*/
-  HTTP_Request parse_request(Buffer message){
-    HTTP_Request req;
-    Str bufstr = message.fromUtf8();
-    Char space = " ".begin.v;
-    Str headersep = "\r\n";
-    Str:Iter current = bufstr.find(space);
-    Str methodstr = bufstr.cut(bufstr.begin(), current);
-
-    // if (methodstr == "GET") {
-    //   req.method = HTTP_Method:GET;
-    // }
-
-    req.method = stringToMethod(methodstr);
-
-    Str:Iter next = bufstr.find(space, current + 1);
-    Str pathstr = bufstr.cut(current + 1, next);
-    //================Extract query strings==============
-    //Str:Iter queryIter = pathstr.find("?");                   //reusing "current" Iterator
-    current = pathstr.find("?");
-    req.path = parsePath(pathstr.cut(pathstr.begin(), current));
-    pathstr = pathstr.cut(current + 1, pathstr.end());
-
-    while(!pathstr.empty())                                     //Only enters if query strings present, empty otherwise
-    {
-      Str key;
-      Str value;
-      current = pathstr.find("=");
-      key = pathstr.cut(pathstr.begin(), current);
-      current = pathstr.find("&");
-      value = pathstr.cut(pathstr.begin()+key.count()+1, current);
-      pathstr = pathstr.cut(current+1,pathstr.end());
-      if(!value.empty())
-        req.method_params.put(key, value);
-      //print("not in here ${key}  -> ${value}");
-
-    }
-
-
-    current = next;
-    next = bufstr.find(headersep, current + 1);
-    Str version = bufstr.cut(current + 1, next);
-
-    if (version == "HTTP/0.9") {
-        req.version = HTTP_Version:HTTP_0_9;
-    } else if (version == "HTTP/1.0") {
-        req.version = HTTP_Version:HTTP_1_0;
-    } else if (version == "HTTP/1.1") {
-        req.version = HTTP_Version:HTTP_1_1;
-    }
-
-    /* HEADERS */
-    HTTP_Headers headers;
-    Str header;
-    do {
-        current = next + 2;
-        next = bufstr.find(headersep, current);
-        header = bufstr.cut(current, next);
-        if (header.count > 1) {
-            Str:Iter colonsep = header.find(":".begin.v);
-            Str keystr = header.cut(header.begin(), colonsep);
-            Str val = header.cut(colonsep + 2);
-            if (keystr != "") {
-                HTTP_Header_Type key = stringToHeaderType(keystr);
-                headers.types.push(key);
-                headers.contents.push(val);
-            }
-        }
-    } while (next != bufstr.end());
-    req.headers = headers;
-
-    return req;
-  }
-
-  Buffer get_header(HTTP_Request message, HTTP_Header_Type header){}
-
-  /* FUNCTIONS FOR CREATING RESPONSES AND RESPONDING*/
-  Buffer parse_response(HTTP_Response response){
-    Buffer responseBuf;
-    Str responseStr = "";
-    if(response.version == HTTP_Version:HTTP_0_9)
-    {
-        responseStr += "HTTP/0.9 ";
-    }
-    else if(response.version == HTTP_Version:HTTP_1_0)
-    {
-        responseStr += "HTTP/1.0 ";
-    }
-    else
-    {
-        responseStr += "HTTP/1.1 ";
-    }
-
-    responseStr += response.status_code.v.toS() + " ";
-    //add fuction so "_" becomes "-"
-    responseStr += response.status_code.toS() + "\r\n";
-
-    for(Nat i = 0; i < response.headers.types.count(); i++)
-    {
-        responseStr += underScoreToHyphen(response.headers.types[i].toS()) + ":";
-        responseStr += response.headers.contents[i] + "\r\n";
-    }
-
-    return toUtf8(responseStr);
-
-
-
-  }
-  
-  Bool set_header(HTTP_Response message, HTTP_Header_Type type, Str value){}
-
- /* Str header_to_string(HTTP_General_Header_Type index){
-    static Array<Str> general_headers = ["cache-control", "connection", "date", "pragma", "trailer", "transfer-encoding", "upgrade", "via", "warning"];
-    return general_headers[index];
-  }*/
+HTTP_Request parse_request(Str expr) on Compiler {
+  Parser<SHTTPReq> parser;
+  parser.parse(expr, Url());
+  SHTTPReq tree = parser.tree();
+  HTTP_Request req = tree.transform();
+  return req;
 }
 
+Buffer get_header(HTTP_Request message, HTTP_Header_Type header){}
+
+/* FUNCTIONS FOR CREATING RESPONSES AND RESPONDING*/
+Buffer parse_response(HTTP_Response response){
+  Buffer responseBuf;
+  Str responseStr = "";
+  if(response.version == HTTP_Version:HTTP_0_9)
+  {
+      responseStr += "HTTP/0.9 ";
+  }
+  else if(response.version == HTTP_Version:HTTP_1_0)
+  {
+      responseStr += "HTTP/1.0 ";
+  }
+  else
+  {
+      responseStr += "HTTP/1.1 ";
+  }
+
+  responseStr += response.status_code.v.toS() + " ";
+  //add fuction so "_" becomes "-"
+  responseStr += response.status_code.toS() + "\r\n";
+
+  for(Nat i = 0; i < response.headers.types.count(); i++)
+  {
+      responseStr += underScoreToHyphen(response.headers.types[i].toS()) + ":";
+      responseStr += response.headers.contents[i] + "\r\n";
+  }
+
+  return toUtf8(responseStr);
+}
+
+Bool set_header(HTTP_Response message, HTTP_Header_Type type, Str value){}
+
+/* Str header_to_string(HTTP_General_Header_Type index){
+   static Array<Str> general_headers = ["cache-control", "connection", "date", "pragma", "trailer", "transfer-encoding", "upgrade", "via", "warning"];
+   return general_headers[index];
+}*/
+
+void addVersion(HTTP_Request req, Str versionstr) {
+  if (versionstr == "HTTP/0.9") {
+    req.version = HTTP_Version:HTTP_0_9;
+  } else if (versionstr == "HTTP/1.0") {
+    req.version = HTTP_Version:HTTP_1_0;
+  } else if (versionstr == "HTTP/1.1") {
+    req.version = HTTP_Version:HTTP_1_1;
+  }
+}
+
+void addReqTarget(HTTP_Request req, Str[] segments) {
+  req.path = Url(io:FileProtocol, segments);
+}
+
+void addMethod(HTTP_Request req, Str methodstr) {
+  if (methodstr == "GET") {
+    req.method = HTTP_Method:GET;
+  }
+  else if (methodstr == "POST") {
+    req.method = HTTP_Method:POST;
+  }
+  else if (methodstr == "PUT") {
+    req.method = HTTP_Method:PUT;
+  }
+  else if (methodstr == "DELETE") {
+    req.method = HTTP_Method:DELETE;
+  }
+  else if (methodstr == "OPTIONS") {
+    req.method = HTTP_Method:OPTIONS;
+  }
+  else if (methodstr == "HEAD") {
+    req.method = HTTP_Method:HEAD;
+  }
+  else if (methodstr == "TRACE") {
+    req.method = HTTP_Method:TRACE;
+  }
+  else if (methodstr == "CONNECT") {
+    req.method = HTTP_Method:CONNECT;
+  }
+  else {
+    req.method = HTTP_Method:BAD_METHOD;
+  }
+}
+
+void addHeader(HTTP_Request req, Str key, Str val) {
+  req.headers.contents.push(val);
+  Str headerKey = toLower(key);
+  //General header RFC2616(4.5)
+  if (headerKey == "cache-control") {
+    req.headers.types.push(HTTP_Header_Type:Cache_Control);
+  }
+  else if(headerKey == "connection") {
+    req.headers.types.push(HTTP_Header_Type:Connection);
+  }
+  else if(headerKey == "date") {
+    req.headers.types.push(HTTP_Header_Type:Date);
+  }
+  else if(headerKey == "pragma") {
+    req.headers.types.push(HTTP_Header_Type:Pragma);
+  }
+  else if(headerKey == "trailer") {
+    req.headers.types.push(HTTP_Header_Type:Trailer);
+  }
+  else if(headerKey == "transfer-encoding") {
+    req.headers.types.push(HTTP_Header_Type:Transfer_Encoding);
+  }
+  else if(headerKey == "upgrade") {
+    req.headers.types.push(HTTP_Header_Type:Upgrade);
+  }
+  else if(headerKey == "via") {
+    req.headers.types.push(HTTP_Header_Type:Via);
+  }
+  else if(headerKey == "warning") {
+    req.headers.types.push(HTTP_Header_Type:Warning);
+  }
+
+  //request headers RFC2616(5.3)
+  else if(headerKey == "accept") {
+    req.headers.types.push(HTTP_Header_Type:Accept);
+  }
+  else if(headerKey == "accept-charset") {
+    req.headers.types.push(HTTP_Header_Type:Accept_Charset);
+  }
+  else if(headerKey == "accept-encoding") {
+    req.headers.types.push(HTTP_Header_Type:Accept_Encoding);
+  }
+  else if(headerKey == "accept-language") {
+    req.headers.types.push(HTTP_Header_Type:Accept_Language);
+  }
+  else if(headerKey == "authorization") {
+    req.headers.types.push(HTTP_Header_Type:Authorization);
+  }
+  else if(headerKey == "expect") {
+    req.headers.types.push(HTTP_Header_Type:Expect);
+  }
+  else if(headerKey == "from") {
+    req.headers.types.push(HTTP_Header_Type:From);
+  }
+  else if(headerKey == "host") {
+    req.headers.types.push(HTTP_Header_Type:Host);
+  }
+  else if(headerKey == "if-match") {
+    req.headers.types.push(HTTP_Header_Type:If_Match);
+  }
+  else if(headerKey == "if-modified-since") {
+    req.headers.types.push(HTTP_Header_Type:If_Modified_Since);
+  }
+  else if(headerKey == "if-none-match") {
+    req.headers.types.push(HTTP_Header_Type:If_None_Match);
+  }
+  else if(headerKey == "if-range") {
+    req.headers.types.push(HTTP_Header_Type:If_Range);
+  }
+  else if(headerKey == "if-unmodified-since") {
+    req.headers.types.push(HTTP_Header_Type:If_Unmodified_Since);
+  }
+  else if(headerKey == "max-forwards") {
+    req.headers.types.push(HTTP_Header_Type:Max_Forwards);
+  }
+  else if(headerKey == "proxy-authorization") {
+    req.headers.types.push(HTTP_Header_Type:Proxy_Authorization);
+  }
+  else if(headerKey == "range") {
+    req.headers.types.push(HTTP_Header_Type:Range);
+  }
+  else if(headerKey == "referrer") {
+    req.headers.types.push(HTTP_Header_Type:Referrer);
+  }
+  else if(headerKey == "te") {
+    req.headers.types.push(HTTP_Header_Type:TE);
+  }
+  else if(headerKey == "user-agent") {
+    req.headers.types.push(HTTP_Header_Type:User_Agent);
+  }
+
+  //response header RFC2616(6.2)
+  else if(headerKey == "accept-ranges") {
+    req.headers.types.push(HTTP_Header_Type:Accept_Ranges);
+  }
+  else if(headerKey == "age") {
+    req.headers.types.push(HTTP_Header_Type:Age);
+  }
+  else if(headerKey == "etag") {
+    req.headers.types.push(HTTP_Header_Type:ETag);
+  }
+  else if(headerKey == "location") {
+    req.headers.types.push(HTTP_Header_Type:Location);
+  }
+  else if(headerKey == "proxy-authenticate") {
+    req.headers.types.push(HTTP_Header_Type:Proxy_Authenticate);
+  }
+  else if(headerKey == "retry-after") {
+    req.headers.types.push(HTTP_Header_Type:Retry_After);
+  }
+  else if(headerKey == "server") {
+    req.headers.types.push(HTTP_Header_Type:Server);
+  }
+  else if(headerKey == "vary") {
+    req.headers.types.push(HTTP_Header_Type:Vary);
+  }
+  else if(headerKey == "www-authenticate") {
+    req.headers.types.push(HTTP_Header_Type:WWW_Authenticate);
+  }
+
+  //entity header RFC2616(7.1)
+  else if(headerKey == "allow") {
+    req.headers.types.push(HTTP_Header_Type:Allow);
+  }
+  else if(headerKey == "content-encoding") {
+    req.headers.types.push(HTTP_Header_Type:Content_Encoding);
+  }
+  else if(headerKey == "content-language") {
+    req.headers.types.push(HTTP_Header_Type:Content_Language);
+  }
+  else if(headerKey == "content-length") {
+    req.headers.types.push(HTTP_Header_Type:Content_Length);
+  }
+  else if(headerKey == "content-location") {
+    req.headers.types.push(HTTP_Header_Type:Content_Location);
+  }
+  else if(headerKey == "content-md5") {
+    req.headers.types.push(HTTP_Header_Type:Content_MD5);
+  }
+  else if(headerKey == "content-range") {
+    req.headers.types.push(HTTP_Header_Type:Content_Range);
+  }
+  else if(headerKey == "content-type") {
+    req.headers.types.push(HTTP_Header_Type:Content_Type);
+  }
+  else if(headerKey == "expires") {
+    req.headers.types.push(HTTP_Header_Type:Expires);
+  }
+  else if(headerKey == "last-modified") {
+    req.headers.types.push(HTTP_Header_Type:Last_Modified);
+  }
+  else {
+    req.headers.types.push(HTTP_Header_Type:Extension_Header);
+  }
+}

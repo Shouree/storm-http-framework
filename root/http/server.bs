@@ -36,7 +36,7 @@ class HTTP_Server{
     Bool complete_message = false;
     Nat content_length = 0;
     HTTP_Request request;
-    HTTP_Parser parser;
+    // HTTP_Parser parser;
     Buffer head_body_separation(toUtf8("\r\n\r\n"));
     Listener? socket = listen(connection.port, true);
     if(connection.socket.empty()){

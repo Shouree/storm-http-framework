@@ -1,0 +1,59 @@
+optional delimiter = SOptDelimiter;
+required delimiter = SReqDelimiter;
+
+void SOptDelimiter();
+SOptDelimiter : "";
+
+void SReqDelimiter();
+SReqDelimiter : " ";
+
+HTTP_Request SHTTPReq();
+SHTTPReq => HTTP_Request() : SReqLine(me), SCRLF, (SHeaders(me))?, SCRLF, SOptBody;
+
+void SReqLine(HTTP_Request req);
+SReqLine : SMethod(req) ~ SReqTarget(req) ~ SHTTPVersion(req);
+
+void SMethod(HTTP_Request req);
+SMethod => addMethod(req, str) : "GET" str;
+SMethod => addMethod(req, str) : "POST" str;
+SMethod => addMethod(req, str) : "PUT" str;
+SMethod => addMethod(req, str) : "DELETE" str;
+SMethod => addMethod(req, str) : "HEAD" str;
+SMethod => addMethod(req, str) : "OPTIONS" str;
+SMethod => addMethod(req, str) : "PATCH" str;
+
+void SReqTarget(HTTP_Request req);
+SReqTarget => addReqTarget(req, segments) : SPath segments, ("\?", SQuery(req))?;
+
+Array<Str> SPath();
+SPath => path : ("/", SSegment path)+;
+
+Str SSegment();
+SSegment => segment : "[a-zA-Z0-9\-.();,]+" segment;
+
+void SQuery(HTTP_Request req);
+SQuery : SQueryEntry(req), ("&", SQueryEntry(req))*;
+
+void SQueryEntry(HTTP_Request req);
+SQueryEntry => put(req.method_params, k, v) : "[a-zA-Z0-9\-/.();,]+" k, "=", "[a-zA-Z0-9\-/.();,]+" v;
+
+void SHTTPVersion(HTTP_Request req);
+SHTTPVersion => addVersion(req, version) : "HTTP/[0-9]\.[0-9]" version;
+
+void SOptBody();
+SOptBody : ".*";
+
+void SHeaders(HTTP_Request req);
+SHeaders : SHeader(req), (SCRLF, SHeader(req))*, SCRLF;
+
+void SHeader(HTTP_Request req);
+SHeader => addHeader(req, k, v) : SFieldName k, ":" ~ SFieldValue v;
+
+Str SFieldName();
+SFieldName => name : "[a-zA-Z0-9\-_]+" name;
+
+Str SFieldValue();
+SFieldValue => value : "[a-zA-Z0-9\-/.() ;,]+" value;
+
+void SCRLF();
+SCRLF : "\r\n";

@@ -1,0 +1,51 @@
+use test;
+use http;
+use core:io;
+/*
+ * Körs mha `Storm -T http`
+ */
+
+suite ParseFullRequest {
+  Str teststr;
+  teststr = "GET /resources/hello.htm?banana=true&feet=big HTTP/1.1\r\nUser-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\r\nHost: www.tutorialspoint.com\r\nAccept-Language: en-us\r\nAccept-Encoding: gzip, deflate\r\nConnection: Keep-Alive\r\n\r\n";
+  HTTP_Request req = parse_request(teststr);
+  test req.method == HTTP_Method:GET;
+  test req.path == parsePath("/resources/hello.htm");
+  test req.version == HTTP_Version:HTTP_1_1;
+  test req.method_params["banana"] == "true";
+  test req.method_params["feet"] == "big";
+  test req.headers.types[0] == HTTP_Header_Type:User_Agent;
+  test req.headers.types[1] == HTTP_Header_Type:Host;
+  test req.headers.types[2] == HTTP_Header_Type:Accept_Language;
+  test req.headers.types[3] == HTTP_Header_Type:Accept_Encoding;
+  test req.headers.types[4] == HTTP_Header_Type:Connection;
+}
+
+suite ParseRequestNoHeaders {
+  Str teststr;
+  teststr = "GET /resources/hello.htm?banana=true&feet=big HTTP/1.1\r\n\r\n";
+  HTTP_Request req = parse_request(teststr);
+  test req.method == HTTP_Method:GET;
+  test req.path == parsePath("/resources/hello.htm");
+  test req.version == HTTP_Version:HTTP_1_1;
+  test req.method_params["banana"] == "true";
+  test req.method_params["feet"] == "big";
+  test req.headers.types.count == 0;
+  test req.headers.contents.count == 0;
+}
+
+suite ParseRequestNoQueryParams {
+  Str teststr;
+  teststr = "GET /resources/hello.htm HTTP/1.1\r\nUser-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\r\nHost: www.tutorialspoint.com\r\nAccept-Language: en-us\r\nAccept-Encoding: gzip, deflate\r\nConnection: Keep-Alive\r\n\r\n";
+  HTTP_Request req = parse_request(teststr);
+  test req.method == HTTP_Method:GET;
+  test req.path == parsePath("/resources/hello.htm");
+  test req.version == HTTP_Version:HTTP_1_1;
+  test req.method_params.count == 0;
+  test req.headers.types[0] == HTTP_Header_Type:User_Agent;
+  test req.headers.types[1] == HTTP_Header_Type:Host;
+  test req.headers.types[2] == HTTP_Header_Type:Accept_Language;
+  test req.headers.types[3] == HTTP_Header_Type:Accept_Encoding;
+  test req.headers.types[4] == HTTP_Header_Type:Connection;
+}
+

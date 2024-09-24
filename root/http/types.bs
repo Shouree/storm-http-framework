@@ -135,7 +135,6 @@ value HTTP_Headers{
 
 /*This is a data class and should contain no functions*/
 class HTTP_Request{
-public:
   HTTP_Method method;
   HTTP_Version version;
   Url path;
