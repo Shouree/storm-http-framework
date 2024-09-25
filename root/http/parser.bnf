@@ -8,7 +8,7 @@ void SReqDelimiter();
 SReqDelimiter : " ";
 
 HTTP_Request SHTTPReq();
-SHTTPReq => HTTP_Request() : SReqLine(me), SCRLF, (SHeaders(me))?, SCRLF, SOptBody;
+SHTTPReq => HTTP_Request() : SReqLine(me), SCRLF, (SHeaders(me))?, SCRLF, SOptBody(me);
 
 void SReqLine(HTTP_Request req);
 SReqLine : SMethod(req) ~ SReqTarget(req) ~ SHTTPVersion(req);
@@ -20,28 +20,31 @@ SMethod => addMethod(req, str) : "PUT" str;
 SMethod => addMethod(req, str) : "DELETE" str;
 SMethod => addMethod(req, str) : "HEAD" str;
 SMethod => addMethod(req, str) : "OPTIONS" str;
-SMethod => addMethod(req, str) : "PATCH" str;
 
 void SReqTarget(HTTP_Request req);
-SReqTarget => addReqTarget(req, segments) : SPath segments, ("\?", SQuery(req))?;
+SReqTarget : SPath(req) path, ("\?", SQuery(req.method_params))?;
 
-Array<Str> SPath();
-SPath => path : ("/", SSegment path)+;
+void SPath(HTTP_Request req);
+SPath => addReqPath(req, segments) : SSegments segments;
+
+Array<Str> SSegments();
+SSegments => path : ("/", SSegment path)+;
+SSegments => Array<Str>() : "/";
 
 Str SSegment();
 SSegment => segment : "[a-zA-Z0-9\-.();,]+" segment;
 
-void SQuery(HTTP_Request req);
-SQuery : SQueryEntry(req), ("&", SQueryEntry(req))*;
+void SQuery(Map<Str, Str> params);
+SQuery : SQueryEntry(params), ("&", SQueryEntry(params))*;
 
-void SQueryEntry(HTTP_Request req);
-SQueryEntry => put(req.method_params, k, v) : "[a-zA-Z0-9\-/.();,]+" k, "=", "[a-zA-Z0-9\-/.();,]+" v;
+void SQueryEntry(Map<Str, Str> params);
+SQueryEntry => put(params, k, v) : "[a-zA-Z0-9\-/.();,]+" k, "=", "[a-zA-Z0-9\-/.();,]+" v;
 
 void SHTTPVersion(HTTP_Request req);
 SHTTPVersion => addVersion(req, version) : "HTTP/[0-9]\.[0-9]" version;
 
-void SOptBody();
-SOptBody : ".*";
+void SOptBody(HTTP_Request req);
+SOptBody => addData(req, str) : ".*" str;
 
 void SHeaders(HTTP_Request req);
 SHeaders : SHeader(req), (SCRLF, SHeader(req))*, SCRLF;

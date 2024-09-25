@@ -48,158 +48,7 @@ Str underScoreToHyphen(Str b)
   return b;
 }
 
-  private HTTP_Header_Type stringToHeaderType(Str headerKey) {
-    headerKey = toLower(headerKey);
-    if (headerKey == "cache-control") {
-        return HTTP_Header_Type:Cache_Control;
-    }
-    else if(headerKey == "connection") {
-        return HTTP_Header_Type:Connection;
-    }
-    else if(headerKey == "date") {
-        return HTTP_Header_Type:Date;
-    }
-    else if(headerKey == "pragma") {
-        return HTTP_Header_Type:Pragma;
-    }
-    else if(headerKey == "trailer") {
-        return HTTP_Header_Type:Trailer;
-    }
-    else if(headerKey == "transfer-encoding") {
-        return HTTP_Header_Type:Transfer_Encoding;
-    }
-    else if(headerKey == "upgrade") {
-        return HTTP_Header_Type:Upgrade;
-    }
-    else if(headerKey == "via") {
-        return HTTP_Header_Type:Via;
-    }
-    else if(headerKey == "warning") {
-        return HTTP_Header_Type:Warning;
-    }
-
-    else if(headerKey == "accept") {
-        return HTTP_Header_Type:Accept;
-    }
-    else if(headerKey == "accept-charset") {
-        return HTTP_Header_Type:Accept_Charset;
-    }
-    else if(headerKey == "accept-encoding") {
-        return HTTP_Header_Type:Accept_Encoding;
-    }
-    else if(headerKey == "accept-language") {
-        return HTTP_Header_Type:Accept_Language;
-    }
-    else if(headerKey == "authorization") {
-        return HTTP_Header_Type:Authorization;
-    }
-    else if(headerKey == "expect") {
-        return HTTP_Header_Type:Expect;
-    }
-    else if(headerKey == "from") {
-        return HTTP_Header_Type:From;
-    }
-    else if(headerKey == "host") {
-        return HTTP_Header_Type:Host;
-    }
-    else if(headerKey == "if-match") {
-        return HTTP_Header_Type:If_Match;
-    }
-    else if(headerKey == "if-modified-since") {
-        return HTTP_Header_Type:If_Modified_Since;
-    }
-    else if(headerKey == "if-none-match") {
-        return HTTP_Header_Type:If_None_Match;
-    }
-    else if(headerKey == "if-range") {
-        return HTTP_Header_Type:If_Range;
-    }
-    else if(headerKey == "if-unmodified-since") {
-        return HTTP_Header_Type:If_Unmodified_Since;
-    }
-    else if(headerKey == "max-forwards") {
-        return HTTP_Header_Type:Max_Forwards;
-    }
-    else if(headerKey == "proxy-authorization") {
-        return HTTP_Header_Type:Proxy_Authorization;
-    }
-    else if(headerKey == "range") {
-        return HTTP_Header_Type:Range;
-    }
-    else if(headerKey == "referrer") {
-        return HTTP_Header_Type:Referrer;
-    }
-    else if(headerKey == "te") {
-        return HTTP_Header_Type:TE;
-    }
-    else if(headerKey == "user-agent") {
-        return HTTP_Header_Type:User_Agent;
-    }
-
-    else if(headerKey == "accept-ranges") {
-        return HTTP_Header_Type:Accept_Ranges;
-    }
-    else if(headerKey == "age") {
-        return HTTP_Header_Type:Age;
-    }
-    else if(headerKey == "etag") {
-        return HTTP_Header_Type:ETag;
-    }
-    else if(headerKey == "location") {
-        return HTTP_Header_Type:Location;
-    }
-    else if(headerKey == "proxy-authenticate") {
-        return HTTP_Header_Type:Proxy_Authenticate;
-    }
-    else if(headerKey == "retry-after") {
-        return HTTP_Header_Type:Retry_After;
-    }
-    else if(headerKey == "server") {
-        return HTTP_Header_Type:Server;
-    }
-    else if(headerKey == "vary") {
-        return HTTP_Header_Type:Vary;
-    }
-    else if(headerKey == "www-authenticate") {
-        return HTTP_Header_Type:WWW_Authenticate;
-    }
-
-    else if(headerKey == "allow") {
-        return HTTP_Header_Type:Allow;
-    }
-    else if(headerKey == "content-encoding") {
-        return HTTP_Header_Type:Content_Encoding;
-    }
-    else if(headerKey == "content-language") {
-        return HTTP_Header_Type:Content_Language;
-    }
-    else if(headerKey == "content-length") {
-        return HTTP_Header_Type:Content_Length;
-    }
-    else if(headerKey == "content-location") {
-        return HTTP_Header_Type:Content_Location;
-    }
-    else if(headerKey == "content-md5") {
-        return HTTP_Header_Type:Content_MD5;
-    }
-    else if(headerKey == "content-range") {
-        return HTTP_Header_Type:Content_Range;
-    }
-    else if(headerKey == "content-type") {
-        return HTTP_Header_Type:Content_Type;
-    }
-    else if(headerKey == "expires") {
-        return HTTP_Header_Type:Expires;
-    }
-    else if(headerKey == "last-modified") {
-        return HTTP_Header_Type:Last_Modified;
-    }
-    else {
-        return HTTP_Header_Type:Extension_Header;
-    }
-  }
-
-  /* FUNCTIONS FOR RECIEVING REQUESTS AND EXTRACTING DATA FROM REQUESTS*/
+/* FUNCTIONS FOR RECIEVING REQUESTS AND EXTRACTING DATA FROM REQUESTS*/
 HTTP_Request parse_request(Str expr) on Compiler {
   Parser<SHTTPReq> parser;
   parser.parse(expr, Url());
@@ -257,7 +106,7 @@ void addVersion(HTTP_Request req, Str versionstr) {
   }
 }
 
-void addReqTarget(HTTP_Request req, Str[] segments) {
+void addReqPath(HTTP_Request req, Str[] segments) {
   req.path = Url(io:FileProtocol, segments);
 }
 
@@ -445,4 +294,8 @@ void addHeader(HTTP_Request req, Str key, Str val) {
   else {
     req.headers.types.push(HTTP_Header_Type:Extension_Header);
   }
+}
+
+void addData(HTTP_Request req, Str str) {
+    req.data = str.toUtf8;
 }
