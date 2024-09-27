@@ -83,6 +83,7 @@ class HTTP_Server{
 
             Buffer body = cut(rbuf, sep_loc+4, rbuf.filled());
             request = parser.parse_request(header);
+            //--------------------------------- Check if URL is valid? -------------
             Str len_str;
             for(Nat i=0; i< request.headers.types.count(); i++){
               if(request.headers.types[i] == HTTP_Header_Type:Content_Length){
@@ -136,13 +137,14 @@ class HTTP_Server{
     //message += "\r\n";
     //data = toUtf8(message);
 
-    Url index_page = cwdUrl;
-    index_page = index_page / "index.html";
-    IStream data_stream = index_page.read();
+    //Below should be done in parse_response? Build the whole message in parse_response then send back. Marked with //:
+    Url index_page = cwdUrl;                         //: Maybe this should be done by the user when creating the response?
+    index_page = index_page / "index.html";          //:  check in parser.bs for how we think of handling this.
+    IStream data_stream = index_page.read();         //:
 
     NetOStream os = connection.ns[0].output();
-    os.write(header);
-    os.write(toUtf8("\r\n\r\n"));
+    os.write(header);                                //:
+    os.write(toUtf8("\r\n\r\n"));                    //:
     while(data_stream.more()){
       os.write(data_stream.read(1024));
     }

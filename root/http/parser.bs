@@ -62,29 +62,36 @@ class HTTP_Parser {
 
   /* FUNCTIONS FOR CREATING RESPONSES AND RESPONDING*/
   Buffer parse_response(HTTP_Response response){
-    Buffer responseBuf;
-    StrBuf responseStr;
-    if(response.version == HTTP_Version:HTTP_0_9)
-    {
-        responseStr << "HTTP/0.9 ";
-    }
-    else if(response.version == HTTP_Version:HTTP_1_0)
-    {
-        responseStr << "HTTP/1.0 ";
-    }
-    else
-    {
-        responseStr << "HTTP/1.1 ";
-    }
+  //Buffer responseBuf;
+  StrBuf responseBuf;
 
-    responseStr << response.status_code.v.toS() + " ";
-    //add fuction so "_" becomes "-"
-    responseStr << response.status_code.toS() + "\r\n";
+  //maybe create a bool in the request that checks at once if the url called for is valid?
+  if(response.version == HTTP_Version:HTTP_0_9)         //Should be removed or made so it is correctly integrated for HTTP/0.9
+  {
+      responseBuf << "HTTP/0.9 "; //return responseBuf?
+  }
+  else if(response.version == HTTP_Version:HTTP_1_0)
+  {
+      responseBuf << "HTTP/1.0 ";
+  }
+  else
+  {
+      responseBuf << "HTTP/1.1 ";
+  }
 
-    for(k,v in response.headers){
-      responseStr << k << ": " << v << "\r\n";
-    }
+  responseBuf << response.status_code.v.toS() + " ";
+  responseBuf << response.status_code.toS() + "\r\n";
 
-    return responseStr;
+  for(k,v in response.headers){
+    responseBuf << k << ": " << v << "\r\n";
+  }
+  
+  //Should content-length always be included?
+  responseBuf << "content-length: " << response.data.filled() << "\r\n"; 
+  responseBuf << "\r\n\r\n";
+  //Add data here to the stream?
+  //reponseBuf << response.path.read();
+
+  return responseBuf;
   }
 }
