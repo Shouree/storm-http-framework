@@ -57,39 +57,35 @@ HTTP_Request parse_request(Str expr) on Compiler {
   return req;
 }
 
-Buffer get_header(HTTP_Request message, HTTP_Header_Type header){}
 
 /* FUNCTIONS FOR CREATING RESPONSES AND RESPONDING*/
 Buffer parse_response(HTTP_Response response){
   Buffer responseBuf;
-  Str responseStr = "";
+  StrBuf responseStr;
   if(response.version == HTTP_Version:HTTP_0_9)
   {
-      responseStr += "HTTP/0.9 ";
+      responseStr << "HTTP/0.9 ";
   }
   else if(response.version == HTTP_Version:HTTP_1_0)
   {
-      responseStr += "HTTP/1.0 ";
+      responseStr << "HTTP/1.0 ";
   }
   else
   {
-      responseStr += "HTTP/1.1 ";
+      responseStr << "HTTP/1.1 ";
   }
 
-  responseStr += response.status_code.v.toS() + " ";
+  responseStr << response.status_code.v.toS() + " ";
   //add fuction so "_" becomes "-"
-  responseStr += response.status_code.toS() + "\r\n";
+  responseStr << response.status_code.toS() + "\r\n";
 
-  for(Nat i = 0; i < response.headers.types.count(); i++)
-  {
-      responseStr += underScoreToHyphen(response.headers.types[i].toS()) + ":";
-      responseStr += response.headers.contents[i] + "\r\n";
+  for(k,v in response.headers){
+    responseStr << k << ": " << v << "\r\n";
   }
 
-  return toUtf8(responseStr);
+  return responseStr;
 }
 
-Bool set_header(HTTP_Response message, HTTP_Header_Type type, Str value){}
 
 /* Str header_to_string(HTTP_General_Header_Type index){
    static Array<Str> general_headers = ["cache-control", "connection", "date", "pragma", "trailer", "transfer-encoding", "upgrade", "via", "warning"];
@@ -140,161 +136,6 @@ void addMethod(HTTP_Request req, Str methodstr) {
   }
 }
 
-void addHeader(HTTP_Request req, Str key, Str val) {
-  req.headers.contents.push(val);
-  Str headerKey = toLower(key);
-  //General header RFC2616(4.5)
-  if (headerKey == "cache-control") {
-    req.headers.types.push(HTTP_Header_Type:Cache_Control);
-  }
-  else if(headerKey == "connection") {
-    req.headers.types.push(HTTP_Header_Type:Connection);
-  }
-  else if(headerKey == "date") {
-    req.headers.types.push(HTTP_Header_Type:Date);
-  }
-  else if(headerKey == "pragma") {
-    req.headers.types.push(HTTP_Header_Type:Pragma);
-  }
-  else if(headerKey == "trailer") {
-    req.headers.types.push(HTTP_Header_Type:Trailer);
-  }
-  else if(headerKey == "transfer-encoding") {
-    req.headers.types.push(HTTP_Header_Type:Transfer_Encoding);
-  }
-  else if(headerKey == "upgrade") {
-    req.headers.types.push(HTTP_Header_Type:Upgrade);
-  }
-  else if(headerKey == "via") {
-    req.headers.types.push(HTTP_Header_Type:Via);
-  }
-  else if(headerKey == "warning") {
-    req.headers.types.push(HTTP_Header_Type:Warning);
-  }
-
-  //request headers RFC2616(5.3)
-  else if(headerKey == "accept") {
-    req.headers.types.push(HTTP_Header_Type:Accept);
-  }
-  else if(headerKey == "accept-charset") {
-    req.headers.types.push(HTTP_Header_Type:Accept_Charset);
-  }
-  else if(headerKey == "accept-encoding") {
-    req.headers.types.push(HTTP_Header_Type:Accept_Encoding);
-  }
-  else if(headerKey == "accept-language") {
-    req.headers.types.push(HTTP_Header_Type:Accept_Language);
-  }
-  else if(headerKey == "authorization") {
-    req.headers.types.push(HTTP_Header_Type:Authorization);
-  }
-  else if(headerKey == "expect") {
-    req.headers.types.push(HTTP_Header_Type:Expect);
-  }
-  else if(headerKey == "from") {
-    req.headers.types.push(HTTP_Header_Type:From);
-  }
-  else if(headerKey == "host") {
-    req.headers.types.push(HTTP_Header_Type:Host);
-  }
-  else if(headerKey == "if-match") {
-    req.headers.types.push(HTTP_Header_Type:If_Match);
-  }
-  else if(headerKey == "if-modified-since") {
-    req.headers.types.push(HTTP_Header_Type:If_Modified_Since);
-  }
-  else if(headerKey == "if-none-match") {
-    req.headers.types.push(HTTP_Header_Type:If_None_Match);
-  }
-  else if(headerKey == "if-range") {
-    req.headers.types.push(HTTP_Header_Type:If_Range);
-  }
-  else if(headerKey == "if-unmodified-since") {
-    req.headers.types.push(HTTP_Header_Type:If_Unmodified_Since);
-  }
-  else if(headerKey == "max-forwards") {
-    req.headers.types.push(HTTP_Header_Type:Max_Forwards);
-  }
-  else if(headerKey == "proxy-authorization") {
-    req.headers.types.push(HTTP_Header_Type:Proxy_Authorization);
-  }
-  else if(headerKey == "range") {
-    req.headers.types.push(HTTP_Header_Type:Range);
-  }
-  else if(headerKey == "referrer") {
-    req.headers.types.push(HTTP_Header_Type:Referrer);
-  }
-  else if(headerKey == "te") {
-    req.headers.types.push(HTTP_Header_Type:TE);
-  }
-  else if(headerKey == "user-agent") {
-    req.headers.types.push(HTTP_Header_Type:User_Agent);
-  }
-
-  //response header RFC2616(6.2)
-  else if(headerKey == "accept-ranges") {
-    req.headers.types.push(HTTP_Header_Type:Accept_Ranges);
-  }
-  else if(headerKey == "age") {
-    req.headers.types.push(HTTP_Header_Type:Age);
-  }
-  else if(headerKey == "etag") {
-    req.headers.types.push(HTTP_Header_Type:ETag);
-  }
-  else if(headerKey == "location") {
-    req.headers.types.push(HTTP_Header_Type:Location);
-  }
-  else if(headerKey == "proxy-authenticate") {
-    req.headers.types.push(HTTP_Header_Type:Proxy_Authenticate);
-  }
-  else if(headerKey == "retry-after") {
-    req.headers.types.push(HTTP_Header_Type:Retry_After);
-  }
-  else if(headerKey == "server") {
-    req.headers.types.push(HTTP_Header_Type:Server);
-  }
-  else if(headerKey == "vary") {
-    req.headers.types.push(HTTP_Header_Type:Vary);
-  }
-  else if(headerKey == "www-authenticate") {
-    req.headers.types.push(HTTP_Header_Type:WWW_Authenticate);
-  }
-
-  //entity header RFC2616(7.1)
-  else if(headerKey == "allow") {
-    req.headers.types.push(HTTP_Header_Type:Allow);
-  }
-  else if(headerKey == "content-encoding") {
-    req.headers.types.push(HTTP_Header_Type:Content_Encoding);
-  }
-  else if(headerKey == "content-language") {
-    req.headers.types.push(HTTP_Header_Type:Content_Language);
-  }
-  else if(headerKey == "content-length") {
-    req.headers.types.push(HTTP_Header_Type:Content_Length);
-  }
-  else if(headerKey == "content-location") {
-    req.headers.types.push(HTTP_Header_Type:Content_Location);
-  }
-  else if(headerKey == "content-md5") {
-    req.headers.types.push(HTTP_Header_Type:Content_MD5);
-  }
-  else if(headerKey == "content-range") {
-    req.headers.types.push(HTTP_Header_Type:Content_Range);
-  }
-  else if(headerKey == "content-type") {
-    req.headers.types.push(HTTP_Header_Type:Content_Type);
-  }
-  else if(headerKey == "expires") {
-    req.headers.types.push(HTTP_Header_Type:Expires);
-  }
-  else if(headerKey == "last-modified") {
-    req.headers.types.push(HTTP_Header_Type:Last_Modified);
-  }
-  else {
-    req.headers.types.push(HTTP_Header_Type:Extension_Header);
-  }
-}
 
 void addData(HTTP_Request req, Str str) {
     req.data = str.toUtf8;

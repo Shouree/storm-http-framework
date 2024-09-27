@@ -50,7 +50,7 @@ void SHeaders(HTTP_Request req);
 SHeaders : SHeader(req), (SCRLF, SHeader(req))*, SCRLF;
 
 void SHeader(HTTP_Request req);
-SHeader => addHeader(req, k, v) : SFieldName k, ":" ~ SFieldValue v;
+SHeader => put(req.headers, k, v) : SFieldName k, ":" ~ SFieldValue v;
 
 Str SFieldName();
 SFieldName => name : "[a-zA-Z0-9\-_]+" name;

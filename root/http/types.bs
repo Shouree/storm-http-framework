@@ -70,68 +70,6 @@ enum HTTP_Method{
   CONNECT,
   BAD_METHOD
 }
-enum HTTP_Header_Type{
-  //General header RFC2616(4.5)
-  Cache_Control,
-  Connection,
-  Date,
-  Pragma,
-  Trailer,
-  Transfer_Encoding,
-  Upgrade,
-  Via,
-  Warning,
-
-  //request headers RFC2616(5.3)
-  Accept,
-  Accept_Charset,
-  Accept_Encoding,
-  Accept_Language,
-  Authorization,
-  Expect,
-  From,
-  Host,
-  If_Match,
-  If_Modified_Since,
-  If_None_Match,
-  If_Range,
-  If_Unmodified_Since,
-  Max_Forwards,
-  Proxy_Authorization,
-  Range,
-  Referrer,
-  TE,
-  User_Agent,
-
-  //response header RFC2616(6.2)
-  Accept_Ranges,
-  Age,
-  ETag,
-  Location,
-  Proxy_Authenticate,
-  Retry_After,
-  Server,
-  Vary,
-  WWW_Authenticate,
-
-  //entity header RFC2616(7.1)
-  Allow,
-  Content_Encoding,
-  Content_Language,
-  Content_Length,
-  Content_Location,
-  Content_MD5,
-  Content_Range,
-  Content_Type,
-  Expires,
-  Last_Modified,
-  Extension_Header
-}
-
-value HTTP_Headers{
-  Array<HTTP_Header_Type> types;
-  Array<Str> contents;
-}
 
 /*This is a data class and should contain no functions*/
 class HTTP_Request{
@@ -139,7 +77,7 @@ class HTTP_Request{
   HTTP_Version version;
   Url path;
   Str->Str method_params;
-  HTTP_Headers headers;
+  Str->Str headers;
   Buffer data;
 }
 
@@ -147,6 +85,6 @@ class HTTP_Request{
 class HTTP_Response{
   HTTP_Version version;
   HTTP_StatusCode status_code;
-  HTTP_Headers headers;
+  Str->Str headers;
   Buffer data;
 }
