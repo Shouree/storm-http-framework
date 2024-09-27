@@ -2,141 +2,89 @@ use core:lang;
 use core:io;
 use lang:bs:macro;
 
-Str toLower(Str b) {                                      //Helper function to make a string lowercase
-  Buffer string = b.toUtf8;
-  Nat i = 0;
-  while(i < b.count()){
-    if(string[i] > 90){
-      string[i] = string[i];
+class HTTP_Parser {
+  /* FUNCTIONS FOR RECIEVING REQUESTS AND EXTRACTING DATA FROM REQUESTS*/
+  HTTP_Request parse_request(Str expr) {
+    Parser<SHTTPReq> parser;
+    parser.parse(expr, Url());
+    SHTTPReq tree = parser.tree();
+    HTTP_Request req = tree.transform(this);
+    return req;
+  }
+
+  void addVersion(HTTP_Request req, Str versionstr) {
+    if (versionstr == "HTTP/0.9") {
+      req.version = HTTP_Version:HTTP_0_9;
+    } else if (versionstr == "HTTP/1.0") {
+      req.version = HTTP_Version:HTTP_1_0;
+    } else if (versionstr == "HTTP/1.1") {
+      req.version = HTTP_Version:HTTP_1_1;
     }
-    else if(string[i] <65 ){
-      string[i] = string[i];
+  }
+
+  void addReqPath(HTTP_Request req, Str[] segments) {
+    req.path = Url(io:FileProtocol, segments);
+  }
+
+  void addMethod(HTTP_Request req, Str methodstr) {
+    if (methodstr == "GET") {
+      req.method = HTTP_Method:GET;
+    }
+    else if (methodstr == "POST") {
+      req.method = HTTP_Method:POST;
+    }
+    else if (methodstr == "PUT") {
+      req.method = HTTP_Method:PUT;
+    }
+    else if (methodstr == "DELETE") {
+      req.method = HTTP_Method:DELETE;
+    }
+    else if (methodstr == "OPTIONS") {
+      req.method = HTTP_Method:OPTIONS;
+    }
+    else if (methodstr == "HEAD") {
+      req.method = HTTP_Method:HEAD;
+    }
+    else if (methodstr == "TRACE") {
+      req.method = HTTP_Method:TRACE;
+    }
+    else if (methodstr == "CONNECT") {
+      req.method = HTTP_Method:CONNECT;
+    }
+    else {
+      req.method = HTTP_Method:BAD_METHOD;
+    }
+  }
+
+  void addData(HTTP_Request req, Str str) {
+      req.data = str.toUtf8;
+  }
+
+  /* FUNCTIONS FOR CREATING RESPONSES AND RESPONDING*/
+  Buffer parse_response(HTTP_Response response){
+    Buffer responseBuf;
+    StrBuf responseStr;
+    if(response.version == HTTP_Version:HTTP_0_9)
+    {
+        responseStr << "HTTP/0.9 ";
+    }
+    else if(response.version == HTTP_Version:HTTP_1_0)
+    {
+        responseStr << "HTTP/1.0 ";
     }
     else
     {
-      string[i] = string[i]+32;
+        responseStr << "HTTP/1.1 ";
     }
-    i++;
-  }
-  return fromUtf8(string);
-}
-/*
- * Content_Length
- * Content-
- * Length 
- * */
-Str underScoreToHyphen(Str b)
-{
-  Str:Iter Iterator = b.find("_");
-  Str temp = b.cut(b.begin(), Iterator);
-  Str tmp = "";
-  if(temp == b)
-    return b;
-  while(!temp.empty())
-  {
-    tmp += temp + "-";
-    temp = b.cut(Iterator+1, b.end());
-    Iterator = temp.find("_");
-    if(temp.cut(Iterator, temp.end()).empty()){
-      tmp += temp;
-      print("tmp= " + tmp + "\n");
-      return tmp;
+
+    responseStr << response.status_code.v.toS() + " ";
+    //add fuction so "_" becomes "-"
+    responseStr << response.status_code.toS() + "\r\n";
+
+    for(k,v in response.headers){
+      responseStr << k << ": " << v << "\r\n";
     }
-    //Str:Iter it = b.find("_");
-    temp = temp.cut(Iterator);
-  }
-  return b;
-}
 
-/* FUNCTIONS FOR RECIEVING REQUESTS AND EXTRACTING DATA FROM REQUESTS*/
-HTTP_Request parse_request(Str expr) on Compiler {
-  Parser<SHTTPReq> parser;
-  parser.parse(expr, Url());
-  SHTTPReq tree = parser.tree();
-  HTTP_Request req = tree.transform();
-  return req;
-}
-
-
-/* FUNCTIONS FOR CREATING RESPONSES AND RESPONDING*/
-Buffer parse_response(HTTP_Response response){
-  Buffer responseBuf;
-  StrBuf responseStr;
-  if(response.version == HTTP_Version:HTTP_0_9)
-  {
-      responseStr << "HTTP/0.9 ";
+    return responseStr;
   }
-  else if(response.version == HTTP_Version:HTTP_1_0)
-  {
-      responseStr << "HTTP/1.0 ";
-  }
-  else
-  {
-      responseStr << "HTTP/1.1 ";
-  }
-
-  responseStr << response.status_code.v.toS() + " ";
-  //add fuction so "_" becomes "-"
-  responseStr << response.status_code.toS() + "\r\n";
-
-  for(k,v in response.headers){
-    responseStr << k << ": " << v << "\r\n";
-  }
-
-  return responseStr;
-}
-
-
-/* Str header_to_string(HTTP_General_Header_Type index){
-   static Array<Str> general_headers = ["cache-control", "connection", "date", "pragma", "trailer", "transfer-encoding", "upgrade", "via", "warning"];
-   return general_headers[index];
-}*/
-
-void addVersion(HTTP_Request req, Str versionstr) {
-  if (versionstr == "HTTP/0.9") {
-    req.version = HTTP_Version:HTTP_0_9;
-  } else if (versionstr == "HTTP/1.0") {
-    req.version = HTTP_Version:HTTP_1_0;
-  } else if (versionstr == "HTTP/1.1") {
-    req.version = HTTP_Version:HTTP_1_1;
-  }
-}
-
-void addReqPath(HTTP_Request req, Str[] segments) {
-  req.path = Url(io:FileProtocol, segments);
-}
-
-void addMethod(HTTP_Request req, Str methodstr) {
-  if (methodstr == "GET") {
-    req.method = HTTP_Method:GET;
-  }
-  else if (methodstr == "POST") {
-    req.method = HTTP_Method:POST;
-  }
-  else if (methodstr == "PUT") {
-    req.method = HTTP_Method:PUT;
-  }
-  else if (methodstr == "DELETE") {
-    req.method = HTTP_Method:DELETE;
-  }
-  else if (methodstr == "OPTIONS") {
-    req.method = HTTP_Method:OPTIONS;
-  }
-  else if (methodstr == "HEAD") {
-    req.method = HTTP_Method:HEAD;
-  }
-  else if (methodstr == "TRACE") {
-    req.method = HTTP_Method:TRACE;
-  }
-  else if (methodstr == "CONNECT") {
-    req.method = HTTP_Method:CONNECT;
-  }
-  else {
-    req.method = HTTP_Method:BAD_METHOD;
-  }
-}
-
-
-void addData(HTTP_Request req, Str str) {
-    req.data = str.toUtf8;
 }
