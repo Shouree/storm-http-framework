@@ -33,9 +33,13 @@ void main(){
     res.headers.put("content-type", "text/html; charset=utf-8");
     //res.headers.contents.push("text/html; charset=utf-8");
 
+    //TODO, check if this impelemntation works:
     res.headers.put("connection", "close");
+    Url index_page = cwdUrl;                       
+    index_page = index_page / "index.html";
+    res.data = index_page.readAllText.toS();
 
-    //TODO, don't hardcode the website in "send on the http server"
+    
     //res.headers.contents.push("close");
 
     server.send(res);

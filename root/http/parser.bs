@@ -68,15 +68,22 @@ class HTTP_Parser {
   //maybe create a bool in the request that checks at once if the url called for is valid?
   if(response.version == HTTP_Version:HTTP_0_9)         //Should be removed or made so it is correctly integrated for HTTP/0.9
   {
-      responseBuf << "HTTP/0.9 "; //return responseBuf?
+
+      responseBuf << response.data.toS();                         //Only send back body
+      return responseBuf;
   }
   else if(response.version == HTTP_Version:HTTP_1_0)
   {
       responseBuf << "HTTP/1.0 ";
   }
-  else
+  else if(response.version == HTTP_Version:HTTP_1_1)
   {
       responseBuf << "HTTP/1.1 ";
+  }
+  else
+  {
+    print("Non valid header version provided"); //Change to throw error
+    return responseBuf;
   }
 
   responseBuf << response.status_code.v.toS() + " ";
@@ -89,8 +96,8 @@ class HTTP_Parser {
   //Should content-length always be included?
   responseBuf << "content-length: " << response.data.filled() << "\r\n"; 
   responseBuf << "\r\n\r\n";
-  //Add data here to the stream?
-  //reponseBuf << response.path.read();
+  //Add data here to the stream:
+  reponseBuf << response.data.toS();                  //Input data
 
   return responseBuf;
   }
