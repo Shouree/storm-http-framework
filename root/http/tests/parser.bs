@@ -34,11 +34,6 @@ suite ParseRootPath {
   test req.method_params["key2"] == "val2";
 }
 
-// TODO(Christoffer): Hur unit-testa server recieve
-// suite test {
-//   test myThing() throws Exception();
-// }
-
 suite ParseNoHeaders {
   Str teststr;
   teststr = "GET /resources/hello.htm?banana=true&feet=big HTTP/1.1\r\n\r\n";
@@ -55,10 +50,9 @@ suite ParseNoQueryParams {
   test req.method_params.count == 0;
 }
 
-// TODO(Christoffer): Fix this
 suite ParseReq09 {
   Str teststr;
-  teststr = "GET /resources/hello.htm\r\nFIXME";
+  teststr = "GET /resources/hello.htm";
   HTTP_Parser parser;
   HTTP_Request req = parser.parse_request(teststr);
   test req.method_params.count == 0;

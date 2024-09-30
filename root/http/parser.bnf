@@ -9,9 +9,14 @@ SReqDelimiter : " ";
 
 HTTP_Request SHTTPReq(HTTP_Parser p);
 SHTTPReq => HTTP_Request() : SReqLine(p, me), SCRLF, (SHeaders(p, me))?, SCRLF, SOptBody(p, me);
+// For HTTP/0.9 requests
+SHTTPReq => HTTP_Request() : SReqLine09(p, me);
 
 void SReqLine(HTTP_Parser p, HTTP_Request req);
 SReqLine : SMethod(p, req) ~ SReqTarget(p, req) ~ SHTTPVersion(p, req);
+
+void SReqLine09(HTTP_Parser p, HTTP_Request req);
+SReqLine09 : SMethod(p, req) ~ SReqTarget(p, req);
 
 void SMethod(HTTP_Parser p, HTTP_Request req);
 SMethod => addMethod(p, req, str) : "GET" str;
