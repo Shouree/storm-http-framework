@@ -40,8 +40,7 @@ SQuery : SQueryEntry(params), ("&", SQueryEntry(params))*;
 void SQueryEntry(Map<Str, Str> params);
 SQueryEntry => put(params, k, v) : "[a-zA-Z0-9\-/.();,]+" k, "=", "[a-zA-Z0-9\-/.();,]+" v;
 // TODO(Christoffer): Fix cookie parsing
-// SQueryEntry : "cookie" k, "=", SCookies;
-//
+// SQueryEntry : "cookie" k, "=", SCookies(cookies);
 // void SCookies(HTTP_Cookies cookies);
 // SCookies => addCookie(k, v) : ("[a-zA-Z0-9\-/.(),]+" k, "=", "[a-zA-Z0-9\-/.(),]+" v, ";")+;
 

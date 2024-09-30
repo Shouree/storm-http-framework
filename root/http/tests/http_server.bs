@@ -1,6 +1,7 @@
 use core:net;
 use core:io;
 use http;
+use core:lang;
 
 void main(){
   //Listener? socket = listen(1234, true);
@@ -12,7 +13,20 @@ void main(){
 
 
   while(true){
-    HTTP_Request req = server.recieve();
+    HTTP_Request req;
+    try {
+        req = server.recieve();
+    } catch (SyntaxError e) {
+        HTTP_Response resp;
+        resp.version = HTTP_Version:HTTP_1_1;
+        resp.status_code = HTTP_StatusCode:Bad_Request;
+        resp.headers.put("content-type", "text/html; charset=utf-8");
+        resp.headers.put("content-length", "15");
+        resp.headers.put("connection", "close");
+        resp.data = "400 Bad Request".toUtf8;
+        server.send(resp);
+        continue;
+    }
     //Read requests here...
     print("\n\nRecieved the following request:");
     print("Method: ${req.method}");

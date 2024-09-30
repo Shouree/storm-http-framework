@@ -1,7 +1,6 @@
 use core:io;
 use core:net;
 use http;
-use core:lang;
 
 private Byte to_lower(Byte b){
   if(b >90){
@@ -87,18 +86,7 @@ class HTTP_Server{
             Buffer body = cut(rbuf, sep_loc+3, rbuf.filled());
 
             print(body.toS());
-            try {
-                request = parser.parse_request(fromUtf8(header));
-            } catch (SyntaxError e) {
-                // TODO(Christoffer): Fix crashing (try-catch)
-                throw e;
-                // HTTP_Response resp;
-                // resp.version = request.version;
-                // resp.status_code = HTTP_StatusCode:Bad_Request;
-                // resp.headers.put("Content-Length", "0");
-                // send(resp);
-                // break;
-            }
+            request = parser.parse_request(fromUtf8(header));
             unless(content_length = request.headers.get("content-length").toNat()){
               break;
             }
