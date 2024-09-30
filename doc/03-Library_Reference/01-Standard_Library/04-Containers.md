@@ -49,6 +49,8 @@ It has the following members:
 - `sort()` - sort the array, optionally provide a comparison function
 - `sorted()` - sort and return a copy of the array
 - `random()` - get a random element
+- `removeDuplicates()` - remove duplicate elements from a sorted array
+- `withoutDuplicates()` - return a copy of the array without duplicates
 
 ## Queue
 

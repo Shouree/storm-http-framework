@@ -66,6 +66,12 @@ namespace storm {
 		// Sort using a predicate.
 		void CODECALL sortRawPred(FnBase *compare);
 
+		// Remove duplicates, assumes sorted beforehand.
+		void CODECALL removeDuplicatesRaw();
+
+		// Remove duplicates, return the new version.
+		ArrayBase *CODECALL withoutDuplicatesRaw();
+
 		// To string.
 		virtual void STORM_FN toS(StrBuf *to) const;
 
@@ -260,6 +266,17 @@ namespace storm {
 			Array<T> *copy = new (this) Array<T>(*this);
 			copy->sortRawPred(compare);
 			return copy;
+		}
+
+		// Remove duplicates, assuming sorted beforehand.
+		// Assumes we have a '==' or '<' in the handle.
+		void removeDuplicates() {
+			removeDuplicatesRaw();
+		}
+
+		// Removed duplicates.
+		Array<T> *withoutDuplicates() {
+			return (Array<T> *)withoutDuplicatesRaw();
 		}
 
 		// Append elements.
