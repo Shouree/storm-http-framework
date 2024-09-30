@@ -37,7 +37,8 @@ void main(){
     res.headers.put("connection", "close");
     Url index_page = cwdUrl;                       
     index_page = index_page / "index.html";
-    res.data = index_page.readAllText.toS();
+    print("\nSending response...");
+    res.data = toUtf8(index_page.readAllText.toS());
 
     
     //res.headers.contents.push("close");

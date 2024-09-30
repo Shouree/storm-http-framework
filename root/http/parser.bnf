@@ -22,7 +22,7 @@ SMethod => addMethod(p, req, str) : "HEAD" str;
 SMethod => addMethod(p, req, str) : "OPTIONS" str;
 
 void SReqTarget(HTTP_Parser p, HTTP_Request req);
-SReqTarget : SPath(p, req) path, ("\?", SQuery(req.method_params))?;
+SReqTarget : SPath(p, req), ("\?", SQuery(req.method_params))?;
 
 void SPath(HTTP_Parser p, HTTP_Request req);
 SPath => addReqPath(p, req, segments) : SSegments segments;
@@ -39,6 +39,11 @@ SQuery : SQueryEntry(params), ("&", SQueryEntry(params))*;
 
 void SQueryEntry(Map<Str, Str> params);
 SQueryEntry => put(params, k, v) : "[a-zA-Z0-9\-/.();,]+" k, "=", "[a-zA-Z0-9\-/.();,]+" v;
+// TODO(Christoffer): Fix cookie parsing
+// SQueryEntry : "cookie" k, "=", SCookies;
+//
+// void SCookies(HTTP_Cookies cookies);
+// SCookies => addCookie(k, v) : ("[a-zA-Z0-9\-/.(),]+" k, "=", "[a-zA-Z0-9\-/.(),]+" v, ";")+;
 
 void SHTTPVersion(HTTP_Parser p, HTTP_Request req);
 SHTTPVersion => addVersion(p, req, version) : "HTTP/[0-9]\.[0-9]" version;
@@ -56,7 +61,7 @@ Str SFieldName();
 SFieldName => name : "[a-zA-Z0-9\-_]+" name;
 
 Str SFieldValue();
-SFieldValue => value : "[a-zA-Z0-9\-/.() ;,]+" value;
+SFieldValue => value : "[a-zA-Z0-9\-/.() ;,:_+=*?\"]+" value;
 
 void SCRLF();
 SCRLF : "\r\n";

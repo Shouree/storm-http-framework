@@ -70,7 +70,7 @@ class HTTP_Parser {
   {
 
       responseBuf << response.data.toS();                         //Only send back body
-      return responseBuf;
+      return toUtf8(responseBuf.toS());
   }
   else if(response.version == HTTP_Version:HTTP_1_0)
   {
@@ -83,7 +83,7 @@ class HTTP_Parser {
   else
   {
     print("Non valid header version provided"); //Change to throw error
-    return responseBuf;
+    return toUtf8(responseBuf.toS());
   }
 
   responseBuf << response.status_code.v.toS() + " ";
@@ -94,11 +94,11 @@ class HTTP_Parser {
   }
   
   //Should content-length always be included?
-  responseBuf << "content-length: " << response.data.filled() << "\r\n"; 
-  responseBuf << "\r\n\r\n";
+  responseBuf << "content-length: " << response.data.filled()-1 << "\r\n"; 
+  responseBuf << "\r\n";
   //Add data here to the stream:
-  reponseBuf << response.data.toS();                  //Input data
+  responseBuf << fromUtf8(response.data);                  //Input data
 
-  return responseBuf;
+  return toUtf8(responseBuf.toS());
   }
 }

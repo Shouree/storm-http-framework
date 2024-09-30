@@ -1,6 +1,7 @@
 use core:io;
 use core:net;
 use http;
+use core:lang;
 
 private Byte to_lower(Byte b){
   if(b >90){
@@ -14,7 +15,9 @@ private Byte to_lower(Byte b){
 private 
 class HTTP_Connection{
   Nat port; //id
+  // TODO(Martin): Ändra till Listener?
   Array<Listener> socket;
+  // TODO(Martin): Ändra till NetStream?
   Array<NetStream> ns;
   init(Nat init_port){
       init{
@@ -56,7 +59,7 @@ class HTTP_Server{
         while(is.more()){
           if(rbuf.free() == 0 ){
             //TODO decide maximum size of rbuf
-            rbuf = grow(rbuf, rbuf.count() + 4069);
+            rbuf = grow(rbuf, rbuf.count() + 4096);
           }
           print("Reading the stream...");
           Nat old_filled = rbuf.filled();
@@ -69,7 +72,7 @@ class HTTP_Server{
           for(Nat i = 0; i< rbuf.filled(); i++){
             for(Nat j=0; j<4; j++){
               if(rbuf[i+j] != head_body_separation[j]){
-                sep_loc = i;
+                sep_loc = i+1;
                 break;
               }
             }
@@ -77,23 +80,32 @@ class HTTP_Server{
           
           if(sep_loc != 0){
             Buffer header = cut(rbuf,0, sep_loc);
-
+            
             print("\n\nHeader is equal to: ${header.filled()}");
             print(fromUtf8(header));
+            print(header.toS());
+            Buffer body = cut(rbuf, sep_loc+3, rbuf.filled());
 
-            Buffer body = cut(rbuf, sep_loc+4, rbuf.filled());
-            request = parser.parse_request(header);
-            //--------------------------------- Check if URL is valid? -------------
-            Str len_str;
-            for(Nat i=0; i< request.headers.types.count(); i++){
-              if(request.headers.types[i] == HTTP_Header_Type:Content_Length){
-                content_length = request.headers.contents[i].toNat();
-                break;
-              }
+            print(body.toS());
+            try {
+                request = parser.parse_request(fromUtf8(header));
+            } catch (SyntaxError e) {
+                // TODO(Christoffer): Fix crashing (try-catch)
+                throw e;
+                // HTTP_Response resp;
+                // resp.version = request.version;
+                // resp.status_code = HTTP_StatusCode:Bad_Request;
+                // resp.headers.put("Content-Length", "0");
+                // send(resp);
+                // break;
+            }
+            unless(content_length = request.headers.get("content-length").toNat()){
+              break;
             }
             while(body.filled() < content_length){
               if(rbuf.free() == 0 ){
                 //TODO decide maximum size of body
+                // Nginx uses 1MiB
                 body = grow(body, body.count() + 4069);
               }
               old_filled = rbuf.filled();
@@ -107,14 +119,12 @@ class HTTP_Server{
             request.data = body;
           }
           break; //GOTO check valid message
-        }
-       
-        
+        } // while(is.more)
       print("Returning to main");
       //TODO Check if we have a complete message (data = content-length)
       //Check if HTTP_Request require immediate response (?)
       return request;
-      }
+      } // while(true)
       else{
         print("Error! Netstream accept.");
         return request;
@@ -131,25 +141,12 @@ class HTTP_Server{
     //if connection: close ---> close the socket.
     //return
     HTTP_Parser parser;
-    Buffer header = parser.parse_response(msg);
+    Buffer response = parser.parse_response(msg);
     print("HEADER IS:\n");
-    print(fromUtf8(header));
-    //message += "\r\n";
-    //data = toUtf8(message);
-
-    //Below should be done in parse_response? Build the whole message in parse_response then send back. Marked with //:
-    Url index_page = cwdUrl;                         //: Maybe this should be done by the user when creating the response?
-    index_page = index_page / "index.html";          //:  check in parser.bs for how we think of handling this.
-    IStream data_stream = index_page.read();         //:
-
+    print(fromUtf8(response));
     NetOStream os = connection.ns[0].output();
-    os.write(header);                                //:
-    os.write(toUtf8("\r\n\r\n"));                    //:
-    while(data_stream.more()){
-      os.write(data_stream.read(1024));
-    }
+    os.write(response);
     os.flush();
-
 
     //remove netstream close socket 
     connection.socket[0].close();
