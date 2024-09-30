@@ -197,6 +197,7 @@ namespace code {
 		arena(o.arena),
 		code(o.code),
 		nextLabels(o.nextLabels),
+		nextLabel(o.nextLabel),
 		params(o.params),
 		vars(o.vars),
 		blocks(o.blocks),
@@ -265,6 +266,27 @@ namespace code {
 				*this << l->at(i);
 
 		return *this;
+	}
+
+	void Listing::insert(Nat pos, Instr *i) {
+		if (pos >= code->count()) {
+			// Regular insert, accounts for 'nextLabels':
+			*this << i;
+		} else {
+			code->insert(pos, Entry(i, null));
+		}
+	}
+
+	void Listing::insert(Nat pos, Label l) {
+		if (pos >= code->count()) {
+			// Just insert regularly at the end:
+			*this << l;
+		} else {
+			Entry &e = code->at(pos);
+			if (!e.labels)
+				e.labels = new (this) Array<Label>();
+			e.labels->push(l);
+		}
 	}
 
 	MAYBE(Array<Label> *) Listing::labels(Nat id) const {
