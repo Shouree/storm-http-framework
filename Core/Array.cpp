@@ -205,6 +205,42 @@ namespace storm {
 		sort(d);
 	}
 
+	void ArrayBase::removeDuplicatesRaw() {
+		if (count() == 0)
+			return;
+
+		Nat out = 0;
+		for (Nat i = 1; i < count(); i++) {
+			if (!handle.equal(ptr(out), ptr(i))) {
+				++out;
+				if (out != i)
+					arraySwap(ptr(out), ptr(i), handle.size);
+			}
+		}
+
+		while (count() > out + 1)
+			pop();
+	}
+
+	ArrayBase *ArrayBase::withoutDuplicatesRaw() {
+		// Create a copy:
+		void *copyMem = runtime::allocObject(sizeof(ArrayBase), runtime::typeOf(this));
+		ArrayBase *copy = new (Place(copyMem)) ArrayBase(handle);
+		runtime::setVTable(copy);
+
+		// Copy unique elements:
+		if (count() == 0)
+			return copy;
+
+		copy->pushRaw(ptr(0));
+		for (Nat i = 1; i < count(); i++) {
+			if (!handle.equal(ptr(i), copy->ptr(copy->count() - 1)))
+				copy->pushRaw(ptr(i));
+		}
+
+		return copy;
+	}
+
 	void ArrayBase::toS(StrBuf *to) const {
 		*to << S("[");
 		if (count() > 0)

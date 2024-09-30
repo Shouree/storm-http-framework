@@ -164,6 +164,13 @@ namespace storm {
 			add(nativeFunction(e, t, S("sorted"), valList(e, 2, t, predicate), address(&sortedRawPred))->makePure());
 		}
 
+		// Remove duplicates.
+		if (param().type->handle().lessFn || param().type->handle().equalFn) {
+			addRemoveDuplicates();
+		} else {
+			watchFor |= watchEquality;
+		}
+
 		if (!param().type->isA(StormInfo<TObject>::type(engine))) {
 			if (SerializeInfo *info = serializeInfo(param().type)) {
 				addSerialization(info);
@@ -218,7 +225,17 @@ namespace storm {
 			fn->params->at(1).type == to) {
 
 			watchFor &= ~watchLess;
+			watchFor &= ~watchEquality;
 			addSort();
+			addRemoveDuplicates();
+		} else if (*fn->name == S("==") &&
+				fn->result == Value(StormInfo<Bool>::type(engine)) &&
+				fn->params->count() == 2 &&
+				fn->params->at(0).type == to &&
+				fn->params->at(1).type == to) {
+
+			watchFor &= ~watchEquality;
+			addRemoveDuplicates();
 		} else if (SerializeInfo *info = serializeInfo(param().type)) {
 			if (watchFor & watchSerialization) {
 				watchFor &= ~watchSerialization;
@@ -255,6 +272,15 @@ namespace storm {
 
 		// Add the 'read' function.
 		add(serializedReadFn(this));
+	}
+
+	void ArrayType::addRemoveDuplicates() {
+		Engine &e = engine;
+		Array<Value> *params = valList(e, 1, thisPtr(this));
+
+		// Sort using <.
+		add(nativeFunction(e, Value(), S("removeDuplicates"), params, address(&ArrayBase::removeDuplicatesRaw)));
+		add(nativeFunction(e, Value(this), S("withoutDuplicates"), params, address(&ArrayBase::withoutDuplicatesRaw))->makePure());
 	}
 
 	Function *ArrayType::writeFn(SerializedType *type, SerializeInfo *info) {

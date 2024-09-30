@@ -45,6 +45,7 @@ namespace storm {
 			watchNone = 0x00,
 			watchLess = 0x01,
 			watchSerialization = 0x02,
+			watchEquality = 0x04,
 		};
 
 		Nat watchFor;
@@ -58,6 +59,9 @@ namespace storm {
 
 		// Add serialization functions.
 		void addSerialization(SerializeInfo *info);
+
+		// Add 'removeDuplicates'
+		void addRemoveDuplicates();
 
 		// Generate the 'write' function.
 		Function *writeFn(SerializedType *type, SerializeInfo *info);
