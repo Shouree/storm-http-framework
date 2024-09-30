@@ -81,3 +81,6 @@ root/doc
 # Database files (sqlite)
 *.db
 html/
+
+# Cached test data
+__pycache__/
