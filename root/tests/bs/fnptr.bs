@@ -243,3 +243,24 @@ Int autoMemberFn() {
 	PtrTest x(5);
 	runFnPtr(&x.doIt);
 }
+
+Bool intPredicate(Int a, Int b) {
+	a > b;
+}
+
+Int copyIntPredicate() {
+	Fn<Bool, Int, Int> ptr = &intPredicate;
+
+	Array<Int> data;
+	data << 1 << 2 << 3;
+
+	// This should always work:
+	Int result = data.sorted(ptr)[0];
+
+	Fn<Bool, Int, Int> copy(ptr);
+
+	// This was broken previously:
+	result += data.sorted(copy)[0];
+
+	result;
+}

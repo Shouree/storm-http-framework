@@ -25,7 +25,8 @@ namespace storm {
 	}
 
 	static void fnCopy(void *mem, FnBase *src) {
-		new (Place(mem)) FnBase(*src);
+		FnBase *created = new (Place(mem)) FnBase(*src);
+		runtime::setVTable(created);
 	}
 
 	FnType::FnType(Str *name, ValueArray *params) : Type(name, params->toArray(), typeClass) {

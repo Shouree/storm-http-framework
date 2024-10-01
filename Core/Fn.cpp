@@ -2,6 +2,7 @@
 #include "Fn.h"
 #include "StrBuf.h"
 #include "CloneEnv.h"
+#include "Str.h"
 
 namespace storm {
 
