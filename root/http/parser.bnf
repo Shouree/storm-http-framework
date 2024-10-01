@@ -44,10 +44,6 @@ SQuery : SQueryEntry(params), ("&", SQueryEntry(params))*;
 
 void SQueryEntry(Map<Str, Str> params);
 SQueryEntry => put(params, k, v) : "[a-zA-Z0-9\-/.();,]+" k, "=", "[a-zA-Z0-9\-/.();,]+" v;
-// TODO(Christoffer): Fix cookie parsing
-// SQueryEntry : "cookie" k, "=", SCookies(cookies);
-// void SCookies(HTTP_Cookies cookies);
-// SCookies => addCookie(k, v) : ("[a-zA-Z0-9\-/.(),]+" k, "=", "[a-zA-Z0-9\-/.(),]+" v, ";")+;
 
 void SHTTPVersion(HTTP_Parser p, HTTP_Request req);
 SHTTPVersion => addVersion(p, req, version) : "HTTP/[0-9]\.[0-9]" version;
@@ -59,7 +55,11 @@ void SHeaders(HTTP_Parser p, HTTP_Request req);
 SHeaders : SHeader(req), (SCRLF, SHeader(req))*, SCRLF;
 
 void SHeader(HTTP_Request req);
-SHeader => put(req.headers, k, v) : SFieldName k, ":" ~ SFieldValue v;
+SHeader[1] : "Cookie", ":" ~ SCookie(req.cookies), ("; ?", SCookie(req.cookies))*;
+SHeader[0] => put(req.headers, k, v) : SFieldName k, ":" ~ SFieldValue v;
+
+void SCookie(Map<Str, Str> cookies);
+SCookie => put(cookies, k, v) : "[a-zA-Z0-9\-/.(),]+" k, "=", "[a-zA-Z0-9\-/.(),]+" v;
 
 Str SFieldName();
 SFieldName => name : "[a-zA-Z0-9\-_]+" name;

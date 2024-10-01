@@ -79,6 +79,7 @@ class HTTP_Request{
   Str->Str method_params;
   Str->Str headers;
   Buffer data;
+  Str->Str cookies;
 }
 
 /*This is a data class and should contain no functions*/
