@@ -69,8 +69,14 @@ namespace storm {
 		// Remove duplicates, assumes sorted beforehand.
 		void CODECALL removeDuplicatesRaw();
 
+		// Remove duplicates, assumes sorted beforehand, custom predicate.
+		void CODECALL removeDuplicatesRawPred(FnBase *compare);
+
 		// Remove duplicates, return the new version.
 		ArrayBase *CODECALL withoutDuplicatesRaw();
+
+		// Remove duplicates, return the new version, custom predicate.
+		ArrayBase *CODECALL withoutDuplicatesRawPred(FnBase *compare);
 
 		// To string.
 		virtual void STORM_FN toS(StrBuf *to) const;
@@ -277,6 +283,15 @@ namespace storm {
 		// Removed duplicates.
 		Array<T> *withoutDuplicates() {
 			return (Array<T> *)withoutDuplicatesRaw();
+		}
+
+		// Remove duplicates with custom predicate.
+		void removeDuplicates(Fn<Bool, T, T> *compare) {
+			removeDuplicatesRawPred(compare);
+		}
+
+		Array<T> *withoutDuplicates(Fn<Bool, T, T> *compare) {
+			return (Array<T> *)withoutDuplicatesRawPred(compare);
 		}
 
 		// Append elements.
