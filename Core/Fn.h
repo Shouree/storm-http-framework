@@ -217,6 +217,11 @@ namespace storm {
 			runtime::setVTable(this);
 		}
 
+		// Copy:
+		Fn(const Fn<R, P1, P2> &other) : FnBase(other) {
+			runtime::setVTable(this);
+		}
+
 		// Call the function.
 		R call(P1 p1, P2 p2) const {
 			const TObject *first = asTObject(p1);
@@ -256,6 +261,11 @@ namespace storm {
 			runtime::setVTable(this);
 		}
 
+		// Copy:
+		Fn(const Fn<R, P1> &other) : FnBase(other) {
+			runtime::setVTable(this);
+		}
+
 		// Call the function.
 		R call(P1 p1) const {
 			const TObject *first = asTObject(p1);
@@ -291,6 +301,11 @@ namespace storm {
 
 		template <class Q>
 		Fn(R (CODECALL Q::*ptr)(), const Q *obj) : FnBase(address(ptr), obj, true, null) {
+			runtime::setVTable(this);
+		}
+
+		// Copy:
+		Fn(const Fn<R> &other) : FnBase(other) {
 			runtime::setVTable(this);
 		}
 

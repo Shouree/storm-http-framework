@@ -141,6 +141,11 @@ BEGIN_TEST(StormFnPtrTest, BS) {
 
 } END_TEST
 
+BEGIN_TEST(StormFnPtrCopyTest, BS) {
+	// Previously, the copy-ctor of Fn<T> was broken. Surfaced in sort() for example.
+	CHECK_EQ(runFn<Int>(S("tests.bs.copyIntPredicate")), 6);
+} END_TEST
+
 // Run the function pointer both through Storm and C++ and compare the results.
 static int runPtr(Fn<Int, Dbg *> *ptr, int start) {
 	Dbg *dbg = runFn<Dbg *>(S("tests.bs.dbgTrack"), start);
