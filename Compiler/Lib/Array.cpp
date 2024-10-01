@@ -153,22 +153,25 @@ namespace storm {
 			watchFor |= watchLess;
 		}
 
-
-		// Sort with provided predicate function.
-		{
-			Array<Value> *pParams = new (e) Array<Value>();
-			*pParams << Value(StormInfo<Bool>::type(e));
-			*pParams << param() << param();
-			Value predicate = Value(fnType(pParams));
-			add(nativeFunction(e, Value(), S("sort"), valList(e, 2, t, predicate), address(&ArrayBase::sortRawPred)));
-			add(nativeFunction(e, t, S("sorted"), valList(e, 2, t, predicate), address(&sortedRawPred))->makePure());
-		}
-
 		// Remove duplicates.
 		if (param().type->handle().lessFn || param().type->handle().equalFn) {
 			addRemoveDuplicates();
 		} else {
 			watchFor |= watchEquality;
+		}
+
+		// Sort and remove duplicates with provided predicate function.
+		{
+			Array<Value> *pParams = new (e) Array<Value>();
+			*pParams << Value(StormInfo<Bool>::type(e));
+			*pParams << param() << param();
+			Value predicate = Value(fnType(pParams));
+
+			add(nativeFunction(e, Value(), S("sort"), valList(e, 2, t, predicate), address(&ArrayBase::sortRawPred)));
+			add(nativeFunction(e, t, S("sorted"), valList(e, 2, t, predicate), address(&sortedRawPred))->makePure());
+
+			add(nativeFunction(e, Value(), S("removeDuplicates"), valList(e, 2, t, predicate), address(&ArrayBase::removeDuplicatesRawPred)));
+			add(nativeFunction(e, t, S("withoutDuplicates"), valList(e, 2, t, predicate), address(&ArrayBase::withoutDuplicatesRawPred))->makePure());
 		}
 
 		if (!param().type->isA(StormInfo<TObject>::type(engine))) {

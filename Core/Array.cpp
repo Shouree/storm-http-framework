@@ -209,9 +209,47 @@ namespace storm {
 		if (count() == 0)
 			return;
 
+		Bool isEqual = true;
+		Bool (*compare)(const void *, const void *) = handle.equalFn;
+		if (!compare) {
+			isEqual = false;
+			compare = handle.lessFn;
+		}
+
 		Nat out = 0;
 		for (Nat i = 1; i < count(); i++) {
-			if (!handle.equal(ptr(out), ptr(i))) {
+			if (compare(ptr(out), ptr(i)) != isEqual) {
+				++out;
+				if (out != i)
+					arraySwap(ptr(out), ptr(i), handle.size);
+			}
+		}
+
+		while (count() > out + 1)
+			pop();
+	}
+
+	void ArrayBase::removeDuplicatesRawPred(FnBase *compare) {
+		if (count() == 0)
+			return;
+
+		RawFn compareFn = compare->rawCall();
+
+		// Support *both* compare being < and == by checking:
+		Bool isEqual = false;
+		{
+			const void *params[2] = { ptr(0), ptr(0) };
+			compareFn.call(compare, &isEqual, params);
+		}
+
+		Nat out = 0;
+		for (Nat i = 1; i < count(); i++) {
+			// Compare:
+			Bool equal = false;
+			const void *params[2] = { ptr(out), ptr(i) };
+			compareFn.call(compare, &equal, params);
+
+			if (equal != isEqual) {
 				++out;
 				if (out != i)
 					arraySwap(ptr(out), ptr(i), handle.size);
@@ -232,9 +270,48 @@ namespace storm {
 		if (count() == 0)
 			return copy;
 
+		Bool isEqual = true;
+		Bool (*compare)(const void *, const void *) = handle.equalFn;
+		if (!compare) {
+			isEqual = false;
+			compare = handle.lessFn;
+		}
+
 		copy->pushRaw(ptr(0));
 		for (Nat i = 1; i < count(); i++) {
-			if (!handle.equal(ptr(i), copy->ptr(copy->count() - 1)))
+			if (compare(copy->ptr(copy->count() - 1), ptr(i)) != isEqual)
+				copy->pushRaw(ptr(i));
+		}
+
+		return copy;
+	}
+
+	ArrayBase *ArrayBase::withoutDuplicatesRawPred(FnBase *compare) {
+		// Create a copy:
+		void *copyMem = runtime::allocObject(sizeof(ArrayBase), runtime::typeOf(this));
+		ArrayBase *copy = new (Place(copyMem)) ArrayBase(handle);
+		runtime::setVTable(copy);
+
+		// Copy unique elements:
+		if (count() == 0)
+			return copy;
+
+		RawFn compareFn = compare->rawCall();
+
+		Bool isEqual = false;
+		{
+			const void *params[2] = { ptr(0), ptr(0) };
+			compareFn.call(compare, &isEqual, params);
+		}
+
+		copy->pushRaw(ptr(0));
+		for (Nat i = 1; i < count(); i++) {
+			// Compare:
+			Bool equal = false;
+			const void *params[2] = { copy->ptr(copy->count() - 1), ptr(i) };
+			compareFn.call(compare, &equal, params);
+
+			if (equal != isEqual)
 				copy->pushRaw(ptr(i));
 		}
 
