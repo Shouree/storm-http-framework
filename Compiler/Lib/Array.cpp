@@ -225,9 +225,11 @@ namespace storm {
 			fn->params->at(1).type == to) {
 
 			watchFor &= ~watchLess;
-			watchFor &= ~watchEquality;
 			addSort();
-			addRemoveDuplicates();
+			if (watchFor & watchEquality) {
+				watchFor &= ~watchEquality;
+				addRemoveDuplicates();
+			}
 		} else if (*fn->name == S("==") &&
 				fn->result == Value(StormInfo<Bool>::type(engine)) &&
 				fn->params->count() == 2 &&
