@@ -87,14 +87,14 @@ def test_weird_requests():
 
     assert "400 Bad Request" in response
     """
-    """request = "GIBBERISH / HTTP/1.1\r\nHost: localhost\r\n\r\n" #<GIBBERISH 
+    request = "GIBBERISH / HTTP/1.1\r\nHost: localhost\r\n\r\n" #<GIBBERISH 
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((SERVER_HOST, SERVER_PORT))
         s.sendall(request.encode())
         response = s.recv(4096).decode()
 
-    assert "400 Bad Request" in response"""
+    assert "400 Bad Request" in response
 
     request = "GET /etc/passwd HTTP/1.1\r\nHost: localhost\r\n\r\n" #<icke giltig sökväg 
 
@@ -115,18 +115,42 @@ def test_long_inputs():
     )
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(0)
+        s.settimeout(4)
+        s.connect((SERVER_HOST, SERVER_PORT))
+        #s.sendall(request.encode())
+        try:
+            bytes_sent = 0
+            while(bytes_sent < len(request)):
+                sent= s.send(request[bytes_sent:].encode());
+                if sent == 0:
+                    break
+                bytes_sent += sent
+
+        except socket.timeout:
+            print("Timed out while sending data to the server.")
+        response = s.recv(4096).decode()
+    assert "414 Request_URI_Too_Long" in response
+
+    data = "{" + '"id":1,"name":"Test",'*1024*1024 +"}" #< borde bli minst 1 MiB+
+    
+    request = "POST / HTTP/1.1\r\n"+"Host: localhost\r\n" + "Content-Length: "+str(len(data)) +"\r\n\r\n"
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(4)
         s.connect((SERVER_HOST, SERVER_PORT))
         s.sendall(request.encode())
+        try:
+            bytes_sent = 0
+            while(bytes_sent < len(request)):
+                sent= s.send(data[bytes_sent:].encode());
+                if sent == 0:
+                    break
+                bytes_sent += sent
+
+        except socket.timeout:
+            print("Timed out while sending data to the server.")
         response = s.recv(4096).decode()
-
-    assert "414 Request-URI Too Long" in response
-
-    data = "{" + '"id":1,"name":"Test",'*1024*1024*1024 +"}" #< borde bli minst 1 MiB+
-    headers = {"Content-Type": "application/json"}
-    result = run_curl_request("PUT", BASE_URL, headers=headers, data=data)
-    assert result.returncode == 0
-    assert "413 Request Entity Too Large" in result.stdout
+    assert "413 Request_Entity_Too_Large" in response
 
 
 

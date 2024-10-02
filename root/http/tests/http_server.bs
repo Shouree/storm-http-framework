@@ -35,6 +35,7 @@ void main(){
     try {
         req = server.recieve();
     } catch (SyntaxError e) {
+        print("ERROR: ${e.toS()}");
         HTTP_Response resp;
         resp.version = HTTP_Version:HTTP_1_1;
         resp.status_code = HTTP_StatusCode:Bad_Request;
