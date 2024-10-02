@@ -106,7 +106,7 @@ def test_weird_requests():
     assert "404 Not Found" in response #< Eller ska detta också vara Bad Request?
 
 def test_long_inputs():
-    long_uri = "/EnMycketStorURI" * 1024*1024*1024
+    long_uri = "/EnMycketStorURI" * 1024*1024
 
     request = (
         f"GET {long_uri} HTTP/1.1\r\n"
@@ -115,6 +115,7 @@ def test_long_inputs():
     )
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0)
         s.connect((SERVER_HOST, SERVER_PORT))
         s.sendall(request.encode())
         response = s.recv(4096).decode()

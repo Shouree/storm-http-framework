@@ -3,14 +3,32 @@ use core:io;
 use http;
 use core:lang;
 
+Bool valid_url(Url path, Url url){
+  if(url.toS() == path.toS()){
+    print("Match:${url.toS()} :::=::: ${path.toS()}");
+    return true;
+  }
+  for(child in path.children()){
+    if(url.toS() == child.toS()){
+      print("Match:${url.toS()} :::=::: ${child.toS()}");
+      return true;
+    }
+    if(child.dir()){
+      return valid_url(child, url);
+    }
+  }
+  return false;
+}
+
+
 void main(){
   //Listener? socket = listen(1234, true);
   //unless(socket){
    // print("Error! Cannot bind socket.");
    // return;
   //}
+  Url root_dir = cwdUrl() / "site";
   HTTP_Server server(1234);
-
 
   while(true){
     HTTP_Request req;
@@ -21,7 +39,6 @@ void main(){
         resp.version = HTTP_Version:HTTP_1_1;
         resp.status_code = HTTP_StatusCode:Bad_Request;
         resp.headers.put("content-type", "text/html; charset=utf-8");
-        resp.headers.put("content-length", "15");
         resp.headers.put("connection", "close");
         resp.data = "400 Bad Request".toUtf8;
         server.send(resp);
@@ -37,26 +54,47 @@ void main(){
       print("${k} : ${v}");
     }
     HTTP_Response res;
+    if(req.imediate_response != HTTP_StatusCode:NO_ERROR){
+      HTTP_Response resp;
+      resp.version = HTTP_Version:HTTP_1_1;
+      resp.status_code = req.imediate_response;
+      resp.headers.put("content-type", "text/html; charset=utf-8");
+      resp.headers.put("connection", "close");
+      resp.data = "Client Error".toUtf8;
+      server.send(resp);
+      continue;
+    }
+    Url cmp = root_dir;
+    if(!req.path.empty()){
+      print("Base path is ${req.path.toS()}");
+      cmp = cmp / req.path.name();
+    }
+    if(!valid_url(root_dir, cmp)){
+      print("PATH NOT VALID!\n");
+      //HTTP_Response resp;
+      res.version = HTTP_Version:HTTP_1_1;
+      res.status_code = HTTP_StatusCode:Not_Found;
+      res.headers.put("content-type", "text/html; charset=utf-8");
+      res.headers.put("connection", "close");
+      res.data = toUtf8("404 Not Found");
+      server.send(res);
+      continue;
+    }
+
     //TODO skapa header tests Fille o/c.
+
     res.version = HTTP_Version:HTTP_1_1;
+
     res.status_code = HTTP_StatusCode:OK;
-    
-    //res.headers.types.push(HTTP_Header_Type:Content_Length);
-    // res.headers.contents.push("132");
 
     res.headers.put("content-type", "text/html; charset=utf-8");
-    //res.headers.contents.push("text/html; charset=utf-8");
-
     //TODO, check if this impelemntation works:
     res.headers.put("connection", "close");
     Url index_page = cwdUrl;                       
     index_page = index_page / "index.html";
     print("\nSending response...");
+
     res.data = toUtf8(index_page.readAllText.toS());
-
-    
-    //res.headers.contents.push("close");
-
     server.send(res);
   }
 }

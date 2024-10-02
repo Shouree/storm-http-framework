@@ -98,7 +98,6 @@ class HTTP_Parser {
   responseBuf << "\r\n";
   //Add data here to the stream:
   responseBuf << fromUtf8(response.data);                  //Input data
-
   return toUtf8(responseBuf.toS());
   }
 }

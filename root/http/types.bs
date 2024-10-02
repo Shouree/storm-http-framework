@@ -7,6 +7,7 @@ enum HTTP_Version{
 }
 
 enum HTTP_StatusCode{
+  NO_ERROR = 0,
   //Informational 1xx
   Continue = 100,
   Switching_Protocol = 101,
@@ -73,6 +74,7 @@ enum HTTP_Method{
 
 /*This is a data class and should contain no functions*/
 class HTTP_Request{
+  HTTP_StatusCode imediate_response;
   HTTP_Method method;
   HTTP_Version version;
   Url path;
