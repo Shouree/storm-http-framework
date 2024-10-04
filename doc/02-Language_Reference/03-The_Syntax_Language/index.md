@@ -19,6 +19,13 @@ The remainder of this section describes the Syntax Language in full. Since the S
 with many similar terms, readers are encouraged to start by looking at the
 [terminology](md:Terminology) section of the manual.
 
+**Note:** This section focuses on the syntax language as it is used to parse and compile source
+code. As such, the explanations are aimed towards usage with the
+[main parser in Storm](md:/Library_Reference/Compiler_Library/Parsing). Storm also provides
+more restricted but more efficient parsers in the [parser library](md:/Library_Reference/Parser_Library)
+that are often more suitable for application code. These parsers also use the Syntax Language, but
+with some minor differences to the parsing process and semantics.
+
 
 Finally, a note for the curious reader: all code generation in the Syntax Language is implemented
 using Basic Storm: The Syntax Language creates abstract syntax trees in Basic Storm and thus

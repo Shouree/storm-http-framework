@@ -8,6 +8,11 @@ As with previous sections of the compiler library, this part of the documentatio
 interfaces themselves. The conceptual parts are described in the corresponding section of the
 [language reference](md:/Language_Reference/The_Syntax_Language).
 
+**Note:** The parser described here is powerful and is able to parse all context-free languages.
+This does, however, come at a cost in complexity and performance. For application code that parses
+simple input formats, using the [parser library](md:/Library_Reference/Compiler_Library/Parsing),
+which provides simpler but more performant parsers for such tasks.
+
 
 Source Positions
 ----------------
@@ -227,7 +232,6 @@ matching a production in the text. It contains the following additional members:
 - .indent
 - .production()
 - .[](core.Nat)
-- 
 ```
 
 ### Leaf Nodes
