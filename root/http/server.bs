@@ -112,15 +112,15 @@ class HTTP_Server{
             }else{
               continue; //continue recieving header...
             }
-            content_length = request.headers.get("content-length").toNat();
+            content_length = request.headers.get("content-length").toLong();
             print("\n\nContent-Length IS: ${content_length.toS()}\n\n");
-            if(content_length >= 0x100000){
+            if(content_length >= 0x100000.long){
               //Content-Length over 1MiB
               request.imediate_response = HTTP_StatusCode:Request_Entity_Too_Large; 
               return request;
             }
             print("Recieving body...\n");
-            while(body.filled() < content_length){
+            while(body.filled().long < content_length){
               if(rbuf.free() == 0 ){
                 //TODO decide maximum size of body
                 // Nginx uses 1MiB
