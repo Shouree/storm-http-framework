@@ -1,0 +1,14 @@
+stages:
+  - test
+
+test_job:
+  stage: test
+  image: ubuntu:latest
+  script:
+    - apt-get update
+    - apt-get install -y storm-lang
+    - cp -fr ./root/http/ /usr/lib/storm/
+    - storm -T http
+  only:
+    - master
+    - merge_requests
