@@ -250,6 +250,14 @@ namespace storm {
 		return r;
 	}
 
+	MAYBE(NameOverloads *) NameSet::allOverloads(Str *name) {
+		Overloads::Iter found = overloads->find(name);
+		if (found == overloads->end())
+			return null;
+		else
+			return found.v();
+	}
+
 	void NameSet::forceLoad() {
 		if (loaded)
 			return;

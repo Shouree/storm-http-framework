@@ -260,7 +260,7 @@ namespace storm {
 			pop();
 	}
 
-	ArrayBase *ArrayBase::withoutDuplicatesRaw() {
+	ArrayBase *ArrayBase::withoutDuplicatesRaw() const {
 		// Create a copy:
 		void *copyMem = runtime::allocObject(sizeof(ArrayBase), runtime::typeOf(this));
 		ArrayBase *copy = new (Place(copyMem)) ArrayBase(handle);
@@ -286,7 +286,7 @@ namespace storm {
 		return copy;
 	}
 
-	ArrayBase *ArrayBase::withoutDuplicatesRawPred(FnBase *compare) {
+	ArrayBase *ArrayBase::withoutDuplicatesRawPred(FnBase *compare) const {
 		// Create a copy:
 		void *copyMem = runtime::allocObject(sizeof(ArrayBase), runtime::typeOf(this));
 		ArrayBase *copy = new (Place(copyMem)) ArrayBase(handle);
@@ -316,6 +316,84 @@ namespace storm {
 		}
 
 		return copy;
+	}
+
+	Nat ArrayBase::lowerBoundRaw(const void *find) const {
+		Nat first = 0;
+		Nat count = this->count();
+		while (count > 0) {
+			Nat step = count / 2;
+			Nat middle = first + step;
+			if ((*handle.lessFn)(ptr(middle), find)) {
+				first = middle + 1;
+				count -= step + 1;
+			} else {
+				count = step;
+			}
+		}
+		return first;
+	}
+
+	Nat ArrayBase::lowerBoundRawPred(const void *find, FnBase *compare) const {
+		RawFn compareFn = compare->rawCall();
+
+		Nat first = 0;
+		Nat count = this->count();
+		while (count > 0) {
+			Nat step = count / 2;
+			Nat middle = first + step;
+
+			Bool isLess = false;
+			const void *params[2] = { ptr(middle), find };
+			compareFn.call(compare, &isLess, params);
+
+			if (isLess) {
+				first = middle + 1;
+				count -= step + 1;
+			} else {
+				count = step;
+			}
+		}
+		return first;
+	}
+
+	Nat ArrayBase::upperBoundRaw(const void *find) const {
+		Nat first = 0;
+		Nat count = this->count();
+		while (count > 0) {
+			Nat step = count / 2;
+			Nat middle = first + step;
+			if (!(*handle.lessFn)(find, ptr(middle))) {
+				first = middle + 1;
+				count -= step + 1;
+			} else {
+				count = step;
+			}
+		}
+		return first;
+	}
+
+	Nat ArrayBase::upperBoundRawPred(const void *find, FnBase *compare) const {
+		RawFn compareFn = compare->rawCall();
+
+		Nat first = 0;
+		Nat count = this->count();
+		while (count > 0) {
+			Nat step = count / 2;
+			Nat middle = first + step;
+
+			Bool isLess = false;
+			const void *params[2] = { find, ptr(middle) };
+			compareFn.call(compare, &isLess, params);
+
+			if (!isLess) {
+				first = middle + 1;
+				count -= step + 1;
+			} else {
+				count = step;
+			}
+		}
+		return first;
 	}
 
 	void ArrayBase::toS(StrBuf *to) const {

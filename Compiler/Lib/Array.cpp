@@ -149,6 +149,7 @@ namespace storm {
 		// Sort with operator <.
 		if (param().type->handle().lessFn) {
 			addSort();
+			addBinarySearch();
 		} else {
 			watchFor |= watchLess;
 		}
@@ -172,6 +173,9 @@ namespace storm {
 
 			add(nativeFunction(e, Value(), S("removeDuplicates"), valList(e, 2, t, predicate), address(&ArrayBase::removeDuplicatesRawPred)));
 			add(nativeFunction(e, t, S("withoutDuplicates"), valList(e, 2, t, predicate), address(&ArrayBase::withoutDuplicatesRawPred))->makePure());
+
+			add(new (e) TemplateFn(new (e) Str(S("lowerBound")), fnPtr(e, &ArrayType::createLowerBound, this)));
+			add(new (e) TemplateFn(new (e) Str(S("upperBound")), fnPtr(e, &ArrayType::createUpperBound, this)));
 		}
 
 		if (!param().type->isA(StormInfo<TObject>::type(engine))) {
@@ -229,6 +233,7 @@ namespace storm {
 
 			watchFor &= ~watchLess;
 			addSort();
+			addBinarySearch();
 			if (watchFor & watchEquality) {
 				watchFor &= ~watchEquality;
 				addRemoveDuplicates();
@@ -262,6 +267,85 @@ namespace storm {
 		add(nativeFunction(e, Value(this), S("sorted"), params, address(&sortedRaw))->makePure());
 
 		// TODO: Would be nice to have < for comparison as well!
+	}
+
+	void ArrayType::addBinarySearch() {
+		Engine &e = engine;
+		Value n(StormInfo<Nat>::type(e));
+		Array<Value> *params = valList(e, 2, thisPtr(this), param().asRef());
+
+		add(nativeFunction(e, n, S("lowerBound"), params, address(&ArrayBase::lowerBoundRaw)));
+		add(nativeFunction(e, n, S("upperBound"), params, address(&ArrayBase::upperBoundRaw)));
+	}
+
+	MAYBE(Named *) ArrayType::createLowerBound(Str *name, SimplePart *part) {
+		if (part->params->count() != 3)
+			return null;
+
+		Value findType = part->params->at(1).asRef(false);
+		if (!findType.type)
+			return null;
+
+		// Note: To help automatic deduction of template parameters, we ignore parameter #2 and
+		// produce a suitable match based on parameter 1 (parameter 2 is often deduced to 'void' for
+		// anonymous lambdas). To make this work, we need to re-use existing entities whenever
+		// possible.
+		NameOverloads *candidates = allOverloads(new (this) Str(S("lowerBound")));
+		for (Nat i = 0; i < candidates->count(); i++) {
+			Named *candidate = candidates->at(i);
+			if (candidate->params->count() == 3)
+				if (candidate->params->at(1).type == findType.type)
+					return candidate;
+		}
+
+		// Otherwise, create a new entity:
+		Value n(StormInfo<Nat>::type(engine));
+		Array<Value> *predParams = new (engine) Array<Value>(3, Value(StormInfo<Bool>::type(engine)));
+		predParams->at(1) = param();
+		predParams->at(2) = findType;
+
+		Array<Value> *params = new (engine) Array<Value>(3, thisPtr(this));
+		params->at(1) = findType.asRef();
+		params->at(2) = Value(fnType(predParams));
+
+		Function *created = nativeFunction(engine, n, S("lowerBound"), params, address(&ArrayBase::lowerBoundRawPred));
+		created->flags |= namedMatchNoInheritance;
+		return created;
+	}
+
+	MAYBE(Named *) ArrayType::createUpperBound(Str *name, SimplePart *part) {
+		if (part->params->count() != 3)
+			return null;
+
+		Value findType = part->params->at(1).asRef(false);
+		if (!findType.type)
+			return null;
+
+		// Note: To help automatic deduction of template parameters, we ignore parameter #2 and
+		// produce a suitable match based on parameter 1 (parameter 2 is often deduced to 'void' for
+		// anonymous lambdas). To make this work, we need to re-use existing entities whenever
+		// possible.
+		NameOverloads *candidates = allOverloads(new (this) Str(S("upperBound")));
+		for (Nat i = 0; i < candidates->count(); i++) {
+			Named *candidate = candidates->at(i);
+			if (candidate->params->count() == 3)
+				if (candidate->params->at(1).type == findType.type)
+					return candidate;
+		}
+
+		// Otherwise, create a new entity:
+		Value n(StormInfo<Nat>::type(engine));
+		Array<Value> *predParams = new (engine) Array<Value>(3, Value(StormInfo<Bool>::type(engine)));
+		predParams->at(1) = findType;
+		predParams->at(2) = param();
+
+		Array<Value> *params = new (engine) Array<Value>(3, thisPtr(this));
+		params->at(1) = findType.asRef();
+		params->at(2) = Value(fnType(predParams));
+
+		Function *created = nativeFunction(engine, n, S("upperBound"), params, address(&ArrayBase::upperBoundRawPred));
+		created->flags |= namedMatchNoInheritance;
+		return created;
 	}
 
 	void ArrayType::addSerialization(SerializeInfo *info) {
