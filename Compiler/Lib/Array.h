@@ -57,6 +57,13 @@ namespace storm {
 		// Add 'sort' without parameters.
 		void addSort();
 
+		// Add 'upperBound' and 'lowerBound' without parameters.
+		void addBinarySearch();
+
+		// Create 'upperBound' and 'lowerBound' from a template, with fn params.
+		MAYBE(Named *) CODECALL createUpperBound(Str *name, SimplePart *part);
+		MAYBE(Named *) CODECALL createLowerBound(Str *name, SimplePart *part);
+
 		// Add serialization functions.
 		void addSerialization(SerializeInfo *info);
 

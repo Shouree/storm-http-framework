@@ -73,10 +73,19 @@ namespace storm {
 		void CODECALL removeDuplicatesRawPred(FnBase *compare);
 
 		// Remove duplicates, return the new version.
-		ArrayBase *CODECALL withoutDuplicatesRaw();
+		ArrayBase *CODECALL withoutDuplicatesRaw() const;
 
 		// Remove duplicates, return the new version, custom predicate.
-		ArrayBase *CODECALL withoutDuplicatesRawPred(FnBase *compare);
+		ArrayBase *CODECALL withoutDuplicatesRawPred(FnBase *compare) const;
+
+		// Find first element that is greater than or equal to 'test', using binary search. Returns
+		// 'count' if no element is found.
+		Nat CODECALL lowerBoundRaw(const void *find) const;
+		Nat CODECALL lowerBoundRawPred(const void *find, FnBase *compare) const;
+
+		// Find first element that is greater than 'test', using binary search.
+		Nat CODECALL upperBoundRaw(const void *find) const;
+		Nat CODECALL upperBoundRawPred(const void *find, FnBase *compare) const;
 
 		// To string.
 		virtual void STORM_FN toS(StrBuf *to) const;
@@ -281,7 +290,7 @@ namespace storm {
 		}
 
 		// Removed duplicates.
-		Array<T> *withoutDuplicates() {
+		Array<T> *withoutDuplicates() const {
 			return (Array<T> *)withoutDuplicatesRaw();
 		}
 
@@ -290,8 +299,30 @@ namespace storm {
 			removeDuplicatesRawPred(compare);
 		}
 
-		Array<T> *withoutDuplicates(Fn<Bool, T, T> *compare) {
+		Array<T> *withoutDuplicates(Fn<Bool, T, T> *compare) const {
 			return (Array<T> *)withoutDuplicatesRawPred(compare);
+		}
+
+		// Find lower bound. Assumes '<' is in the handle.
+		Nat lowerBound(const T &find) const {
+			return lowerBoundRaw(&find);
+		}
+
+		// Lower bound with custom predicate.
+		template <class U>
+		Nat lowerBound(const U &find, Fn<Bool, T, U> *compare) const {
+			return lowerBoundRawPred(&find, compare);
+		}
+
+		// Find upper bound. Assumes '<' is in the handle.
+		Nat upperBound(const T &find) const {
+			return upperBoundRaw(&find);
+		}
+
+		// Upper bound with custom predicate.
+		template <class U>
+		Nat upperBound(const T &find, Fn<Bool, U, T> *compare) const {
+			return upperBoundRawPred(&find, compare);
 		}
 
 		// Append elements.

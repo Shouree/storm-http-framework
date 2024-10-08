@@ -104,6 +104,9 @@ namespace storm {
 		// Get all members.
 		virtual Array<Named *> *STORM_FN content();
 
+		// Find all overloads for a particular name.
+		MAYBE(NameOverloads *) STORM_FN allOverloads(Str *name);
+
 		// Force loading this NameSet.
 		void STORM_FN forceLoad();
 
