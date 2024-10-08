@@ -396,6 +396,37 @@ namespace storm {
 		return first;
 	}
 
+	Bool ArrayBase::equalRaw(const ArrayBase *other) const {
+		if (count() != other->count())
+			return false;
+
+		for (Nat i = 0; i < count(); i++)
+			if (!handle.equal(ptr(i), other->ptr(i)))
+				return false;
+
+		return true;
+	}
+
+	Bool ArrayBase::lessRaw(const ArrayBase *other) const {
+		Nat smallest = min(count(), other->count());
+
+		if (handle.equalFn) {
+			for (Nat i = 0; i < smallest; i++) {
+				if (!(*handle.equalFn)(ptr(i), other->ptr(i)))
+					return (*handle.lessFn)(ptr(i), other->ptr(i));
+			}
+		} else {
+			for (Nat i = 0; i < smallest; i++) {
+				if ((*handle.lessFn)(ptr(i), other->ptr(i)))
+					return true;
+				if ((*handle.lessFn)(other->ptr(i), ptr(i)))
+					return false;
+			}
+		}
+
+		return count() < other->count();
+	}
+
 	void ArrayBase::toS(StrBuf *to) const {
 		*to << S("[");
 		if (count() > 0)
