@@ -266,7 +266,22 @@ namespace storm {
 		add(nativeFunction(e, Value(), S("sort"), params, address(&ArrayBase::sortRaw)));
 		add(nativeFunction(e, Value(this), S("sorted"), params, address(&sortedRaw))->makePure());
 
-		// TODO: Would be nice to have < for comparison as well!
+		// < for comparing.
+		Value b(StormInfo<Bool>::type(e));
+		add(nativeFunction(e, b, S("<"), new (e) Array<Value>(2, thisPtr(this)), address(&ArrayBase::lessRaw)));
+	}
+
+	void ArrayType::addRemoveDuplicates() {
+		Engine &e = engine;
+		Array<Value> *params = valList(e, 1, thisPtr(this));
+
+		// Compare with == or <, whichever is present.
+		add(nativeFunction(e, Value(), S("removeDuplicates"), params, address(&ArrayBase::removeDuplicatesRaw)));
+		add(nativeFunction(e, Value(this), S("withoutDuplicates"), params, address(&ArrayBase::withoutDuplicatesRaw))->makePure());
+
+		// == for comparing.
+		Value b(StormInfo<Bool>::type(e));
+		add(nativeFunction(e, b, S("=="), new (e) Array<Value>(2, thisPtr(this)), address(&ArrayBase::equalRaw)));
 	}
 
 	void ArrayType::addBinarySearch() {
@@ -361,15 +376,6 @@ namespace storm {
 
 		// Add the 'read' function.
 		add(serializedReadFn(this));
-	}
-
-	void ArrayType::addRemoveDuplicates() {
-		Engine &e = engine;
-		Array<Value> *params = valList(e, 1, thisPtr(this));
-
-		// Sort using <.
-		add(nativeFunction(e, Value(), S("removeDuplicates"), params, address(&ArrayBase::removeDuplicatesRaw)));
-		add(nativeFunction(e, Value(this), S("withoutDuplicates"), params, address(&ArrayBase::withoutDuplicatesRaw))->makePure());
 	}
 
 	Function *ArrayType::writeFn(SerializedType *type, SerializeInfo *info) {

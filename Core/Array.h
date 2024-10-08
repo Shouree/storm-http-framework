@@ -87,6 +87,12 @@ namespace storm {
 		Nat CODECALL upperBoundRaw(const void *find) const;
 		Nat CODECALL upperBoundRawPred(const void *find, FnBase *compare) const;
 
+		// Compare for equality.
+		Bool CODECALL equalRaw(const ArrayBase *other) const;
+
+		// Compare lexiographically less than.
+		Bool CODECALL lessRaw(const ArrayBase *other) const;
+
 		// To string.
 		virtual void STORM_FN toS(StrBuf *to) const;
 
