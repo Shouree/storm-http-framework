@@ -61,6 +61,71 @@ BEGIN_TEST(ArraySortTest, CoreEx) {
 	CHECK_EQ(toS(v), L"[5, 6, 7, 8, 9, 10, 1, 2, 3, 4]");
 } END_TEST
 
+BEGIN_TEST(ArrayRemoveDupTest, CoreEx) {
+	Engine &e = gEngine();
+
+	Array<Int> *v = new (e) Array<Int>();
+	v->push(1);
+	v->push(2);
+	v->push(2);
+	v->push(3);
+	v->push(3);
+	v->push(3);
+	v->push(4);
+
+	Array<Int> *w = v->withoutDuplicates();
+	CHECK_EQ(toS(w), L"[1, 2, 3, 4]");
+	CHECK_EQ(toS(v), L"[1, 2, 2, 3, 3, 3, 4]");
+
+	v->removeDuplicates();
+	CHECK_EQ(toS(v), L"[1, 2, 3, 4]");
+} END_TEST
+
+BEGIN_TEST(ArrayBinSearchTest, CoreEx) {
+	Engine &e = gEngine();
+
+	Array<Int> *v = new (e) Array<Int>();
+	v->push(1);
+	v->push(2);
+	v->push(2);
+	v->push(3);
+	v->push(3);
+	v->push(3);
+	v->push(4);
+	v->push(4);
+
+	CHECK_EQ(v->lowerBound(3), 3);
+	CHECK_EQ(v->upperBound(3), 6);
+	CHECK_EQ(v->lowerBound(0), 0);
+	CHECK_EQ(v->upperBound(0), 0);
+	CHECK_EQ(v->lowerBound(4), 6);
+	CHECK_EQ(v->upperBound(4), 8);
+	CHECK_EQ(v->lowerBound(10), 8);
+	CHECK_EQ(v->upperBound(10), 8);
+} END_TEST
+
+BEGIN_TEST(ArrayCompareTest, CoreEx) {
+	Engine &e = gEngine();
+
+	Array<Int> *a = new (e) Array<Int>();
+	a->push(10);
+	a->push(20);
+	a->push(30);
+
+	Array<Int> *b = new (e) Array<Int>();
+	b->push(10);
+	b->push(30);
+
+	Array<Int> *c = new (e) Array<Int>();
+	c->push(10);
+	c->push(30);
+
+	CHECK(a->lessRaw(b));
+	CHECK(!b->lessRaw(a));
+
+	CHECK(!a->equalRaw(b));
+	CHECK(b->equalRaw(c));
+} END_TEST
 
 // Performance of sort()
 BEGIN_TESTX(ArraySortPerf, CoreEx) {

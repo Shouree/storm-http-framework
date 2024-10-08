@@ -444,6 +444,23 @@ BEGIN_TEST(BSArrayTest, BS) {
 	CHECK_EQ(toS(runFn<Str *>(S("tests.bs.sortedArray"))), L"[1, 2, 3, 4, 5][5, 4, 3, 2, 1]");
 	CHECK_EQ(toS(runFn<Str *>(S("tests.bs.sortArrayP"))), L"[3, 4, 5, 1, 2]");
 	CHECK_EQ(toS(runFn<Str *>(S("tests.bs.sortedArrayP"))), L"[3, 4, 5, 1, 2][5, 4, 3, 2, 1]");
+
+	// Remove duplicates.
+	CHECK_EQ(toS(runFn<Str *>(S("tests.bs.noDuplicates"))), L"[1, 2, 3, 4]");
+	CHECK_EQ(toS(runFn<Str *>(S("tests.bs.noDuplicatesP1"))), L"0, 1, 2, 3, 4");
+	CHECK_EQ(toS(runFn<Str *>(S("tests.bs.noDuplicatesP2"))), L"0, 1, 2, 3, 4");
+	CHECK_EQ(toS(runFn<Str *>(S("tests.bs.noDuplicatesP3"))), L"0, 1, 2, 3, 4");
+	CHECK_EQ(toS(runFn<Str *>(S("tests.bs.noDuplicatesP4"))), L"0, 1, 2, 3, 4");
+
+	// Comparison operators.
+	CHECK_EQ(toS(runFn<Str *>(S("tests.bs.arrayEq"))), L"truefalse");
+	CHECK_EQ(toS(runFn<Str *>(S("tests.bs.arrayLess"))), L"truefalse");
+
+	// Upper/lower bounds.
+	CHECK_EQ(runFn<Int>(S("tests.bs.addRange"), 2), 6);
+	CHECK_EQ(runFn<Int>(S("tests.bs.addRange"), 3), 12);
+	CHECK_EQ(runFn<Int>(S("tests.bs.addRangeKV"), 1), 2+3);
+	CHECK_EQ(runFn<Int>(S("tests.bs.addRangeKV"), 4), 8+9);
 } END_TEST
 
 BEGIN_TEST(BSPQTest, BS) {
