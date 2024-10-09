@@ -319,6 +319,8 @@ namespace storm {
 	}
 
 	Nat ArrayBase::lowerBoundRaw(const void *find) const {
+		// Adapted from the example implementation at:
+		// https://en.cppreference.com/w/cpp/algorithm/lower_bound
 		Nat first = 0;
 		Nat count = this->count();
 		while (count > 0) {
@@ -335,6 +337,8 @@ namespace storm {
 	}
 
 	Nat ArrayBase::lowerBoundRawPred(const void *find, FnBase *compare) const {
+		// Adapted from the example implementation at:
+		// https://en.cppreference.com/w/cpp/algorithm/lower_bound
 		RawFn compareFn = compare->rawCall();
 
 		Nat first = 0;
@@ -358,6 +362,8 @@ namespace storm {
 	}
 
 	Nat ArrayBase::upperBoundRaw(const void *find) const {
+		// Adapted from the example implementation at:
+		// https://en.cppreference.com/w/cpp/algorithm/upper_bound
 		Nat first = 0;
 		Nat count = this->count();
 		while (count > 0) {
@@ -374,6 +380,8 @@ namespace storm {
 	}
 
 	Nat ArrayBase::upperBoundRawPred(const void *find, FnBase *compare) const {
+		// Adapted from the example implementation at:
+		// https://en.cppreference.com/w/cpp/algorithm/upper_bound
 		RawFn compareFn = compare->rawCall();
 
 		Nat first = 0;
