@@ -7,8 +7,7 @@ test_job:
   script:
     - apt-get update
     - apt-get install -y storm-lang
-    - cp -fr ./root/http/ /usr/lib/storm/
-    - storm -T http
+    - storm -i root/http -T http
   only:
     - master
     - merge_requests
