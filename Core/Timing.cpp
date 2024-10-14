@@ -3,6 +3,7 @@
 #include "Str.h"
 #include "StrBuf.h"
 #include <iomanip>
+#include <limits>
 
 namespace storm {
 
@@ -142,7 +143,12 @@ namespace storm {
 	}
 
 	void sleep(Duration d) {
-		os::UThread::sleep(nat(d.inMs()));
+		Long duration = d.inMs();
+		if (duration > std::numeric_limits<Nat>::max())
+			duration = std::numeric_limits<Nat>::max();
+		else if (duration < 0)
+			duration = 0;
+		os::UThread::sleep(Nat(duration));
 	}
 
 	void yield() {
