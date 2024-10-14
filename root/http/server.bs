@@ -95,14 +95,15 @@ class HTTP_Server{
           }
           if(match)print("\n\n\nWE FOUND HEAD BODY SEPARATION!!!!!!!!!!\n\n\n");
           if(sep_loc != 0){
-            Buffer header = cut(rbuf,0, sep_loc);
+            Buffer header = cut(rbuf,0, sep_loc+4);
             
             print("\n\nHeader is equal to: ${header.filled()}");
             print(fromUtf8(header));
             //print(header.toS());
-            Buffer body = cut(rbuf, sep_loc+3, rbuf.filled());
+            print(header.toS());
+            Buffer body = cut(rbuf, sep_loc+4, rbuf.filled());
 
-            //print(body.toS());
+            print(body.empty().toS());
             request = parser.parse_request(fromUtf8(header));
             if(request.headers.has("content-length")){
               if(!request.headers.get("content-length").isNat()){
@@ -110,7 +111,8 @@ class HTTP_Server{
                   return request;
               }
             }else{
-              continue; //continue recieving header...
+              print(request.version.toS());
+              return request; //continue recieving header...
             }
             content_length = request.headers.get("content-length").toLong();
             print("\n\nContent-Length IS: ${content_length.toS()}\n\n");
@@ -124,7 +126,7 @@ class HTTP_Server{
               if(rbuf.free() == 0 ){
                 //TODO decide maximum size of body
                 // Nginx uses 1MiB
-                body = grow(body, body.count() + 4069);
+                body = grow(body, body.count() + 4096);
                 body_buffer_growth++;                                            
                 if(body_buffer_growth > 250){
                   request.imediate_response = HTTP_StatusCode:Request_Entity_Too_Large; 

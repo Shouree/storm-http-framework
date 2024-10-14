@@ -54,6 +54,9 @@ void main(){
     for(k, v in req.method_params){
       print("${k} : ${v}");
     }
+    for(k, v in req.headers){
+      print("${k} : ${v}");
+    }
     HTTP_Response res;
     if(req.imediate_response != HTTP_StatusCode:NO_ERROR){
       HTTP_Response resp;
@@ -72,6 +75,7 @@ void main(){
     }
     if(!valid_url(root_dir, cmp)){
       print("PATH NOT VALID!\n");
+      print(cmp.toS());
       //HTTP_Response resp;
       res.version = HTTP_Version:HTTP_1_1;
       res.status_code = HTTP_StatusCode:Not_Found;
@@ -92,10 +96,12 @@ void main(){
     //TODO, check if this impelemntation works:
     res.headers.put("connection", "close");
     Url index_page = cwdUrl;                       
-    index_page = index_page / "index.html";
+    index_page = root_dir / "index.html";
     print("\nSending response...");
 
-    res.data = toUtf8(index_page.readAllText.toS());
+    Str data = index_page.readAllText.toS();
+    print(data);
+    res.data = toUtf8(data);
     server.send(res);
   }
 }
