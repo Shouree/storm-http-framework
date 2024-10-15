@@ -104,7 +104,7 @@ class HTTP_Server{
             Buffer body = cut(rbuf, sep_loc+4, rbuf.filled());
 
             print(body.empty().toS());
-            request = parser.parse_request(fromUtf8(header));
+            request = parser.parse_request(header);
             if(request.headers.has("content-length")){
               if(!request.headers.get("content-length").isNat()){
                   request.imediate_response = HTTP_StatusCode:Bad_Request; 

@@ -34,7 +34,7 @@ void main(){
     HTTP_Request req;
     try {
         req = server.recieve();
-    } catch (SyntaxError e) {
+    } catch (HttpParseError e) {
         print("ERROR: ${e.toS()}");
         HTTP_Response resp;
         resp.version = HTTP_Version:HTTP_1_1;

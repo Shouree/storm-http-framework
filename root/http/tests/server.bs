@@ -9,7 +9,7 @@ suite Webserver {
   print("Creating Server");
   // HTTP_Server server;
   print("Creating Parser");
-  HTTP_Parser parser;
+  // HTTP_Parser parser;
   print("Creating request");
   HTTP_Request request;
   print("Creating response");

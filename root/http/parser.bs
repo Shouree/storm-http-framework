@@ -1,6 +1,160 @@
-use core:lang;
+use core:asm;
 use core:io;
+use core:lang;
 use lang:bs:macro;
+use parser;
+
+class HttpParseError extends Exception {
+    private Nat pos;
+    private Str msg;
+
+    init (Nat position, Str message) {
+        init {
+            pos = position;
+            msg = message;
+        }
+    }
+
+    protected void message(StrBuf to) : override {
+        to << "Error parsing HTTP request at position: " << pos << "\n" << msg;
+    }
+}
+
+httpParser : parser(recursive descent, binary) {
+  start = SHTTPReq;
+
+  optional delimiter = SOptDelimiter;
+  required delimiter = SReqDelimiter;
+
+  void SOptDelimiter();
+  SOptDelimiter : " *";
+
+  void SReqDelimiter();
+  SReqDelimiter : " +";
+
+  HTTP_Request SHTTPReq();
+  SHTTPReq => HTTP_Request() : SReqLine(me) - SNewline - SHeaders(me) - SOptBody(me);
+
+  void SNewline();
+  SNewline : "\r\n";
+
+  void SReqLine(HTTP_Request req);
+  SReqLine : SMethod(req) ~ SReqTarget(req) - SVersion(req);
+
+  void SMethod(HTTP_Request req);
+  SMethod => addMethod(req, b): "GET" b;
+  SMethod => addMethod(req, b): "POST" b;
+  SMethod => addMethod(req, b): "PUT" b;
+  SMethod => addMethod(req, b): "DELETE" b;
+  SMethod => addMethod(req, b): "HEAD" b;
+  SMethod => addMethod(req, b): "OPTIONS" b;
+
+  void SReqTarget(HTTP_Request req);
+  SReqTarget => addReqPath(req, segments) : SSegments(req) segments;
+
+  Array<Buffer> SSegments(HTTP_Request req);
+  SSegments => Array<Buffer>() : "/\?" - SQuery(req) - " ";
+  SSegments => Array<Buffer>() : "\?" - SQuery(req) - " ";
+  SSegments => Array<Buffer>() : "/ ";
+  SSegments => Array<Buffer>() : " ";
+  SSegments => Array<Buffer>() : "/" - "[a-zA-Z0-9\-.();,]*" -> push - SSegments(req) -> append;
+
+  void SQuery(HTTP_Request req);
+  SQuery : SQueryEntry(req) - ("&" - SQuery(req))?;
+
+  void SQueryEntry(HTTP_Request req);
+  SQueryEntry => addQueryEntry(req, k, v) : "[^=]+" k, "=", "[^ &]+" v;
+
+  void SVersion(HTTP_Request req);
+  SVersion => addVersion(req, bin) : "HTTP/[0-9]+\.[0-9]+" bin;
+
+  void SHeaders(HTTP_Request req);
+  SHeaders : SNewline;
+  SHeaders[1] : "Cookie", ":" ~ SCookies(req);
+  SHeaders[0] => addHeader(req, k, v) : "[^:\r\n]+" k - ":" ~ "[^\r\n]+" v - SNewline - SHeaders(req);
+
+  void SCookies(HTTP_Request req);
+  SCookies : SNewline;
+  // NOTE: This rule allows "key=val;\r\n\r\n"
+  SCookies => addCookie(req, k, v) : "[^=]+" k - "=" - "[^;\r\n]+" v - "[; ]*" - SCookies(req);
+
+  void SOptBody(HTTP_Request req);
+  SOptBody => addData(req, bin) : ".*" bin;
+}
+
+void addMethod(HTTP_Request req, Buffer binary) {
+  Str methodstr = readText(MemIStream(binary)).readAllRaw();
+  if (methodstr == "GET") {
+    req.method = HTTP_Method:GET;
+  }
+  else if (methodstr == "POST") {
+    req.method = HTTP_Method:POST;
+  }
+  else if (methodstr == "PUT") {
+    req.method = HTTP_Method:PUT;
+  }
+  else if (methodstr == "DELETE") {
+    req.method = HTTP_Method:DELETE;
+  }
+  else if (methodstr == "OPTIONS") {
+    req.method = HTTP_Method:OPTIONS;
+  }
+  else if (methodstr == "HEAD") {
+    req.method = HTTP_Method:HEAD;
+  }
+  else if (methodstr == "TRACE") {
+    req.method = HTTP_Method:TRACE;
+  }
+  else if (methodstr == "CONNECT") {
+    req.method = HTTP_Method:CONNECT;
+  }
+  else {
+    req.method = HTTP_Method:BAD_METHOD;
+  }
+}
+
+void addHeader(HTTP_Request req, Buffer keybin, Buffer valbin) {
+  Str key = readText(MemIStream(keybin)).readAllRaw();
+  Str val = readText(MemIStream(valbin)).readAllRaw();
+  put(req.headers, key, val);
+}
+
+void addReqPath(HTTP_Request req, Buffer[] segmentbins) {
+  Str[] segments;
+  for (sb in segmentbins) {
+    Str segment = readText(MemIStream(sb)).readAllRaw();
+    segments.push(segment);
+  }
+  req.path = Url(segments);
+}
+
+void addQueryEntry(HTTP_Request req, Buffer keybin, Buffer valbin) {
+  Str key = readText(MemIStream(keybin)).readAllRaw();
+  Str val = readText(MemIStream(valbin)).readAllRaw();
+  put(req.method_params, key, val);
+}
+
+
+void addData(HTTP_Request req, Buffer bin) {
+    req.data = bin;
+}
+
+void addVersion(HTTP_Request req, Buffer versionbin) {
+  Str versionstr = readText(MemIStream(versionbin)).readAllRaw();
+  if (versionstr == "HTTP/0.9") {
+    req.version = HTTP_Version:HTTP_0_9;
+  } else if (versionstr == "HTTP/1.0") {
+    req.version = HTTP_Version:HTTP_1_0;
+  } else if (versionstr == "HTTP/1.1") {
+    req.version = HTTP_Version:HTTP_1_1;
+  }
+}
+
+void addCookie(HTTP_Request req, Buffer keybin, Buffer valbin) {
+  Str key = readText(MemIStream(keybin)).readAllRaw();
+  Str val = readText(MemIStream(valbin)).readAllRaw();
+  put(req.cookies, key, val);
+}
 
 Str->Str HttpAsciiLookupTable on Compiler;
 Str toASCIIEncodedStr(Str string) on Compiler{
@@ -122,62 +276,15 @@ Str fromASCIIEncodedStr(Str string) on Compiler{
 class HTTP_Parser {
   /* FUNCTIONS FOR RECIEVING REQUESTS AND EXTRACTING DATA FROM REQUESTS*/
 
-  HTTP_Request parse_request(Str expr) {
-    Parser<SHTTPReq> parser;
-    parser.parse(expr, Url());
-    SHTTPReq tree = parser.tree();
-    HTTP_Request req = tree.transform(this);
-    return req;
-  }
-  
-
-
-  void addVersion(HTTP_Request req, Str versionstr) {
-    if (versionstr == "HTTP/0.9") {
-      req.version = HTTP_Version:HTTP_0_9;
-    } else if (versionstr == "HTTP/1.0") {
-      req.version = HTTP_Version:HTTP_1_0;
-    } else if (versionstr == "HTTP/1.1") {
-      req.version = HTTP_Version:HTTP_1_1;
+  HTTP_Request parse_request(Buffer buffer) {
+    var ret = httpParser(buffer);
+    if (err = ret.error) {
+      throw HttpParseError(err.pos, err.message);
     }
-  }
-
-  void addReqPath(HTTP_Request req, Str[] segments) {
-    req.path = Url(io:FileProtocol, segments);
-  }
-
-  void addMethod(HTTP_Request req, Str methodstr) {
-    if (methodstr == "GET") {
-      req.method = HTTP_Method:GET;
+    if (val = ret.value) {
+      return val;
     }
-    else if (methodstr == "POST") {
-      req.method = HTTP_Method:POST;
-    }
-    else if (methodstr == "PUT") {
-      req.method = HTTP_Method:PUT;
-    }
-    else if (methodstr == "DELETE") {
-      req.method = HTTP_Method:DELETE;
-    }
-    else if (methodstr == "OPTIONS") {
-      req.method = HTTP_Method:OPTIONS;
-    }
-    else if (methodstr == "HEAD") {
-      req.method = HTTP_Method:HEAD;
-    }
-    else if (methodstr == "TRACE") {
-      req.method = HTTP_Method:TRACE;
-    }
-    else if (methodstr == "CONNECT") {
-      req.method = HTTP_Method:CONNECT;
-    }
-    else {
-      req.method = HTTP_Method:BAD_METHOD;
-    }
-  }
-
-  void addData(HTTP_Request req, Str str) {
-      req.data = str.toUtf8;
+    return HTTP_Request();
   }
 
   /* FUNCTIONS FOR CREATING RESPONSES AND RESPONDING*/
