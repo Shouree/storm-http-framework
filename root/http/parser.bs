@@ -2,8 +2,126 @@ use core:lang;
 use core:io;
 use lang:bs:macro;
 
+Str->Str HttpAsciiLookupTable on Compiler;
+Str toASCIIEncodedStr(Str string) on Compiler{
+  if(HttpAsciiLookupTable.empty()){
+    //fill Http
+    HttpAsciiLookupTable.put(" ", "%20");
+    HttpAsciiLookupTable.put("!", "%21");
+    HttpAsciiLookupTable.put("\"", "%22");
+    HttpAsciiLookupTable.put("#", "%23");
+    HttpAsciiLookupTable.put("\$", "%24");
+    HttpAsciiLookupTable.put("%", "%25");
+    HttpAsciiLookupTable.put("&", "%26");
+    HttpAsciiLookupTable.put("'", "%27");
+    HttpAsciiLookupTable.put("(", "%28");
+    HttpAsciiLookupTable.put(")", "%29");
+    HttpAsciiLookupTable.put("*", "%2A");
+    HttpAsciiLookupTable.put("+", "%2B");
+    HttpAsciiLookupTable.put(",", "%2C");
+    HttpAsciiLookupTable.put("-", "%2D");
+    HttpAsciiLookupTable.put(".", "%2E");
+    HttpAsciiLookupTable.put("/", "%2F");
+
+    HttpAsciiLookupTable.put(":", "%3A");
+    HttpAsciiLookupTable.put(";", "%3B");
+    HttpAsciiLookupTable.put("<", "%3C");
+    HttpAsciiLookupTable.put("=", "%3D");
+    HttpAsciiLookupTable.put(">", "%3E");
+    HttpAsciiLookupTable.put("?", "%3F");
+    HttpAsciiLookupTable.put("@", "%40");
+
+    HttpAsciiLookupTable.put("[", "%5B");
+    HttpAsciiLookupTable.put("\\", "%5C");
+    HttpAsciiLookupTable.put("]", "%5D");
+    HttpAsciiLookupTable.put("^", "%5E");
+    HttpAsciiLookupTable.put("_", "%5F");
+    HttpAsciiLookupTable.put("`", "%60");
+
+    HttpAsciiLookupTable.put("{", "%7B");
+    HttpAsciiLookupTable.put("|", "%7C");
+    HttpAsciiLookupTable.put("}", "%7D");
+    HttpAsciiLookupTable.put("~", "%7E");
+
+  }
+  //Do stuff
+  StrBuf retbuf;
+  for(c in string){
+    if(HttpAsciiLookupTable.has(c.toS())){
+      retbuf << HttpAsciiLookupTable.get(c.toS());
+    }else{
+      retbuf << c.toS();
+    }
+  }
+  return retbuf.toS();
+}
+
+Str->Str reverseHttpAsciiLookupTable on Compiler;
+Str fromASCIIEncodedStr(Str string) on Compiler{
+  if(reverseHttpAsciiLookupTable.empty()){
+    //fill reverse Http
+    reverseHttpAsciiLookupTable.put("%20", " ");
+    reverseHttpAsciiLookupTable.put("%21", "!");
+    reverseHttpAsciiLookupTable.put("%22","\"");
+    reverseHttpAsciiLookupTable.put("%23", "#");
+    reverseHttpAsciiLookupTable.put("%24","\$");
+    reverseHttpAsciiLookupTable.put("%25", "%");
+    reverseHttpAsciiLookupTable.put("%26", "&");
+    reverseHttpAsciiLookupTable.put("%27", "'");
+    reverseHttpAsciiLookupTable.put("%28", "(");
+    reverseHttpAsciiLookupTable.put("%29", ")");
+    reverseHttpAsciiLookupTable.put("%2A", "*");
+    reverseHttpAsciiLookupTable.put("%2B", "+");
+    reverseHttpAsciiLookupTable.put("%2C", ",");
+    reverseHttpAsciiLookupTable.put("%2D", "-");
+    reverseHttpAsciiLookupTable.put("%2E", ".");
+    reverseHttpAsciiLookupTable.put("%2F", "/");
+    reverseHttpAsciiLookupTable.put("%3A", ":");
+    reverseHttpAsciiLookupTable.put("%3B", ";");
+    reverseHttpAsciiLookupTable.put("%3C", "<");
+    reverseHttpAsciiLookupTable.put("%3D", "=");
+    reverseHttpAsciiLookupTable.put("%3E", ">");
+    reverseHttpAsciiLookupTable.put("%3F", "?");
+    reverseHttpAsciiLookupTable.put("%40", "@");
+    reverseHttpAsciiLookupTable.put("%5B", "[");
+    reverseHttpAsciiLookupTable.put("%5C","\\");
+    reverseHttpAsciiLookupTable.put("%5D", "]");
+    reverseHttpAsciiLookupTable.put("%5E", "^");
+    reverseHttpAsciiLookupTable.put("%5F", "_");
+    reverseHttpAsciiLookupTable.put("%60", "`");
+    reverseHttpAsciiLookupTable.put("%7B", "{");
+    reverseHttpAsciiLookupTable.put("%7C", "|");
+    reverseHttpAsciiLookupTable.put("%7D", "}");
+    reverseHttpAsciiLookupTable.put("%7E", "~");
+  }
+  //Do stuff
+  StrBuf retbuf;
+  Str:Iter it = string.begin();
+  while(it != string.end()){
+    print("The it.v() is: ${it.v()}");
+    if(it.v() == '%'){
+      Str cmp = string.cut(it, it+3);
+      print("The cmp is: '${cmp}'");
+      if(reverseHttpAsciiLookupTable.has(cmp)){
+        print("match");
+        retbuf << reverseHttpAsciiLookupTable.get(cmp);
+        it = it + 3;
+      }else{
+        retbuf << it.v();
+        it++;
+      }
+    }else{
+      retbuf << it.v();
+      it++;
+    }
+  }
+  return retbuf.toS();
+}
+
+
 class HTTP_Parser {
   /* FUNCTIONS FOR RECIEVING REQUESTS AND EXTRACTING DATA FROM REQUESTS*/
+
   HTTP_Request parse_request(Str expr) {
     Parser<SHTTPReq> parser;
     parser.parse(expr, Url());
@@ -11,6 +129,8 @@ class HTTP_Parser {
     HTTP_Request req = tree.transform(this);
     return req;
   }
+  
+
 
   void addVersion(HTTP_Request req, Str versionstr) {
     if (versionstr == "HTTP/0.9") {
