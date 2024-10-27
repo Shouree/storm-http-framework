@@ -201,7 +201,7 @@ private:
 		this.loop = loop;
 
 		if (keyName)
-			throw SyntaxError(pos, "Keys are not supported for range-based iterators.");
+			throw SyntaxError(pos, "Keys are not supported for lazy iterators.");
 
 		WeakMaybeCast cond(nextExpr);
 		cond.name(SStr(valName, pos));

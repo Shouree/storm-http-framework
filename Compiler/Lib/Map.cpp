@@ -493,15 +493,20 @@ namespace storm {
 	 * Iterator.
 	 */
 
-	static void copyIterator(void *to, const MapBase::Iter *from) {
+	static void CODECALL copyIterator(void *to, const MapBase::Iter *from) {
 		new (Place(to)) MapBase::Iter(*from);
 	}
 
-	static bool iteratorEq(MapBase::Iter &a, MapBase::Iter &b) {
+	static void *CODECALL assignIterator(MapBase::Iter *to, const MapBase::Iter *from) {
+		*to = *from;
+		return to;
+	}
+
+	static bool CODECALL iteratorEq(MapBase::Iter &a, MapBase::Iter &b) {
 		return a == b;
 	}
 
-	static bool iteratorNeq(MapBase::Iter &a, MapBase::Iter &b) {
+	static bool CODECALL iteratorNeq(MapBase::Iter &a, MapBase::Iter &b) {
 		return a != b;
 	}
 
@@ -531,6 +536,7 @@ namespace storm {
 		Array<Value> *refref = valList(e, 2, r, r);
 
 		add(nativeFunction(e, Value(), Type::CTOR, refref, address(&copyIterator))->makePure());
+		add(nativeFunction(e, r, S("="), refref, address(&assignIterator))->makePure());
 		add(nativeFunction(e, vBool, S("=="), refref, address(&iteratorEq))->makePure());
 		add(nativeFunction(e, vBool, S("!="), refref, address(&iteratorNeq))->makePure());
 		add(nativeFunction(e, r, S("++*"), ref, address(&MapBase::Iter::preIncRaw)));
