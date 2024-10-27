@@ -123,6 +123,11 @@ namespace storm {
 		new (Place(to)) QueueBase::Iter(*from);
 	}
 
+	static void *CODECALL assignIterator(QueueBase::Iter *to, const QueueBase::Iter *from) {
+		*to = *from;
+		return to;
+	}
+
 	static bool CODECALL iteratorEq(QueueBase::Iter &a, QueueBase::Iter &b) {
 		return a == b;
 	}
@@ -158,6 +163,7 @@ namespace storm {
 		Value vBool = Value(StormInfo<Bool>::type(e));
 		Value vNat = Value(StormInfo<Nat>::type(e));
 		add(nativeFunction(e, Value(), Type::CTOR, refref, address(&copyIterator))->makePure());
+		add(nativeFunction(e, r, S("="), refref, address(&assignIterator))->makePure());
 		add(nativeFunction(e, vBool, S("=="), refref, address(&iteratorEq))->makePure());
 		add(nativeFunction(e, vBool, S("!="), refref, address(&iteratorNeq))->makePure());
 		add(nativeFunction(e, r, S("++*"), ref, address(&QueueBase::Iter::preIncRaw)));

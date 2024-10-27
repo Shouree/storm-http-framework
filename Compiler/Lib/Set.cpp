@@ -373,6 +373,11 @@ namespace storm {
 		new (Place(to)) SetBase::Iter(*from);
 	}
 
+	static void *CODECALL assignIterator(SetBase::Iter *to, const SetBase::Iter *from) {
+		*to = *from;
+		return to;
+	}
+
 	static bool CODECALL iteratorEq(SetBase::Iter &a, SetBase::Iter &b) {
 		return a == b;
 	}
@@ -408,6 +413,7 @@ namespace storm {
 		Array<Value> *refref = valList(e, 2, r, r);
 
 		add(nativeFunction(e, Value(), Type::CTOR, refref, address(&copyIterator))->makePure());
+		add(nativeFunction(e, r, S("="), refref, address(&assignIterator))->makePure());
 		add(nativeFunction(e, vBool, S("=="), refref, address(&iteratorEq))->makePure());
 		add(nativeFunction(e, vBool, S("!="), refref, address(&iteratorNeq))->makePure());
 		add(nativeFunction(e, r, S("++*"), ref, address(&SetBase::Iter::preIncRaw)));
