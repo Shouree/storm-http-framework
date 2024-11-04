@@ -4,6 +4,245 @@ use core:lang;
 use lang:bs:macro;
 use parser;
 
+class Cookie {    //RFC 9110
+  Str name;
+  Str value;
+  Str path = "";    //change to URL?
+  Str domain ="";
+  Str expires ="";    //Maybe add a time class? There is one in Storm already but too basic
+  Nat maxAge = 0;
+  Bool secure = false;
+  Bool httpOnly = false;
+  Str samSite ="";
+  Bool cookieValid = true;
+
+
+  void toS(StrBuf to) : override
+  {
+    to << name << "=" << value;
+    if(path != "")
+    {
+      to << "; Path=" << path;
+    }
+    if(domain != "")
+    {
+      to << "; Domain=" << domain;
+    }
+    if(expires != "")
+    {
+      to << "; Expires=" << expires;
+    }
+    if(maxAge != 0)
+    {
+      to << "; Max-Age: " << maxAge;
+    }
+    if(secure)
+    {
+      to << "; Secure";
+    }
+    if(httpOnly)
+    {
+      to << "; HttpOnly";
+    }
+    if(samSite != "")
+    {
+      to << "; SamSite=" << samSite;
+    }
+  }
+
+
+}
+
+//Parse for correct structure
+
+Bool responseCookieParser(Cookie cookie) on Compiler
+{
+  initMonth();      //Call in server
+  initDays();       //Call in server
+  Str:Iter iter;
+  if(cookie.name != "") //Use .empty() istead
+    {
+
+      //parse here
+      cookie.name = cookie.name;
+    }
+  else{
+    //Print what wrong
+    return false;
+  }
+  if(cookie.value != "")
+    {
+      //Better CTL support for parsing will be added later with Martins implementation
+      //parse here if string in ascii US
+      iter = cookie.value.find(' ', cookie.value.begin());
+      //print(iter.toS() + "\n");
+      if(iter != cookie.value.end())
+        return false;
+      iter = cookie.value.find(',' , cookie.value.begin());
+      if(iter != cookie.value.end())
+        return false;
+      iter = cookie.value.find(';' , cookie.value.begin());
+        if(iter != cookie.value.end())
+          return false;
+      //cookie.value = trimWhitespace(cookie.value);
+    }
+  else{
+      return false;
+    }
+  if(cookie.path != "")
+    {
+      //CTL character support add later
+      iter = cookie.path.find(';', cookie.path.begin());
+      if(iter != cookie.path.end())
+        return false;
+      //parse here
+      //cookie.path = trimWhitespace(cookie.path);
+    }
+  if(cookie.domain != "")
+    {
+      //Should be subdomain ?
+      // parse here
+      // cookie.domain = trimWhitespace(cookie.domain);
+    }
+  if(cookie.expires != "")
+    {
+      //IMF formating check :)
+
+        StrBuf buf;
+        iter = cookie.expires.find(' ', cookie.expires.begin());
+        buf << cookie.expires.cut(cookie.expires.begin(), iter);
+        Str:Iter iter2;
+        for(Int i = 0; i < 4; i++)
+        {
+          if(iter == cookie.expires.end())
+            return false;
+          iter2 = iter + 1;
+          iter = cookie.expires.find(' ', iter2);
+          buf << cookie.expires.cut(iter2, iter);
+        }
+        Str cookiestr = buf.toS();
+        print("\n\n"+cookiestr+"\n\n");
+        if(cookiestr.count() != 24)
+        {
+          return false;
+        }
+        if("," != cookiestr.cut(cookiestr.begin()+3, cookiestr.begin()+4))
+          return false;
+      iter = cookiestr.begin()+3;
+      if(!dayFormatIMF.has(cookiestr.cut(cookiestr.begin(), iter)))
+      {
+        return false;
+      }
+      //iter +2 till iter+12
+
+      Str month = cookiestr.cut(iter+3, iter+6);
+      if(!monthFormatIMF.has(month))
+      {
+        return false;
+      }
+      Str day = cookiestr.cut(iter+1, iter+3);
+      Int? validInt;
+      try{          //TODO, byt ut till isInt
+        validInt = day.toInt();
+        
+      }
+      catch(Exception e)
+      {
+        validInt = null;
+      }
+      if(validInt.empty())
+      {
+        return false;
+      }
+      
+      if(day.toInt() < 1 | day.toInt() > monthFormatIMF.get(month))  //Check if day is correct in month
+        {
+          return false;
+        }
+
+      try{
+        validInt = cookiestr.cut(iter+6, iter+10).toInt();
+      }catch(Exception e){
+        validInt = null;
+      }
+      if(validInt.empty())
+      {
+        return false;
+      }
+      if(cookiestr.cut(iter+6, iter+10).toInt() < 1970)
+        {
+          return false;
+        }
+
+      try{
+        validInt = cookiestr.cut(iter+10, iter+12).toInt();
+      }catch(Exception e){
+        validInt = null;
+      }
+      if(validInt.empty())
+      {
+        return false;
+      }
+      if(cookiestr.cut(iter+10, iter+12).toInt() < 0 | cookiestr.cut(iter+10, iter+12).toInt() > 23)
+        return false;
+      
+      if(cookiestr.cut(iter+12, iter+13) != ":" | cookiestr.cut(iter+15, iter+16) != ":" )
+        return false;
+      
+      try{
+        validInt = cookiestr.cut(iter+13, iter+15).toInt();
+      }catch(Exception e){
+        validInt = null;
+      }
+      if(validInt.empty())
+      {
+        return false;
+      }
+      if(cookiestr.cut(iter+13, iter+15).toInt() < 0 | cookiestr.cut(iter+13, iter+15).toInt() > 59)
+        return false;
+
+      try{
+        validInt = cookiestr.cut(iter+16, iter+18).toInt();
+      }catch(Exception e){
+        validInt = null;
+      }
+      if(validInt.empty())
+      {
+        return false;
+      }
+      if(cookiestr.cut(iter+16, iter+18).toInt() < 0 | cookiestr.cut(iter+16, iter+18).toInt() > 60)
+        return false;
+
+      if(cookiestr.cut(iter+18, cookiestr.end()) != "GMT")
+        return false;
+      
+    
+
+      //parse here
+    }
+  if(cookie.samSite != "")
+    {
+      if(cookie.samSite != "None")
+        if(cookie.samSite != "Lax")
+          if(cookie.samSite != "Strict")
+            return false;
+      // parse here
+      // cookie.samSite = trimWhitespace(cookie.samSite);
+    }
+
+    return true;
+}
+
+Bool setCookie(Cookie cookie, HTTP_Response response)
+{
+  cookie.cookieValid = responseCookieParser(cookie);
+  if(cookie.cookieValid)
+  {
+  response.cookies.push(cookie);
+  }
+  return cookie.cookieValid;
+}
+
 class HttpParseError extends Exception {
     private Nat pos;
     private Str msg;
@@ -318,6 +557,13 @@ class HTTP_Parser {
 
   for(k,v in response.headers){
     responseBuf << k << ": " << v << "\r\n";
+  }
+
+  for(l in response.cookies){
+    if(l.cookieValid)     //Make sure field and value not empty 
+    { 
+      responseBuf << "Set-Cookie: " << l.toS() << "\r\n";
+    }
   }
   
   //Should content-length always be included?

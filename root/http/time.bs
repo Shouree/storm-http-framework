@@ -1,0 +1,39 @@
+use core:io;
+use core:lang;
+use lang:bs:macro;
+
+//Str[] days on Compiler;
+Set<Str> dayFormatIMF on Compiler;
+Map<Str, Int> monthFormatIMF on Compiler;
+void initDays() on Compiler
+{
+    if(dayFormatIMF.empty()) 
+    {
+        dayFormatIMF.put("Mon");
+        dayFormatIMF.put("Tue");
+        dayFormatIMF.put("Wed");
+        dayFormatIMF.put("Thu");
+        dayFormatIMF.put("Fri");
+        dayFormatIMF.put("Sat");
+        dayFormatIMF.put("Sun");
+    }
+}
+
+void initMonth() on Compiler
+{
+    if(monthFormatIMF.empty()) 
+    {
+        monthFormatIMF.put("Jan", 31);
+        monthFormatIMF.put("Feb", 29); // Or 29 for leap years
+        monthFormatIMF.put("Mar", 31);
+        monthFormatIMF.put("Apr", 30);
+        monthFormatIMF.put("May", 31);
+        monthFormatIMF.put("Jun", 30);
+        monthFormatIMF.put("Jul", 31);
+        monthFormatIMF.put("Aug", 31);
+        monthFormatIMF.put("Sep", 30);
+        monthFormatIMF.put("Oct", 31);
+        monthFormatIMF.put("Nov", 30);
+        monthFormatIMF.put("Dec", 31);
+    }
+}

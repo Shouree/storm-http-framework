@@ -90,4 +90,5 @@ class HTTP_Response{
   HTTP_StatusCode status_code;
   Str->Str headers;
   Buffer data;
+  Array<Cookie> cookies;
 }
