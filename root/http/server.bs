@@ -34,7 +34,7 @@ class HTTP_Server{
     }
   }
 
-  HTTP_Request separation (NetIStream is)
+  HTTP_Request separation (NetIStream is)           //Function for separating header from body returns HTTP request with only raw header
   {
     Nat header_buffer_growth = 0;
     Nat body_buffer_growth = 0;
@@ -96,7 +96,7 @@ class HTTP_Server{
   }
 
 
-  HTTP_Request recieve(){
+  HTTP_Request recieve(){             //Recieves HTTP reqeust and creates a internal class and returns it for use
     print("Waiting to recieve...");
     Bool complete_message = false;
     Long content_length = 0;
@@ -184,7 +184,7 @@ class HTTP_Server{
     return request;
   }
   
-  Bool send(HTTP_Response msg){
+  Bool send(HTTP_Response msg){                     //Send HTTP response, returns bool for success and closes connection(TODO: expand behaviour for keep alive)
 
     HTTP_Parser parser;
     Buffer response = parser.parse_response(msg);
