@@ -186,6 +186,9 @@ class HTTP_Server{
   
   Bool send(HTTP_Response msg){                     //Send HTTP response, returns bool for success and closes connection(TODO: expand behaviour for keep alive)
 
+    //Create a array for active connections?
+    //One thread for active and one for the ones that are supposed to be killed.
+
     HTTP_Parser parser;
     Buffer response = parser.parse_response(msg);
     print("HEADER IS:\n");
