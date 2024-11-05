@@ -1,5 +1,6 @@
 use core:io;
 use core:net;
+use core:lang;
 use http;
 
 private Byte to_lower(Byte b){
@@ -33,45 +34,25 @@ class HTTP_Server{
     }
   }
 
-
-
-  HTTP_Request recieve(){
-    print("Waiting to recieve...");
-    Bool complete_message = false;
-    Long content_length = 0;
-
+  HTTP_Request separation (NetIStream is)
+  {
     Nat header_buffer_growth = 0;
     Nat body_buffer_growth = 0;
-
-    HTTP_Request request;
-    request.imediate_response = HTTP_StatusCode:NO_ERROR;
-    HTTP_Parser parser;
     Buffer head_body_separation(toUtf8("\r\n\r\n"));
-    Listener? socket = listen(connection.port, true);
-    if(connection.socket.empty()){
-      unless(socket){
-        print("Error! Cannot bind socket.");
-        return request;
-      }
-      connection.socket.push(socket);
-    }
-
-    while(true){
-      Buffer rbuf = buffer(4096);
-      NetStream? ns = connection.socket[0].accept();
-      if(ns){//ns != null
-        connection.ns.push(ns);
-        NetIStream is = ns.input();
-        while(is.more()){
-          if(rbuf.free() == 0 ){
-            //TODO decide maximum size of rbuf
+    HTTP_Request request;
+    HTTP_Parser parser;
+    Buffer rbuf = buffer(4096);
+    while(is.more())
+    {  
+    if(rbuf.free() == 0 ){
+            //TODO decide maximum size of rbuf         
             rbuf = grow(rbuf, rbuf.count() + 4096);
             header_buffer_growth++;
             if(header_buffer_growth > 250){
               request.imediate_response = HTTP_StatusCode:Request_URI_Too_Long;
               return request;
             }
-          }
+    }
           print("Reading the stream...");
           Nat old_filled = rbuf.filled();
           rbuf = is.read(rbuf);
@@ -94,6 +75,7 @@ class HTTP_Server{
             }
           }
           if(match)print("\n\n\nWE FOUND HEAD BODY SEPARATION!!!!!!!!!!\n\n\n");
+
           if(sep_loc != 0){
             Buffer header = cut(rbuf,0, sep_loc+4);
             
@@ -101,59 +83,101 @@ class HTTP_Server{
             print(fromUtf8(header));
             //print(header.toS());
             print(header.toS());
-            Buffer body = cut(rbuf, sep_loc+4, rbuf.filled());
+            request.data = cut(rbuf, sep_loc+4, rbuf.filled());
 
-            print(body.empty().toS());
+            print(request.data.empty().toS());
             request = parser.parse_request(header);
-            if(request.headers.has("content-length")){
-              if(!request.headers.get("content-length").isNat()){
+            return request;
+          }
+    }
+    return request;
+
+    
+  }
+
+
+  HTTP_Request recieve(){
+    print("Waiting to recieve...");
+    Bool complete_message = false;
+    Long content_length = 0;
+
+    Nat header_buffer_growth = 0;
+    Nat body_buffer_growth = 0;
+
+    HTTP_Request request;
+    request.imediate_response = HTTP_StatusCode:NO_ERROR;
+    //HTTP_Parser parser;
+    Buffer head_body_separation(toUtf8("\r\n\r\n"));
+    Listener? socket = listen(connection.port, true);
+    if(connection.socket.empty()){
+      unless(socket){
+        print("Error! Cannot bind socket.");
+        return request;
+      }
+      connection.socket.push(socket);
+    }
+
+    while(true){
+      
+      NetStream? ns = connection.socket[0].accept();
+      if(ns){//ns != null
+        connection.ns.push(ns);
+        NetIStream is = ns.input();
+        request = separation(is);
+
+        if(request.headers.has("content-length")){
+          if(!request.headers.get("content-length").isNat()){
                   request.imediate_response = HTTP_StatusCode:Bad_Request; 
                   return request;
-              }
-            }else{
-              print(request.version.toS());
-              return request; //continue recieving header...
             }
-            content_length = request.headers.get("content-length").toLong();
-            print("\n\nContent-Length IS: ${content_length.toS()}\n\n");
-            if(content_length >= 0x100000.long){
-              //Content-Length over 1MiB
-              request.imediate_response = HTTP_StatusCode:Request_Entity_Too_Large; 
-              return request;
-            }
-            print("Recieving body...\n");
-            while(body.filled().long < content_length){
-              if(rbuf.free() == 0 ){
-                //TODO decide maximum size of body
-                // Nginx uses 1MiB
-                body = grow(body, body.count() + 4096);
-                body_buffer_growth++;                                            
-                if(body_buffer_growth > 250){
-                  request.imediate_response = HTTP_StatusCode:Request_Entity_Too_Large; 
-                  return request;
-                }
-                old_filled = rbuf.filled();
-                body = is.read(body);
-                }
-                if(body.filled() == old_filled){
-                //TODO allow?
-                break; //recieved 0 bytes
-              }
-            }
-            // BODY COMPLETE
-            request.data = body;
+          }else{
+            print(request.version.toS());
+            return request; //continue recieving header...
           }
-          //break; //GOTO check valid message
-        } // while(is.more)
-      print("Returning to main");
-      //TODO Check if we have a complete message (data = content-length)
-      //Check if HTTP_Request require immediate response (?)
-      return request;
-      } // while(true)
+          content_length = request.headers.get("content-length").toLong();
+          print("\n\nContent-Length IS: ${content_length.toS()}\n\n");
+          if(content_length >= 0x100000.long){
+            //Content-Length over 1MiB
+            request.imediate_response = HTTP_StatusCode:Request_Entity_Too_Large; 
+            return request;
+          }
+          print("Recieving body...\n");
+          Nat old_filled = request.data.filled();
+          while(request.data.filled().long < content_length){
+            if(request.data.free() == 0 ){
+              //TODO decide maximum size of body
+              // Nginx uses 1MiB
+              request.data = grow(request.data, request.data.count() + 4096);
+              body_buffer_growth++;                                            
+              if(body_buffer_growth > 250){
+                request.imediate_response = HTTP_StatusCode:Request_Entity_Too_Large; 
+                return request;
+              }
+              old_filled = request.data.filled();
+              request.data = is.read(request.data);
+            }
+            if(request.data.filled() == old_filled){
+              //TODO allow?
+               break; //recieved 0 bytes
+            }
+          }
+            // BODY COMPLETE
+         // request.data = body;
+
+          print("Returning to main");
+          //TODO Check if we have a complete message (data = content-length)
+          //Check if HTTP_Request require immediate response (?)
+          return request;
+          // while(true)
+      }
       else{
         print("Error! Netstream accept.");
         return request;
       }
+          //break; //GOTO check valid message
+        
+      
+      
     } 
     //This should never happen
     print("Error! No proper request returned.");
