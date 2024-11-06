@@ -370,7 +370,8 @@ void addReqPath(HTTP_Request req, Buffer[] segmentbins) {
 void addQueryEntry(HTTP_Request req, Buffer keybin, Buffer valbin) {
   Str key = readText(MemIStream(keybin)).readAllRaw();
   Str val = readText(MemIStream(valbin)).readAllRaw();
-  put(req.method_params, key, val);
+  Str decodedval = fromASCIIEncodedStr(val);
+  put(req.method_params, key, decodedval);
 }
 
 
@@ -491,12 +492,9 @@ Str fromASCIIEncodedStr(Str string) on Compiler{
   StrBuf retbuf;
   Str:Iter it = string.begin();
   while(it != string.end()){
-    print("The it.v() is: ${it.v()}");
     if(it.v() == '%'){
       Str cmp = string.cut(it, it+3);
-      print("The cmp is: '${cmp}'");
       if(reverseHttpAsciiLookupTable.has(cmp)){
-        print("match");
         retbuf << reverseHttpAsciiLookupTable.get(cmp);
         it = it + 3;
       }else{
