@@ -1,0 +1,172 @@
+use core:io;
+use core:net;
+use core:lang;
+use http;
+
+HTTP_Request separation (NetIStream is)           //Function for separating header from body returns HTTP request with only raw header
+  {
+    Nat header_buffer_growth = 0;
+    Nat body_buffer_growth = 0;
+    Buffer head_body_separation(toUtf8("\r\n\r\n"));
+    HTTP_Request request;
+    
+    Buffer rbuf = buffer(4096);
+    while(is.more())
+    {  
+    if(rbuf.free() == 0 ){
+            //TODO decide maximum size of rbuf         
+            rbuf = grow(rbuf, rbuf.count() + 4096);
+            header_buffer_growth++;
+            if(header_buffer_growth > 250){
+              request.imediate_response = HTTP_StatusCode:Request_URI_Too_Long;
+              return request;
+            }
+    }
+          Nat old_filled = rbuf.filled();
+          rbuf = is.read(rbuf);
+          if(rbuf.filled() == old_filled)
+              break; //recieved 0 bytes
+
+          //find body/header separation 
+          Nat sep_loc = 0;
+          Bool match = false;
+          for(Nat i = 0; i< rbuf.filled()-3; i++){
+            match = true;
+            for(Nat j=0; j<4; j++)
+              if(rbuf[i+j] != head_body_separation[j])
+                match = false;
+
+            if(match)
+              sep_loc = i;
+          }
+
+          if(sep_loc != 0){
+            Buffer header = cut(rbuf,0, sep_loc+4);
+            request.data = cut(rbuf, sep_loc+4, rbuf.filled());
+            HTTP_Parser parser;
+            request = parser.parse_request(header);
+            return request;
+          }
+    }
+    return request;
+
+    
+  }
+
+Bool connectionThread(NetStream? socket)
+{
+    Bool complete_message = false;
+    Long content_length = 0;
+
+    Nat header_buffer_growth = 0;
+    Nat body_buffer_growth = 0;
+
+    // Timer which represents when a connection has been made
+    //Moment connectionStartTimer;
+    //Long test = connectionStartTimer.v;
+    //sleep(5 s);
+    //Moment test2;
+    //Long test3 = test2.v;
+    //print(((test3 - test) / 1000000).toS());
+    
+    while(true) {                                        //TODO: Should countdown timeout/max when we implement keep-alive later
+      if(socket){
+        NetIStream is = socket.input();
+        if(is.fill())
+        // Check if NetIStream is empty
+        // If it is empty break and close socket
+        HTTP_Request request;
+        request = separation(is);
+
+/*
+        if(request.headers.has("content-length")) {
+          if(!request.headers.get("content-length").isNat()) {
+                  request.imediate_response = HTTP_StatusCode:Bad_Request; 
+                  //return request;               //Replace to so thread returns correct value
+                  //return false;
+                  // generateResponseBasedOnRequest
+            }
+          }
+        else {
+            print(request.version.toS());
+            //return request;               //Replace to so thread returns correct value //continue recieving header...
+            return false;
+        }
+          content_length = request.headers.get("content-length").toLong();
+          print("\n\nContent-Length IS: ${content_length.toS()}\n\n");
+          if(content_length >= 0x100000.long){
+            //Content-Length over 1MiB
+            request.imediate_response = HTTP_StatusCode:Request_Entity_Too_Large; 
+            //return request;               //Replace to so thread returns correct value
+            return false; //For now, replace with generateResponseBasedOnRequest when done
+          }
+          print("Recieving body...\n");
+          Nat old_filled = request.data.filled();
+          while(request.data.filled().long < content_length){
+            if(request.data.free() == 0 ){
+              //TODO decide maximum size of body
+              // Nginx uses 1MiB
+              request.data = grow(request.data, request.data.count() + 4096);
+              body_buffer_growth++;                                            
+              if(body_buffer_growth > 250){
+                request.imediate_response = HTTP_StatusCode:Request_Entity_Too_Large; 
+                //return request;               //Replace to so thread returns correct value
+                return false; //replace with generateResponseBasedOnRequest when done
+              }
+              old_filled = request.data.filled();
+              request.data = is.read(request.data);
+            }
+            if(request.data.filled() == old_filled){
+              //TODO allow?
+               break; //recieved 0 bytes
+            }
+          }
+                  */
+            // BODY COMPLETE
+         // request.data = body;            //Dafuq does this do?
+
+          print("Returning to main");
+          //TODO Check if we have a complete message (data = content-length)
+          //Check if HTTP_Request require immediate response (?)
+          //return request;               //Replace to so thread returns correct value
+          break;//replace with generateResponseBasedOnRequest when done
+          // while(true)
+      }
+      else{
+        print("Error! Netstream accept.");
+        //return request;               //Replace to so thread returns correct value
+        return false; //replace with generateResponseBasedOnRequest when done
+      }
+          //break; //GOTO check valid message       
+    } 
+    HTTP_Response res;
+
+    res.version = HTTP_Version:HTTP_1_1;
+
+    res.status_code = HTTP_StatusCode:OK;
+
+    res.headers.put("content-type", "text/html; charset=utf-8");
+    //TODO, check if this impelemntation works:
+    res.headers.put("connection", "close");    
+    Url root_dir = cwdUrl() / "site";   
+    print(root_dir.toS());              
+    Url index_page = root_dir / "index.html";
+    print("\nSending response...");
+
+    Str data = index_page.readAllText.toS();
+    print(data);
+    res.data = toUtf8(data);
+    
+    HTTP_Parser parser;
+    Buffer response = parser.parse_response(res);
+    print("HEADER IS:\n");
+    print(fromUtf8(response));
+    if(socket) {
+        NetOStream os = socket.output();
+        os.write(response);
+        os.flush();
+        socket.close();
+    }
+    
+    return true;
+}

@@ -30,6 +30,10 @@ void main(){
   Url root_dir = cwdUrl() / "site";
   HTTP_Server server(1234);
 
+  while(true)
+    server.recieve();
+  
+  /*
   while(true){
     HTTP_Request req;
     try {
@@ -103,5 +107,15 @@ void main(){
     print(data);
     res.data = toUtf8(data);
     server.send(res);
+    
   }
+  */
+  /*
+  server.behaviour(server socket, function what_to_send_back)
+  while(true)
+    server.recieve()
+
+    for(array with requests)
+
+  */
 }
