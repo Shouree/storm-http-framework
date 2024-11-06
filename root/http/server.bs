@@ -12,11 +12,11 @@ private Byte to_lower(Byte b){
   }
   return b+32;
 }
-private 
+private
 class HTTP_Connection{
   Nat port; //id
   // TODO(Martin): Ändra till Listener?
-  Array<Listener> socket;
+  Array<Listener> socket;                   //Init connection sockets
   // TODO(Martin): Ändra till NetStream?
   Array<NetStream> ns;
   init(Nat init_port){
@@ -26,6 +26,7 @@ class HTTP_Connection{
     }
 }
 
+// Initialize a server-CLASS on a given port
 class HTTP_Server{
   HTTP_Connection connection;
   init(Nat port){
@@ -33,6 +34,8 @@ class HTTP_Server{
       connection = HTTP_Connection(port);
     }
   }
+
+// Create a hashmap 
 
   HTTP_Request separation (NetIStream is)           //Function for separating header from body returns HTTP request with only raw header
   {
@@ -96,95 +99,20 @@ class HTTP_Server{
   }
 
 
-  HTTP_Request recieve(){             //Recieves HTTP reqeust and creates a internal class and returns it for use
-    print("Waiting to recieve...");
-    Bool complete_message = false;
-    Long content_length = 0;
-
-    Nat header_buffer_growth = 0;
-    Nat body_buffer_growth = 0;
-
-    HTTP_Request request;
+  void recieve() {             //Recieves HTTP reqeust and creates a internal class and returns it for use
+    HTTP_Request request; // REMOVE THESE, SHOULD NOT BE NECCESSARY!
     request.imediate_response = HTTP_StatusCode:NO_ERROR;
-    //HTTP_Parser parser;
-    Buffer head_body_separation(toUtf8("\r\n\r\n"));
-    Listener? socket = listen(connection.port, true);
-    if(connection.socket.empty()){
-      unless(socket){
-        print("Error! Cannot bind socket.");
-        return request;
-      }
-      connection.socket.push(socket);
+
+    Listener? serverListener = listen(connection.port, true);
+    unless(serverListener) {
+      return;
     }
 
-    while(true){
-      
-      NetStream? ns = connection.socket[0].accept();
-      if(ns){//ns != null
-        connection.ns.push(ns);
-        NetIStream is = ns.input();
-        request = separation(is);
-
-        if(request.headers.has("content-length")){
-          if(!request.headers.get("content-length").isNat()){
-                  request.imediate_response = HTTP_StatusCode:Bad_Request; 
-                  return request;
-            }
-          }else{
-            print(request.version.toS());
-            return request; //continue recieving header...
-          }
-          content_length = request.headers.get("content-length").toLong();
-          print("\n\nContent-Length IS: ${content_length.toS()}\n\n");
-          if(content_length >= 0x100000.long){
-            //Content-Length over 1MiB
-            request.imediate_response = HTTP_StatusCode:Request_Entity_Too_Large; 
-            return request;
-          }
-          print("Recieving body...\n");
-          Nat old_filled = request.data.filled();
-          while(request.data.filled().long < content_length){
-            if(request.data.free() == 0 ){
-              //TODO decide maximum size of body
-              // Nginx uses 1MiB
-              request.data = grow(request.data, request.data.count() + 4096);
-              body_buffer_growth++;                                            
-              if(body_buffer_growth > 250){
-                request.imediate_response = HTTP_StatusCode:Request_Entity_Too_Large; 
-                return request;
-              }
-              old_filled = request.data.filled();
-              request.data = is.read(request.data);
-            }
-            if(request.data.filled() == old_filled){
-              //TODO allow?
-               break; //recieved 0 bytes
-            }
-          }
-            // BODY COMPLETE
-         // request.data = body;
-
-          print("Returning to main");
-          //TODO Check if we have a complete message (data = content-length)
-          //Check if HTTP_Request require immediate response (?)
-          return request;
-          // while(true)
-      }
-      else{
-        print("Error! Netstream accept.");
-        return request;
-      }
-          //break; //GOTO check valid message
-        
-      
-      
-    } 
-    //This should never happen
-    print("Error! No proper request returned.");
-    return request;
+    NetStream? socket = serverListener.accept();
+    var x = spawn connectionThread(socket);
   }
   
-  Bool send(HTTP_Response msg){                     //Send HTTP response, returns bool for success and closes connection(TODO: expand behaviour for keep alive)
+  Bool send(HTTP_Response msg) {                     //Send HTTP response, returns bool for success and closes connection(TODO: expand behaviour for keep alive)
 
     //Create a array for active connections?
     //One thread for active and one for the ones that are supposed to be killed.
@@ -198,7 +126,7 @@ class HTTP_Server{
     os.flush();
 
     //remove netstream close socket 
-    connection.socket[0].close();
+    connection.socket[0].close();                           //CLOSE CONNECTION if not keep-alive or expired/max
     connection.ns.pop();
     connection.socket.pop();
     return true;
