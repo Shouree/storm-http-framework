@@ -102,14 +102,16 @@ class HTTP_Server{
   void recieve() {             //Recieves HTTP reqeust and creates a internal class and returns it for use
     HTTP_Request request; // REMOVE THESE, SHOULD NOT BE NECCESSARY!
     request.imediate_response = HTTP_StatusCode:NO_ERROR;
+    print("SERVER TEST");
 
-    Listener? serverListener = listen(connection.port, true);
+    Listener? serverListener = listen(connection.port, true); // SO_REUSEADDR DOES NOT WORK PROPERLY ON WINDOWS
     unless(serverListener) {
       return;
     }
 
     NetStream? socket = serverListener.accept();
     var x = spawn connectionThread(socket);
+    serverListener.close(); // MIGHT BE NEEDED TO WORK ON WINDOWS
   }
   
   Bool send(HTTP_Response msg) {                     //Send HTTP response, returns bool for success and closes connection(TODO: expand behaviour for keep alive)
