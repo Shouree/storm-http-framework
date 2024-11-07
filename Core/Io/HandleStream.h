@@ -3,6 +3,7 @@
 #include "PeekStream.h"
 #include "OS/Handle.h"
 #include "Core/EnginePtr.h"
+#include "Core/Timing.h"
 
 namespace storm {
 	STORM_PKG(core.io);
@@ -97,6 +98,28 @@ namespace storm {
 
 		// Is our handle added to a thread?
 		UNKNOWN(PTR_NOGC) os::Thread attachedTo;
+	};
+
+	/**
+	 * Input stream that supports timeouts. Used for sockets, for example.
+	 */
+	class HandleTimeoutIStream : public IStream {
+		STORM_CLASS;
+	public:
+		// Create.
+		HandleTimeoutIStream(os::Handle handle);
+		HandleTimeoutIStream(os::Handle handle, os::Thread attachedTo);
+
+		// Timeout used for new reads from the stream. The function 'readAll' respects the timeout
+		// for individual read operations, meaning that the time taken for 'readAll' could be longer
+		// than a single timeout if the remote end of a socket is slow, for example. As such, think
+		// of the timeout as "time since the last byte was received". A zero (or negative) timeout
+		// means that the timeout is disabled.
+		Duration timeout;
+
+	protected:
+		// Do read operations.
+		virtual Nat doRead(byte *to, Nat count);
 	};
 
 	/**
