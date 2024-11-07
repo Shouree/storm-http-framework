@@ -9,6 +9,54 @@ namespace storm {
 	class NetOStream;
 
 	/**
+	 * Keepalive times for NetStream (TCP sockets).
+	 *
+	 * Consists of a idle time, and an interval. The idle time determines how long to wait when the
+	 * socket has become idle until a keepalive packet is being sent. The interval then specifies
+	 * how long between individual keepalive packets if no response is being received.
+	 */
+	class Keepalive {
+		STORM_VALUE;
+	public:
+		// Set both times to zero, indicating that keepalive is off.
+		STORM_CTOR Keepalive() : idle(), interval() {}
+
+		// Set both times to the same value.
+		STORM_CTOR Keepalive(Duration t) : idle(t), interval(t) {}
+
+		// Set both times individually.
+		STORM_CTOR Keepalive(Duration idle, Duration interval)
+			: idle(idle), interval(interval) {}
+
+		// No keepalive.
+		static Keepalive STORM_FN off() {
+			return Keepalive();
+		}
+
+		// Default keepalive.
+		static Keepalive STORM_FN STORM_NAME(def, default)() {
+			return Keepalive(time::min(120), time::s(75));
+		}
+
+		// Idle time. Time to first keepalive packet.
+		Duration idle;
+
+		// Interval time. Time between keepalive packets if no response is received.
+		Duration interval;
+
+		// Zero?
+		Bool STORM_FN empty() const {
+			return idle.v <= 0 || interval.v <= 0;
+		}
+		Bool STORM_FN any() const {
+			return !empty();
+		}
+
+		// To string.
+		void STORM_FN toS(StrBuf *to) const;
+	};
+
+	/**
 	 * A TCP socket.
 	 *
 	 * The socket contain two streams: one for reading data and another for writing data. These
@@ -37,6 +85,15 @@ namespace storm {
 
 		// Set the `nodelay` socket option.
 		void STORM_ASSIGN nodelay(Bool v);
+
+		// Get the current keepalive setting.
+		Keepalive STORM_FN keepalive() const;
+
+		// Set the current keepalive setting.
+		void STORM_ASSIGN keepalive(Keepalive k);
+		void STORM_ASSIGN keepalive(Duration d) {
+			keepalive(Keepalive(d));
+		}
 
 		// Get the remote host we're connected to.
 		Address *STORM_FN remote() const { return peer; }

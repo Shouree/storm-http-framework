@@ -3,6 +3,14 @@
 
 namespace storm {
 
+	void Keepalive::toS(StrBuf *to) const {
+		if (empty()) {
+			*to << S("<no keepalive>");
+		} else {
+			*to << S("{ idle: ") << idle << S(", interval: ") << interval << S(" }");
+		}
+	}
+
 	NetStream::NetStream(os::Handle handle, os::Thread attachedTo, Address *peer)
 		: Socket(handle, attachedTo), closed(0), peer(peer) {
 
@@ -33,6 +41,82 @@ namespace storm {
 		int val = v ? 1 : 0;
 		setSocketOpt(handle, IPPROTO_TCP, TCP_NODELAY, &val, sizeof(val));
 	}
+
+#if defined(WINDOWS)
+
+	Keepalive NetStream::keepalive() const {
+		tcp_keepalive info = { 0, 0, 0 };
+		DWORD bytesOut = 0;
+		int ok = WSAIoctl(socket.v(), SIO_KEEPALIVE_VALS,
+						NULL, NULL, // No input
+						&info, sizeof(info), &bytesOut, // ...but output
+						NULL, NULL); // No OVERLAPPED
+		if (ok != 0 || bytesOut < sizeof(info)) {
+			throw new (this) NetError(S("Failed to get keepalive information."));
+		}
+
+		if (info.onoff == 0)
+			return Keepalive();
+		else
+			return Keepalive(time::ms(info.keepalivetime), time::ms(info.keepaliveinterval));
+	}
+
+	void NetStream::keepalive(Keepalive d) {
+		Bool on = d.any();
+		tcp_keepalive info = {
+			on ? 1 : 0,
+			// Defaults are the default on Linux. Only used whenever we have keepalive off.
+			on ? d.idle.inMs() : 120 * 60 * 1000,
+			on ? d.interval.inMs() : 75 * 1000,
+		};
+		int ok = WSAIoctl(socket.v(), SIO_KEEPALIVE_VALS,
+						&info, sizeof(info), // input
+						NULL, NULL, NULL, // no output
+						NULL, NULL); // not OVERLAPPED
+		if (ok != 0) {
+			throw new (this) NetError(S("Failed to set keepalive information."));
+		}
+	}
+
+#elif defined(LINUX)
+
+	Keepalive NetStream::keepalive() const {
+		int enabled = 0;
+		if (!getSocketOpt(handle, SOL_SOCKET, SO_KEEPALIVE, &enabled, sizeof(enabled)))
+			throw new (this) NetError(S("Failed to get SO_KEEPALIVE."));
+
+		if (enabled == 0)
+			return Keepalive();
+
+		int idletime = 0;
+		if (!getSocketOpt(handle, SOL_TCP, TCP_KEEPIDLE, &idletime, sizeof(idletime)))
+			throw new (this) NetError(S("Failed to get TCP_KEEPIDLE."));
+		int idleinterval = 0;
+		if (!getSocketOpt(handle, SOL_TCP, TCP_KEEPINTVL, &idleinterval, sizeof(idleinterval)))
+			throw new (this) NetError(S("Failed to get TCP_KEEPINTVL."));
+
+		return Keepalive(time::s(idletime), time::s(idleinterval));
+	}
+
+	void NetStream::keepalive(Keepalive d) {
+		int enabled = d.any() ? 1 : 0;
+		if (!setSocketOpt(handle, SOL_SOCKET, SO_KEEPALIVE, &enabled, sizeof(enabled)))
+			throw new (this) NetError(S("Failed to set SO_KEEPALIVE."));
+
+		if (enabled) {
+			int idletime = d.idle.inS();
+			int idleinterval = d.interval.inS();
+
+			if (!setSocketOpt(handle, SOL_TCP, TCP_KEEPIDLE, &idletime, sizeof(idletime)))
+				throw new (this) NetError(S("Failed to set TCP_KEEPIDLE."));
+			if (!setSocketOpt(handle, SOL_TCP, TCP_KEEPINTVL, &idleinterval, sizeof(idleinterval)))
+				throw new (this) NetError(S("Failed to set TCP_KEEPINTVL."));
+		}
+	}
+
+#else
+#error "TODO: Implement keepalive for your OS."
+#endif
 
 	void NetStream::closeEnd(Nat which) {
 		Nat old, w;
