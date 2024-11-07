@@ -72,7 +72,6 @@ Bool connectionThread(NetStream? socket)
     while(true) {                                        //TODO: Should countdown timeout/max when we implement keep-alive later
       if(socket){
         NetIStream is = socket.input();
-        if(is.fill())
         // Check if NetIStream is empty
         // If it is empty break and close socket
         HTTP_Request request;
