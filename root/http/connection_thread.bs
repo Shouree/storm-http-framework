@@ -3,12 +3,13 @@ use core:net;
 use core:lang;
 use http;
 
-HTTP_Request separation (NetIStream is)           //Function for separating header from body returns HTTP request with only raw header
+HTTP_Request separation (NetIStream is, Moment lastActivity)           //Function for separating header from body returns HTTP request with only raw header
   {
     Nat header_buffer_growth = 0;
     Nat body_buffer_growth = 0;
     Buffer head_body_separation(toUtf8("\r\n\r\n"));
     HTTP_Request request;
+    request.imediate_response = HTTP_StatusCode:NO_ERROR;
     
     Buffer rbuf = buffer(4096);
     while(is.more())
@@ -24,8 +25,11 @@ HTTP_Request separation (NetIStream is)           //Function for separating head
     }
           Nat old_filled = rbuf.filled();
           rbuf = is.read(rbuf);
-          if(rbuf.filled() == old_filled)
-              break; //recieved 0 bytes
+          if(rbuf.filled() == old_filled) {
+            if(lastActivity + 5 s <= Moment())
+              request.imediate_response = HTTP_StatusCode:Request_Timeout;
+            break; // Recieved 0 bytes
+          }
 
           //find body/header separation 
           Nat sep_loc = 0;
@@ -45,9 +49,11 @@ HTTP_Request separation (NetIStream is)           //Function for separating head
             request.data = cut(rbuf, sep_loc+4, rbuf.filled());
             HTTP_Parser parser;
             request = parser.parse_request(header);
+            lastActivity = Moment();
             return request;
           }
     }
+    lastActivity = Moment();
     return request;
 
     
@@ -60,7 +66,7 @@ Bool connectionThread(NetStream? socket)
 
     Nat header_buffer_growth = 0;
     Nat body_buffer_growth = 0;
-
+    
     // Timer which represents when a connection has been made
     //Moment connectionStartTimer;
     //Long test = connectionStartTimer.v;
@@ -68,14 +74,26 @@ Bool connectionThread(NetStream? socket)
     //Moment test2;
     //Long test3 = test2.v;
     //print(((test3 - test) / 1000000).toS());
+    Moment lastActivity;
     
     while(true) {                                        //TODO: Should countdown timeout/max when we implement keep-alive later
       if(socket){
         NetIStream is = socket.input();
+        if(!is.more()) {
+          Moment idleTimer;
+          Duration d = idleTimer - lastActivity;
+          if(idleTimer - lastActivity >= 5 s) {
+            print("TEST");
+            socket.close();
+            return false;
+          }
+          continue;
+        }
+        //lastActivity = Moment m;
         // Check if NetIStream is empty
         // If it is empty break and close socket
         HTTP_Request request;
-        request = separation(is);
+        request = separation(is, lastActivity);
 
 /*
         if(request.headers.has("content-length")) {
@@ -146,7 +164,7 @@ Bool connectionThread(NetStream? socket)
 
     res.headers.put("content-type", "text/html; charset=utf-8");
     //TODO, check if this impelemntation works:
-    res.headers.put("connection", "close");    
+    res.headers.put("connection", "keep-alive");    
     Url root_dir = cwdUrl() / "site";   
     print(root_dir.toS());              
     Url index_page = root_dir / "index.html";
