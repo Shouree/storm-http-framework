@@ -25,22 +25,6 @@ namespace storm {
 		}
 	}
 
-	Duration Socket::inputTimeout() const {
-		return getSocketTime(handle, SOL_SOCKET, SO_RCVTIMEO);
-	}
-
-	void Socket::inputTimeout(Duration v) {
-		setSocketTime(handle, SOL_SOCKET, SO_RCVTIMEO, v);
-	}
-
-	Duration Socket::outputTimeout() const {
-		return getSocketTime(handle, SOL_SOCKET, SO_SNDTIMEO);
-	}
-
-	void Socket::outputTimeout(Duration v) {
-		setSocketTime(handle, SOL_SOCKET, SO_SNDTIMEO, v);
-	}
-
 	Nat Socket::inputBufferSize() const {
 		Nat out = 0;
 		getSocketOpt(handle, SOL_SOCKET, SO_RCVBUF, &out, sizeof(out));
