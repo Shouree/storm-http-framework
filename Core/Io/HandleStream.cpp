@@ -5,6 +5,16 @@
 
 namespace storm {
 
+	// Helper to make a Duration into a ms interval, clamping as necessary.
+	static nat toMs(Duration duration) {
+		Long ms = duration.inMs();
+		if (ms < 0)
+			return 0;
+		if (ms > std::numeric_limits<nat>::max())
+			return std::numeric_limits<nat>::max();
+		return nat(ms);
+	}
+
 	/**
 	 * System-specific helpers. These all behave as if the handle was blocking.
 	 */
@@ -17,13 +27,13 @@ namespace storm {
 		h = os::Handle();
 	}
 
-	static Nat read(os::Handle h, os::Thread &attached, void *dest, Nat limit) {
+	static Nat read(os::Handle h, os::Thread &attached, void *dest, Nat limit, Duration timeout = Duration()) {
 		if (attached == os::Thread::invalid) {
 			attached = os::Thread::current();
 			attached.attach(h);
 		}
 
-		os::IORequest request(attached);
+		os::IORequest request(h, attached, toMs(timeout));
 
 		LARGE_INTEGER pos;
 		pos.QuadPart = 0;
@@ -70,7 +80,7 @@ namespace storm {
 			attached.attach(h);
 		}
 
-		os::IORequest request(attached);
+		os::IORequest request(h, attached, 0);
 
 		LARGE_INTEGER pos;
 		pos.QuadPart = 0;
@@ -155,18 +165,18 @@ namespace storm {
 	}
 
 	// Returns 'false' if the handle was closed (by us) during the operation.
-	static bool doWait(os::Handle h, os::Thread &attached, os::IORequest::Type type) {
+	static bool doWait(os::Handle h, os::Thread &attached, os::IORequest::Type type, Duration timeout) {
 		if (attached == os::Thread::invalid) {
 			attached = os::Thread::current();
 			attached.attach(h);
 		}
 
-		os::IORequest request(h, type, attached);
+		os::IORequest request(h, type, attached, toMs(timeout));
 		request.wake.wait();
 		return !request.closed;
 	}
 
-	static Nat read(os::Handle h, os::Thread &attached, void *dest, Nat limit) {
+	static Nat read(os::Handle h, os::Thread &attached, void *dest, Nat limit, Duration timeout = Duration()) {
 		while (true) {
 			ssize_t r = ::read(h.v(), dest, size_t(limit));
 			if (r >= 0)
@@ -199,7 +209,7 @@ namespace storm {
 				continue;
 			} else if (errno == EAGAIN) {
 				// Wait for more data.
-				if (!doWait(h, attached, os::IORequest::write))
+				if (!doWait(h, attached, os::IORequest::write, Duration()))
 					break;
 			} else {
 				// Unknown error.
@@ -384,7 +394,7 @@ namespace storm {
 
 	Nat HandleTimeoutIStream::doRead(byte *to, Nat count) {
 		if (handle)
-			return storm::read(handle, attachedTo, to, count);
+			return storm::read(handle, attachedTo, to, count, timeout);
 		else
 			return 0;
 	}

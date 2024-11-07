@@ -412,6 +412,7 @@ namespace os {
 	}
 
 	bool UThreadState::anySleeping() {
+		util::Lock::L z(sleepingLock);
 		return sleeping.any();
 	}
 
@@ -424,12 +425,27 @@ namespace os {
 			}
 		};
 
-		D done(timestamp() + msInTimestamp(ms));
-		sleeping.push(&done);
+		D done(sleepTarget(ms));
+		addSleep(&done);
 		done.sema.down();
 	}
 
+	void UThreadState::addSleep(SleepData *item) {
+		util::Lock::L z(sleepingLock);
+		sleeping.push(item);
+	}
+
+	void UThreadState::cancelSleep(SleepData *item) {
+		util::Lock::L z(sleepingLock);
+		sleeping.erase(item);
+	}
+
+	int64 UThreadState::sleepTarget(nat msDelay) {
+		return timestamp() + msInTimestamp(msDelay);
+	}
+
 	bool UThreadState::nextWake(nat &time) {
+		util::Lock::L z(sleepingLock);
 		SleepData *first = sleeping.peek();
 		if (!first)
 			return false;
@@ -443,11 +459,12 @@ namespace os {
 	}
 
 	void UThreadState::wakeThreads(int64 time) {
+		util::Lock::L z(sleepingLock);
 		while (sleeping.any()) {
 			SleepData *first = sleeping.peek();
 			if (time >= first->until) {
-				first->signal();
 				sleeping.pop();
+				first->signal();
 			} else {
 				break;
 			}

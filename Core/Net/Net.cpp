@@ -93,7 +93,7 @@ namespace storm {
 
 		// Output buffer with some extra data as specified in the documentation.
 		sockaddr_large buffer[2];
-		os::IORequest request(thread);
+		os::IORequest request(socket, thread);
 		DWORD bytes = 0;
 
 		int error = 0;
@@ -143,7 +143,7 @@ namespace storm {
 			return false;
 		}
 
-		os::IORequest request(attached);
+		os::IORequest request(socket, attached);
 
 		int error = 0;
 		if (!ConnectEx(socket, addr, addrSize, &request))
