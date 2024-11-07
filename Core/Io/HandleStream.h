@@ -103,7 +103,7 @@ namespace storm {
 	/**
 	 * Input stream that supports timeouts. Used for sockets, for example.
 	 */
-	class HandleTimeoutIStream : public IStream {
+	class HandleTimeoutIStream : public HandleIStream {
 		STORM_CLASS;
 	public:
 		// Create.

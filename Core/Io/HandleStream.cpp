@@ -382,9 +382,9 @@ namespace storm {
 
 	HandleTimeoutIStream::HandleTimeoutIStream(os::Handle handle, os::Thread attachedTo) : HandleIStream(handle), timeout() {}
 
-	void HandleTimeoutIStream::doRead(byte *to, Nat count) {
+	Nat HandleTimeoutIStream::doRead(byte *to, Nat count) {
 		if (handle)
-			return storm::readTimeout(handle, attachedTo, to, count, timeout);
+			return storm::read(handle, attachedTo, to, count);
 		else
 			return 0;
 	}
