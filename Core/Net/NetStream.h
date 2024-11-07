@@ -136,7 +136,7 @@ namespace storm {
 	/**
 	 * Input stream for the socket.
 	 */
-	class NetIStream : public HandleIStream {
+	class NetIStream : public HandleTimeoutIStream {
 		STORM_CLASS;
 	public:
 		// Not exposed to Storm. Created by the Socket.
