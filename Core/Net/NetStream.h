@@ -11,50 +11,64 @@ namespace storm {
 	/**
 	 * Keepalive times for NetStream (TCP sockets).
 	 *
-	 * Consists of a idle time, and an interval. The idle time determines how long to wait when the
-	 * socket has become idle until a keepalive packet is being sent. The interval then specifies
-	 * how long between individual keepalive packets if no response is being received.
+	 * Interestingly enough, it is not always possible to get the current timeouts from a socket. As
+	 * such, this class has three possible states:
+	 *
+	 * - Keepalive off.
+	 * - Keepalive on, using system defaults.
+	 * - Keepalive on, using custom times.
+	 *
+	 * The two times are `idle` and `interval`. The first (`idle`) specifies how long to wait before
+	 * sending a keepalive packet after the connection has been idle. The second (`interval`)
+	 * decides how often keepalive packets should be sent if a reply from the first keepalive is not
+	 * received. Number of retries is not always configurable.
 	 */
 	class Keepalive {
 		STORM_VALUE;
 	public:
-		// Set both times to zero, indicating that keepalive is off.
-		STORM_CTOR Keepalive() : idle(), interval() {}
+		// Default constructor, means "off".
+		STORM_CTOR Keepalive() : enabled(false) {}
 
-		// Set both times to the same value.
-		STORM_CTOR Keepalive(Duration t) : idle(t), interval(t) {}
-
-		// Set both times individually.
-		STORM_CTOR Keepalive(Duration idle, Duration interval)
-			: idle(idle), interval(interval) {}
-
-		// No keepalive.
+		// Create "off" explicitly.
 		static Keepalive STORM_FN off() {
 			return Keepalive();
 		}
 
-		// Default keepalive.
-		static Keepalive STORM_FN STORM_NAME(def, default)() {
-			return Keepalive(time::min(120), time::s(75));
+		// Create "on", but using defaults.
+		static Keepalive STORM_FN on() {
+			return Keepalive(Duration(), Duration());
 		}
 
-		// Idle time. Time to first keepalive packet.
-		Duration idle;
+		// Create "on", specifying timeouts.
+		static Keepalive STORM_FN on(Duration idle) {
+			return Keepalive(idle, time::s(2));
+		}
+		static Keepalive STORM_FN on(Duration idle, Duration interval) {
+			return Keepalive(idle, interval);
+		}
 
-		// Interval time. Time between keepalive packets if no response is received.
+		// Enable keepalive?
+		Bool enabled;
+
+		// Durations for idle and interval. If <= 0 is used, then the default time is used. Note
+		// that both must be set at the same time.
+		Duration idle;
 		Duration interval;
 
-		// Zero?
-		Bool STORM_FN empty() const {
-			return idle.v <= 0 || interval.v <= 0;
-		}
-		Bool STORM_FN any() const {
-			return !empty();
+		// Are the times default?
+		Bool STORM_FN defaultTimes() const {
+			return idle.v > 0 && interval.v > 0;
 		}
 
 		// To string.
 		void STORM_FN toS(StrBuf *to) const;
+
+	private:
+		// Internal constructor.
+		Keepalive(Duration idle, Duration interval)
+			: enabled(true), idle(idle), interval(interval) {}
 	};
+
 
 	/**
 	 * A TCP socket.
@@ -92,7 +106,7 @@ namespace storm {
 		// Set the current keepalive setting.
 		void STORM_ASSIGN keepalive(Keepalive k);
 		void STORM_ASSIGN keepalive(Duration d) {
-			keepalive(Keepalive(d));
+			keepalive(Keepalive::on(d));
 		}
 
 		// Get the remote host we're connected to.
@@ -122,6 +136,9 @@ namespace storm {
 
 		// Connected peer (if any).
 		Address *peer;
+
+		// Current keepalive.
+		Keepalive alive;
 	};
 
 
