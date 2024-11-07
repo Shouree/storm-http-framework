@@ -1,10 +1,25 @@
 #pragma once
 #include "Sync.h"
 #include "Handle.h"
+#include "UThread.h"
 
 namespace os {
 
 	class Thread;
+	class IORequest;
+
+	/**
+	 * Sleep structure for IORequests that have a timeout.
+	 */
+	class IOTimeoutSleep : public UThreadState::SleepData {
+	public:
+		IOTimeoutSleep() : SleepData(0), request(null) {}
+
+		IORequest *request;
+
+		virtual void signal();
+	};
+
 
 	/**
 	 * IO request. These are posted to an IOHandle when the requests are completed.
@@ -14,11 +29,14 @@ namespace os {
 	class IORequest : public OVERLAPPED {
 	public:
 		// Note the thread that the request is associated with.
-		IORequest(const Thread &thread);
+		IORequest(Handle handle, const Thread &thread, nat timeout = 0);
 		~IORequest();
 
 		// Sema used for notifying when the request is complete.
 		Sema wake;
+
+		// Handle we are working with. So that we can cancel IO.
+		Handle handle;
 
 		// Number of bytes read.
 		nat bytes;
@@ -35,6 +53,9 @@ namespace os {
 	private:
 		// Owning thread.
 		const Thread &thread;
+
+		// Sleep structure.
+		IOTimeoutSleep sleep;
 	};
 
 #elif defined(POSIX)
@@ -47,7 +68,7 @@ namespace os {
 		};
 
 		// Note the thread that the request is associated with.
-		IORequest(Handle handle, Type type, const Thread &thread);
+		IORequest(Handle handle, Type type, const Thread &thread, nat timeout = 0);
 		~IORequest();
 
 		// Event used for notifying when the file descriptor is ready for the desired operation, or
@@ -66,6 +87,9 @@ namespace os {
 
 		// Owning thread.
 		const Thread &thread;
+
+		// Sleep structure.
+		IOTimeoutSleep sleep;
 	};
 
 #else
