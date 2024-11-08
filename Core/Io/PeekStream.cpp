@@ -53,10 +53,10 @@ namespace storm {
 		if (read == 0)
 			return b;
 
-		Nat r = doRead(b.dataPtr() + start, read);
-		if (r == 0)
-			atEof = true;
-		b.filled(r + start);
+		PeekReadResult r = doRead(b.dataPtr() + start, read);
+		if (r.bytesRead() == 0)
+			atEof = !r.timedOut();
+		b.filled(r.bytesRead() + start);
 		return b;
 	}
 
@@ -90,10 +90,10 @@ namespace storm {
 
 		// We need to read more data!
 		Nat read = bytes - avail;
-		Nat more = doRead(lookahead->v + lookahead->filled, read);
-		lookahead->filled += more;
-		if (more == 0)
-			atEof = true;
+		PeekReadResult more = doRead(lookahead->v + lookahead->filled, read);
+		lookahead->filled += more.bytesRead();
+		if (more.bytesRead() == 0)
+			atEof = !more.timedOut();
 
 		return lookaheadAvail();
 	}
@@ -124,8 +124,8 @@ namespace storm {
 		lookaheadStart = 0;
 	}
 
-	Nat PeekIStream::doRead(byte *to, Nat count) {
-		return 0;
+	PeekReadResult PeekIStream::doRead(byte *to, Nat count) {
+		return PeekReadResult::end();
 	}
 
 

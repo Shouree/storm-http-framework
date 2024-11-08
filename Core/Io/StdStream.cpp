@@ -21,11 +21,11 @@ namespace storm {
 
 	StdIStream::StdIStream() {}
 
-	Nat StdIStream::doRead(byte *to, Nat count) {
+	PeekReadResult StdIStream::doRead(byte *to, Nat count) {
 		StdRequest r(stdIn, to, count);
 		runtime::postStdRequest(engine(), &r);
 		r.wait.down();
-		return r.count;
+		return PeekReadResult::success(r.count);
 	}
 
 	StdOStream::StdOStream(StdStream t) : target(t) {}

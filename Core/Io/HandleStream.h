@@ -44,7 +44,7 @@ namespace storm {
 		UNKNOWN(PTR_NOGC) os::Thread attachedTo;
 
 		// Do read operations.
-		virtual Nat doRead(byte *to, Nat count);
+		virtual PeekReadResult doRead(byte *to, Nat count);
 	};
 
 	/**
@@ -119,7 +119,7 @@ namespace storm {
 
 	protected:
 		// Do read operations.
-		virtual Nat doRead(byte *to, Nat count);
+		virtual PeekReadResult doRead(byte *to, Nat count);
 	};
 
 	/**
