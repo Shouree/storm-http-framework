@@ -30,8 +30,9 @@ BEGIN_TEST(SyncTest, OS) {
 
 class InlineOrder {
 public:
-	InlineOrder(int v) : v(v), next(null) {}
+	InlineOrder(int v) : v(v), next(null), prev(null) {}
 	InlineOrder *next;
+	InlineOrder *prev;
 
 	int v;
 
