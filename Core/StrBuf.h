@@ -323,11 +323,13 @@ namespace storm {
 		Failure c(...); // all varargs, last resort to avoid errors
 
 		// Helper to check for whether we have an overload for const or non-const versions:
-		template <class T>
+		template <class T,
+				  size_t regularSize = sizeof(r<T>(0, static_cast<short>(1))),
+				  size_t constSize = sizeof(c<T>(0, static_cast<short>(1)))>
 		struct HasToS {
 			enum {
-				regular = sizeof(r<T>(0, static_cast<short>(1))) == sizeof(Success),
-				onlyConst = sizeof(c<T>(0, static_cast<short>(1))) == sizeof(Success),
+				regular = regularSize == sizeof(Success),
+				onlyConst = constSize == sizeof(Success),
 			};
 		};
 
@@ -398,7 +400,6 @@ namespace storm {
 		}
 	}
 
-
 	// Operator <<, for non-const variants:
 	template <class T>
 	typename EnableIf<tos_impl::HasToS<T>::regular, StrBuf &>::t
@@ -414,4 +415,5 @@ namespace storm {
 		tos_impl::callConst(&to, value);
 		return to;
 	}
+
 }
