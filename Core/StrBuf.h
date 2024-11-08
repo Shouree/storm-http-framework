@@ -322,7 +322,23 @@ namespace storm {
 		template <class U>
 		Failure c(...); // all varargs, last resort to avoid errors
 
-		// Helper to check for whether we have an overload for const or non-const versions:
+#if defined(VISUAL_STUDIO) && VISUAL_STUDIO < 2010
+		// Helper to check for whether we have an overload for const or non-const versions: The
+		// older MSVC compilers are a bit finnicky here. The exact version is a guess. I do not have
+		// access to all of them to test.
+		template <class T>
+		struct HasToS {
+			enum {
+				regular = sizeof(r<T>(0, static_cast<short>(1))) == sizeof(Success),
+				onlyConst = sizeof(c<T>(0, static_cast<short>(1))) == sizeof(Success),
+			};
+		};
+
+#else
+
+		// Interestingly, the "old" version fails for newer MSVC versions but works in GCC and
+		// CLANG. It seems like the body is instantiated outside of a SFINAE context, so we see
+		// errors from toS() being protected, etc. from that.
 		template <class T,
 				  size_t regularSize = sizeof(r<T>(0, static_cast<short>(1))),
 				  size_t constSize = sizeof(c<T>(0, static_cast<short>(1)))>
@@ -332,6 +348,8 @@ namespace storm {
 				onlyConst = constSize == sizeof(Success),
 			};
 		};
+
+#endif
 
 		// Functions that actually call the implementation. Works like above:
 		template <class T>
