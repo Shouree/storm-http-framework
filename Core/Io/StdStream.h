@@ -28,7 +28,7 @@ namespace storm {
 
 	protected:
 		// Read.
-		virtual Nat doRead(byte *to, Nat count);
+		virtual PeekReadResult doRead(byte *to, Nat count);
 	};
 
 

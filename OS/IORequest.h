@@ -81,6 +81,9 @@ namespace os {
 		// Closed?
 		bool closed;
 
+		// Timeout?
+		bool timeout;
+
 	private:
 		// Handle used.
 		Handle handle;

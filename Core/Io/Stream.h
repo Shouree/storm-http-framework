@@ -53,7 +53,8 @@ namespace storm {
 		// cases it is not possible to determine the end of stream ahead of time. In such cases,
 		// `more` might return `true` even if `read` will later report that it managed to read zero
 		// bytes. Whenever `read` succeeds with zero bytes, `more` will start returning `false`
-		// afterwards.
+		// afterwards, except for streams that support timeouts. A timed-out read does not count
+		// as an end of stream.
 		virtual Bool STORM_FN more();
 
 		// Read data from the stream and attempt to fill the bytes from `filled` to `count` in the
