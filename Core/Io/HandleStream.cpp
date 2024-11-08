@@ -2,6 +2,7 @@
 #include "HandleStream.h"
 #include "Core/Exception.h"
 #include "OS/IORequest.h"
+#include <limits>
 
 namespace storm {
 
@@ -187,7 +188,7 @@ namespace storm {
 				continue;
 			} else if (errno == EAGAIN) {
 				// Wait for more data.
-				if (!doWait(h, attached, os::IORequest::read))
+				if (!doWait(h, attached, os::IORequest::read, timeout))
 					break;
 			} else {
 				// Unknown error.

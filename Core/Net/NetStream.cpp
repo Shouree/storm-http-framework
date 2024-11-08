@@ -95,7 +95,7 @@ namespace storm {
 		if (!setSocketOpt(handle, SOL_SOCKET, SO_KEEPALIVE, &enabled, sizeof(enabled)))
 			throw new (this) NetError(S("Failed to set SO_KEEPALIVE."));
 
-		if (alive.enabled() && !alive.defaultTimes()) {
+		if (alive.enabled && !alive.defaultTimes()) {
 			int idletime = alive.idle.inS();
 			int idleinterval = alive.interval.inS();
 

@@ -56,7 +56,7 @@ namespace os {
 #ifdef POSIX
 
 	IORequest::IORequest(Handle handle, Type type, const Thread &thread, nat timeout)
-		: type(type), timeout(timeout), closed(false), handle(handle), thread(thread) {
+		: type(type), closed(false), handle(handle), thread(thread) {
 
 		thread.threadData()->ioComplete.attach(handle, this);
 		if (timeout) {
@@ -76,7 +76,8 @@ namespace os {
 		if (request) {
 			// We can just cancel it immediately. On UNIX, we always rely on OS-level buffers, so
 			// nothing is transferred outside of the calls to read/write.
-			wake.set();
+			request->closed = true;
+			request->wake.set();
 		}
 		request = null;
 	}
