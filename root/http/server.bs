@@ -28,10 +28,12 @@ class HTTP_Connection{
 
 // Initialize a server-CLASS on a given port
 class HTTP_Server{
-  HTTP_Connection connection;
+  //HTTP_Connection connection;
+  Listener? serverListener;
   init(Nat port){
     init{
-      connection = HTTP_Connection(port);
+      serverListener = listen(port, true);
+      //connection = HTTP_Connection(port);
     }
   }
 
@@ -104,11 +106,14 @@ class HTTP_Server{
     request.imediate_response = HTTP_StatusCode:NO_ERROR;
     print("SERVER TEST");
 
-    Listener? serverListener = listen(connection.port, true); // SO_REUSEADDR DOES NOT WORK PROPERLY ON WINDOWS
+    /*Listener? serverListener = listen(connection.port, true); // SO_REUSEADDR DOES NOT WORK PROPERLY ON WINDOWS
     unless(serverListener) {
       return;
-    }
+    }*/
 
+    unless(serverListener) { // Move this to a seperate function which check if it is valid or not
+        return;
+      }
     NetStream? socket = serverListener.accept();
     var x = spawn connectionThread(socket);
     serverListener.close(); // MIGHT BE NEEDED TO WORK ON WINDOWS
