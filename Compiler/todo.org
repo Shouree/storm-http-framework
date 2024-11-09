@@ -59,7 +59,12 @@
     but the scale of the issue should be assessed first.
   - [ ] Parsing core.lang.syntax.bnf takes about 80 ms, which is a bit on the high end when compiling code...
 
-* Loose ends so far [63/113]
+* Loose ends so far [63/114]
+  - [ ] For replacing return ptrs on the stack, we might need to use paciasp and autiasp if pointer
+    authentication is active. That, or we need to disable branch protection on ARM for Debian builds.
+    This feature is enabled with -mbranch-protection=standard on GCC. It can be detected by looking
+    for the presence of __ARM_FEATURE_PAC_DEFAULT and __ARM_FEATURE_BTI_DEFAULT. Both only require
+    injecting a few custom instructions in the final machine code (in prolog and epilog).
   - [ ] Relative imports in Basic Storm?
   - [ ] The Compiler thread should probably wait for all UThreads to terminate. Otherwise any UThreads
     that are sleeping will not block the system from terminating properly.
