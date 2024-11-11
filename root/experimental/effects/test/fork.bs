@@ -1,0 +1,29 @@
+use experimental:effects;
+use test;
+
+effect Fork {
+	unsafe effect void fork();
+}
+
+handler ForkHandler for Fork {
+	handle fork(), k {
+		k.call();
+		k.call();
+	}
+}
+
+test ForkTest {
+	Counter before;
+	Counter after;
+
+	handle ForkHandler {
+		// print("Before");
+		before.count++;
+		Fork:fork();
+		// print("After");
+		after.count++;
+	};
+
+	check before.count == 1;
+	check after.count == 2;
+}

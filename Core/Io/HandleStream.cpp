@@ -2,8 +2,19 @@
 #include "HandleStream.h"
 #include "Core/Exception.h"
 #include "OS/IORequest.h"
+#include <limits>
 
 namespace storm {
+
+	// Helper to make a Duration into a ms interval, clamping as necessary.
+	static nat toMs(Duration duration) {
+		Long ms = duration.inMs();
+		if (ms < 0)
+			return 0;
+		if (ms > std::numeric_limits<nat>::max())
+			return std::numeric_limits<nat>::max();
+		return nat(ms);
+	}
 
 	/**
 	 * System-specific helpers. These all behave as if the handle was blocking.
@@ -17,13 +28,13 @@ namespace storm {
 		h = os::Handle();
 	}
 
-	static Nat read(os::Handle h, os::Thread &attached, void *dest, Nat limit) {
+	static PeekReadResult read(os::Handle h, os::Thread &attached, void *dest, Nat limit, Duration timeout = Duration()) {
 		if (attached == os::Thread::invalid) {
 			attached = os::Thread::current();
 			attached.attach(h);
 		}
 
-		os::IORequest request(attached);
+		os::IORequest request(h, attached, toMs(timeout));
 
 		LARGE_INTEGER pos;
 		pos.QuadPart = 0;
@@ -32,7 +43,7 @@ namespace storm {
 			LARGE_INTEGER len;
 			GetFileSizeEx(h.v(), &len);
 			if (pos.QuadPart >= len.QuadPart)
-				return 0;
+				return PeekReadResult::end();
 
 			request.Offset = pos.LowPart;
 			request.OffsetHigh = pos.HighPart;
@@ -56,12 +67,17 @@ namespace storm {
 			// Advance the file pointer.
 			pos.QuadPart = request.bytes;
 			SetFilePointerEx(h.v(), pos, NULL, FILE_CURRENT);
+
+			// Was the operation cancelled?
+			if (request.bytes == 0 && request.error == ERROR_OPERATION_ABORTED)
+				return PeekReadResult::timeout();
+
 		} else {
 			// Failed.
 			request.bytes = 0;
 		}
 
-		return request.bytes;
+		return PeekReadResult::success(request.bytes);
 	}
 
 	static Nat write(os::Handle h, os::Thread &attached, const void *src, Nat limit) {
@@ -70,7 +86,7 @@ namespace storm {
 			attached.attach(h);
 		}
 
-		os::IORequest request(attached);
+		os::IORequest request(h, attached, 0);
 
 		LARGE_INTEGER pos;
 		pos.QuadPart = 0;
@@ -154,30 +170,42 @@ namespace storm {
 		h = os::Handle();
 	}
 
+	struct WaitResult {
+		bool closed;
+		bool timeout;
+	};
+
 	// Returns 'false' if the handle was closed (by us) during the operation.
-	static bool doWait(os::Handle h, os::Thread &attached, os::IORequest::Type type) {
+	static WaitResult doWait(os::Handle h, os::Thread &attached, os::IORequest::Type type, Duration timeout) {
 		if (attached == os::Thread::invalid) {
 			attached = os::Thread::current();
 			attached.attach(h);
 		}
 
-		os::IORequest request(h, type, attached);
+		os::IORequest request(h, type, attached, toMs(timeout));
 		request.wake.wait();
-		return !request.closed;
+		WaitResult r = {
+			request.closed,
+			request.timeout
+		};
+		return r;
 	}
 
-	static Nat read(os::Handle h, os::Thread &attached, void *dest, Nat limit) {
+	static PeekReadResult read(os::Handle h, os::Thread &attached, void *dest, Nat limit, Duration timeout = Duration()) {
 		while (true) {
 			ssize_t r = ::read(h.v(), dest, size_t(limit));
 			if (r >= 0)
-				return Nat(r);
+				return PeekReadResult::success(Nat(r));
 
 			if (errno == EINTR) {
 				// Aborted by a signal. Retry.
 				continue;
 			} else if (errno == EAGAIN) {
 				// Wait for more data.
-				if (!doWait(h, attached, os::IORequest::read))
+				WaitResult r = doWait(h, attached, os::IORequest::read, timeout);
+				if (r.timeout)
+					return PeekReadResult::timeout();
+				if (r.closed)
 					break;
 			} else {
 				// Unknown error.
@@ -185,7 +213,7 @@ namespace storm {
 			}
 		}
 
-		return 0;
+		return PeekReadResult::end();
 	}
 
 	static Nat write(os::Handle h, os::Thread &attached, const void *src, Nat limit) {
@@ -199,7 +227,8 @@ namespace storm {
 				continue;
 			} else if (errno == EAGAIN) {
 				// Wait for more data.
-				if (!doWait(h, attached, os::IORequest::write))
+				WaitResult r = doWait(h, attached, os::IORequest::write, Duration());
+				if (r.closed || r.timeout)
 					break;
 			} else {
 				// Unknown error.
@@ -279,11 +308,11 @@ namespace storm {
 		PeekIStream::close();
 	}
 
-	Nat HandleIStream::doRead(byte *to, Nat count) {
+	PeekReadResult HandleIStream::doRead(byte *to, Nat count) {
 		if (handle)
 			return storm::read(handle, attachedTo, to, count);
 		else
-			return 0;
+			return PeekReadResult::end();
 	}
 
 	/**
@@ -331,8 +360,8 @@ namespace storm {
 		if (start >= b.count())
 			return b;
 
-		Nat r = storm::read(handle, attachedTo, b.dataPtr() + start, b.count() - start);
-		b.filled(r + start);
+		PeekReadResult r = storm::read(handle, attachedTo, b.dataPtr() + start, b.count() - start);
+		b.filled(r.bytesRead() + start);
 		return b;
 	}
 
@@ -372,6 +401,21 @@ namespace storm {
 			return 0;
 
 		return storm::length(handle);
+	}
+
+	/**
+	 * With timeout.
+	 */
+
+	HandleTimeoutIStream::HandleTimeoutIStream(os::Handle handle) : HandleIStream(handle), timeout() {}
+
+	HandleTimeoutIStream::HandleTimeoutIStream(os::Handle handle, os::Thread attachedTo) : HandleIStream(handle), timeout() {}
+
+	PeekReadResult HandleTimeoutIStream::doRead(byte *to, Nat count) {
+		if (handle)
+			return storm::read(handle, attachedTo, to, count, timeout);
+		else
+			return PeekReadResult::end();
 	}
 
 	/**

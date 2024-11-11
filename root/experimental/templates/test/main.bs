@@ -15,7 +15,7 @@ T pickOne(Array<T> x) {
 	x.first;
 }
 
-suite UseTemplates {
+test UseTemplates {
 	Templated<Int> x;
 	x.v = 10;
 	print(x.f.toS);

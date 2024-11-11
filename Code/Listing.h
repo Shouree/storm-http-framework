@@ -115,6 +115,10 @@ namespace code {
 		Listing &STORM_FN operator <<(Label l);
 		Listing &STORM_FN operator <<(MAYBE(Array<Label> *) l);
 
+		// Insert instructions and labels.
+		void STORM_FN insert(Nat pos, Instr *op);
+		void STORM_FN insert(Nat pos, Label l);
+
 		// Access instructions.
 		inline Nat STORM_FN count() const { return code->count(); }
 		inline Bool STORM_FN empty() const { return count() == 0; }

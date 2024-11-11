@@ -51,6 +51,9 @@ namespace storm {
 		// function and the result type.
 		STORM_CTOR CodeGen(RunOn thread, Bool member, Value result);
 
+		// Short-hand to create a CodeGen object suitable for generating code for a function.
+		STORM_CTOR CodeGen(Function *forFunction);
+
 		// Create a new CodeGen which attaches to an already existing listing.
 		STORM_CTOR CodeGen(RunOn thread, code::Listing *l);
 		STORM_CTOR CodeGen(RunOn thread, code::Listing *l, code::Block block);

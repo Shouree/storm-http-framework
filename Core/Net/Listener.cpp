@@ -33,6 +33,7 @@ namespace storm {
 
 		os::Handle socket = createTcpSocket(addr->sa_family);
 
+		// TODO: Maybe not use SO_REUSEADDR on Windows?
 		int reuse = reuseAddr ? 1 : 0;
 		if (!setSocketOpt(socket, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(int)))
 			goto error;

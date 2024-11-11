@@ -31,18 +31,6 @@ namespace storm {
 		// To string.
 		virtual void STORM_FN toS(StrBuf *to) const;
 
-		// Get input timeout.
-		Duration STORM_FN inputTimeout() const;
-
-		// Set input timeout.
-		void STORM_ASSIGN inputTimeout(Duration v);
-
-		// Get output timeout.
-		Duration STORM_FN outputTimeout() const;
-
-		// Set output timeout.
-		void STORM_ASSIGN outputTimeout(Duration v);
-
 		// Get input buffer size in bytes.
 		Nat STORM_FN inputBufferSize() const;
 

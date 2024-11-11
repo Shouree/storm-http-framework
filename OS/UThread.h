@@ -349,13 +349,14 @@ namespace os {
 		// End the detour, returning to the thread which called 'startDetour'.
 		void endDetour(void *result = null);
 
-	private:
+
 		// Data for sleeping threads.
 		struct SleepData {
-			inline SleepData(int64 until) : next(null), until(until) {}
+			inline SleepData(int64 until) : next(null), prev(null), until(until) {}
 
-			// Next entry in the list.
+			// Next and prev entries in the list.
 			SleepData *next;
+			SleepData *prev;
 
 			// Wait until this timestamp.
 			int64 until;
@@ -369,6 +370,12 @@ namespace os {
 			}
 		};
 
+		// Add a custom sleep item.
+		void addSleep(SleepData *sleep);
+		void cancelSleep(SleepData *sleep);
+		static int64 sleepTarget(nat ms);
+
+	private:
 		// Currently running thread here.
 		UThreadData *running;
 
@@ -382,9 +389,11 @@ namespace os {
 		// Keep track of exited threads. Remove these at earliest opportunity!
 		InlineList<UThreadData> exited;
 
-		// Threads which are currently waiting. Not protected by locks as it is only accessed from
-		// the OS thread owning this state.
+		// Threads which are currently waiting.
 		SortedInlineList<SleepData> sleeping;
+
+		// Lock for the 'sleeping' list.
+		util::Lock sleepingLock;
 
 		// Number of threads alive. Always updated using atomics, no locks. Threads
 		// that are waiting and not stored in the 'ready' queue are also counted.

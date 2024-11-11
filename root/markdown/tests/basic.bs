@@ -42,7 +42,7 @@ Nat countType(Document d, core:lang:Type t) {
 	x.count;
 }
 
-suite BasicMarkdown {
+test BasicMarkdown {
 	var simple = str {
 		this is a
 		paragraph
@@ -64,16 +64,16 @@ suite BasicMarkdown {
 
 	Document result = parse(simple);
 
-	test result.elements.elements.count == 6;
-	test result.countType(named{Paragraph}) == 4;
-	test result.countType(named{Heading}) == 2;
+	check result.elements.elements.count == 6;
+	check result.countType(named{Paragraph}) == 4;
+	check result.countType(named{Heading}) == 2;
 	// print("Result:");
 	// print(result.toS);
 	// print("\nHTML:");
 	// print(result.toHtml.toS);
 }
 
-suite MarkdownLists {
+test MarkdownLists {
 	var nested = str {
 		- First
 		  - Second
@@ -82,7 +82,7 @@ suite MarkdownLists {
 	};
 	{
 		Document result = parse(nested);
-		test result.countType(named{List}) == 2;
+		check result.countType(named{List}) == 2;
 
 		// print("Result:");
 		// print(result.toHtml.toS);
@@ -115,14 +115,14 @@ suite MarkdownLists {
 
 	{
 		Document result = parse(lists);
-		test result.countType(named{List}) == 4;
+		check result.countType(named{List}) == 4;
 
 		// print("Result:");
 		// print(result.toHtml.toS);
 	}
 }
 
-suite MarkdownCode {
+test MarkdownCode {
 	var code = str {
 		Paragraph
 
@@ -143,15 +143,15 @@ suite MarkdownCode {
 	};
 
 	Document result = parse(code);
-	test result.countType(named{CodeBlock}) == 2;
-	test result.countType(named{Paragraph}) == 4;
-	test result.countType(named{InlineCode}) == 1;
-	test result.countType(named{List}) == 1;
+	check result.countType(named{CodeBlock}) == 2;
+	check result.countType(named{Paragraph}) == 4;
+	check result.countType(named{InlineCode}) == 1;
+	check result.countType(named{List}) == 1;
 
 	// print(result.toHtml.toS);
 }
 
-suite MarkdownCodeNoSpace {
+test MarkdownCodeNoSpace {
 	var code = str {
 		Paragraph
 		```c++
@@ -161,11 +161,11 @@ suite MarkdownCodeNoSpace {
 	};
 
 	Document result = parse(code);
-	test result.countType(named{CodeBlock}) == 1;
-	test result.countType(named{Paragraph}) == 2;
+	check result.countType(named{CodeBlock}) == 1;
+	check result.countType(named{Paragraph}) == 2;
 }
 
-suite MarkdownMultilineMarkup {
+test MarkdownMultilineMarkup {
 	var code = str {
 		test *multiline
 		bold* text and `multiline
@@ -180,8 +180,8 @@ suite MarkdownMultilineMarkup {
 	};
 
 	Document result = parse(code);
-	test result.countType(named{Paragraph}) == 3;
-	test result.countType(named{ItalicText}) == 1;
-	test result.countType(named{InlineCode}) == 2;
-	test result.countType(named{Link}) == 1;
+	check result.countType(named{Paragraph}) == 3;
+	check result.countType(named{ItalicText}) == 1;
+	check result.countType(named{InlineCode}) == 2;
+	check result.countType(named{Link}) == 1;
 }

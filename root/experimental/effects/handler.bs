@@ -1,0 +1,327 @@
+use core:lang;
+use lang:bs;
+use lang:bs:macro;
+use core:sync;
+
+/**
+ * Definition of an effect handler.
+ */
+class HandlerType extends Class {
+	// Which effect is being handled? Same as our 'super'.
+	EffectType handledEffect;
+
+	// What type is returned from the handler?
+	Value result;
+
+	// What type is expected from the body of the handler clause (i.e. input to the return clause)?
+	Value param;
+
+	// Return handler?
+	private HandlerClause? returnHandler;
+	HandlerClause? returnClause() { returnHandler; }
+
+	// Create.
+	init(SrcPos pos, Scope scope, Str name, Value result, Value param, EffectType effect, SHandlerBody body) {
+		init(TypeFlags:typeClass, pos, scope, name, body) {
+			result = result;
+			param = param;
+			handledEffect = effect;
+		}
+		setSuper(effect);
+	}
+
+	// Custom handler body.
+	class Body extends ClassBody {
+		// Parent.
+		HandlerType handler;
+
+		// Clauses to add.
+		SHandlerClause[] clauses;
+
+		init(Class handler) {
+			HandlerType t = if (handler as HandlerType) {
+				handler;
+			} else {
+				throw InternalError("HandlerType.Body must be passed a HandlerType parameter!");
+			};
+
+			init(handler) {
+				handler = t;
+			}
+		}
+
+		void add(TObject toAdd) : override {
+			if (toAdd as SHandlerClause) {
+				clauses << toAdd;
+			} else {
+				super:add(toAdd);
+			}
+		}
+
+		void finished() {
+			Set<EffectFun> handled;
+
+			for (c in clauses) {
+				var toAdd = c.transform(handler);
+
+				if (toAdd as EffectHandlerClause) {
+					if (handled.has(toAdd.effect))
+						throw SyntaxError(toAdd.pos, "This effect has already been handled.");
+
+					handled.put(toAdd.effect);
+					handler.add(toAdd.handler);
+				} else {
+					if (handler.returnHandler.any)
+						throw SyntaxError(toAdd.pos, "The 'return' handler may only occur once.");
+					handler.returnHandler = toAdd;
+				}
+			}
+
+			// Look for missing handlers:
+
+			if (handler.returnHandler.empty) {
+				if (!handler.result.mayStore(handler.param)) {
+					throw SyntaxError(handler.pos, "A return handler is required when the parameter and result types differ.");
+				}
+			}
+
+			Str[] missing;
+			for (x in handler.handledEffect) {
+				if (x as EffectFun) {
+					if (!handled.has(x))
+						missing << x.identifier;
+				}
+			}
+
+			if (missing.any) {
+				missing.sort();
+				throw SyntaxError(handler.pos, "The following effects are not handled in this handler:\n- " # join(missing, "\n- "));
+			}
+		}
+	}
+}
+
+
+/**
+ * Container for the types in a handler. Used with the grammar.
+ */
+class HandlerParams on Compiler {
+	// Resulting type from the handler.
+	SrcName result;
+
+	// Parameter type to the handler (i.e. the return type from the effect).
+	SrcName param;
+
+	// Create type representing (from -> to).
+	init(SrcName param, SrcName result) {
+		init {
+			param = param;
+			result = result;
+		}
+	}
+
+	// Create type representing (t -> t)
+	init(SrcName type) {
+		init {
+			param = type;
+			result = type;
+		}
+	}
+
+	// Create type representing (void -> void)
+	init() {
+		init {}
+	}
+
+	// Resolve result.
+	Value result(Scope scope) {
+		if (result.empty)
+			Value();
+		else
+			scope.value(result);
+	}
+
+	// Resolve param.
+	Value param(Scope scope) {
+		if (param.empty)
+			Value();
+		else
+			scope.value(param);
+	}
+}
+
+
+/**
+ * Decl object for handler types.
+ */
+class HandlerDecl extends NamedDecl {
+	SrcPos pos;
+	Scope scope;
+	Str name;
+	HandlerParams params;
+	SrcName effect;
+	SHandlerBody body;
+
+	init(Scope scope, SStr name, HandlerParams params, SrcName effect, SHandlerBody body) {
+		init {
+			scope = scope;
+			name = name.v;
+			pos = name.pos;
+			body = body;
+			params = params;
+			effect = effect;
+		}
+	}
+
+	protected Named doCreate() : override {
+		Scope fScope = fileScope(scope, pos);
+
+		unless (wrapper = fScope.find(effect) as Nonmovable)
+			throw SyntaxError(effect.pos, "The name ${effect} does not refer to an effect.");
+
+		unless (e = wrapper.wrapped as EffectType)
+			throw SyntaxError(effect.pos, "The name ${effect} does not refer to an effect.");
+
+		HandlerType handler(pos, fScope, name, params.result(fScope), params.param(fScope), e, body);
+		return Nonmovable(wrapper, handler);
+	}
+}
+
+
+/**
+ * Base case for effect handler clauses. Used for the return value.
+ */
+class HandlerClause on Compiler {
+	// Position.
+	SrcPos pos;
+
+	// Function that implements the handler.
+	Function handler;
+
+	// Create.
+	init(SrcPos pos, Function handler) {
+		init {
+			pos = pos;
+			handler = handler;
+		}
+	}
+}
+
+/**
+ * Handler for a particular effect.
+ */
+class EffectHandlerClause extends HandlerClause {
+	// Effect being handled.
+	EffectFun effect;
+
+	// Create.
+	init(SrcPos pos, Function handler, EffectFun effect) {
+		init(pos, handler) {
+			effect = effect;
+		}
+	}
+}
+
+// Create a return clause for an effect.
+HandlerClause returnHandler(SrcPos pos, HandlerType handler, SStr? param, SBlock bodyBlock) on Compiler {
+	ValParam[] fnParams;
+	fnParams << thisParam(handler);
+
+	if (param) {
+		if (handler.param.empty)
+			throw SyntaxError(pos, "You can not specify a parameter for a handler that accepts 'void'.");
+		fnParams << ValParam(handler.param, param);
+	} else {
+		if (handler.param.any)
+			throw SyntaxError(pos, "You need to specify a parameter for a handler that accepts a value.");
+	}
+
+	BSTreeFn f(handler.result, SStr("@handle-return", bodyBlock.pos), fnParams, null);
+	f.parentLookup = handler;
+
+	FnBody body(f, handler.scope);
+	f.body = body;
+
+	body.add(bodyBlock.transform(body));
+
+	HandlerClause(pos, f);
+}
+
+HandlerClause returnHandler(SrcPos pos, HandlerType handler, SBlock body) on Compiler {
+	returnHandler(pos, handler, null, body);
+}
+
+EffectHandlerClause effectHandler(SrcPos pos, HandlerType handler, SStr effect, NameParam[] params, SStr contParam, SBlock bodyBlock) on Compiler {
+	Scope scope = handler.scope;
+
+	var resolvedParams = params.resolve(scope);
+
+	SimplePart effectSig(effect.v, resolvedParams.values());
+	effectSig.params.insert(0, thisPtr(handler.handledEffect));
+
+	unless (foundEffect = handler.handledEffect.find(effectSig, scope) as EffectFun) {
+		throw SyntaxError(effect.pos, "Unable to find an effect named ${effect.v} in ${handler.handledEffect.identifier}.");
+	}
+
+	BSTreeFn f(Value(), SStr(foundEffect.handlerFn.name, bodyBlock.pos), [
+				thisParam(handler),
+				ValParam(named{HandlerFrame}, "@result"),
+				ValParam(named{Continuation}, "@continuation"),
+				ValParam(foundEffect.resumeType, "@params")
+			], null);
+
+	f.parentLookup = handler;
+
+	FnBody body(f, scope);
+	f.body = body;
+
+	LocalVarAccess paramsAccess(SrcPos(), body.parameters[3]);
+
+	// Extract the parameters from @params into local variables:
+	for (i, p in resolvedParams) {
+		Expr initTo = MemberVarAccess(SrcPos(), paramsAccess, foundEffect.resumeType.vars[i]);
+		// TODO: Use references if possible to save on copies? Ideally, we make Var support this
+		// use-case, then we can just replace 'p.type' with 'p.type.asRef' below.
+		body.add(Var(body, p.type, SStr(p.name), initTo));
+	}
+
+	unless (typedFrame = named{}.find("HandlerFrame", handler, Scope()) as Type)
+		throw InternalError("Failed to find a handler frame.");
+
+	// Create a typed wrapper for the continuation.
+	Function contWrapper = typedContinuation(pos, scope, handler, foundEffect.result);
+	contWrapper.parentLookup = handler;
+
+	// Cast "result" to the proper type:
+	WeakDowncast cast(body, LocalVarAccess(pos, body.parameters[1]), typedFrame);
+	If check(body, cast);
+
+	if (var = cast.result) {
+		LocalVarAccess varAccess(pos, var);
+
+		ExprBlock inSuccess(bodyBlock.pos, check.successBlock);
+		check.success(inSuccess);
+
+		// Variable for the continuation:
+		LocalVarAccess contAccess(SrcPos(), body.parameters[2]);
+		inSuccess.add(Var(body, contParam, FnPtr(contAccess, contWrapper, pos)));
+
+		// The body, wrapped in a return point to allow return statements to work properly.
+		ReturnPoint bodyWrap(bodyBlock.pos, inSuccess, handler.result);
+		bodyWrap.body = bodyBlock.transform(bodyWrap);
+
+		if (handler.result.any) {
+			inSuccess.add(pattern(inSuccess) { ${varAccess}.result = ${bodyWrap}; });
+		} else {
+			inSuccess.add(bodyWrap);
+		}
+	}
+
+	check.fail(pattern(body) {
+						throw InternalError("Invalid types!");
+					});
+
+	body.add(check);
+
+	EffectHandlerClause(pos, f, foundEffect);
+}

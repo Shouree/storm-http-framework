@@ -35,9 +35,14 @@ class LambdaExpr extends Expr {
 
 	// Create a lambda expression where the types of all parameters are known.
 	init(SrcPos pos, Block parent, Array<ValParam> params, SExpr body) {
+		self(pos, parent, params, body, LambdaCaptureStrategy());
+	}
+
+	// Create a lambda expression where the types of all parameters are known, providing a custom storage strategy.
+	init(SrcPos pos, Block parent, Array<ValParam> params, SExpr body, LambdaCaptureStrategy storage) {
 		Scope scope = lambdaScope(parent);
 
-		LambdaBody tfmBody(scope, parent, params, body);
+		LambdaBody tfmBody(scope, parent, params, body, storage);
 
 		SimpleName name;
 		name.add("core");
@@ -106,7 +111,7 @@ class LambdaExpr extends Expr {
 			for (i, p in fnParams)
 				params << ValParam(fnType.params[i + 1], p.name);
 
-			LambdaBody(scope, parent, params, rawBody);
+			LambdaBody(scope, parent, params, rawBody, LambdaCaptureStrategy());
 		};
 
 		if (body.anyCaptures) {
@@ -191,18 +196,19 @@ class LambdaExpr extends Expr {
 
 
 /**
- * Root block of a lamdba function. Intercepts variable lookups and creates suitable replacement
+ * Root block of a lambda function. Intercepts variable lookups and creates suitable replacement
  * variables.
  *
  * Inherits from ReturnPoint (which inherits from Block) to support "return" statements properly.
  */
 private class LambdaBody extends ReturnPoint {
 	// Create.
-	init(Scope scope, Block context, Array<ValParam> params, SExpr body) {
+	init(Scope scope, Block context, Array<ValParam> params, SExpr body, LambdaCaptureStrategy capture) {
 		DeductiveReturnInfo info;
 
 		init(body.pos, scope, info) {
 			context = context;
+			capture = capture;
 		}
 
 		for (p in params) {
@@ -216,6 +222,9 @@ private class LambdaBody extends ReturnPoint {
 
 	// Context from where the lambda function can capture variables.
 	private Block context;
+
+	// Variable capture strategy.
+	private LambdaCaptureStrategy capture;
 
 	// Variables captured from the surrounding context.
 	private LocalVar[] captured;
@@ -246,7 +255,8 @@ private class LambdaBody extends ReturnPoint {
 
 		// Otherwise, look inside the context.
 		if (inContext = context.variable(name)) {
-			LocalVar shadow(inContext.name, inContext.result.asRef(), inContext.pos, false);
+			var type = capture.shadowAs(inContext.result);
+			LocalVar shadow(inContext.name, type, inContext.pos, false);
 			captured << inContext;
 			shadows << shadow;
 			add(shadow);
@@ -295,12 +305,14 @@ private class LambdaBody extends ReturnPoint {
 				throw InternalError("Invalid this variable.");
 
 			// Initialize other variables by getting a pointer from the type.
-			gen.l << mov(ptrA, thisVar.var.v);
+			Bool resetPtrA = true;
 			for (s in shadows) {
 				unless (member = thisType.find(SimplePart(s.name, thisType), Scope()) as MemberVar)
 					throw InternalError("Failed to find member variable of the captured object.");
 
-				gen.l << lea(s.var.v, ptrRel(ptrA, member.offset));
+				if (resetPtrA)
+					gen.l << mov(ptrA, thisVar.var.v);
+				resetPtrA = capture.restore(gen, s, member, ptrA);
 			}
 		}
 
@@ -327,7 +339,7 @@ private class LambdaBody extends ReturnPoint {
 		// Compute formal parameters.
 		Actuals actuals;
 		for (i, c in captured) {
-			MemberVar member(c.name, c.result, type);
+			MemberVar member(c.name, capture.storeAs(c.result), type);
 			type.add(member);
 			vars << member;
 
@@ -343,7 +355,8 @@ private class LambdaBody extends ReturnPoint {
 			Initializer[] init;
 			for (i, v in vars) {
 				var formal = b.parameters[i + 1];
-				init << Initializer(SStr(v.name), LocalVarAccess(pos, formal));
+				var initExpr = capture.storeInitializer(v.type, LocalVarAccess(pos, formal));
+				init << Initializer(SStr(v.name), initExpr);
 			}
 			InitBlock s(pos, b, Actuals(), init);
 			b.add(s);
@@ -361,6 +374,57 @@ private class LambdaBody extends ReturnPoint {
 		}
 	}
 }
+
+
+/**
+ * Class that allows customizing how lambda functions store captured variables.
+ *
+ * This is useful to store certain types of variables in a special way, for example. Introduced to
+ * handle nonmovable variables in the effects implementation specially.
+ *
+ * The default class implements the default strategy.
+ */
+class LambdaCaptureStrategy {
+	// Compute the type of how a captured variable should be shadowed.
+	//
+	// This allows determining how different types should be shadowed. In most situations, this is
+	// typically used to determine which variables should be values and which should be references.
+	Value shadowAs(Value original) {
+		original.asRef;
+	}
+
+	// Compute the storage type of a captured variable.
+	//
+	// Called by LambdaBody when it has determined that it needs to store a captured variable inside
+	// an object. The function returns the type that should be used to store the variable inside the
+	// lambda object.
+	Value storeAs(Value original) {
+		// Note: Never store things as references. That won't work.
+		original.asRef(false);
+	}
+
+	// Customize how to initialize a variable.
+	//
+	// If the 'storeAs' was overriden to return an incompatible type for some data type, this
+	// function allows customizing the expression that is used to initialize the new variable inside
+	// the type.
+	Expr storeInitializer(Value type, Expr original) {
+		original;
+	}
+
+	// Customize how to load a captured variable from the object.
+	//
+	// Called to customize the initialization of the local variable that is used in the lambda
+	// function. That is, the expression produced here should produce code that initializes the
+	// variable "init" from the member "member" that was previously stored in the object. This
+	// should be done from the object that resides in "baseReg". Should return 'true' if 'baseReg'
+	// was clobbered.
+	Bool restore(CodeGen gen, LocalVar init, MemberVar member, Reg baseReg) {
+		gen.l << lea(init.var.v, ptrRel(baseReg, member.offset));
+		false;
+	}
+}
+
 
 /**
  * ReturnInfo that deduces the return type based on what is actually used with 'return'.

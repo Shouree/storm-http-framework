@@ -1,75 +1,138 @@
 use core:lang;
 use lang:bs;
 use lang:bs:macro;
-use core:asm;
 use core:sync;
+use core:asm;
 
 /**
- * Effect definition.
- *
- * Expands to a function that can be called from other languages.
+ * Definition of an effect type.
  */
-class Effect extends Function {
-	init(SrcPos pos, Str name, Value result, ValParam[] params) {
-		var vals = params.values();
+class EffectType extends Class {
+	init(SrcPos pos, Scope scope, Str name, SEffectTypeBody body) {
+		init(TypeFlags:typeClass, pos, scope, name, body);
+	}
 
-		var frameType = if (found = named{}.find("EffectFrame", result, Scope()) as Type) {
-			found;
+	protected Bool loadAll() : override {
+		if (!super:loadAll())
+			return false;
+
+		// For each effect function, also add a corresponding handler that the handler can override.
+		Named[] toAdd;
+		for (x in this) {
+			if (x as EffectFun) {
+				toAdd << x.handlerFn;
+				if (x.unsafe)
+					toAdd << x.makeUnsafeWrapper();
+			}
+		}
+
+		for (x in toAdd)
+			add(x);
+
+		true;
+	}
+}
+
+// Create effect types. Note: we don't need a Decl for this, we can just create it directly since we
+// want it to be created before someone might need it!
+Named createEffectType(Scope scope, SStr name, SEffectTypeBody body) {
+	SrcPos pos = name.pos;
+	EffectType t(pos, fileScope(scope, pos), name.v, body);
+	return Nonmovable(null, t);
+}
+
+
+/**
+ * An actual effect function.
+ */
+class EffectFun extends Function {
+	init(SrcPos pos, Class memberOf, Bool unsafe, Str name, Value result, ValParam[] params) {
+		var effect = if (memberOf as EffectType) {
+			memberOf;
 		} else {
-			throw InternalError("Could not found EffectFrame!");
+			throw InternalError("EffectFun must be a member of an effect!");
 		};
 
+		var vals = params.values();
+
+		// Make us a member function.
+		vals.insert(0, thisPtr(memberOf));
+
+		var resultType = if(found = named{}.find("EffectResult", result, Scope()) as Type) {
+			found;
+		} else {
+			throw InternalError("Could not find EffectFrame!");
+		};
+
+		// Note: we intentionally ignore the possible this parameter.
+		var resumeType = ResumeHandlerType(effect, name, params.values());
 
 		init(pos, result, name, vals) {
-			resumeType(vals);
-			frameType = frameType;
+			unsafe = unsafe;
+			resumeType = resumeType;
+			resultType = resultType;
+			handlerFn = BSAbstractFn(Value(), SStr("@handle-" + name), [
+										thisParam(memberOf),
+										ValParam(named{HandlerFrame}, "@result"),
+										ValParam(named{Continuation}, "@continuation"),
+										ValParam(resumeType, "@params")
+									]);
 		}
 
 		setCode(LazyCode(&this.generate()));
-
-		resumeType.parentLookup = this;
 	}
 
-	// Type for resuming the handler.
-	private HandlerResumeType resumeType;
+	// Custom type used to store the parameters to this effect.
+	package ResumeHandlerType resumeType;
 
-	// Type of the frame.
-	private Type frameType;
+	// Type used for results. Points to a subclass of EffectResult.
+	private Type resultType;
+
+	// Store the function that handles this effect in the parent class.
+	package Function handlerFn;
+
+	// Is this effect an unsafe effect? This just means that we should generate a wrapper that don't
+	// accept a 'this' parameter.
+	package Bool unsafe;
 
 	private CodeGen generate() {
-		CodeGen gen(runOn, isMember, result);
+		CodeGen gen(this);
+
+		// The 'this' parameter. Specifies the handler to invoke.
+		var me = gen.l.createParam(ptrDesc);
 
 		core:asm:Var[] actuals;
-		for (x in params)
-			actuals << gen.l.createParam(x.desc);
+		for (i, x in params) {
+			// Skip param #0, its the this param.
+			if (i > 0)
+				actuals << gen.l.createParam(x.desc);
+		}
 
 		gen.l << prolog();
 
-		// Find a handler and update the resume object:
-		var targetObj = gen.l.createVar(gen.block, sPtr);
-		gen.l << fnParam(ptrDesc, objPtr(this));
-		gen.l << fnCall(named{findHandler<Effect>}.ref, false, ptrDesc, targetObj);
+		// Create our effect result object.
+		var resultObj = gen.allocObject(resultType);
 
-		// Create our effects frame:
-		var frameObj = gen.allocObject(frameType);
-
-		// Create a handler resume frame to store the parameters we received:
+		// Create a handler resume object and store the parameters we received:
 		var resumeObj = gen.l.createVar(gen.block, sPtr);
 		gen.l << fnParam(ptrDesc, resumeType.typeRef);
 		gen.l << fnCall(BuiltIn:alloc.ref, false, ptrDesc, resumeObj);
 
 		// Call the base class' constructor:
-		var ctorParams = Value:[named{HandlerResume}, named{HandlerResume:Target}, named{EffectFrame}];
-		if (ctor = named{HandlerResume}.find("__init", ctorParams, Scope()) as Function) {
+		var ctorParams = Value:[named{ResumeHandler}, named{EffectResult}];
+		if (ctor = named{ResumeHandler}.find("__init", ctorParams, Scope()) as Function) {
 			gen.l << fnParam(ptrDesc, resumeObj);
-			gen.l << fnParam(ptrDesc, targetObj);
-			gen.l << fnParam(ptrDesc, frameObj);
+			gen.l << fnParam(ptrDesc, resultObj);
 			gen.l << fnCall(ctor.ref, true);
 		} else {
 			throw InternalError("Failed to find resume type ctor!");
 		}
 
-		// Now, we can copy the parameters there:
+		// Store the handler.
+		gen.l << mov(ptrA, resumeObj);
+		gen.l << mov(ptrRel(ptrA, resumeType.handler.offset), me);
+
+		// Now, copy the parameters:
 		for (i, actual in actuals) {
 			var v = resumeType.vars[i];
 			if (v.type.isAsmType) {
@@ -89,261 +152,71 @@ class Effect extends Function {
 		if (vtable = resumeType.vtable)
 			vtable.insert(gen.l, resumeObj);
 
-
-		// Finish set-up of the resume object.
+		// Call 'post' on the resume handler to make it ready to capture the continuation.
 		gen.l << fnParam(ptrDesc, resumeObj);
-		gen.l << fnCall(named{HandlerResume:finish<HandlerResume>}.ref, true);
+		gen.l << fnParam(ptrDesc, me);
+		gen.l << fnCall(named{ResumeHandler:post<ResumeHandler, Object>}.ref, true);
 
-		// Wait for it to complete:
-		gen.l << fnParam(ptrDesc, frameObj);
-		gen.l << fnCall(named{EffectFrame:wait<EffectFrame>}.ref, true);
+		// Call 'wait' to make things happen!
+		gen.l << fnParam(ptrDesc, resultObj);
+		gen.l << fnCall(named{EffectResult:wait<EffectResult>}.ref, true);
 
-		// Load a pointer to the result if necessary:
+		// If we have a result, find the result and return it. Note, we abuse the fact that a Maybe
+		// type has the same representation as an instance of an ordinary type when it is non-null
+		// (except for the possibility of a few additional bytes).
 		if (result.any) {
-			unless (resultVar = frameType.find("result", frameType, Scope()) as MemberVar)
+			unless (resultVar = resultType.find("result", resultType, Scope()) as MemberVar)
 				throw InternalError("Failed to find 'result' in EffectFrame!");
 
-			gen.l << add(frameObj, ptrConst(resultVar.offset));
-			gen.l << fnRetRef(frameObj);
+			gen.l << add(resultObj, ptrConst(resultVar.offset));
+			gen.l << fnRetRef(resultObj);
 		} else {
 			gen.l << fnRet();
 		}
 
 		gen;
 	}
-}
 
-private HandlerResume:Target findHandler(Effect effect) {
-	if (top = currentHandlerFrame()) {
-		HandlerFrame? current = top;
-		while (c = current) {
-			if (h = c.effects.at(effect)) {
-				return HandlerResume:Target(top, c, h);
-			}
+	// Make a wrapper for an unsafe effect that calls this effect.
+	Function makeUnsafeWrapper() {
+		unless (effect = this.params[0].type as EffectType)
+			throw InternalError("Inconsistent types!");
 
-			current = c.prev;
+		Array<Value> params(this.params);
+		params.remove(0);
+		Function f(pos, result, name, params);
+		f.make(FnFlags:static);
+
+		var resultDesc = result.desc;
+		Listing l(false, resultDesc);
+
+		l << prolog();
+		l << fnParam(ptrDesc, effect.typeRef);
+		l << fnCall(named{findEffectHandler<EffectType>}.ref, false, ptrDesc, ptrA);
+
+		l << fnParam(ptrDesc, ptrA);
+
+		// Forward parameters:
+		for (x in params) {
+			var desc = x.desc;
+			var v = l.createParam(desc);
+			l << fnParam(desc, v);
 		}
-	}
-	throw NoHandlerFor(effect.identifier());
-}
 
+		var resultVar = l.createVar(l.root, resultDesc);
+		l << fnCall(this.ref, true, resultDesc, resultVar);
 
-// Data structure for storing the result to an effect invocation, and starting it again.
-package class EffectFrame {
-	// Ctor.
-	init() {
-		init {
-			sema(0);
-		}
-	}
+		l << fnRet(resultVar);
 
-	// Semaphore to wait for execution to finish.
-	// Note: We might need something more elaborate later.
-	private Sema sema;
+		f.setCode(DynamicCode(l));
 
-	// Should we throw an error to clean up?
-	private Exception? throwError;
-
-	// Wait for the result to be present.
-	void wait() {
-		sema.down();
-
-		if (e = throwError) {
-			throwError = null;
-			throw e;
-		}
-	}
-
-	// Indicate that a result is available.
-	void signal() {
-		sema.up();
-	}
-
-	// Signal that we should throw an exception and exit.
-	void terminate(Exception e) {
-		throwError = e;
-		signal();
+		f;
 	}
 }
 
-
-// Generic result.
-EffectFrame : generate(params) {
-	if (params.count != 1)
-		return null;
-
-	var retVal = params[0].asRef(false);
-
-	Type t("EffectFrame", [retVal], TypeFlags:typeClass);
-	t.flags += NamedFlags:namedMatchNoInheritance;
-
-	t.setSuper(named{EffectFrame});
-	if (retVal.any)
-		t.add(MemberVar("result", wrapMaybe(retVal), t));
-	t.add(TypeDefaultCtor(t));
-	t.add(TypeCopyCtor(t));
-	t.add(TypeAssign(t));
-	if (needsDestructor(t))
-		t.add(TypeDefaultDtor(t));
-
-	t;
-}
-
-/**
- * Message indicating that a handler block should invocate a handler.
- *
- * This class will be overloaded for each effect to provide a class with the appropriate parameters
- * and the appropriate logic inside 'call'.
- */
-class HandlerResume {
-	// Metadata.
-	class Target {
-		// Top of the handler chain.
-		HandlerFrame top;
-
-		// Target frame.
-		HandlerFrame target;
-
-		// Function to call.
-		FnBase handler;
-
-		init(HandlerFrame top, HandlerFrame target, FnBase handler) {
-			init {
-				top = top;
-				target = target;
-				handler = handler;
-			}
-		}
-	}
-
-	// Target information.
-	Target target;
-
-	// Information for controlling the old frame.
-	EffectFrame frame;
-
-	// Create.
-	init(Target target, EffectFrame frame) {
-		init { target = target; frame = frame; }
-	}
-
-	// Called to update the target frame.
-	void finish() {
-		target.target.resume(this);
-	}
-
-	// Called on the original UThread to invoke the handler.
-	void call(HandlerFrame frame) : abstract;
-
-	// Called at the start of 'call' to save the handler information.
-	Continuation saveContinuation() {
-		// Walk the chain of handler frames and collect the stacks from them.
-		Continuation cont(frame);
-
-		{
-			HandlerFrame current = target.top;
-			cont.add(current);
-
-			while (current !is target.target) {
-				unless (next = current.prev)
-					break;
-				current = next;
-
-				cont.add(current);
-			}
-		}
-
-		// Then resume the topmost handler to clean up the stack.
-		Sema wait(0);
-		frame.terminate(EffectUnwind(wait, target.target));
-
-		// Wait for it to complete.
-		wait.down();
-
-		// All done!
-		return cont;
-	}
-}
-
-
-/**
- * Class that subclasses "HandlerResume" inside effects.
- *
- * Note: The type has no constructor, since it is intended to be created directly from ASM.
- */
-class HandlerResumeType extends Type {
-	// Create.
-	init(Value[] members) {
-		init("HandlerResume", TypeFlags:typeClass) {}
-		setSuper(named{HandlerResume});
-
-		for (i, m in members) {
-			MemberVar v("member" + i.toS, m, this);
-			vars << v;
-			add(v);
-		}
-	}
-
-	// Member variables, easily accessible.
-	MemberVar[] vars;
-
-	// Load functions.
-	Bool loadAll() : override {
-		Function callFn(Value(), "call", [this, named{HandlerFrame}]);
-		callFn.setCode(LazyCode(&this.createCall));
-		add(callFn);
-
-		true;
-	}
-
-	// Create the body to 'call'
-	private CodeGen createCall() {
-		CodeGen gen(RunOn(), true, Value());
-
-		var me = gen.l.createParam(ptrDesc);
-		var frameParam = gen.l.createParam(ptrDesc);
-
-		gen.l << prolog();
-
-		// Note: We *could* pass ourselves to the handler directly instead of decomposing ourselves
-		// into pieces. Then the handler itself would have to find the variables instead.
-
-		// Save the continuation.
-		var storedCont = gen.l.createVar(gen.block, sPtr);
-		gen.l << fnParam(ptrDesc, me);
-		gen.l << fnCall(named{HandlerResume:saveContinuation<HandlerResume>}.ref, true, ptrDesc, storedCont);
-
-		// Find the function to call:
-		gen.l << mov(ptrA, me);
-		gen.l << mov(ptrC, ptrRel(ptrA, named{HandlerResume:target<HandlerResume>}.offset));
-		gen.l << mov(ptrC, ptrRel(ptrC, named{HandlerResume:Target:handler<HandlerResume:Target>}.offset));
-
-		// Compile a parameter list:
-		// gen.l << mov(ptrA, me); // already done above
-		gen.l << fnParam(ptrDesc, ptrC);
-		gen.l << fnParam(ptrDesc, frameParam);
-		for (v in vars) {
-			gen.l << fnParam(v.type.desc, xRel(v.type.size, ptrA, v.offset));
-		}
-		gen.l << fnParam(ptrDesc, storedCont);
-
-		// Figure out the parameters of a Fn<> object so that we can find the 'call' function:
-		Value[] paramTypes;
-		paramTypes << Value(); // Return
-		paramTypes << named{HandlerFrame}; // Where to return
-		for (x in vars)
-			paramTypes << x.type;
-		paramTypes << named{Continuation};
-
-		var type = fnType(paramTypes.clone);
-		paramTypes[0] = type;
-
-		unless (toCall = type.find("call", paramTypes, Scope()) as Function)
-			throw InternalError("Failed to find 'call' inside Fn!");
-
-		gen.l << fnCall(toCall.ref, true);
-		gen.l << fnRet();
-
-		gen;
-	}
+// Helper:
+package EffectFun effectFun(SrcPos pos, Class memberOf, Bool unsafe, SStr name, SrcName result, NameParam[] params) on Compiler {
+	var res = memberOf.scope.value(result);
+	var par = params.resolve(memberOf.scope);
+	return EffectFun(pos, memberOf, unsafe, name.v, res, par);
 }

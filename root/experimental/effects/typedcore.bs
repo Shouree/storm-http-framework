@@ -1,0 +1,254 @@
+/**
+ * This file extends the constructs in "core.bs" with typed versions of the same constructs.
+ */
+use lang:bs;
+use lang:bs:macro;
+use core:lang;
+use core:asm;
+
+// Subclass of HandlerFrame that contains a "value" member of the proper type (unless "void"), and a
+// member "body" that refers to the actual handler to call when the member "main" is called.
+HandlerFrame : generate(params) {
+	if (params.count != 1)
+		return null;
+
+	unless (handler = params[0].type as HandlerType)
+		return null;
+
+	var retVal = handler.result;
+	var lambdaType = fnType([handler.result, handler]);
+
+	Type t("HandlerFrame", [handler], TypeFlags:typeClass);
+	t.flags += NamedFlags:namedMatchNoInheritance;
+
+	// Note: the 'object' here is just a properly typed version of the 'handler' in HandlerFrame.
+	// This redundancy could be removed at the cost of e.g. unsafe type casts or abstract function
+	// calls. This is, however, easier overall and does not cost that much memory.
+	t.setSuper(named{HandlerFrame});
+	t.add(MemberVar("object", handler, t));
+	t.add(MemberVar("body", lambdaType, t));
+	if (retVal.any)
+		t.add(MemberVar("result", wrapMaybe(retVal), t));
+
+	// Create a constructor with two parameters: the object and a lambda. Note: We *could* make the
+	// HandlerFrame emulate a lambda to save on an indirection, but that is probably not worth the
+	// effort - effects are slow anyway.
+	{
+		SStr objName("object");
+		SStr lambdaName("body");
+
+		BSTreeCtor ctor([thisParam(t), ValParam(handler, objName), ValParam(lambdaType, lambdaName)], SrcPos());
+		CtorBody body(ctor, Scope());
+		ctor.body = body;
+
+		InitBlock init(SrcPos(), body, Actuals(LocalVarAccess(SrcPos(), body.parameters[1])));
+		init.init(Initializer(objName, LocalVarAccess(SrcPos(), body.parameters[1])));
+		init.init(Initializer(lambdaName, LocalVarAccess(SrcPos(), body.parameters[2])));
+		body.add(init);
+
+		t.add(ctor);
+	}
+
+	t.add(TypeCopyCtor(t));
+	t.add(TypeAssign(t));
+	if (needsDestructor(t))
+		t.add(TypeDefaultDtor(t));
+
+	{
+		ValParam[] paramList = [thisParam(t)];
+
+		BSTreeFn fn(Value(), SStr("callBody"), paramList, null);
+		FnBody body(fn, Scope(named{}, BSLookup()));
+		fn.body = body;
+		t.add(fn);
+
+		if (retVal.any) {
+			body.add(pattern(body) { this.result = this.body.call(this.object); });
+		} else {
+			body.add(pattern(body) { this.body.call(this.object); });
+		}
+	}
+
+	t;
+}
+
+
+// Custom subclass of the ResumeHandler class that contains an arbitrary list of members that
+// corresponds to members in an effect. Not visible from the name tree. Each effect has its own
+// instance.
+package class ResumeHandlerType extends Type {
+	// Create.
+	init(EffectType handlerType, Str effectName, Value[] members) {
+		super("HandlerResume(for ${effectName})", TypeFlags:typeClass);
+
+		init {
+			handler("handler", handlerType, this);
+			effectName = effectName;
+		}
+		setSuper(named{ResumeHandler});
+
+		add(handler);
+		for (i, m in members) {
+			MemberVar v("member" + i.toS, m, this);
+			vars << v;
+			add(v);
+		}
+	}
+
+	// Member variables, easily accessible in the original order.
+	MemberVar[] vars;
+
+	// Variable that stores the handler that should be called.
+	MemberVar handler;
+
+	// Effect name.
+	private Str effectName;
+
+	// Load functions.
+	Bool loadAll() : override {
+		Function callFn(Value(), "callHandler", [this, named{HandlerFrame}, named{Continuation}]);
+		callFn.setCode(LazyCode(&this.createCall));
+		add(callFn);
+
+		true;
+	}
+
+	// Create the body to 'callHandler'.
+	private CodeGen createCall() {
+		CodeGen gen(RunOn(), true, Value());
+
+		var me = gen.l.createParam(ptrDesc);
+		var resultFrame = gen.l.createParam(ptrDesc);
+		var cont = gen.l.createParam(ptrDesc);
+
+		gen.l << prolog();
+
+		// Note: We *could* pass ourselves to the handler directly instead of decomposing ourselves
+		// into pieces. Then the handler itself would have to find the variables instead.
+
+		// Find the function to call. This will find the abstract function in the effect object,
+		// that is then overloaded by the handler.
+		unless (handlerType = handler.type.type)
+			throw InternalError("Invalid handler type.");
+
+		SimplePart toFind("@handle-" + effectName, [
+							thisPtr(handlerType),
+							named{HandlerFrame},
+							named{Continuation},
+							Value(this),
+							]);
+		unless (handlerFn = handlerType.find(toFind, Scope()) as Function)
+			throw InternalError("Failed to find the handler for ${effectName}.");
+
+		// Call it!
+		gen.l << mov(ptrA, me);
+		gen.l << fnParam(ptrDesc, ptrRel(ptrA, handler.offset));
+		gen.l << fnParam(ptrDesc, resultFrame);
+		gen.l << fnParam(ptrDesc, cont);
+		gen.l << fnParam(ptrDesc, me);
+		gen.l << fnCall(handlerFn.ref, true);
+
+		gen.l << fnRet();
+
+		gen;
+	}
+}
+
+
+// Effect result with a specific return type.
+EffectResult : generate(params) {
+	if (params.count != 1)
+		return null;
+
+	var retVal = params[0].asRef(false);
+
+	Type t("EffectResult", [retVal], TypeFlags:typeClass);
+	t.flags += NamedFlags:namedMatchNoInheritance;
+
+	t.setSuper(named{EffectResult});
+	if (retVal.any)
+		t.add(MemberVar("result", wrapMaybe(retVal), t));
+	t.add(TypeDefaultCtor(t));
+	t.add(TypeCopyCtor(t));
+	t.add(TypeAssign(t));
+	if (needsDestructor(t))
+		t.add(TypeDefaultDtor(t));
+
+	t;
+}
+
+
+// Helper to create a function that wraps a continuation. TODO: Maybe implement as a generator?
+// There is *some* potential for reuse at least, even if it is not too large.
+package Function typedContinuation(SrcPos pos, Scope scope, HandlerType handler, Value effectResult) on Compiler {
+	ValParam[] params;
+	params << ValParam(named{Continuation}, "c");
+	if (effectResult.any)
+		params << ValParam(effectResult, "param");
+	BSTreeFn f(Value(handler.result), SStr("wrap-continuation", pos), params, null);
+
+	FnBody body(f, scope);
+	f.body = body;
+
+	// Get the frame and copy the parameter:
+	if (effectResult.any) {
+		unless (typedEffect = named{}.find("EffectResult", effectResult, Scope()) as Type)
+			throw InternalError("Failed to find EffectResult<T>.");
+
+		// Note: We can just type-pun instead of checking. That should be safe here.
+		body.add(pattern(body) {
+					if (frame = c.effectResult as ${typedEffect}) {
+						frame.result = param;
+					} else {
+						throw InternalError("Invalid parameter type!");
+					}
+				});
+	}
+
+	// Call resume and get the result:
+	if (handler.result.any) {
+		unless (typedHandler = named{}.find("HandlerFrame", handler, Scope()) as Type)
+			throw InternalError("Failed to find a handler frame.");
+
+		// Note: We can skip all checked if:s here if we want to.
+		body.add(pattern(body) {
+					if (result = c.resume() as ${typedHandler}) {
+						if (r = result.result) {
+							r;
+						} else {
+							throw InternalError("No result set!");
+						}
+					} else {
+						throw InternalError("Invalid parameter type!");
+					}
+				});
+	} else {
+		body.add(pattern(body) { c.resume(); });
+	}
+
+	f;
+}
+
+NonMovable : generate(params) {
+	if (params.any)
+		return null;
+
+	NonMovableType t("NonMovable");
+
+	t.add(MemberVar("x", named{Str}, t));
+	t.add(TypeDefaultCtor(t));
+
+	t;
+}
+
+class NonMovableType extends Type {
+	init(Str name) {
+		init(name, [], TypeFlags:typeValue, sPtr) {}
+	}
+
+	protected TypeDesc createTypeDesc() {
+		SimpleDesc desc(sPtr, 1);
+		desc.at(0) = Primitive(PrimitiveKind:pointer, sPtr, Offset());
+		return desc;
+	}
+}

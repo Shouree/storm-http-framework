@@ -1,0 +1,24 @@
+use experimental:effects;
+use test;
+
+unsafe effect void simpleFork(Nat times);
+
+handler SimpleFork for simpleFork(Nat t), k {
+	for (Nat i = 0; i < t; i++)
+		k.call();
+}
+
+
+test SimpleForkTest {
+	Counter before;
+	Counter after;
+
+	handle SimpleFork {
+		before.count++;
+		simpleFork(3);
+		after.count++;
+	}
+
+	check before.count == 1;
+	check after.count == 3;
+}

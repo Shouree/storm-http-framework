@@ -13,7 +13,7 @@ DATABASE SimpleDB {
 	INDEX ON test(name);
 }
 
-suite Simple {
+test Simple {
 	SQLite baseDb; // (cwdUrl / ".." / "test.db");
 	SimpleDB c(baseDb);
 
@@ -21,34 +21,34 @@ suite Simple {
 	for (row in WITH c: SELECT * FROM test)
 		count++;
 
-	test count == 0;
+	check count == 0;
 
 	Str test = "variable";
 	WITH c: INSERT INTO test VALUES (3, "test's");
 	WITH c: INSERT INTO test(id, name) VALUES (4, test);
 	var insertedId = WITH c: INSERT INTO test(name) VALUES ("auto-id");
 
-	test insertedId == 5;
+	check insertedId == 5;
 
 	WITH c: UPDATE test SET name = name || " " || test WHERE id == 2 + 1;
 
 	Nat numRows = WITH c: COUNT FROM test WHERE id > 3;
-	test numRows == 2.nat;
+	check numRows == 2.nat;
 
 	Bool b = false;
 	var removed = WITH c: DELETE FROM test WHERE id == insertedId AND NOT b;
 
-	test removed == 1.nat;
+	check removed == 1.nat;
 
 	StrBuf data;
 	for (row in WITH c: SELECT * FROM test) {
 		data << row.id << ", " << row.name << "\n";
 	}
 
-	test data.toS == "3, test's variable\n4, variable\n";
+	check data.toS == "3, test's variable\n4, variable\n";
 }
 
-suite BSEscape {
+test BSEscape {
 	SQLite db;
 	SimpleDB c(db);
 
@@ -59,11 +59,11 @@ suite BSEscape {
 		for (row in SELECT name AS n FROM test)
 			data << row.n << "|";
 
-		test data.toS == "test3|";
+		check data.toS == "test3|";
 	}
 }
 
-suite Repeat {
+test Repeat {
 	// Statements are cached, make sure that we can re-run them more than once.
 	SQLite baseDB;
 	SimpleDB c(baseDB);
@@ -78,10 +78,10 @@ suite Repeat {
 		rows++;
 	}
 
-	test rows == 3;
+	check rows == 3;
 }
 
-suite Like {
+test Like {
 	SQLite db;
 	SimpleDB c(db);
 
@@ -99,11 +99,11 @@ suite Like {
 			all << row.name << "!";
 		}
 
-		test all.toS == "test|best|best!beaver!";
+		check all.toS == "test|best|best!beaver!";
 	}
 }
 
-suite ComplexCondition {
+test ComplexCondition {
 	SQLite db;
 	SimpleDB c(db);
 
@@ -117,7 +117,7 @@ suite ComplexCondition {
 			all << row.name << "|";
 		}
 
-		test all.toS == "best|";
+		check all.toS == "best|";
 	}
 }
 
@@ -140,7 +140,7 @@ DATABASE TwoTables {
 	INDEX ON extra(test);
 }
 
-suite AutoMigrate {
+test AutoMigrate {
 	SQLite baseDb;
 	{
 		SimpleDB c(baseDb);
@@ -158,16 +158,16 @@ suite AutoMigrate {
 
 			for (x in SELECT city FROM test WHERE id == 4) {
 				rows++;
-				test x.city == "city";
+				check x.city == "city";
 			}
 		}
 
 		// Outside the block to ensure it is actually executed.
-		test rows == 1;
+		check rows == 1;
 	}
 }
 
-suite Join {
+test Join {
 	SQLite db;
 	TwoTables c(db);
 
@@ -184,7 +184,7 @@ suite Join {
 			all << x.id << "|" << x.data << "|";
 		}
 
-		test all.toS == "3|more|3|even more|";
+		check all.toS == "3|more|3|even more|";
 
 		all.clear();
 
@@ -195,7 +195,7 @@ suite Join {
 			all << x.id;
 		}
 
-		test all.toS == "3";
+		check all.toS == "3";
 
 		all.clear();
 
@@ -203,11 +203,11 @@ suite Join {
 			all << x.test.id << "|" << x.extra.data << "|";
 		}
 
-		test all.toS == "4|some more|";
+		check all.toS == "4|some more|";
 	}
 }
 
-suite OrderBy {
+test OrderBy {
 	SQLite db;
 	TwoTables c(db);
 
@@ -220,17 +220,17 @@ suite OrderBy {
 		for (x in SELECT id, name FROM test ORDER BY name DESC, id ASC)
 			all << x.id << x.name << "|";
 
-		test all.toS == "1g|2g|3c|";
+		check all.toS == "1g|2g|3c|";
 
 		all = StrBuf();
 		for (x in SELECT id, name FROM test ORDER BY name ASC, id ASC)
 			all << x.id << x.name << "|";
 
-		test all.toS == "3c|1g|2g|";
+		check all.toS == "3c|1g|2g|";
 	}
 }
 
-suite TableAlias {
+test TableAlias {
 	SQLite db;
 	TwoTables c(db);
 	WITH c {
@@ -243,7 +243,7 @@ suite TableAlias {
 			all << x.a << x.b << x.c << x.d << "|";
 		}
 
-		test all.toS == "12ab|23bc|";
+		check all.toS == "12ab|23bc|";
 	}
 }
 
@@ -255,7 +255,7 @@ DATABASE MultiPK {
 	);
 }
 
-suite MultiPKTest {
+test MultiPKTest {
 	SQLite db;
 	MultiPK c(db);
 
@@ -273,7 +273,7 @@ suite MultiPKTest {
 		for (x in SELECT * FROM test)
 			all << x.id1 << x.id2 << "|";
 
-		test all.toS == "12|13|";
+		check all.toS == "12|13|";
 	}
 
 	// Try re-creating the typed connection to test that we parse the declaration from SQLite properly.
@@ -290,7 +290,7 @@ DATABASE NullDB {
 	);
 }
 
-suite NullTest {
+test NullTest {
 	SQLite db;
 	NullDB c(db);
 
@@ -309,6 +309,6 @@ suite NullTest {
 			data << row.value1.toS << "|" << row.value2 << "|" << row.value3 << "!";
 		}
 
-		test data.toS == "null|a|i!b|c|empty!null|d|empty!zz|e|empty!";
+		check data.toS == "null|a|i!b|c|empty!null|d|empty!zz|e|empty!";
 	}
 }

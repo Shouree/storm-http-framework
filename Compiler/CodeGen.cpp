@@ -12,6 +12,11 @@ namespace storm {
 		block = l->root();
 	}
 
+	CodeGen::CodeGen(Function *f) : runOn(f->runOn()), res(f->result) {
+		l = new (this) code::Listing(f->isMember(), res.desc(engine()));
+		block = l->root();
+	}
+
 	CodeGen::CodeGen(RunOn thread, code::Listing *to) : runOn(thread), l(to), block(to->root()) {}
 
 	CodeGen::CodeGen(RunOn thread, code::Listing *to, code::Block block) : runOn(thread), l(to), block(block) {}

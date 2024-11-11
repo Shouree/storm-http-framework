@@ -1,77 +1,97 @@
 use experimental:effects;
-use experimental:templates;
 use test;
+use lang:bs:macro;
 
-effect choose()->Bool;
-effect fail()->void;
+// TODO: make sure Backtrack is not possible to create outside of handle blocks.
+effect Backtrack {
+	// TODO: Allow effects to be marked "unchecked" or similarly - that makes them static and not checked.
+	// TODO: Also provide a top-level convenience for cases where we only want a single one?
+	effect Bool choose();
+	effect void fail();
 
-template <T>
-handler PickOne(T->Maybe<T>) {
-	choose(), k {
+	Nat choose(Nat first, Nat last) {
+		if (first >= last) {
+			fail();
+			return 0; // NB. Will never be executed.
+		} else if (choose()) {
+			return first;
+		} else {
+			return choose(first + 1, last);
+		}
+	}
+
+	Int choose(Int first, Int last) {
+		if (first >= last) {
+			fail();
+			return 0; // NB. Will never be executed.
+		} else if (choose()) {
+			return first;
+		} else {
+			return choose(first + 1, last);
+		}
+	}
+
+	Int choose(Array<Int> from) {
+		return from[choose(0n, from.count)];
+	}
+}
+
+// TODO: Make sure PickOne is not possible to create outside of handle blocks.
+handler PickOne(Array<Int> -> Maybe<Array<Int>>) for Backtrack {
+	handle choose(), k {
 		var first = k.call(true);
 		if (first.empty)
 			first = k.call(false);
 		return first;
 	}
-	fail(), k {
+
+	handle fail(), k {
 		return null;
 	}
-	return x {
+
+	handle return x {
 		return x;
 	}
 }
 
-template <T>
-handler PickAll(T->Array<T>) {
-	choose(), k {
-		Array<T> result = k.call(true);
-		result.append(k.call(false));
-		return result;
+handler PickAll(Array<Int> -> Array<Array<Int>>) for Backtrack {
+	handle choose(), k {
+		var first = k.call(true);
+		first.append(k.call(false));
+		return first;
 	}
-	fail(), k {
+
+	handle fail(), k {
 		return [];
 	}
-	return x {
+
+	handle return x {
 		return [x];
 	}
 }
 
-Int choose(Int first, Int last) {
-	if (first >= last) {
-		fail();
-		return 0; // NB. will not be executed.
-	} else if (choose()) {
-		return first;
-	} else {
-		return choose(first + 1, last);
-	}
-}
-
-Nat choose(Nat first, Nat last) {
-	if (first >= last) {
-		fail();
-		return 0; // NB. will not be executed.
-	} else if (choose()) {
-		return first;
-	} else {
-		return choose(first + 1, last);
-	}
-}
-
-template <T>
-T choose(Array<T> in) {
-	// Note: No error handling necessary, choose will fail internally.
-	return in[choose(0, in.count)];
-}
-
-suite Backtrack {
-	var r = with PickAll<Array<Int>> handle {
-		Int a = choose(1, 6);
-		Int b = choose(1, 6);
-		Int c = choose(1, 6);
+test BacktrackTest1 {
+	var r = handle (x = PickOne) {
+		Int a = x.choose(1, 11);
+		Int b = x.choose(1, 11);
+		Int c = x.choose(1, 11);
 		if (a*a + b*b != c*c)
-			fail();
+			x.fail();
 		[a, b, c];
 	};
-	print("Result: ${r}");
+	// print("Result: ${r}");
+	check r.toS() == "[3, 4, 5]";
+}
+
+test BacktrackTest2 {
+	var r = handle (x = PickAll) {
+		Int a = x.choose(1, 11);
+		Int b = x.choose(1, 11);
+		Int c = x.choose(1, 11);
+		if (a*a + b*b != c*c)
+			x.fail();
+		[a, b, c];
+	};
+	// print("Result: ${r}");
+	check r.toS() == "[[3, 4, 5], [4, 3, 5], [6, 8, 10], [8, 6, 10]]";
 }

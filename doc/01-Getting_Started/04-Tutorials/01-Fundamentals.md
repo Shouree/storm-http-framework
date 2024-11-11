@@ -315,7 +315,7 @@ Elements are inserted into the map with the `put` function as follows:
 
 ```bs
 void main() {
-    Nat->Str numbers;
+    Str->Nat numbers;
     numbers.put("zero", 0);
     numbers.put("one", 1);
     numbers.put("two", 2);

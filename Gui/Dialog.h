@@ -60,6 +60,7 @@ namespace gui {
 
 #ifdef GUI_GTK
 		// Gtk+ signals
+		using Frame::onKey;
 		gboolean onKey(GdkEvent *event);
 		virtual void initSignals(GtkWidget *widget, GtkWidget *draw);
 #endif

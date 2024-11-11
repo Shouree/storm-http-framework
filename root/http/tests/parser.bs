@@ -50,6 +50,13 @@ suite ParseNoQueryParams {
 //   test req.method_params.count == 0;
 // }
 
+/* Query string parsing URL-encode */
+suite ParseQueryParamsURLEncoded {
+  Buffer teststr = "GET /?q=test%20string%20%26encoded HTTP/1.1\r\n\r\n".toUtf8;
+  HTTP_Request req = HTTP_Parser.parse_request(teststr);
+  test req.method_params["q"] == "test string &encoded";
+}
+
 /* Cookie Parsing */
 suite ParseCookies {
   Buffer teststr = "GET /resources/hello.htm HTTP/1.1\r\nCookie: sessionId=abc123; theme=light; rememberMe=true\r\n\r\n".toUtf8;
@@ -67,7 +74,9 @@ suite ParseCookiesNoSpace {
   test req.cookies["rememberMe"] == "true";
 }
 
-/* POST */
+/*
+ * POST (FIXME)
+ */
 suite ParseFullPost {
   Buffer teststr = "POST /submit-form HTTP/1.0\r\nUser-Agent: Mozilla/5.0\r\nHost: www.example.com\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 48\r\n\r\nusername=bobbytables&name=robert&city=EAS&age=39".toUtf8;
   HTTP_Parser parser;
@@ -75,10 +84,12 @@ suite ParseFullPost {
   test req.method == HTTP_Method:POST;
   test req.path == Url(["submit-form"]);
   test req.version == HTTP_Version:HTTP_1_0;
+  // TODO: Bodyn ska parse:as till `method_params`
   test req.method_params.count == 0;
   test req.headers["User-Agent"] == "Mozilla/5.0";
   test req.headers["Host"] == "www.example.com";
   test req.headers["Content-Type"] == "application/x-www-form-urlencoded";
   test req.headers["Content-Length"] == "48";
+  // TODO: det ska finnas en body?
   test req.data.fromUtf8 == "username=bobbytables&name=robert&city=EAS&age=39";
 }

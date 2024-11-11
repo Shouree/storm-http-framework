@@ -23,6 +23,6 @@ inlineParser : parser(recursive descent) {
 	Delim : "[ \n\r\t]*";
 }
 
-suite InlineGrammar {
-	test check(inlineParser("1 + 3")) == "4";
+test InlineGrammar {
+	check check(inlineParser("1 + 3")) == "4";
 }

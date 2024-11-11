@@ -1,0 +1,70 @@
+use experimental:effects;
+use test;
+
+effect NestedEff {
+	effect Int fork();
+}
+
+handler NestedHandler(Int) for NestedEff {
+	handle fork(), k {
+		Int a = k.call(1);
+		Int b = k.call(10);
+		a + b;
+	}
+}
+
+handler OuterHandler(Int) for NestedEff {
+	handle fork(), k {
+		Int a = k.call(5);
+		Int b = k.call(50);
+		a + b;
+	}
+}
+
+test NestedTest1 {
+	Counter innerTimes;
+	Counter outerTimes;
+
+	// This is fairly logical:
+
+	Int result = handle (a = OuterHandler) {
+		Int intermediate = handle (b = NestedHandler) {
+			Int x = a.fork();
+			Int y = b.fork();
+			innerTimes.count++;
+			// print("Inner: ${x} ${y}");
+			x + y + 1000;
+		};
+		outerTimes.count++;
+		// print("Outer!");
+		intermediate + 10;
+	};
+
+	check result == 4152;
+	check innerTimes.count == 4;
+	check outerTimes.count == 2;
+}
+
+test NestedTest2 {
+	Counter innerTimes;
+	Counter outerTimes;
+
+	// Good luck tracing this. I do, however, believe it behaves correctly (verified in Pyret).
+
+	Int result = handle (a = OuterHandler) {
+		Int intermediate = handle (b = NestedHandler) {
+			Int x = b.fork();
+			Int y = a.fork();
+			innerTimes.count++;
+			// print("Inner: ${x} ${y}");
+			x + y + 1000;
+		};
+		outerTimes.count++;
+		// print("Outer!");
+		intermediate + 10;
+	};
+
+	check result == 8304;
+	check innerTimes.count == 6; // !
+	check outerTimes.count == 4;
+}

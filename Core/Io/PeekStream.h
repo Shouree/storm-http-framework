@@ -5,6 +5,47 @@ namespace storm {
 	STORM_PKG(core.io);
 
 	/**
+	 * Helper for the result from 'doRead':
+	 */
+	class PeekReadResult {
+	public:
+		// End of stream.
+		static PeekReadResult end() {
+			return PeekReadResult(false, 0);
+		}
+
+		// Successful read of some size.
+		static PeekReadResult success(Nat bytes) {
+			return PeekReadResult(false, bytes);
+		}
+
+		// Timeout.
+		static PeekReadResult timeout() {
+			return PeekReadResult(true, 0);
+		}
+
+		// Is it a timeout?
+		Bool timedOut() const {
+			return fail;
+		}
+
+		// Number of bytes read?
+		Nat bytesRead() const {
+			return read;
+		}
+
+	private:
+		PeekReadResult(Bool timeout, Nat bytes)
+			: read(bytes), fail(timeout) {}
+
+		// Bytes read.
+		Nat read;
+
+		// Timeout?
+		Bool fail;
+	};
+
+	/**
 	 * Helper class that provides limited buffering to support seeking without a native peek
 	 * operation on the underlying stream.
 	 */
@@ -34,7 +75,7 @@ namespace storm {
 	protected:
 		// Function which does the actual reading. We assume that end of stream is reached when this
 		// returns zero.
-		virtual Nat doRead(byte *to, Nat count);
+		virtual PeekReadResult doRead(byte *to, Nat count);
 
 	private:
 		// Lookahead data (if any). Used when doing peek() operations.

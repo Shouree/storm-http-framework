@@ -1,0 +1,212 @@
+use core:lang;
+use core:asm;
+use lang:bs;
+
+/**
+ * Wrapper for a class-type that should not be moveable.
+ *
+ * This is achieved by creating a wrapper that is a pointer-sized value type without a copy
+ * constructor. Since it is still a "simple" type, it may still be used in function calls. We don't
+ * include an explicit member for the contained pointer, so it is not possible to extract either.
+ *
+ * This also prohibits binding it to a function pointer and in a lambda. The second is problematic,
+ * as we need that to be able to nest handlers. We can probably work around that somehow.
+ */
+class Nonmovable extends Type {
+	init(Nonmovable? parent, Type toWrap) {
+		init(toWrap.name, toWrap.params, TypeFlags:typeValue, sPtr) {
+			wrapped = toWrap;
+		}
+		toWrap.parentLookup = this;
+		if (parent)
+			setSuper(parent);
+	}
+
+	// Store the wrapped type so that others can access the type conveniently.
+	Type wrapped;
+
+	// Generate a type description:
+	protected TypeDesc createTypeDesc() : override {
+		// Create a suitable type description.
+		SimpleDesc desc(sPtr, 1);
+		desc.at(0) = Primitive(PrimitiveKind:pointer, sPtr, Offset());
+		return desc;
+	}
+
+	// Populate ourselves when necessary to do so.
+	protected Bool loadAll() : override {
+		if (!super:loadAll())
+			return false;
+
+		// Note: We don't have a regular constructor nor a copy constructor. This makes it so that
+		// we only can be created from the 'handle' block (or other custom code), and only copied in
+		// function calls.
+
+		// Note: We might be in the process of a circular dependency when loading ourselves (the
+		// wrapped type will do name lookups throuhg us while it is loading itself). Therefore, we
+		// add all members we can find currently, and add a watch for any remaining ones.
+
+		// Wrap all current members:
+		wrapped.forceLoad();
+		wrapped.watchAdd(this);
+		for (member in wrapped) {
+			addWrap(member);
+		}
+
+		true;
+	}
+
+	// Called when new things are added to the parent class to let us add wrapper members. This is
+	// fine to do at any time, since value types don't have vtables that need to be updated.
+	void notifyAdded(NameSet to, Named added) : override {
+		addWrap(added);
+	}
+
+	// Add a wrap for a Named.
+	private void addWrap(Named member) {
+		// Ignore constructors:
+		if (member.name == "__init")
+			return;
+
+		// Ignore obviously temporary names:
+		if (member.name.startsWith("@"))
+			return;
+
+		if (member as Function) {
+			add(wrapFunction(member));
+		} else if (member as MemberVar) {
+			add(wrapMemberVar(member));
+		}
+	}
+
+	// Helpers to wrap a function from the wrapped type.
+	private Function wrapFunction(Function member) {
+		var params = member.params.clone();
+		// Replace this pointer if member function:
+		if (member.isMember)
+			params[0] = Value(this);
+		Function wrap(member.result, member.name, params);
+		InlineCode code((InlineParams p) => {
+							Listing l = p.state.l;
+							for (i, param in member.params)
+								l << fnParam(param.desc, p.param(i));
+							l << fnCall(member.ref, true, member.result.desc, p.result.safeLocation(p.state, member.result));
+							p.result.created(p.state);
+				});
+		wrap.setCode(code);
+		return wrap;
+	}
+
+	// Helpers to wrap a member variable in the wrapped type.
+	private Function wrapMemberVar(MemberVar member) {
+		Function wrap(member.type.asRef, member.name, [Value(this)]);
+		InlineCode code((InlineParams p) => {
+							if (p.result.needed()) {
+								p.allocRegs(0);
+								Listing l = p.state.l;
+								// Read the pointer to the wrapped object.
+								l << lea(ptrA, ptrRel(p.regParam(0), member.offset));
+								// Save it.
+								l << mov(p.result.location(p.state), ptrA);
+								p.result.created(p.state);
+							}
+						});
+		wrap.setCode(code);
+		return wrap;
+	}
+}
+
+
+/**
+ * Expression used to convert to Nonmovable types.
+ */
+package class ToNonmovable extends Expr {
+	// Create.
+	init(Nonmovable to, Expr from) {
+		if (outType = from.result.type.type) {
+			if (!to.wrapped.isA(outType)) {
+				throw InternalError("Trying to convert to a nonmovable of an incompatible type!");
+			}
+		} else {
+			throw InternalError("Cannot convert 'void' to nonmovable type!");
+		}
+
+		init(SrcPos()) {
+			to = to;
+			from = from;
+		}
+	}
+
+	// Type to convert to.
+	private Nonmovable to;
+
+	// Type to convert from.
+	private Expr from;
+
+	// Report the resulting type.
+	ExprResult result() : override {
+		Value(to);
+	}
+
+	// Generate code.
+	void code(CodeGen state, CodeResult result) : override {
+		// We can just forward to the expr in general. Breaks down if it examines the type inside
+		// 'result', but we only ever have variables here, so it should be fine.
+		from.code(state, result);
+	}
+
+	// Isolation?
+	Bool isolate() : override {
+		from.isolate();
+	}
+
+	// To string:
+	void toS(StrBuf to) : override {
+		to << "<to nonmovable>(" << from << ")";
+	}
+}
+
+/**
+ * Expression used to convert from a nonmovable type to the contained type.
+ */
+package class FromNonmovable extends Expr {
+	// Create.
+	init(Expr from) {
+		var to = if (x = from.result.type.type as Nonmovable) {
+			x.wrapped;
+		} else {
+			throw InternalError("Source type for 'FromNonmovable' is not a nonmovable type!");
+		};
+
+		init(SrcPos()) {
+			from = from;
+			to = to;
+		}
+	}
+
+	// Source expression.
+	private Expr from;
+
+	// Type to convert to.
+	private Type to;
+
+	// Report the resulting type.
+	ExprResult result() : override {
+		Value(to);
+	}
+
+	// Generate code.
+	void code(CodeGen state, CodeResult result) : override {
+		from.code(state, result);
+	}
+
+	// Isolation?
+	Bool isolate() : override {
+		from.isolate();
+	}
+
+	// To string:
+	void toS(StrBuf to) : override {
+		to << "<from nonmovable>(" << from << ")";
+	}
+}

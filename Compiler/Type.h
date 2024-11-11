@@ -226,6 +226,10 @@ namespace storm {
 		// result is cached.
 		virtual code::TypeDesc *STORM_FN createTypeDesc();
 
+		// Compute the size of this type. Called the first time the size needs to be computed,
+		// unless it was specified as a parameter to the constructor. The result is cached.
+		virtual Size STORM_FN createSize();
+
 		// Modify the type handle, if desired. Called when the default construction is complete.
 		virtual void STORM_FN modifyHandle(Handle *handle);
 

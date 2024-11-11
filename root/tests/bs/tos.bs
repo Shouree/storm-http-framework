@@ -28,19 +28,19 @@ value ToSLimited {
 	}
 }
 
-suite ToSImpl {
+test ToSImpl {
 	ToSFull full(1);
 	ToSLimited limited(2);
 
-	test full.toS() == "str:1";
-	test (StrBuf() << full).toS == "strbuf:1";
-	test ("!" # full) == "!strbuf:1";
-	test "!${full}" == "!strbuf:1";
-	test ToSFull:[full].toS == "[strbuf:1]";
+	check full.toS() == "str:1";
+	check (StrBuf() << full).toS == "strbuf:1";
+	check ("!" # full) == "!strbuf:1";
+	check "!${full}" == "!strbuf:1";
+	check ToSFull:[full].toS == "[strbuf:1]";
 
-	test limited.toS() == "str:2";
-	test (StrBuf() << limited).toS == "str:2";
-	test ("!" # limited) == "!str:2";
-	test "!${limited}" == "!str:2";
-	test ToSLimited:[limited].toS == "[str:2]";
+	check limited.toS() == "str:2";
+	check (StrBuf() << limited).toS == "str:2";
+	check ("!" # limited) == "!str:2";
+	check "!${limited}" == "!str:2";
+	check ToSLimited:[limited].toS == "[str:2]";
 }

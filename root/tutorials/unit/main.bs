@@ -20,13 +20,13 @@ Int fibonacci(Int n) {
 	return current;
 }
 
-suite Fibonacci {
-	test fibonacci(0) == 0;
-	test fibonacci(1) == 1;
-	test fibonacci(2) == 1;
-	test fibonacci(3) == 2;
+test Fibonacci {
+	check fibonacci(0) == 0;
+	check fibonacci(1) == 1;
+	check fibonacci(2) == 1;
+	check fibonacci(3) == 2;
 
-	test fibonacci(-1) throws NotSupported;
+	check fibonacci(-1) throws NotSupported;
 }
 
 void main() {

@@ -45,6 +45,7 @@ namespace storm {
 			watchNone = 0x00,
 			watchLess = 0x01,
 			watchSerialization = 0x02,
+			watchEquality = 0x04,
 		};
 
 		Nat watchFor;
@@ -56,8 +57,18 @@ namespace storm {
 		// Add 'sort' without parameters.
 		void addSort();
 
+		// Add 'upperBound' and 'lowerBound' without parameters.
+		void addBinarySearch();
+
+		// Create 'upperBound' and 'lowerBound' from a template, with fn params.
+		MAYBE(Named *) CODECALL createUpperBound(Str *name, SimplePart *part);
+		MAYBE(Named *) CODECALL createLowerBound(Str *name, SimplePart *part);
+
 		// Add serialization functions.
 		void addSerialization(SerializeInfo *info);
+
+		// Add 'removeDuplicates'
+		void addRemoveDuplicates();
 
 		// Generate the 'write' function.
 		Function *writeFn(SerializedType *type, SerializeInfo *info);

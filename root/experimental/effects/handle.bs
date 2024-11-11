@@ -1,0 +1,256 @@
+use core:lang;
+use lang:bs;
+use lang:bs:macro;
+use core:asm;
+
+class HandleExpr extends Expr {
+	Expr handlerBody;
+	CreateHandler create;
+	Value bodyFnType;
+
+	init(SrcPos pos, Block parent, SStr varName, CreateHandler create, SExpr body) {
+		// TODO: Check the handler!
+
+		var handler = create.toCreate;
+
+		var bodyFnType = fnType([handler.result, handler]);
+
+		SStr paramName("@handler");
+
+		// Inject the return clause and a return point into the lambda:
+		body = WrapLambda(body, paramName, varName, create.outerType, handler.result, handler.returnClause);
+		LambdaExpr lambdaBody(body.pos, parent, [ValParam(handler, paramName)], body, CustomCapture());
+
+		init(pos) {
+			create = create;
+			handlerBody = lambdaBody.expectCastTo(bodyFnType, parent.scope);
+			bodyFnType = bodyFnType;
+		}
+	}
+
+	init(SrcPos pos, Block parent, CreateHandler create, SExpr body) {
+		self(pos, parent, SStr("@handler"), create, body);
+	}
+
+	ExprResult result() : override {
+		create.toCreate.result;
+	}
+
+	void code(CodeGen code, CodeResult result) : override {
+		unless (frameType = named{}.find("HandlerFrame", create.toCreate, Scope()) as Type)
+			throw InternalError("Failed to find HandlerFrame!");
+		var handler = create.toCreate;
+
+		// Create the handler object.
+		CodeResult handlerObj = create.create(code);
+
+		// Create the lambda.
+		CodeResult lambda(bodyFnType, code.block);
+		handlerBody.code(code, lambda);
+
+		// Create a handler frame:
+		var frame = {
+			unless (ctorFn = frameType.find("__init", [frameType, handler, bodyFnType], Scope()) as Function)
+				throw InternalError("Failed to find the constructor for HandlerFrame.");
+			var handlerAccess = BareVarAccess(SrcPos(), handler, handlerObj.location(code));
+			var lambdaAccess = BareVarAccess(SrcPos(), bodyFnType, lambda.location(code));
+			CtorCall call(SrcPos(), Scope(), ctorFn, Actuals([handlerAccess, lambdaAccess]));
+
+			CodeResult frame(frameType, code.block);
+			call.code(code, frame);
+			frame.location(code);
+		};
+
+		// Call 'spawn' to handle the rest of the spawning process.
+		code.l << fnParam(ptrDesc, frame);
+		code.l << fnCall(named{HandlerFrame:spawn<HandlerFrame>}.ref, true);
+
+		// Extract and return the result.
+		// Note: Due to how maybe types work, we can actually use it as if it was a regular value.
+		// We know that it is set at this point.
+		if (handler.result.any) {
+			unless (frameResult = frameType.find("result", frameType, Scope()) as MemberVar)
+				throw InternalError("Failed to find 'result' in HandlerFrame!");
+
+			if (result.needed()) {
+				// Just copy the result.
+				if (handler.result.isAsmType) {
+					code.l << mov(ptrA, frame);
+					code.l << mov(result.location(code), xRel(handler.result.size, ptrA, frameResult.offset));
+				} else {
+					code.l << mov(ptrA, frame);
+					code.l << add(ptrA, ptrConst(frameResult.offset));
+					code.l << lea(ptrC, result.location(code));
+					code.l << fnParam(ptrDesc, ptrC);
+					code.l << fnParam(ptrDesc, ptrA);
+					code.l << fnCall(handler.result.copyCtor, true);
+					result.created(code);
+				}
+			}
+		}
+	}
+
+	// Helper class to wrap the entire body of the lambda in a ReturnPoint, and optionally pass the
+	// result value through a function as well.
+	private class WrapLambda extends SExpr {
+		SExpr body;
+		HandlerClause? wrap;
+		SStr paramName;
+		SStr effectName;
+		Value finalResult;
+		Nonmovable outer;
+
+		init(SExpr body, SStr paramName, SStr effectName, Nonmovable outer, Value result, HandlerClause? wrap) {
+			init() {
+				body = body;
+				wrap = wrap;
+				paramName = paramName;
+				effectName = effectName;
+				finalResult = result;
+				outer = outer;
+			}
+			pos = body.pos;
+		}
+
+		Expr transform(Block block) : override {
+			Value result = finalResult;
+
+			// If we have a function, we should use it:
+			if (wrap) {
+				if (wrap.handler.params.count > 1)
+					result = wrap.handler.params[1];
+				else
+					result = Value();
+			}
+
+			// Find the parameter, wrap it into its wrapper type:
+			unless (paramVar = block.variable(SimplePart(paramName.v)))
+				throw InternalError("Failed to find the effect parameter.");
+
+			ExprBlock innerBlock(SrcPos(), block);
+
+			Var effectVar(innerBlock, effectName, ToNonmovable(outer, LocalVarAccess(pos, paramVar)));
+			innerBlock.add(effectVar); // Not entirely kosher to add to the parent, but it will work here.
+
+			// Wrap in a return point to make returns work as we would expect.
+			ReturnPoint p(pos, innerBlock, result);
+			p.body = body.transform(p);
+
+
+			if (wrap) {
+				// A function to wrap:
+				Actuals actuals(LocalVarAccess(pos, paramVar));
+
+				if (result.any) {
+					actuals.add(p);
+					innerBlock.add(FnCall(pos, innerBlock.scope, wrap.handler, actuals));
+				} else {
+					innerBlock.add(p);
+					innerBlock.add(FnCall(pos, innerBlock.scope, wrap.handler, actuals));
+				}
+			} else {
+				// Nothing to wrap:
+				innerBlock.add(p);
+			}
+
+			innerBlock;
+		}
+	}
+
+	/**
+	 * Custom behavior for lambdas to allow them to store nonmovable types.
+	 */
+	class CustomCapture extends LambdaCaptureStrategy {
+		// Customize shadowing. Shadow as value types.
+		Value shadowAs(Value original) {
+			if (original.type as Nonmovable) {
+				original.asRef(false);
+			} else {
+				super:shadowAs(original);
+			}
+		}
+
+		// Customize types to store in the lambda.
+		Value storeAs(Value original) {
+			if (nonmovable = original.type as Nonmovable) {
+				Value(nonmovable.wrapped);
+			} else {
+				super:storeAs(original);
+			}
+		}
+
+		// Compute a initializer.
+		Expr storeInitializer(Value type, Expr original) {
+			if (nonmovable = original.result.type.type as Nonmovable) {
+				FromNonmovable(original);
+			} else {
+				super:storeInitializer(type, original);
+			}
+		}
+
+		// Load from a stored variable.
+		Bool restore(CodeGen gen, LocalVar init, MemberVar member, Reg baseReg) {
+			if (nonmovable = init.result.type as Nonmovable) {
+				gen.l << mov(init.var.v, ptrRel(baseReg, member.offset));
+				false;
+			} else {
+				super:restore(gen, init, member, baseReg);
+			}
+		}
+	}
+}
+
+// Expression for creating an effect.
+class CreateHandler on Compiler {
+	// Which wrapper was used?
+	Nonmovable outerType;
+
+	// Which handler to create?
+	HandlerType toCreate;
+
+	// Constructor to call.
+	Function ctor;
+
+	// Parameters to the constructor?
+	Actuals params;
+
+	init(Block parent, SrcName name) {
+		self(parent, name, Actuals());
+	}
+
+	init(Block parent, SrcName name, Actuals params) {
+		Nonmovable outer = if (x = parent.scope.find(name) as Nonmovable) {
+			x;
+		} else {
+			throw SyntaxError(name.pos, "${name} needs to refer to an effect handler.");
+		};
+
+		HandlerType h = if (x = outer.wrapped as HandlerType) {
+			x;
+		} else {
+			throw SyntaxError(name.pos, "${name} needs to refer to an effect handler.");
+		};
+
+		Function ctor = if (x = h.find(BSNamePart(SStr("__init"), params).withFirst(h), parent.scope) as Function) {
+			x;
+		} else {
+			throw SyntaxError(name.pos, "${name} does not have a constructor that accepts ${params}.");
+		};
+
+		init() {
+			outerType = outer;
+			toCreate = h;
+			ctor = ctor;
+			params = params;
+		}
+	}
+
+	CodeResult create(CodeGen gen) {
+		CodeResult out(toCreate, gen.block);
+
+		CtorCall call(SrcPos(), Scope(), ctor, params);
+		call.code(gen, out);
+
+		out;
+	}
+}

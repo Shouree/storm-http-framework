@@ -35,39 +35,39 @@ parseList : parser(recursive descent) {
 	start = List;
 }
 
-suite SimpleRecursive {
+test SimpleRecursive {
 	// TODO: Test with true/false in them, so we can skip "== true".
-	test check(parseList("A, B, C")) == "[A, B, C]";
+	check check(parseList("A, B, C")) == "[A, B, C]";
 
 	Str x = ",A, B, C";
-	test check(parseList(x, x.begin + 1)) == "[A, B, C]";
+	check check(parseList(x, x.begin + 1)) == "[A, B, C]";
 }
 
 parseRepList : parser(recursive descent) {
 	start = RepList;
 }
 
-suite RepRecursive {
-	test check(parseRepList("[A, B,]")) == "[A, B]";
-	test check(parseRepList("{A, B,}")) == "[A, B]";
-	test check(parseRepList("[]")) == "[]";
-	test check(parseRepList("{}")) == "Error at Iterator: {|>}, Expected one of:\n\"[A-Z]+\"";
+test RepRecursive {
+	check check(parseRepList("[A, B,]")) == "[A, B]";
+	check check(parseRepList("{A, B,}")) == "[A, B]";
+	check check(parseRepList("[]")) == "[]";
+	check check(parseRepList("{}")) == "Error at Iterator: {|>}, Expected one of:\n\"[A-Z]+\"";
 }
 
 parseOptional : parser(recursive descent) {
 	start = Optional;
 }
 
-suite OptionalRecursive {
-	test check(parseOptional("=")) == "null";
-	test check(parseOptional("=ZA")) == "ZA";
+test OptionalRecursive {
+	check check(parseOptional("=")) == "null";
+	check check(parseOptional("=ZA")) == "ZA";
 }
 
 parseCapture : parser(recursive descent) {
 	start = Capture;
 }
 
-suite CaptureRecursive {
-	test check(parseCapture("[A,   C]")) == "A,   C";
-	test check(parseCapture("zA,  D")) == "A,  D";
+test CaptureRecursive {
+	check check(parseCapture("[A,   C]")) == "A,   C";
+	check check(parseCapture("zA,  D")) == "A,  D";
 }

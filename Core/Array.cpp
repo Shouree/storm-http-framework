@@ -205,6 +205,236 @@ namespace storm {
 		sort(d);
 	}
 
+	void ArrayBase::removeDuplicatesRaw() {
+		if (count() == 0)
+			return;
+
+		Bool isEqual = true;
+		Bool (*compare)(const void *, const void *) = handle.equalFn;
+		if (!compare) {
+			isEqual = false;
+			compare = handle.lessFn;
+		}
+
+		Nat out = 0;
+		for (Nat i = 1; i < count(); i++) {
+			if (compare(ptr(out), ptr(i)) != isEqual) {
+				++out;
+				if (out != i)
+					arraySwap(ptr(out), ptr(i), handle.size);
+			}
+		}
+
+		while (count() > out + 1)
+			pop();
+	}
+
+	void ArrayBase::removeDuplicatesRawPred(FnBase *compare) {
+		if (count() == 0)
+			return;
+
+		RawFn compareFn = compare->rawCall();
+
+		// Support *both* compare being < and == by checking:
+		Bool isEqual = false;
+		{
+			const void *params[2] = { ptr(0), ptr(0) };
+			compareFn.call(compare, &isEqual, params);
+		}
+
+		Nat out = 0;
+		for (Nat i = 1; i < count(); i++) {
+			// Compare:
+			Bool equal = false;
+			const void *params[2] = { ptr(out), ptr(i) };
+			compareFn.call(compare, &equal, params);
+
+			if (equal != isEqual) {
+				++out;
+				if (out != i)
+					arraySwap(ptr(out), ptr(i), handle.size);
+			}
+		}
+
+		while (count() > out + 1)
+			pop();
+	}
+
+	ArrayBase *ArrayBase::withoutDuplicatesRaw() const {
+		// Create a copy:
+		void *copyMem = runtime::allocObject(sizeof(ArrayBase), runtime::typeOf(this));
+		ArrayBase *copy = new (Place(copyMem)) ArrayBase(handle);
+		runtime::setVTable(copy);
+
+		// Copy unique elements:
+		if (count() == 0)
+			return copy;
+
+		Bool isEqual = true;
+		Bool (*compare)(const void *, const void *) = handle.equalFn;
+		if (!compare) {
+			isEqual = false;
+			compare = handle.lessFn;
+		}
+
+		copy->pushRaw(ptr(0));
+		for (Nat i = 1; i < count(); i++) {
+			if (compare(copy->ptr(copy->count() - 1), ptr(i)) != isEqual)
+				copy->pushRaw(ptr(i));
+		}
+
+		return copy;
+	}
+
+	ArrayBase *ArrayBase::withoutDuplicatesRawPred(FnBase *compare) const {
+		// Create a copy:
+		void *copyMem = runtime::allocObject(sizeof(ArrayBase), runtime::typeOf(this));
+		ArrayBase *copy = new (Place(copyMem)) ArrayBase(handle);
+		runtime::setVTable(copy);
+
+		// Copy unique elements:
+		if (count() == 0)
+			return copy;
+
+		RawFn compareFn = compare->rawCall();
+
+		Bool isEqual = false;
+		{
+			const void *params[2] = { ptr(0), ptr(0) };
+			compareFn.call(compare, &isEqual, params);
+		}
+
+		copy->pushRaw(ptr(0));
+		for (Nat i = 1; i < count(); i++) {
+			// Compare:
+			Bool equal = false;
+			const void *params[2] = { copy->ptr(copy->count() - 1), ptr(i) };
+			compareFn.call(compare, &equal, params);
+
+			if (equal != isEqual)
+				copy->pushRaw(ptr(i));
+		}
+
+		return copy;
+	}
+
+	Nat ArrayBase::lowerBoundRaw(const void *find) const {
+		// Adapted from the example implementation at:
+		// https://en.cppreference.com/w/cpp/algorithm/lower_bound
+		Nat first = 0;
+		Nat count = this->count();
+		while (count > 0) {
+			Nat step = count / 2;
+			Nat middle = first + step;
+			if ((*handle.lessFn)(ptr(middle), find)) {
+				first = middle + 1;
+				count -= step + 1;
+			} else {
+				count = step;
+			}
+		}
+		return first;
+	}
+
+	Nat ArrayBase::lowerBoundRawPred(const void *find, FnBase *compare) const {
+		// Adapted from the example implementation at:
+		// https://en.cppreference.com/w/cpp/algorithm/lower_bound
+		RawFn compareFn = compare->rawCall();
+
+		Nat first = 0;
+		Nat count = this->count();
+		while (count > 0) {
+			Nat step = count / 2;
+			Nat middle = first + step;
+
+			Bool isLess = false;
+			const void *params[2] = { ptr(middle), find };
+			compareFn.call(compare, &isLess, params);
+
+			if (isLess) {
+				first = middle + 1;
+				count -= step + 1;
+			} else {
+				count = step;
+			}
+		}
+		return first;
+	}
+
+	Nat ArrayBase::upperBoundRaw(const void *find) const {
+		// Adapted from the example implementation at:
+		// https://en.cppreference.com/w/cpp/algorithm/upper_bound
+		Nat first = 0;
+		Nat count = this->count();
+		while (count > 0) {
+			Nat step = count / 2;
+			Nat middle = first + step;
+			if (!(*handle.lessFn)(find, ptr(middle))) {
+				first = middle + 1;
+				count -= step + 1;
+			} else {
+				count = step;
+			}
+		}
+		return first;
+	}
+
+	Nat ArrayBase::upperBoundRawPred(const void *find, FnBase *compare) const {
+		// Adapted from the example implementation at:
+		// https://en.cppreference.com/w/cpp/algorithm/upper_bound
+		RawFn compareFn = compare->rawCall();
+
+		Nat first = 0;
+		Nat count = this->count();
+		while (count > 0) {
+			Nat step = count / 2;
+			Nat middle = first + step;
+
+			Bool isLess = false;
+			const void *params[2] = { find, ptr(middle) };
+			compareFn.call(compare, &isLess, params);
+
+			if (!isLess) {
+				first = middle + 1;
+				count -= step + 1;
+			} else {
+				count = step;
+			}
+		}
+		return first;
+	}
+
+	Bool ArrayBase::equalRaw(const ArrayBase *other) const {
+		if (count() != other->count())
+			return false;
+
+		for (Nat i = 0; i < count(); i++)
+			if (!handle.equal(ptr(i), other->ptr(i)))
+				return false;
+
+		return true;
+	}
+
+	Bool ArrayBase::lessRaw(const ArrayBase *other) const {
+		Nat smallest = min(count(), other->count());
+
+		if (handle.equalFn) {
+			for (Nat i = 0; i < smallest; i++) {
+				if (!(*handle.equalFn)(ptr(i), other->ptr(i)))
+					return (*handle.lessFn)(ptr(i), other->ptr(i));
+			}
+		} else {
+			for (Nat i = 0; i < smallest; i++) {
+				if ((*handle.lessFn)(ptr(i), other->ptr(i)))
+					return true;
+				if ((*handle.lessFn)(other->ptr(i), ptr(i)))
+					return false;
+			}
+		}
+
+		return count() < other->count();
+	}
+
 	void ArrayBase::toS(StrBuf *to) const {
 		*to << S("[");
 		if (count() > 0)

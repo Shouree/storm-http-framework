@@ -1,0 +1,425 @@
+/**
+ * This file contains the core part of the effect handling. It implements logic for keeping track of
+ * active handlers (handler frames), looking up a matching handler, saving execution state into a
+ * continuation, and restoring a continuation.
+ */
+
+use core:lang;
+use core:sync;
+use core:unsafe;
+use lang:bs;
+use lang:bs:unsafe;
+use lang:bs:macro;
+
+
+/**
+ * Class that keeps track of active handlers for all threads in the system. Essentially a pointer to
+ * the head of a linked list of handler frames.
+ *
+ * The class is declared as belonging to the compiler thread. There are, however, accessors that
+ * break thread safety, which is why we need a manual lock.
+ */
+package class ActiveHandlers on Compiler {
+	// Lookup of frames for active UThreads.
+	private Map<Word, HandlerFrame> frames;
+
+	// Lock for 'frames'.
+	private Lock framesLock;
+
+	// Create.
+	init() {}
+
+	// Get the current frame for a thread.
+	HandlerFrame? current() {
+		Lock:Guard z(framesLock);
+		frames.at(currentUThread());
+	}
+
+	// Set the current frame for a thread.
+	void set(HandlerFrame f) {
+		Lock:Guard z(framesLock);
+		frames.put(currentUThread(), f);
+	}
+
+	// Set the current frame for a thread.
+	void set(Word threadId, HandlerFrame f) {
+		Lock:Guard z(framesLock);
+		frames.put(threadId, f);
+	}
+
+	// Remove the current frame for a thread.
+	void remove() {
+		Lock:Guard z(framesLock);
+		frames.remove(currentUThread());
+	}
+}
+
+private ActiveHandlers activeHandlers on Compiler;
+
+package HandlerFrame? currentHandlerFrame() {
+	as thread Compiler {
+		activeHandlers.current();
+	}
+}
+
+package void setHandlerFrame(HandlerFrame to) {
+	as thread Compiler {
+		activeHandlers.set(to);
+	}
+}
+
+package void setHandlerFrame(Word threadId, HandlerFrame to) {
+	as thread Compiler {
+		activeHandlers.set(threadId, to);
+	}
+}
+
+package void removeHandlerFrame() {
+	as thread Compiler {
+		activeHandlers.remove();
+	}
+}
+
+
+/**
+ * Frame of an effect handler. Represents a handle block in the source code. Also has a link to the
+ * previous active handler at runtime, to form a linked list of handlers.
+ */
+package class HandlerFrame {
+	// The handler that is active at this location. Note, there is no common base class for
+	// handlers, so we have to use Object. That is fine, we will just do "isA" calls on its type
+	// anyway.
+	Object handler;
+
+	// UThread associated with us.
+	Word threadId;
+
+	// Previous handles in the handler chain.
+	HandlerFrame? prev;
+
+	// Exception that ocurred, if any.
+	Exception? error;
+
+	// Ctor.
+	init(Object handler) {
+		init {
+			sema(0);
+			handler = handler;
+			waitAgain = false;
+		}
+	}
+
+	// Semaphore to wait for execution to finish.
+	private Sema sema;
+
+	// Wait additional times when we have been woken more than once.
+	private Bool waitAgain;
+
+	// Wait for the result to be present.
+	void wait() {
+		do {
+			sema.down();
+			// print("Woke from sema: ${this} ${waitAgain} ${error}");
+
+			// If we were re-scheduled we might need to wait once more.
+			if (waitAgain)
+				waitAgain = false;
+			else
+				break;
+		}
+
+		// Report error. Note, we need to clear the exception since we might be restarted.
+		if (e = error) {
+			error = null;
+			throw e;
+		}
+
+		// Resume by calling a handler?
+		if (r = resume) {
+			resume = null;
+			r.call();
+		}
+	}
+
+	// Indicate that a result is available.
+	void signal() {
+		// print("Signalled ${this}");
+		sema.up();
+	}
+
+	// Was a handler invoked?
+	private ResumeHandler? resume;
+
+	// Called to invoke a handler when resumed.
+	void callHandler(ResumeHandler r) {
+		resume = r;
+		signal();
+	}
+
+	// Called when the thread has been re-scheduled and has to wait again.
+	void resurrected() {
+		waitAgain = true;
+	}
+
+	// Main function of this handler. Overridden in the typed version of handler frame.
+	protected void callBody() : abstract;
+
+	// Main entry-point to "start" running the body of a handler.
+	void spawn() {
+		// Link us into the chain, so that 'main' can link us into the proper place.
+		prev = currentHandlerFrame();
+		// NOTE: Important to *not* use the result from here. That causes the compiler to use a
+		// version of the spawn function that does not use futures at all. We need that to avoid
+		// confusing the system, since futures can not be posted more than once.
+		spawn main();
+		wait();
+	}
+
+	// Main entry-point in the new UThread:
+	private void main() {
+		// Register us as the head of the handler chain:
+		this.threadId = currentUThread();
+		setHandlerFrame(this);
+
+		try {
+			callBody();
+		} catch (EffectUnwind u) {
+			if (u.forMe(this)) {
+				return;
+			} else {
+				// print("Exiting: ${this}");
+				this.error = u;
+			}
+		} catch (Exception e) {
+			this.error = e;
+		}
+
+		removeHandlerFrame();
+		// print("main finished: ${this}");
+		signal();
+	}
+}
+
+
+// Helper to find the topmost handler for an effect, or throw an exception.
+package Object findEffectHandler(EffectType for) {
+	HandlerFrame? current = currentHandlerFrame();
+	while (c = current) {
+		Object handler = c.handler;
+		if (handler.typeOf.isA(for)) {
+			return handler;
+		}
+
+		current = c.prev;
+	}
+
+	throw NoHandlerFor(for.name);
+}
+
+/**
+ * Class representing an effect having been invoked. It stores the parameters passed to the effect,
+ * so that they can be retrieved later when the stack has been unwound.
+ *
+ * This is the generic part of the interface. Each effect makes a separate subtype that stores the
+ * appropriate parameters.
+ */
+package class ResumeHandler {
+	// Create.
+	init(EffectResult result) {
+		init { result = result; }
+	}
+
+	// Object storing where to place the result whenever the continuation is invoked.
+	private EffectResult result;
+
+	// Handler frames saved when 'post' was called. These are used to capture a continuation when
+	// 'call' is eventually called.
+	private HandlerFrame[] activeHandlers;
+
+	// Call to invoke the handler. Should be done on the UThread that called 'spawn()' on 'frame'.
+	// i.e. not from the UThread spawned from 'spawn()'.
+	void call() {
+		// Handler frame that stores the result of the handler. The last element in 'activeHandlers':
+		HandlerFrame lastFrame = activeHandlers.last;
+
+		// Create a continuation!
+		Continuation cont(activeHandlers, result);
+		activeHandlers.clear();
+
+		// Now that we have captured the continuation we can ask the active stack frames to
+		// terminate properly. This avoids the "main thread terminated before UThreads exited" error
+		// if the continuation is never resumed.
+		Sema wait(0);
+		result.terminate(EffectUnwind(wait, lastFrame));
+
+		// Wait for it to be handled.
+		wait.down();
+
+		// Call the handler.
+		callHandler(lastFrame, cont);
+	}
+
+	// Helper, overridden by derived classes to actually call the handler.
+	protected void callHandler(HandlerFrame lastFrame, Continuation cont) : abstract;
+
+	// Called when the handler is set-up and ready to be posted to the caller.
+	void post(Object handler) {
+		activeHandlers.clear();
+
+		// Store the handler frames we encountered on the way. We need them to capture the continuation!
+		HandlerFrame? current = currentHandlerFrame();
+		while (c = current) {
+			activeHandlers << c;
+
+			if (c.handler is handler) {
+				// Found the handler we were looking for!
+				c.callHandler(this);
+				return;
+			}
+
+			current = c.prev;
+		}
+
+		throw InternalError("The requested handler does not seem to be active.");
+	}
+}
+
+
+/**
+ * Used internally to unwind the call stacks when an effect is invoked.
+ *
+ * Signals 'signal' when caught by the specified handler frame.
+ */
+package class EffectUnwind extends Exception {
+	private core:sync:Sema signal;
+	private HandlerFrame at;
+
+	init(core:sync:Sema signal, HandlerFrame at) {
+		init { signal = signal; at = at; }
+	}
+
+	void message(StrBuf to) {
+		to << "Internal exception";
+	}
+
+	Bool forMe(HandlerFrame f) {
+		if (f is at) {
+			removeHandlerFrame();
+			signal.up();
+			return true;
+		} else {
+			return false;
+		}
+	}
+}
+
+
+/**
+ * Class that stores a value that should be returned to the invocation of an effect, if the captured
+ * continuation is resumed. Also contains logic to pause execution in preparation of the effect
+ * being captured.
+ *
+ * Contains the generic part, there is a typed version that stores the actual value.
+ */
+package class EffectResult {
+	// Create.
+	init() {
+		init { sema(0); }
+	}
+
+	// Semaphore to wait for being resumed more reliably than simply calling 'yield'.
+	private Sema sema;
+
+	// Should we throw an error to clean up?
+	private Exception? throwError;
+
+	// Wait for a result to arrive.
+	void wait() {
+		sema.down();
+
+		if (e = throwError) {
+			throwError = null;
+			throw e;
+		}
+	}
+
+	// Indicate that a result is available.
+	void signal() {
+		sema.up();
+	}
+
+	// Signal that we should throw an exception and exit.
+	void terminate(Exception e) {
+		throwError = e;
+		signal();
+	}
+}
+
+
+/**
+ * The data needed to store a continuation.
+ *
+ * A continuation is essentially an array of stored stacks that we can resume.
+ */
+package class Continuation {
+	// Create a continuation by storing stacks for handler frames.
+	init(HandlerFrame[] frames, EffectResult result) {
+		init {
+			handlerFrames(frames);
+			result = result;
+		}
+
+		// Store all stacks. Should be safe now!
+		for (f in frames)
+			mirrors << StackMirror:save(f.threadId);
+	}
+
+	// All handler frames.
+	private HandlerFrame[] handlerFrames;
+
+	// All captured stacks.
+	private StackMirror[] mirrors;
+
+	// Where to post the result when resuming the continuation.
+	private EffectResult result;
+
+	// Get the result frame.
+	package EffectResult effectResult() { result; }
+
+	// Resume the continuation. Returns the location of the result.
+	package HandlerFrame resume() {
+		if (handlerFrames.empty)
+			throw InternalError("Trying to resume an empty continuation!");
+
+		// Previous handler on this thread:
+		HandlerFrame? prevFrame = currentHandlerFrame();
+
+		// Resume all stacks. For all but the last, we need to ask the HandlerFrame object to wait
+		// once more. Otherwise, the thread will start too early.
+		Bool last = true;
+		// print(handlerFrames.toS);
+		for (Nat i = handlerFrames.count; i > 0; i--) {
+			HandlerFrame frame = handlerFrames[i - 1];
+			if (!last)
+				frame.resurrected();
+
+			// Link it into the chain of handlers to make nested invocations work as expected.
+			frame.prev = prevFrame;
+			setHandlerFrame(frame.threadId, frame);
+
+			// Now, we can resume the thread!
+			mirrors[i - 1].restore();
+
+			// Bookkeeping...
+			prevFrame = frame;
+			last = false;
+		}
+
+		// Finally, wait for the last frame and return it.
+		HandlerFrame lastFrame = handlerFrames.last;
+		// print("Starting to wait... ${lastFrame}");
+		lastFrame.wait();
+		// print("Done waiting! ${lastFrame}");
+		return lastFrame;
+	}
+}

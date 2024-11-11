@@ -1,4 +1,4 @@
-Test
+#Test
 
 #CppTypes -a ../Compiler/ ../Core/ ../Code/ --compiler --template ../Core/Gen/CppTypes.cpp --out ../Compiler/Gen/CppTypes.cpp --asm ../Core/Gen/CppVTables.VS_X86 ../Compiler/Gen/CppVTables.asm --doc ../doc.doc --using storm
 
@@ -28,7 +28,7 @@ Test
 #Main -a -f progvis.debugServer
 #Main -a -f progvis.testCpp
 #Main -a -f trees.main
-#Main -a -t experimental.effects.test
+Main -a -t experimental.effects.test
 #Main -a -t experimental.templates.test
 #Main -a -f tests.syntax.extension.main
 

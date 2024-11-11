@@ -5,31 +5,31 @@ optional delimiter = lang.bs.SDelimiter;
 required delimiter = lang.bs.SRequiredDelimiter;
 
 // Operators that makes sense to use for tests. We give them very low priority to avoid suprises.
-OpInfo STestOp() #fnName; // Mark it so that it is clearly visible.
-STestOp => compareLt(op, 0) : "<"@ op;
-STestOp => compareGt(op, 0) : ">"@ op;
-STestOp => compareLte(op, 0) : "<="@ op;
-STestOp => compareGte(op, 0) : ">="@ op;
-STestOp => compareEq(op, 0) : "=="@ op;
-STestOp => compareNeq(op, 0) : "!="@ op;
-STestOp => IsOperator(op, 0, false) : "is"@ op;
-STestOp => IsOperator(op, 0, true) : "!is"@ op;
+OpInfo SCheckOp() #fnName; // Mark it so that it is clearly visible.
+SCheckOp => compareLt(op, 0) : "<"@ op;
+SCheckOp => compareGt(op, 0) : ">"@ op;
+SCheckOp => compareLte(op, 0) : "<="@ op;
+SCheckOp => compareGte(op, 0) : ">="@ op;
+SCheckOp => compareEq(op, 0) : "=="@ op;
+SCheckOp => compareNeq(op, 0) : "!="@ op;
+SCheckOp => IsOperator(op, 0, false) : "is"@ op;
+SCheckOp => IsOperator(op, 0, true) : "!is"@ op;
 
 // An expression together with its captured source text.
 ExprText SExprText(Block block);
 SExprText => ExprText(expr, text) : (SExpr(block) expr) text;
 
-// Main test logic, the test-statement.
-SSuiteBody..SStmt[10] => testExpr(pos, block, lhs, op, rhs) : "test" #keyword ~ SExprText(block) lhs, STestOp op, SExprText(block) rhs, ";";
-SSuiteBody..SStmt[00] => testExpr(pos, block, cond, text) : "test" #keyword ~ (SCondition(block) cond) text, ";";
-SSuiteBody..SStmt[00] => testExpr(pos, block, expr, exception) : "test" #keyword ~ SExprText(block) expr ~ "throws" #keyword ~ SType exception;
+// Main test logic, the check-statement.
+STestBody..SStmt[10] => checkExpr(pos, block, lhs, op, rhs) : "check" #keyword ~ SExprText(block) lhs, SCheckOp op, SExprText(block) rhs, ";";
+STestBody..SStmt[00] => checkExpr(pos, block, cond, text) : "check" #keyword ~ (SCondition(block) cond) text, ";";
+STestBody..SStmt[00] => checkExpr(pos, block, expr, exception) : "check" #keyword ~ SExprText(block) expr ~ "throws" #keyword ~ SType exception;
 
 // Abort the entire test run.
-SSuiteBody..SStmt[100] => abortExpr(pos, block) : "abort" #keyword, ";";
+STestBody..SStmt[100] => abortExpr(pos, block) : "abort" #keyword, ";";
 
-// Allow creating test suites.
-SPlainFileItem => SuiteDecl(env, name, options, body) : "suite" #keyword ~ SName name #fnName, SFreeOptions@ options, "{" [, SSuiteBody@ body, ]+ "}" = SSuiteDecl;
+// Allow creating test functions.
+SPlainFileItem => TestDecl(env, name, options, body) : "test" #keyword ~ SName name #fnName, SFreeOptions@ options, "{" [, STestBody@ body, ]+ "}" = STestDecl;
 
-// Extra rule for the body, so that we can allow special syntax only inside suites.
-void SSuiteBody(ExprBlock block);
-SSuiteBody => block : (SStmt(block) -> add, )*;
+// Extra rule for the body, so that we can allow special syntax only inside test functions.
+void STestBody(ExprBlock block);
+STestBody => block : (SStmt(block) -> add, )*;

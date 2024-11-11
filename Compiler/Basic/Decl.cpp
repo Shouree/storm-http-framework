@@ -34,10 +34,6 @@ namespace storm {
 			return null;
 		}
 
-		Named *NamedDecl::doCreate() {
-			throw new (this) InternalError(S("Please override 'doCreate'!"));
-		}
-
 		void NamedDecl::doResolve(Named *entity) {}
 
 	}

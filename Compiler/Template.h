@@ -53,6 +53,7 @@ namespace storm {
 		virtual MAYBE(Type *) STORM_FN generate(ValueArray *part);
 	};
 
+
 	/**
 	 * Placeholder template for foreign template definitions from C++.
 	 */
@@ -78,7 +79,7 @@ namespace storm {
 		STORM_CLASS;
 	public:
 		// Create.
-		TemplateFn(Str *name, Fn<MAYBE(Named *), Str *, SimplePart *> *fn);
+		STORM_CTOR TemplateFn(Str *name, Fn<MAYBE(Named *), Str *, SimplePart *> *fn);
 
 		// Function for generation.
 		Fn<MAYBE(Named *), Str *, SimplePart *> *fn;
