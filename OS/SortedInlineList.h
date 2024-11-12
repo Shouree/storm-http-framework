@@ -74,10 +74,6 @@ namespace os {
 
 		// Remove an element from anywhere in the list.
 		void erase(T *elem) {
-			// Allow removing elements that were already removed.
-			if (elem->next == null && elem->prev == null)
-				return;
-
 			// Update head if necessary.
 			if (head == elem)
 				head = elem->next;
@@ -105,6 +101,13 @@ namespace os {
 		// Any?
 		bool any() const {
 			return head != null;
+		}
+
+		// Debug dump.
+		void dbg_dump() {
+			PLN(L"Head: " << head);
+			for (T *x = head; x; x = x->next)
+				PLN(x->prev << L" <- " << x << L" -> " << x->next);
 		}
 
 	private:
