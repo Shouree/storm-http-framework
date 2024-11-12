@@ -72,6 +72,7 @@ HTTP_Request seperateHeader(Buffer buf, Nat index) {
 
 HTTP_Request readSocket(NetStream socket, Buffer rBuf, Moment lastActivity) {
     Buffer seperatorBuf(toUtf8("\r\n\r\n"));
+    Nat header_buffer_growth = 0;
     HTTP_Request request;
     request.imediate_response = HTTP_StatusCode:NO_ERROR;
 
@@ -80,25 +81,26 @@ HTTP_Request readSocket(NetStream socket, Buffer rBuf, Moment lastActivity) {
     
           //TODO decide maximum size of rbuf         
           rBuf = grow(rBuf, rBuf.count() + 4096);
-          //header_buffer_growth++;
+          header_buffer_growth++;
 
-          /*if(header_buffer_growth > 250) {
+          if(header_buffer_growth > 250) {
             request.imediate_response = HTTP_StatusCode:Request_URI_Too_Long;
             return request;
-          }*/
+          }
     }
 
     print("BEFORE READ IN readSocket");
+    socket.input.timeout = 5 s;
+    Moment beforeRead;
     socket.input.read(rBuf);
-    
-    
-    print("READ IN readSocket");
 
-    if(rBuf.empty) {
-      print("rBuf EMPTY!");
+    if(beforeRead + 5 s < Moment()) {
       request.imediate_response = HTTP_StatusCode:Request_Timeout;
       return request;
     }
+    
+    
+    print("READ IN readSocket");
 
     lastActivity = Moment();
     
@@ -133,10 +135,9 @@ void connectionThread(NetStream? socket)
 
 
       HTTP_Request request;
-      NetIStream is = socket.input();
       Buffer rBuf = buffer(4096);
       Moment lastActivity;
-      
+
       while(true) {                                        //TODO: Should countdown timeout/max when we implement keep-alive later
           print("START");
           request = readSocket(socket, rBuf, lastActivity);
