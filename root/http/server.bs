@@ -26,8 +26,13 @@ class HTTP_Connection{
     }
 }
 
+
+
 class HTTP_Server{
   HTTP_Connection connection;
+  
+  HttpRoutingTable routes;
+  
   init(Nat port){
     init{
       connection = HTTP_Connection(port);
@@ -205,6 +210,22 @@ class HTTP_Server{
     
     //return
   }
+
+
+  void addCallback(fn(HTTP_Request)->HTTP_Response func)
+  {
+	 routes.addDefaultCallback(func);
+  }
+  void addCallback(Url route, fn(HTTP_Request)->HTTP_Response func)
+  {
+	routes.addCallbackUrl(route, func);
+  }
+  
+  HTTP_Response getRouteResponse(HTTP_Request req)
+  {
+	return routes.getRouteResponse(req);
+  }
+  
 
 }
 
