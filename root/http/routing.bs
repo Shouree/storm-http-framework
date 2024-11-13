@@ -21,6 +21,8 @@ class HttpRoutingTable{
     if(rTable.has(request.path)){
       response = rTable.get(request.path).call(request);
     }else{
+      //TODO Check if longest matching subUrl has wildcard
+
       if(defautCallback){
         response = defautCallback.call(request);
       }else{
