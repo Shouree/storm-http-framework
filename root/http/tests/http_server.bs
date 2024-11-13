@@ -47,6 +47,40 @@ void main(){
     return res;
     }
   );
+  Url tmpurl;
+  routes.addCallbackUrl(tmpurl / "chat",
+    (HTTP_Request req) =>{
+    HTTP_Response res;
+    res.version = HTTP_Version:HTTP_1_1;
+
+    res.status_code = HTTP_StatusCode:OK;
+
+    res.headers.put("content-type", "text/html; charset=utf-8");
+    res.headers.put("connection", "close");
+    Url index_page = root_dir / "chat" / "index.html";
+    print("\nSending response...");
+    Str data = index_page.readAllText.toS();
+    res.data = toUtf8(data);
+    return res;
+    }
+  );
+
+  routes.addCallbackUrl(tmpurl / "pictures",
+    (HTTP_Request req) =>{
+    HTTP_Response res;
+    res.version = HTTP_Version:HTTP_1_1;
+
+    res.status_code = HTTP_StatusCode:OK;
+
+    res.headers.put("content-type", "text/html; charset=utf-8");
+    res.headers.put("connection", "close");
+    Url index_page = root_dir / "pictures" / "index.html";
+    print("\nSending response...");
+    Str data = index_page.readAllText.toS();
+    res.data = toUtf8(data);
+    return res;
+    }
+  );
 
   while(true){
     HTTP_Request req;
@@ -91,6 +125,7 @@ void main(){
       print("Base path is ${req.path.toS()}");
       cmp = cmp / req.path.name();
     }
+    /*
     if(!valid_url(root_dir, cmp)){
       print("PATH NOT VALID!\n");
       print(cmp.toS());
@@ -103,7 +138,7 @@ void main(){
       server.send(res);
       continue;
     }
-
+    */
     //TODO skapa header tests Fille o/c.
     
     server.send(routes.getRouteResponse(req));
