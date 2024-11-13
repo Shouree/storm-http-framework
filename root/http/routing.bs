@@ -19,7 +19,7 @@ class HttpRoutingTable{
   HTTP_Response getRouteResponse(HTTP_Request request){
     HTTP_Response response;
     if(rTable.has(request.path)){
-      response = rTable.at(request.path).call(request);
+      response = rTable.get(request.path).call(request);
     }else{
       if(defautCallback){
         response = defautCallback.call(request);

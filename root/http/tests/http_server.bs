@@ -29,6 +29,24 @@ void main(){
   //}
   Url root_dir = cwdUrl() / "site";
   HTTP_Server server(1234);
+  HttpRoutingTable routes;
+
+  routes.addDefaultCallback(
+    (HTTP_Request req) =>{
+    HTTP_Response res;
+    res.version = HTTP_Version:HTTP_1_1;
+
+    res.status_code = HTTP_StatusCode:OK;
+
+    res.headers.put("content-type", "text/html; charset=utf-8");
+    res.headers.put("connection", "close");
+    Url index_page = root_dir / "index.html";
+    print("\nSending response...");
+    Str data = index_page.readAllText.toS();
+    res.data = toUtf8(data);
+    return res;
+    }
+  );
 
   while(true){
     HTTP_Request req;
@@ -87,21 +105,7 @@ void main(){
     }
 
     //TODO skapa header tests Fille o/c.
-
-    res.version = HTTP_Version:HTTP_1_1;
-
-    res.status_code = HTTP_StatusCode:OK;
-
-    res.headers.put("content-type", "text/html; charset=utf-8");
-    //TODO, check if this impelemntation works:
-    res.headers.put("connection", "close");
-    Url index_page = cwdUrl;                       
-    index_page = root_dir / "index.html";
-    print("\nSending response...");
-
-    Str data = index_page.readAllText.toS();
-    print(data);
-    res.data = toUtf8(data);
-    server.send(res);
+    
+    server.send(routes.getRouteResponse(req));
   }
 }
