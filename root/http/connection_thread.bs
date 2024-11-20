@@ -61,6 +61,18 @@ HTTP_Request separation (NetIStream is, Moment lastActivity)           //Functio
     
   }
 
+  Bool isCRLF (Buffer tmpBuf, Buffer sepBuff)
+  {
+    for (Nat i = 0; i < tmpBuf.count(); i++)
+    {
+      if(tmpBuf[i] != sepBuff[i])
+      {
+        return false;
+      }
+    }
+    return true;
+  }
+
 
 // IMPLEMENT FOR POST LATER
 HTTP_Request seperateHeader(Buffer buf, Nat index) {
@@ -104,7 +116,7 @@ HTTP_Request readSocket(NetStream socket, Buffer rBuf, Moment lastActivity) {
     
     for(Nat i = 0; i < rBuf.filled() - 3; i++) {
       if(rBuf[i] == seperatorBuf[0])
-        if(fromUtf8(cut(rBuf, i, i+4)) == fromUtf8(seperatorBuf)) { // is fromUtf8 expensive? Should we use nested for-loops instead
+        if(isCRLF(cut(rBuf, i, i+4), seperatorBuf)) { // is fromUtf8 expensive? Should we use nested for-loops instead
             request = seperateHeader(rBuf, i+4);
             //request.data = cut(rbuf, sep_loc+4, rbuf.filled());
             print(request.method.toS());
