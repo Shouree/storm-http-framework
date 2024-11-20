@@ -48,23 +48,7 @@ void main(){
     }
   );
   Url tmpurl;
-  server.addCallback(tmpurl / "chat" / "*",
-    (HTTP_Request req) =>{
-    HTTP_Response res;
-    res.version = HTTP_Version:HTTP_1_1;
-
-    res.status_code = HTTP_StatusCode:OK;
-
-    res.headers.put("content-type", "text/html; charset=utf-8");
-    res.headers.put("connection", "close");
-    Url index_page = root_dir / "chat" / "index.html";
-    print("\nSending response...");
-    Str data = index_page.readAllText.toS();
-    res.data = toUtf8(data);
-    return res;
-    }
-  );
-  server.addCallback(tmpurl / "ass",
+  server.addCallback(Url(["chat", "*", "hello"]),
     (HTTP_Request req) =>{
     HTTP_Response res;
     res.version = HTTP_Version:HTTP_1_1;
@@ -81,7 +65,24 @@ void main(){
     }
   );
 
-  server.addCallback(tmpurl / "pictures",
+  server.addCallback(Url(["pictures"]),
+    (HTTP_Request req) =>{
+    HTTP_Response res;
+    res.version = HTTP_Version:HTTP_1_1;
+
+    res.status_code = HTTP_StatusCode:OK;
+
+    res.headers.put("content-type", "text/html; charset=utf-8");
+    res.headers.put("connection", "close");
+    Url index_page = root_dir / "pictures" / "index.html";
+    print("\nSending response...");
+    Str data = index_page.readAllText.toS();
+    res.data = toUtf8(data);
+    return res;
+    }
+  );
+
+  server.addCallback(Url(["pictures", "2"]),
     (HTTP_Request req) =>{
     HTTP_Response res;
     res.version = HTTP_Version:HTTP_1_1;

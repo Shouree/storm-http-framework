@@ -18,31 +18,38 @@ class HttpRoutingTable{
 
   HTTP_Response getRouteResponse(HTTP_Request request){
     HTTP_Response response;
-	 
-	for(k, value in rTable)
+    Url? routeCallback = null;
+
+	for(route, value in rTable)
 	{
-		Bool valid = true;
 		Nat i = 0;
 		while(true){
-			if(k[i] == "*") continue;
-			if(request.path.count() < i){
-				valid = false;
+            if (i == route.count()-1) {
+                if (route[i] == "*") {
+                    print("got here");
+                    routeCallback = route;
+                    break;
+                } else if (route.count() == request.path.count()) {
+                    if (route[i] == request.path[i]) {
+                        routeCallback = route;
+                    }
+                    break;
+                }
+            }
+			if(route[i] == "*") {
+                ++i;
+                continue;
+            }
+			if(request.path.count() <= i){
 				break;
 			}
-			if(request.path[i] != k[i]){
-				valid = false;
-				break;
-			}
-			if (i >= k.count()-1) {
+			if(request.path[i] != route[i]){
 				break;
 			}
 			++i;
 		}
-		if(valid){
-			if(k[i] != "*")
-				if(k.count()-1 != i) continue;
-			
-			return rTable.get(request.path).call(request);
+		if(rc = routeCallback) {
+			return rTable.get(rc).call(request);
 		}
 	}
 	
