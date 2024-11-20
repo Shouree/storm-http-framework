@@ -127,7 +127,7 @@ namespace storm {
 		} else {
 			// Failed.
 			request.bytes = 0;
-			errorCode = fromSystemError(request.error);
+			errorCode = fromSystemError(error);
 		}
 
 		return request.bytes;

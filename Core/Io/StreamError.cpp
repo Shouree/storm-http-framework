@@ -31,6 +31,7 @@ namespace storm {
 	sys::ErrorCode fromSystemError(int error) {
 		switch (error) {
 		case ERROR_BROKEN_PIPE: return sys::disconnected;
+		case ERROR_NETNAME_DELETED: return sys::disconnected;
 		case ERROR_WRITE_FAULT: return sys::ioError;
 		case ERROR_LOCK_VIOLATION: return sys::fileLocked;
 		case ERROR_SHARING_VIOLATION: return sys::fileLocked;
