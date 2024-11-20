@@ -32,6 +32,7 @@ The `OStream` class has the following members:
 - .write(*)
 - .flush()
 - .close()
+- .error()
 ```
 
 
@@ -52,6 +53,7 @@ The `IStream` class has the following members:
 - .peek(*)
 - .close()
 - .randomAccess()
+- .error()
 ```
 
 
@@ -67,4 +69,5 @@ streams provide the following members in addition to regular streams:
 - .length()
 - .tell()
 - .seek(Word)
+- .error()
 ```

@@ -1,29 +1,11 @@
 #pragma once
 #include "Core/Object.h"
 #include "Buffer.h"
+#include "StreamError.h"
 #include "Core/Exception.h"
 
 namespace storm {
 	STORM_PKG(core.io);
-
-	class EXCEPTION_EXPORT IoError : public Exception {
-		STORM_EXCEPTION;
-	public:
-		IoError(const wchar *msg) {
-			w = new (this) Str(msg);
-			saveTrace();
-		}
-		STORM_CTOR IoError(Str *msg) {
-			w = msg;
-			saveTrace();
-		}
-
-		virtual void STORM_FN message(StrBuf *to) const {
-			*to << w;
-		}
-	private:
-		Str *w;
-	};
 
 	/**
 	 * Input and Output streams for Storm. These are abstract base classes
@@ -115,6 +97,11 @@ namespace storm {
 		// closing streams is generally preferred.
 		virtual void STORM_FN close();
 
+		// Check if any error has occurred while reading. When an error has occurred, the stream
+		// will act as if it has reached the end of file. The reason can be checked by calling this
+		// function.
+		virtual sys::ErrorCode STORM_FN error() const;
+
 		// Read various primitive types from the stream. Throws an exception on error.
 		// Call Int:read() etc. from Storm to access these members!
 		Bool readBool();
@@ -173,12 +160,16 @@ namespace storm {
 		STORM_CTOR OStream();
 
 		// Write all data from the start of the buffer and up to, but not including the `filled`
-		// marker in the buffer. Blocks until all data is written.
-		void STORM_FN write(Buffer buf);
+		// marker in the buffer. Blocks until all data is written, unless an error occurs. Returns
+		// the number of bytes from `buf` that were written to the stream. The returned value will
+		// be equal to the number of bytes in the buffer unless an error occurred.
+		Nat STORM_FN write(Buffer buf);
 
 		// Write all data from `start` up to, but not including the `filled` marker in the buffer.
-		// Blocks until all data is written.
-		virtual void STORM_FN write(Buffer buf, Nat start);
+		// Blocks until all data is written, unless an error occurs. Returns the number of bytes
+		// from `buf` that were written to the stream. The returned value will be equal to the
+		// number of bytes in the buffer unless an error occurred.
+		virtual Nat STORM_FN write(Buffer buf, Nat start);
 
 		// Flush any buffered data to the destination. The exact behavior of this operation depends
 		// on the stream that is used. For example, file- and network streams are generally
@@ -187,8 +178,8 @@ namespace storm {
 		// `flush()` to allow manually flushing the buffer. Calls to `flush` are generally passed
 		// along chains of output streams. For example, calling `flush` on a `BufferedOStream` will
 		// flush the `BufferedOStream` and call flush on whichever stream the `BufferedOStream` is
-		// writing its data to.
-		virtual void STORM_FN flush();
+		// writing its data to. Returns `false` if the operation fails.
+		virtual Bool STORM_FN flush();
 
 		// Closes the stream and frees any associated resources. As with `flush`, this is generally
 		// propagated in the case of chained streams.
@@ -197,6 +188,11 @@ namespace storm {
 		// garbage collected, it might be a while before the destructor is called. As such, manually
 		// closing streams is generally preferred.
 		virtual void STORM_FN close();
+
+		// Check if any error has occurred during write. Errors generally cause `write` operations
+		// to fail, but no exceptions are thrown. This makes it possible to check for errors at the
+		// end of a large write.
+		virtual sys::ErrorCode STORM_FN error() const;
 
 		// Write various primitive types to the stream. Used to implement custom serialization.
 		// Call Int:write etc. from storm to access these members!

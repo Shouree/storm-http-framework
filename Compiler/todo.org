@@ -59,7 +59,7 @@
     but the scale of the issue should be assessed first.
   - [ ] Parsing core.lang.syntax.bnf takes about 80 ms, which is a bit on the high end when compiling code...
 
-* Loose ends so far [63/113]
+* Loose ends so far [63/115]
   - [ ] Relative imports in Basic Storm?
   - [ ] The Compiler thread should probably wait for all UThreads to terminate. Otherwise any UThreads
     that are sleeping will not block the system from terminating properly.
@@ -81,6 +81,9 @@
     would be to have Package only load stages that correspond to the ones loaded by the package that
     is currently loading, and then hold off remaining loading until a later point, for example when
     the other package advances.
+  - [ ] SSL library should report errors properly.
+  - [ ] Perhaps port the Windows SSL library to use newer API:s than SChannel. That might allow us to
+    handle server-side certificates better.
   - [ ] Maybe types are not visualized properly in Progvis. We need a special pointer/value for those.
   - [ ] The Value() ctor was changed to accept a Maybe-type. Because of this, auto-cast from Type to Value
     no longer works in Basic Storm. Investigate, and make a special case for Maybe perhaps.

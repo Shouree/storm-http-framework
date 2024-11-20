@@ -75,7 +75,7 @@ namespace storm {
 
 		// Write.
 		using OStream::write;
-		virtual void STORM_FN write(Buffer buf, Nat start);
+		virtual Nat STORM_FN write(Buffer buf, Nat start);
 
 		// Get the buffer.
 		Buffer STORM_FN buffer();

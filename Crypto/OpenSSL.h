@@ -64,8 +64,8 @@ namespace ssl {
 		virtual Bool more(void *gcData);
 		virtual void read(Buffer &to, void *gcData);
 		virtual void peek(Buffer &to, void *gcData);
-		virtual void write(const Buffer &from, Nat start, void *gcData);
-		virtual void flush(void *gcData);
+		virtual Nat write(const Buffer &from, Nat start, void *gcData);
+		virtual Bool flush(void *gcData);
 		virtual void shutdown(void *gcData);
 		virtual void close(void *gcData);
 

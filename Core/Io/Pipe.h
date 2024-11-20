@@ -74,7 +74,7 @@ namespace storm {
 
 		// Called by the OStream:
 		friend class PipeOStream;
-		void write(Buffer from, Nat start);
+		Nat write(Buffer from, Nat start);
 		void closeWrite();
 	};
 
@@ -131,12 +131,19 @@ namespace storm {
 		}
 
 		// Write data.
-		void STORM_FN write(Buffer buf, Nat start) override {
-			pipe->write(buf, start);
+		Nat STORM_FN write(Buffer buf, Nat start) override {
+			return pipe->write(buf, start);
 		}
 
 		// Flush (no-op for Pipes).
-		void STORM_FN flush() override {}
+		Bool STORM_FN flush() override { return true; }
+
+		// Get error.
+		sys::ErrorCode STORM_FN error() const {
+			if (pipe->readClosed)
+				return sys::disconnected;
+			return sys::none;
+		}
 
 	private:
 		// Pipe we're connected to.

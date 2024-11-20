@@ -69,7 +69,7 @@ namespace storm {
 		// Nothing to do...
 	}
 
-	void MemOStream::write(Buffer src, Nat start) {
+	Nat MemOStream::write(Buffer src, Nat start) {
 		start = min(start, src.filled());
 		Nat copy = src.filled() - start;
 		Nat filled = data.filled();
@@ -82,6 +82,8 @@ namespace storm {
 		// Copy data.
 		memcpy(data.dataPtr() + filled, src.dataPtr() + start, copy);
 		data.filled(filled + copy);
+
+		return copy;
 	}
 
 	Buffer MemOStream::buffer() {

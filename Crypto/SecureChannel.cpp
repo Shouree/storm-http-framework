@@ -544,32 +544,36 @@ namespace ssl {
 		to.filled(to.filled() + toFill);
 	}
 
-	void SChannelSession::write(const Buffer &from, Nat offset, void *gcData) {
+	Nat SChannelSession::write(const Buffer &from, Nat offset, void *gcData) {
 		SChannelData *data = (SChannelData *)gcData;
 		os::Lock::L z(lock);
 
 		if (data->outgoingEnd)
-			return;
+			return 0;
 
 		// Don't send more data than the max message size.
 		// For SChannel, this seems to be 64k, so it is unlikely, but we shall handle it properly.
+		Nat consumed = 0;
 		while (offset < from.filled()) {
 			Nat chunkSz = min(from.filled() - offset, maxMessageSize);
 			encrypt(data->engine(), from, offset, chunkSz, data->outgoing);
 			data->dst->write(data->outgoing);
 
 			offset += chunkSz;
+			consumed += chunkSz;
 		}
 
 		// Clear the buffer if it becomes too large.
 		if (data->outgoing.count() > data->bufferSizes * 2)
 			data->outgoing = Buffer();
+
+		return consumed;
 	}
 
-	void SChannelSession::flush(void *gcData) {
+	Bool SChannelSession::flush(void *gcData) {
 		SChannelData *data = (SChannelData *)gcData;
 		os::Lock::L z(lock);
-		data->dst->flush();
+		return data->dst->flush();
 	}
 
 	void SChannelSession::close(void *gcData) {
