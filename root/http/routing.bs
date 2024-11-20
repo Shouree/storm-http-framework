@@ -16,17 +16,20 @@ class HttpRoutingTable{
     rTable.put(url, func);
   }
 
+  // TODO: Nested hashtables for lookup
   HTTP_Response getRouteResponse(HTTP_Request request){
+    // TODO: on POST, parse body? as urlencoded
+    // TODO: Add headers
     HTTP_Response response;
     Url? routeCallback = null;
 
+    // TODO: * matches 1
 	for(route, value in rTable)
 	{
 		Nat i = 0;
 		while(true){
             if (i == route.count()-1) {
                 if (route[i] == "*") {
-                    print("got here");
                     routeCallback = route;
                     break;
                 } else if (route.count() == request.path.count()) {
@@ -55,6 +58,7 @@ class HttpRoutingTable{
 	
 	if(defautCallback) return defautCallback.call(request);
 	
+    // FIXME
 	throw DivisionByZero;
   }
 	/*
