@@ -6,90 +6,90 @@ use core:io;
  */
 
 /* GET */
-suite ParseFullGet {
+test ParseFullGet {
   Buffer teststr = "GET /resources/hello.htm?banana=true&feet=big HTTP/1.1\r\nUser-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\r\nHost: www.tutorialspoint.com\r\nAccept-Language: en-us\r\nAccept-Encoding: gzip, deflate\r\nConnection: Keep-Alive\r\n\r\n".toUtf8;
   HTTP_Request req = HTTP_Parser.parse_request(teststr);
-  test req.method == HTTP_Method:GET;
-  test req.path == Url(["resources", "hello.htm"]);
-  test req.version == HTTP_Version:HTTP_1_1;
-  test req.method_params["banana"] == "true";
-  test req.method_params["feet"] == "big";
-  test req.headers["User-Agent"] == "Mozilla/4.0 (compatible; MSIE5.01; Windows NT)";
-  test req.headers["Host"] == "www.tutorialspoint.com";
-  test req.headers["Accept-Language"] == "en-us";
-  test req.headers["Accept-Encoding"] == "gzip, deflate";
-  test req.headers["Connection"] == "Keep-Alive";
-  test req.data.fromUtf8 == "";
+  check req.method == HTTP_Method:GET;
+  check req.path == Url(["resources", "hello.htm"]);
+  check req.version == HTTP_Version:HTTP_1_1;
+  check req.method_params["banana"] == "true";
+  check req.method_params["feet"] == "big";
+  check req.headers["User-Agent"] == "Mozilla/4.0 (compatible; MSIE5.01; Windows NT)";
+  check req.headers["Host"] == "www.tutorialspoint.com";
+  check req.headers["Accept-Language"] == "en-us";
+  check req.headers["Accept-Encoding"] == "gzip, deflate";
+  check req.headers["Connection"] == "Keep-Alive";
+  check req.data.fromUtf8 == "";
 }
 
-suite ParseRootPath {
+test ParseRootPath {
   Buffer teststr = "GET /?key1=val1&key2=val2 HTTP/1.1\r\n\r\n".toUtf8;
   HTTP_Parser parser;
   HTTP_Request req = parser.parse_request(teststr);
-  test req.path == Url([]);
-  test req.method_params["key1"] == "val1";
-  test req.method_params["key2"] == "val2";
+  check req.path == Url([]);
+  check req.method_params["key1"] == "val1";
+  check req.method_params["key2"] == "val2";
 }
 
-suite ParseNoHeaders {
+test ParseNoHeaders {
   Buffer teststr = "GET /resources/hello.htm?banana=true&feet=big HTTP/1.1\r\n\r\n".toUtf8;
   HTTP_Request req = HTTP_Parser.parse_request(teststr);
-  test req.headers.count == 0;
+  check req.headers.count == 0;
 }
 
-suite ParseNoQueryParams {
+test ParseNoQueryParams {
   Buffer teststr = "GET /resources/hello.htm HTTP/1.1\r\nUser-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\r\nHost: www.tutorialspoint.com\r\nAccept-Language: en-us\r\nAccept-Encoding: gzip, deflate\r\nConnection: Keep-Alive\r\n\r\n".toUtf8;
   HTTP_Parser parser;
   HTTP_Request req = parser.parse_request(teststr);
-  test req.method_params.count == 0;
+  check req.method_params.count == 0;
 }
 
-// suite ParseReq09 {
+// test ParseReq09 {
 //   Buffer teststr = "GET /resources/hello.htm".toUtf8;
 //   HTTP_Request req = HTTP_Parser.parse_request(teststr);
-//   test req.method_params.count == 0;
+//   check req.method_params.count == 0;
 // }
 
 /* Query string parsing URL-encode */
-suite ParseQueryParamsURLEncoded {
+test ParseQueryParamsURLEncoded {
   Buffer teststr = "GET /?q=test%20string%20%26encoded HTTP/1.1\r\n\r\n".toUtf8;
   HTTP_Request req = HTTP_Parser.parse_request(teststr);
-  test req.method_params["q"] == "test string &encoded";
+  check req.method_params["q"] == "test string &encoded";
 }
 
 /* Cookie Parsing */
-suite ParseCookies {
+test ParseCookies {
   Buffer teststr = "GET /resources/hello.htm HTTP/1.1\r\nCookie: sessionId=abc123; theme=light; rememberMe=true\r\n\r\n".toUtf8;
   HTTP_Request req = HTTP_Parser.parse_request(teststr);
-  test req.cookies["sessionId"] == "abc123";
-  test req.cookies["theme"] == "light";
-  test req.cookies["rememberMe"] == "true";
+  check req.cookies["sessionId"] == "abc123";
+  check req.cookies["theme"] == "light";
+  check req.cookies["rememberMe"] == "true";
 }
 
-suite ParseCookiesNoSpace {
+test ParseCookiesNoSpace {
   Buffer teststr = "GET /resources/hello.htm HTTP/1.1\r\nCookie: sessionId=abc123;theme=light;rememberMe=true\r\n\r\n".toUtf8;
   HTTP_Request req = HTTP_Parser.parse_request(teststr);
-  test req.cookies["sessionId"] == "abc123";
-  test req.cookies["theme"] == "light";
-  test req.cookies["rememberMe"] == "true";
+  check req.cookies["sessionId"] == "abc123";
+  check req.cookies["theme"] == "light";
+  check req.cookies["rememberMe"] == "true";
 }
 
 /*
  * POST (FIXME)
  */
-suite ParseFullPost {
+test ParseFullPost {
   Buffer teststr = "POST /submit-form HTTP/1.0\r\nUser-Agent: Mozilla/5.0\r\nHost: www.example.com\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 48\r\n\r\nusername=bobbytables&name=robert&city=EAS&age=39".toUtf8;
   HTTP_Parser parser;
   HTTP_Request req = parser.parse_request(teststr);
-  test req.method == HTTP_Method:POST;
-  test req.path == Url(["submit-form"]);
-  test req.version == HTTP_Version:HTTP_1_0;
+  check req.method == HTTP_Method:POST;
+  check req.path == Url(["submit-form"]);
+  check req.version == HTTP_Version:HTTP_1_0;
   // TODO: Bodyn ska parse:as till `method_params`
-  test req.method_params.count == 0;
-  test req.headers["User-Agent"] == "Mozilla/5.0";
-  test req.headers["Host"] == "www.example.com";
-  test req.headers["Content-Type"] == "application/x-www-form-urlencoded";
-  test req.headers["Content-Length"] == "48";
+  check req.method_params.count == 0;
+  check req.headers["User-Agent"] == "Mozilla/5.0";
+  check req.headers["Host"] == "www.example.com";
+  check req.headers["Content-Type"] == "application/x-www-form-urlencoded";
+  check req.headers["Content-Length"] == "48";
   // TODO: det ska finnas en body?
-  test req.data.fromUtf8 == "username=bobbytables&name=robert&city=EAS&age=39";
+  check req.data.fromUtf8 == "username=bobbytables&name=robert&city=EAS&age=39";
 }
