@@ -3,9 +3,19 @@ use core:net;
 use core:lang;
 use http;
 
+class route_callback_pair {
+public:
+    init(Url route, fn(HTTP_Request)->HTTP_Response callback)
+    {
+        init {route = route; callback = callback;}
+    }
+    Url route;
+    fn(HTTP_Request)->HTTP_Response callback;
+}
 
 class HttpRoutingTable{
-  Map<Url, fn(HTTP_Request)->HTTP_Response> rTable;
+  //Map<Url, fn(HTTP_Request)->HTTP_Response> rTable;
+  Array<route_callback_pair> rTable;
   fn(HTTP_Request)->HTTP_Response? defautCallback; //Maybe type default callback 
 
   void addDefaultCallback(fn(HTTP_Request)->HTTP_Response func){
@@ -13,69 +23,37 @@ class HttpRoutingTable{
   }
 
   void addCallbackUrl(Url url, fn(HTTP_Request)->HTTP_Response func){
-    rTable.put(url, func);
+    rTable.push(route_callback_pair(url, func));
   }
 
   // TODO: Nested hashtables for lookup
-  HTTP_Response getRouteResponse(HTTP_Request request){
+  HTTP_Response getRouteResponse(HTTP_Request request) {
     // TODO: on POST, parse body? as urlencoded
     // TODO: Add headers
     HTTP_Response response;
     Url? routeCallback = null;
 
-    // TODO: * matches 1
-	for(route, value in rTable)
-	{
-		Nat i = 0;
-		while(true){
-            if (i == route.count()-1) {
-                if (route[i] == "*") {
-                    routeCallback = route;
-                    break;
-                } else if (route.count() == request.path.count()) {
-                    if (route[i] == request.path[i]) {
-                        routeCallback = route;
-                    }
-                    break;
-                }
-            }
-			if(route[i] == "*") {
-                ++i;
-                continue;
-            }
-			if(request.path.count() <= i){
-				break;
-			}
-			if(request.path[i] != route[i]){
-				break;
-			}
-			++i;
-		}
-		if(rc = routeCallback) {
-			return rTable.get(rc).call(request);
-		}
-	}
-	
-	if(defautCallback) return defautCallback.call(request);
-	
-    // FIXME
-	throw DivisionByZero;
-  }
-	/*
-    if(rTable.has(request.path)){
-      response = rTable.get(request.path).call(request);
-    }else{
-      //TODO Check if longest matching subUrl has wildcard
+    for(value in rTable) {
+      Url route = value.route;
+      fn(HTTP_Request)->HTTP_Response callback = value.callback;
 
-      if(defautCallback){
-        response = defautCallback.call(request);
-      }else{
-        print("ERROR! No default callback!");
-        //TODO Hur hantera?
+      Bool valid = true;
+      if(route.count() != request.path.count()) continue;
+      for(Nat i = 0; i < route.count(); ++i) { 
+        if(route[i] == "*") {
+          continue;
+        }
+        if(request.path[i] != route[i]) {
+          valid = false;
+          break;
+        }
+      }
+      if(valid) {
+        return callback.call(request);//rTable.get(route).call(request);
       }
     }
-    return response;
+    if(defautCallback) return defautCallback.call(request);
+        
+    throw DivisionByZero;
   }
-*/
-
 }
