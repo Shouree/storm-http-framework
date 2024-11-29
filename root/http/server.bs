@@ -115,7 +115,7 @@ class HTTP_Server{
         return;
       }
     NetStream? socket = serverListener.accept();
-    var x = spawn connectionThread(socket);
+    spawn connectionThread(socket);
     //serverListener.close(); // MIGHT BE NEEDED TO WORK ON WINDOWS
   }
   

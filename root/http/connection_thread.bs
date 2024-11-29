@@ -90,7 +90,7 @@ HTTP_Request readSocket(NetStream socket, Buffer rBuf, Moment lastActivity) {
     if(rBuf.free() == 0 ) {
     
           //TODO decide maximum size of rbuf         
-          rBuf = grow(rBuf, rBuf.count() + 4096);
+          rBuf = grow(rBuf, rBuf.count() + 4096);       
           //header_buffer_growth++;
 
           /*if(header_buffer_growth > 250) {
@@ -103,8 +103,10 @@ HTTP_Request readSocket(NetStream socket, Buffer rBuf, Moment lastActivity) {
     Moment current_time;
 
     socket.input.timeout= 5 s;
+    print(socket.input.more().toS());
+
     socket.input.read(rBuf);
-    
+    print(socket.input.more().toS());
     
     print("READ IN readSocket");
 
@@ -113,8 +115,14 @@ HTTP_Request readSocket(NetStream socket, Buffer rBuf, Moment lastActivity) {
       request.imediate_response = HTTP_StatusCode:Request_Timeout;
       return request;
     }  
+if(rBuf.filled < 3)
+{
+  print(rBuf.filled().toS() + " bytes, no more to read");  //reqest.imediate_response = HTTP_StatusCode:Request_Timeout;
+  return request;
+}
+          print(rBuf.filled.toS());
     
-    for(Nat i = 0; i < rBuf.filled() - 3; i++) {
+    for(Nat i = 0; i < rBuf.filled()-3; i++) {      //Changed from -3 to i+3 so we avoid underflow
       if(rBuf[i] == seperatorBuf[0])
         if(isCRLF(cut(rBuf, i, i+4), seperatorBuf)) { // is fromUtf8 expensive? Should we use nested for-loops instead
             request = seperateHeader(rBuf, i+4);
@@ -145,9 +153,11 @@ void connectionThread(NetStream? socket)
       
       while(true) {                                        //TODO: Should countdown timeout/max when we implement keep-alive later
           print("START");
+         rBuf.filled(0);
           request = readSocket(socket, rBuf, lastActivity);
           print("HAVE READ");
           //lastActivity = Moment m;
+         
           
           //}
           // Check if NetIStream is empty
@@ -167,7 +177,8 @@ void connectionThread(NetStream? socket)
 
       res.headers.put("content-type", "text/html; charset=utf-8");
       //TODO, check if this impelemntation works:
-      res.headers.put("connection", "keep-alive");    
+      res.headers.put("connection", "keep-alive");
+      res.headers.put("Keep-Alive:", "timeout=5, max=100");
       Url root_dir = cwdUrl() / "site";   
       print(root_dir.toS());              
       Url index_page = root_dir / "index.html";
@@ -181,9 +192,15 @@ void connectionThread(NetStream? socket)
       Buffer response = parser.parse_response(res);
      // print("HEADER IS:\n");
      // print(fromUtf8(response));
-
+    
           //NetOStream os = socket.output();
-        os.write(response);     //crashes the server for some reason
+        if(rBuf.filled < 3)
+        {
+          return;
+        }
+          print("to write stream");
+          os.write(response);     //crashes the server for some reason
+          //print(os.more().toS());
         //os.flush(); //No need as os is unbuffered
         
       print("sent");

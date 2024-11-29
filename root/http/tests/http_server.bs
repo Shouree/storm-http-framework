@@ -2,6 +2,7 @@ use core:net;
 use core:io;
 use http;
 use core:lang;
+use lang:bs:macro;
 
 Bool valid_url(Url path, Url url){
   if(url.toS() == path.toS()){
@@ -22,6 +23,8 @@ Bool valid_url(Url path, Url url){
 
 
 void main(){
+  //(named{http}).compile();
+
   //Listener? socket = listen(1234, true);
   //unless(socket){
    // print("Error! Cannot bind socket.");
