@@ -105,12 +105,12 @@ HTTP_Request readSocket(NetStream socket, Buffer rBuf, Moment lastActivity) {
     socket.input.timeout= 5 s;
     print(socket.input.more().toS());
 
-    socket.input.read(rBuf);
+    socket.input.read(rBuf);            //Can read 0 bytes if we output data on the write stream(WHY?)
     print(socket.input.more().toS());
     
     print("READ IN readSocket");
 
-//    if(current_time + 5 s < Moment) {
+//    if(current_time + 5 s < Moment) {         //Not needed when timeouts work correctly.
 //      print("rBuf timed out!");
 //
 //      return request;
@@ -204,7 +204,7 @@ void connectionThread(NetStream? socket)
           return;
         }
           print("to write stream");
-       //   os.write(response);     //crashes the server for some reason
+       //   os.write(response);     //If this is uncommented then timeout does not work instead as some stream seems to close(maybe the write stream?)
           //print(os.more().toS());
         //os.flush(); //No need as os is unbuffered
         
