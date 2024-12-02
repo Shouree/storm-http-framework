@@ -156,22 +156,22 @@ void connectionThread(NetStream? socket)
       print("NEW THREAD");
       
       while(true) {                                        //TODO: Should countdown timeout/max when we implement keep-alive later
-          print("START");
-         rBuf.filled(0);
-          request = readSocket(socket, rBuf, lastActivity);
-          print("HAVE READ");
-          //lastActivity = Moment m;
-         
-          
-          //}
-          // Check if NetIStream is empty
-          // If it is empty break and close socket
-          //request = separation(is, lastActivity);
-          if(request.imediate_response == HTTP_StatusCode:Request_Timeout ) {
-            print("TIMEOUT");
-            socket.close();
-            return;
-          }
+        print("START");
+        rBuf.filled(0);
+        request = readSocket(socket, rBuf, lastActivity);
+        print("HAVE READ");
+
+        if(rBuf.filled < 3)
+        {
+          socket.close();
+          return;
+        }
+
+        if(request.imediate_response == HTTP_StatusCode:Request_Timeout ) {
+          print("TIMEOUT");
+          socket.close();
+          return;
+        }
 
       HTTP_Response res;
 
@@ -194,18 +194,14 @@ void connectionThread(NetStream? socket)
       
       HTTP_Parser parser;
       Buffer response = parser.parse_response(res);
-     // print("HEADER IS:\n");
-     // print(fromUtf8(response));
+    // print("HEADER IS:\n");
+    // print(fromUtf8(response));
     
           //NetOStream os = socket.output();
-        if(rBuf.filled < 3)
-        {
-          socket.close();
-          return;
-        }
+      
           print("to write stream");
-       //   os.write(response);     //If this is uncommented then timeout does not work instead as some stream seems to close(maybe the write stream?)
-          //print(os.more().toS());
+          Nat test = os.write(response);     //If this is uncommented then timeout does not work instead as some stream seems to close(maybe the write stream?)
+          print("wrote: " + test.toS());
         //os.flush(); //No need as os is unbuffered
         
       print("sent");
