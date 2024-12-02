@@ -15,28 +15,29 @@ namespace storm {
 		buffer = storm::buffer(engine(), bufferSize);
 	}
 
-	void BufferedOStream::write(Buffer input, Nat start) {
+	Nat BufferedOStream::write(Buffer input, Nat start) {
 		if (start >= input.filled())
-			return;
+			return 0;
 
 		// 0: Fast path: if our buffer is empty, and number of bytes are larger than the buffer,
 		// just output the buffer as is.
 		Nat inputCount = input.filled() - start;
 		if (buffer.empty() && inputCount >= buffer.count()) {
-			output->write(input, start);
-			return;
+			return output->write(input, start);
 		}
 
 		// 1: Fill the buffer.
+		Nat consumed = 0;
 		Nat toCopy = min(inputCount, buffer.free());
 		memcpy(buffer.dataPtr() + buffer.filled(), input.dataPtr() + start, toCopy);
 		buffer.filled(buffer.filled() + toCopy);
 		start += toCopy;
 		inputCount -= toCopy;
+		consumed += toCopy;
 
 		// 2: Time to flush? If not, then we are done.
 		if (!buffer.full())
-			return;
+			return consumed;
 		output->write(buffer);
 		buffer.filled(0);
 
@@ -44,25 +45,33 @@ namespace storm {
 		// we can just output the rest as it is (as in the fast-path).
 		if (inputCount >= buffer.count()) {
 			// Output everything.
-			output->write(input, start);
+			consumed += output->write(input, start);
 		} else if (inputCount > 0) {
 			// Copy the remaining data. Note: 'inputCount' is less than 'buffer.count()', and the
 			// buffer is flushed.
 			memcpy(buffer.dataPtr(), input.dataPtr() + start, inputCount);
 			buffer.filled(inputCount);
+			consumed += inputCount;
 		}
+		return consumed;
 	}
 
-	void BufferedOStream::flush() {
+	Bool BufferedOStream::flush() {
+		Bool ok = true;
 		if (buffer.filled() > 0) {
-			output->write(buffer);
+			ok = output->write(buffer) == buffer.filled();
 			buffer.filled(0);
 		}
+		return ok;
 	}
 
 	void BufferedOStream::close() {
 		flush();
 		output->close();
+	}
+
+	sys::ErrorCode BufferedOStream::error() const {
+		return output->error();
 	}
 
 }

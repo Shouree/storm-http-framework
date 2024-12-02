@@ -55,8 +55,16 @@ namespace storm {
 		void STORM_FN shift(Nat n);
 
 		// Access individual bytes.
-		Byte &STORM_FN operator [](Nat id) { return data->v[id]; }
-		Byte operator [](Nat id) const { return data->v[id]; }
+		Byte &STORM_FN operator [](Nat id) {
+			if (id >= count())
+				throwOutOfBounds(id);
+			return data->v[id];
+		}
+		Byte operator [](Nat id) const {
+			if (id >= count())
+				throwOutOfBounds(id);
+			return data->v[id];
+		}
 
 		// Deep copy.
 		void STORM_FN deepCopy(CloneEnv *env);
@@ -97,6 +105,9 @@ namespace storm {
 		friend Buffer emptyBuffer(GcArray<Byte> *data);
 		friend Buffer fullBuffer(GcArray<Byte> *data);
 		friend Buffer buffer(EnginePtr e, const Byte *data, Nat count);
+
+		// Helper to throw out of bounds exception. Helps the [] operator remain inlined.
+		void throwOutOfBounds(Nat id) const;
 	};
 
 	// Create a buffer with room for `count` bytes. It will be initially empty.

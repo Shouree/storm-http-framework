@@ -28,9 +28,10 @@ namespace storm {
 		return PeekReadResult::success(r.count);
 	}
 
-	StdOStream::StdOStream(StdStream t) : target(t) {}
+	StdOStream::StdOStream(StdStream t) : target(t), seenEnd(false) {}
 
-	void StdOStream::write(Buffer to, Nat start) {
+	Nat StdOStream::write(Buffer to, Nat start) {
+		Nat consumed = 0;
 		start = min(start, to.filled());
 
 		while (start < to.filled()) {
@@ -38,11 +39,22 @@ namespace storm {
 			runtime::postStdRequest(engine(), &r);
 			r.wait.down();
 
-			if (r.count == 0)
+			if (r.count == 0) {
+				seenEnd = true;
 				break;
+			}
 
 			start += r.count;
+			consumed += r.count;
 		}
+
+		return consumed;
+	}
+
+	sys::ErrorCode StdOStream::error() const {
+		if (seenEnd)
+			return sys::disconnected;
+		return sys::none;
 	}
 
 	StdRequest::StdRequest(StdStream stream, byte *to, Nat count)

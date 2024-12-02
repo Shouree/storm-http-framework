@@ -43,11 +43,17 @@ namespace storm {
 
 		// Write data.
 		using OStream::write;
-		virtual void STORM_FN write(Buffer buf, Nat start);
+		virtual Nat STORM_FN write(Buffer buf, Nat start);
+
+		// Error.
+		virtual sys::ErrorCode STORM_FN error() const;
 
 	private:
 		// Target stream.
 		StdStream target;
+
+		// Have we seen the end of stream?
+		Bool seenEnd;
 	};
 
 

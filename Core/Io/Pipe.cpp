@@ -110,7 +110,9 @@ namespace storm {
 		}
 	}
 
-	void Pipe::write(Buffer from, Nat start) {
+	Nat Pipe::write(Buffer from, Nat start) {
+		Nat consumed = 0;
+
 		while (from.filled() > start) {
 			waitWrite->wait();
 
@@ -118,7 +120,7 @@ namespace storm {
 
 			// If the read end is closed, just stop writing.
 			if (readClosed)
-				return;
+				return consumed;
 
 			// Any room to write? If not, wait a bit more. It could be a spurious wakeup.
 			if (filled >= data->count) {
@@ -140,6 +142,7 @@ namespace storm {
 
 			filled += toWrite;
 			start += toWrite;
+			consumed += toWrite;
 
 			// Update our state:
 			if (filled >= data->count)
@@ -148,6 +151,8 @@ namespace storm {
 			// It is possible to read now, we put data there.
 			waitRead->set();
 		}
+
+		return consumed;
 	}
 
 }

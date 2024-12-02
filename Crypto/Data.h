@@ -141,10 +141,10 @@ namespace ssl {
 		virtual void peek(Buffer &to, void *gcData) = 0;
 
 		// Write data.
-		virtual void write(const Buffer &from, Nat start, void *gcData) = 0;
+		virtual Nat write(const Buffer &from, Nat start, void *gcData) = 0;
 
 		// Flush the stream.
-		virtual void flush(void *gcData) = 0;
+		virtual Bool flush(void *gcData) = 0;
 
 		// Shut down the session.
 		virtual void shutdown(void *gcData) = 0;

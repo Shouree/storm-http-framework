@@ -36,6 +36,11 @@ namespace storm {
 		// Close this stream.
 		virtual void STORM_FN close();
 
+		// Get error.
+		virtual sys::ErrorCode STORM_FN error() const {
+			return currError;
+		}
+
 	protected:
 		// Our handle.
 		UNKNOWN(PTR_NOGC) os::Handle handle;
@@ -45,6 +50,9 @@ namespace storm {
 
 		// Do read operations.
 		virtual PeekReadResult doRead(byte *to, Nat count);
+
+		// Current error.
+		sys::ErrorCode currError;
 	};
 
 	/**
@@ -92,12 +100,20 @@ namespace storm {
 		// Get length.
 		virtual Word STORM_FN length();
 
+		// Get error.
+		virtual sys::ErrorCode STORM_FN error() const override {
+			return currError;
+		}
+
 	protected:
 		// Our handle.
 		UNKNOWN(PTR_NOGC) os::Handle handle;
 
 		// Is our handle added to a thread?
 		UNKNOWN(PTR_NOGC) os::Thread attachedTo;
+
+		// Current error.
+		sys::ErrorCode currError;
 	};
 
 	/**
@@ -140,10 +156,15 @@ namespace storm {
 
 		// Write data.
 		using OStream::write;
-		virtual void STORM_FN write(Buffer buf, Nat start);
+		virtual Nat STORM_FN write(Buffer buf, Nat start);
 
 		// Close.
 		virtual void STORM_FN close();
+
+		// Get error.
+		virtual sys::ErrorCode STORM_FN error() const {
+			return currError;
+		}
 
 	protected:
 		// Our handle.
@@ -151,6 +172,9 @@ namespace storm {
 
 		// Is our handle added to a thread?
 		UNKNOWN(PTR_NOGC) os::Thread attachedTo;
+
+		// Current error.
+		sys::ErrorCode currError;
 	};
 
 }

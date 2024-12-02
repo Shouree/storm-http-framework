@@ -28,7 +28,8 @@ namespace storm {
 		h = os::Handle();
 	}
 
-	static PeekReadResult read(os::Handle h, os::Thread &attached, void *dest, Nat limit, Duration timeout = Duration()) {
+	static PeekReadResult read(os::Handle h, os::Thread &attached, void *dest, Nat limit,
+							sys::ErrorCode &errorCode, Duration timeout = Duration()) {
 		if (attached == os::Thread::invalid) {
 			attached = os::Thread::current();
 			attached.attach(h);
@@ -71,16 +72,20 @@ namespace storm {
 			// Was the operation cancelled?
 			if (request.bytes == 0 && request.error == ERROR_OPERATION_ABORTED)
 				return PeekReadResult::timeout();
+			// Error?
+			if (request.error)
+				errorCode = fromSystemError(request.error);
 
 		} else {
 			// Failed.
 			request.bytes = 0;
+			errorCode = fromSystemError(error);
 		}
 
 		return PeekReadResult::success(request.bytes);
 	}
 
-	static Nat write(os::Handle h, os::Thread &attached, const void *src, Nat limit) {
+	static Nat write(os::Handle h, os::Thread &attached, const void *src, Nat limit, sys::ErrorCode &errorCode) {
 		if (attached == os::Thread::invalid) {
 			attached = os::Thread::current();
 			attached.attach(h);
@@ -114,9 +119,15 @@ namespace storm {
 			// Advance the file pointer.
 			pos.QuadPart = request.bytes;
 			SetFilePointerEx(h.v(), pos, NULL, FILE_CURRENT);
+
+			// Error?
+			if (request.error != 0)
+				errorCode = fromSystemError(request.error);
+
 		} else {
 			// Failed.
 			request.bytes = 0;
+			errorCode = fromSystemError(error);
 		}
 
 		return request.bytes;
@@ -191,16 +202,18 @@ namespace storm {
 		return r;
 	}
 
-	static PeekReadResult read(os::Handle h, os::Thread &attached, void *dest, Nat limit, Duration timeout = Duration()) {
+	static PeekReadResult read(os::Handle h, os::Thread &attached, void *dest, Nat limit,
+							sys::ErrorCode &errorCode, Duration timeout = Duration()) {
 		while (true) {
 			ssize_t r = ::read(h.v(), dest, size_t(limit));
 			if (r >= 0)
 				return PeekReadResult::success(Nat(r));
 
-			if (errno == EINTR) {
+			int error = errno;
+			if (error == EINTR) {
 				// Aborted by a signal. Retry.
 				continue;
-			} else if (errno == EAGAIN) {
+			} else if (error == EAGAIN) {
 				// Wait for more data.
 				WaitResult r = doWait(h, attached, os::IORequest::read, timeout);
 				if (r.timeout)
@@ -208,7 +221,8 @@ namespace storm {
 				if (r.closed)
 					break;
 			} else {
-				// Unknown error.
+				// Other error.
+				errorCode = fromSystemError(error);
 				break;
 			}
 		}
@@ -216,22 +230,25 @@ namespace storm {
 		return PeekReadResult::end();
 	}
 
-	static Nat write(os::Handle h, os::Thread &attached, const void *src, Nat limit) {
+	static Nat write(os::Handle h, os::Thread &attached, const void *src, Nat limit,
+					sys::ErrorCode &errorCode) {
 		while (true) {
 			ssize_t r = ::write(h.v(), src, size_t(limit));
 			if (r >= 0)
 				return Nat(r);
 
-			if (errno == EINTR) {
+			int error = errno;
+			if (error == EINTR) {
 				// Aborted by a signal. Retry.
 				continue;
-			} else if (errno == EAGAIN) {
+			} else if (error == EAGAIN) {
 				// Wait for more data.
 				WaitResult r = doWait(h, attached, os::IORequest::write, Duration());
 				if (r.closed || r.timeout)
 					break;
 			} else {
-				// Unknown error.
+				// Other error.
+				errorCode = fromSystemError(error);
 				break;
 			}
 		}
@@ -274,18 +291,21 @@ namespace storm {
 
 	HandleIStream::HandleIStream(os::Handle h)
 		: handle(h),
-		  attachedTo(os::Thread::invalid) {}
+		  attachedTo(os::Thread::invalid),
+		  currError(sys::none) {}
 
 	HandleIStream::HandleIStream(os::Handle h, os::Thread t)
 		: handle(h),
-		  attachedTo(t) {}
+		  attachedTo(t),
+		  currError(sys::none) {}
 
 	// HandleIStream::HandleIStream(const HandleIStream &o)
 	// 	: PeekIStream(o),
 	// 	  handle(dupHandle(o.handle)),
 	// 	  attachedTo(os::Thread::invalid) {}
 
-	HandleIStream::HandleIStream(const HandleIStream &o) : PeekIStream(o), attachedTo(os::Thread::invalid) {
+	HandleIStream::HandleIStream(const HandleIStream &o)
+		: PeekIStream(o), attachedTo(os::Thread::invalid), currError(o.currError) {
 		throw new (this) NotSupported(S("Copying HandleIStream"));
 	}
 
@@ -310,7 +330,7 @@ namespace storm {
 
 	PeekReadResult HandleIStream::doRead(byte *to, Nat count) {
 		if (handle)
-			return storm::read(handle, attachedTo, to, count);
+			return storm::read(handle, attachedTo, to, count, currError);
 		else
 			return PeekReadResult::end();
 	}
@@ -321,17 +341,19 @@ namespace storm {
 
 	HandleRIStream::HandleRIStream(os::Handle h)
 		: handle(h),
-		  attachedTo(os::Thread::invalid) {}
+		  attachedTo(os::Thread::invalid),
+		  currError(sys::none) {}
 
 	HandleRIStream::HandleRIStream(os::Handle h, os::Thread t)
 		: handle(h),
-		  attachedTo(t) {}
+		  attachedTo(t),
+		  currError(sys::none) {}
 
 	// HandleRIStream::HandleRIStream(const HandleRIStream &o)
 	// 	: handle(dupHandle(o.handle)),
 	// 	  attachedTo(os::Thread::invalid) {}
 
-	HandleRIStream::HandleRIStream(const HandleRIStream &o) : attachedTo(os::Thread::invalid) {
+	HandleRIStream::HandleRIStream(const HandleRIStream &o) : attachedTo(os::Thread::invalid), currError(o.currError) {
 		throw new (this) NotSupported(S("Copying HandleIStream"));
 	}
 
@@ -360,7 +382,7 @@ namespace storm {
 		if (start >= b.count())
 			return b;
 
-		PeekReadResult r = storm::read(handle, attachedTo, b.dataPtr() + start, b.count() - start);
+		PeekReadResult r = storm::read(handle, attachedTo, b.dataPtr() + start, b.count() - start, currError);
 		b.filled(r.bytesRead() + start);
 		return b;
 	}
@@ -413,7 +435,7 @@ namespace storm {
 
 	PeekReadResult HandleTimeoutIStream::doRead(byte *to, Nat count) {
 		if (handle)
-			return storm::read(handle, attachedTo, to, count, timeout);
+			return storm::read(handle, attachedTo, to, count, currError, timeout);
 		else
 			return PeekReadResult::end();
 	}
@@ -424,17 +446,19 @@ namespace storm {
 
 	HandleOStream::HandleOStream(os::Handle h)
 		: handle(h),
-		  attachedTo(os::Thread::invalid) {}
+		  attachedTo(os::Thread::invalid),
+		  currError(sys::none) {}
 
 	HandleOStream::HandleOStream(os::Handle h, os::Thread t)
 		: handle(h),
-		  attachedTo(t) {}
+		  attachedTo(t),
+		  currError(sys::none) {}
 
 	// HandleOStream::HandleOStream(const HandleOStream &o)
 	// 	: handle(dupHandle(o.handle)),
 	// 	  attachedTo(os::Thread::invalid) {}
 
-	HandleOStream::HandleOStream(const HandleOStream &o) : attachedTo(os::Thread::invalid) {
+	HandleOStream::HandleOStream(const HandleOStream &o) : attachedTo(os::Thread::invalid), currError(o.currError) {
 		throw new (this) NotSupported(S("Copying HandleIStream"));
 	}
 
@@ -443,16 +467,19 @@ namespace storm {
 			storm::close(handle, attachedTo);
 	}
 
-	void HandleOStream::write(Buffer to, Nat start) {
+	Nat HandleOStream::write(Buffer to, Nat start) {
+		Nat consumed = 0;
 		start = min(start, to.filled());
 		if (handle) {
 			while (start < to.filled()) {
-				Nat r = storm::write(handle, attachedTo, to.dataPtr() + start, to.filled() - start);
+				Nat r = storm::write(handle, attachedTo, to.dataPtr() + start, to.filled() - start, currError);
 				if (r == 0)
 					break;
 				start += r;
+				consumed += r;
 			}
 		}
+		return consumed;
 	}
 
 	void HandleOStream::close() {

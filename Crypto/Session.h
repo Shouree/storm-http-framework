@@ -58,8 +58,8 @@ namespace ssl {
 		void read(Buffer &to);
 		void peek(Buffer &to);
 
-		void write(const Buffer &from, Nat start);
-		void flush();
+		Nat write(const Buffer &from, Nat start);
+		Bool flush();
 
 		// Shutdown the write end.
 		void shutdown();
@@ -112,10 +112,10 @@ namespace ssl {
 		void STORM_FN close() override;
 
 		// Write data.
-		void STORM_FN write(Buffer buf, Nat start) override;
+		Nat STORM_FN write(Buffer buf, Nat start) override;
 
 		// Flush the stream.
-		void STORM_FN flush() override;
+		Bool STORM_FN flush() override;
 
 	private:
 		// Session.

@@ -50,15 +50,15 @@ namespace ssl {
 		data->peek(to, gcData);
 	}
 
-	void Session::write(const Buffer &from, Nat offset) {
+	Nat Session::write(const Buffer &from, Nat offset) {
 		if (offset >= from.filled())
-			return;
+			return 0;
 
-		data->write(from, offset, gcData);
+		return data->write(from, offset, gcData);
 	}
 
-	void Session::flush() {
-		data->flush(gcData);
+	Bool Session::flush() {
+		return data->flush(gcData);
 	}
 
 	void Session::shutdown() {
@@ -99,12 +99,12 @@ namespace ssl {
 		owner->shutdown();
 	}
 
-	void SessionOStream::write(Buffer from, Nat offset) {
-		owner->write(from, offset);
+	Nat SessionOStream::write(Buffer from, Nat offset) {
+		return owner->write(from, offset);
 	}
 
-	void SessionOStream::flush() {
-		owner->flush();
+	Bool SessionOStream::flush() {
+		return owner->flush();
 	}
 
 }

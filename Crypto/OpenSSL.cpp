@@ -423,16 +423,22 @@ namespace ssl {
 		}
 	}
 
-	void OpenSSLSession::write(const Buffer &from, Nat offset, void *) {
+	Nat OpenSSLSession::write(const Buffer &from, Nat offset, void *) {
 		os::Lock::L z(lock);
 
-		BIO_write(connection, from.dataPtr() + offset, from.filled() - offset);
+		int r = BIO_write(connection, from.dataPtr() + offset, from.filled() - offset);
+		if (r >= 0)
+			return Nat(r);
+		else
+			return 0;
 	}
 
-	void OpenSSLSession::flush(void *) {
+	Bool OpenSSLSession::flush(void *) {
 		os::Lock::L z(lock);
 
 		BIO_flush(connection);
+
+		return true;
 	}
 
 	void OpenSSLSession::shutdown(void *gcData) {

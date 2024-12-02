@@ -5,20 +5,25 @@ namespace storm {
 
 	MeterOStream::MeterOStream(OStream *to) : to(to), pos(0) {}
 
-	void MeterOStream::write(Buffer buf, Nat start) {
+	Nat MeterOStream::write(Buffer buf, Nat start) {
 		Nat c = 0;
 		if (start <= buf.filled())
 			c = buf.filled() - start;
-		to->write(buf, start);
+		Nat written = to->write(buf, start);
 		pos += c;
+		return written;
 	}
 
-	void MeterOStream::flush() {
-		to->flush();
+	Bool MeterOStream::flush() {
+		return to->flush();
 	}
 
 	void MeterOStream::close() {
 		to->close();
+	}
+
+	sys::ErrorCode MeterOStream::error() const {
+		return to->error();
 	}
 
 	Word MeterOStream::tell() {

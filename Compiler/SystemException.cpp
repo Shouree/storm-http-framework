@@ -180,6 +180,9 @@ namespace storm {
 		sigemptyset(&sa.sa_mask);
 		sa.sa_flags = SA_RESTART | SA_SIGINFO;
 		sigaction(SIGBUS, &sa, &oldBusAction);
+
+		// Disable SIGPIPE. Otherwise we will exit when dealing with sockets in certain cases.
+		signal(SIGPIPE, SIG_IGN);
 	}
 
 #endif

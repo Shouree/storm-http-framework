@@ -25,13 +25,16 @@ namespace storm {
 
 		using OStream::write;
 		// Write data.
-		virtual void STORM_FN write(Buffer buf, Nat start);
+		virtual Nat STORM_FN write(Buffer buf, Nat start);
 
 		// Flush the stream.
-		virtual void STORM_FN flush();
+		virtual Bool STORM_FN flush();
 
 		// Close.
 		virtual void STORM_FN close();
+
+		// Check errors.
+		virtual sys::ErrorCode STORM_FN error() const;
 
 	private:
 		// Underlying stream to output to.

@@ -54,6 +54,10 @@ namespace storm {
 
 	void IStream::close() {}
 
+	sys::ErrorCode IStream::error() const {
+		return sys::none;
+	}
+
 	/**
 	 * RIStream.
 	 */
@@ -77,16 +81,23 @@ namespace storm {
 
 	OStream::OStream() {}
 
-	void OStream::write(Buffer buf) {
-		write(buf, 0);
+	Nat OStream::write(Buffer buf) {
+		return write(buf, 0);
 	}
 
-	void OStream::write(Buffer buf, Nat start) {}
+	Nat OStream::write(Buffer buf, Nat start) {
+		return 0;
+	}
 
-	void OStream::flush() {}
+	Bool OStream::flush() {
+		return true;
+	}
 
 	void OStream::close() {}
 
+	sys::ErrorCode OStream::error() const {
+		return sys::none;
+	}
 
 	/**
 	 * Read/write primitive types.

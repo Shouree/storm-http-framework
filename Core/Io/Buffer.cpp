@@ -4,6 +4,7 @@
 #include "Core/Str.h"
 #include "Core/StrBuf.h"
 #include "Core/Convert.h"
+#include "Core/Exception.h"
 
 namespace storm {
 
@@ -38,6 +39,10 @@ namespace storm {
 				n->v[i] = data->v[i];
 			data = n;
 		}
+	}
+
+	void Buffer::throwOutOfBounds(Nat id) const {
+		throw new (runtime::someEngine()) ArrayError(id, count());
 	}
 
 	Buffer buffer(EnginePtr e, Nat count) {
