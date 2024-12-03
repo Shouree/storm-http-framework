@@ -513,7 +513,7 @@ Str fromASCIIEncodedStr(Str string) on Compiler{
 class HTTP_Parser {
   /* FUNCTIONS FOR RECIEVING REQUESTS AND EXTRACTING DATA FROM REQUESTS*/
 
-  HTTP_Request parse_request(Buffer buffer) {
+  HTTP_Request parseRequest(Buffer buffer) {
     var ret = httpParser(buffer);
     if (err = ret.error) {
       throw HttpParseError(err.pos, err.message);
