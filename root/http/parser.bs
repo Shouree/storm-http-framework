@@ -565,7 +565,7 @@ class HTTP_Parser {
   }
   
   //Should content-length always be included?
-  responseBuf << "content-length: " << response.data.filled()-1 << "\r\n"; 
+  responseBuf << "content-length: " << response.data.filled() << "\r\n"; 
   responseBuf << "\r\n";
   //Add data here to the stream:
   responseBuf << fromUtf8(response.data);                  //Input data

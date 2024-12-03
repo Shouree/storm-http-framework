@@ -81,12 +81,12 @@ HTTP_Request seperateHeader(Buffer buf, Nat index) {
   return parser.parse_request(cut(buf, 0, index));
 }
 
-HTTP_Request readSocket(NetStream socket, Buffer rBuf, Moment lastActivity) {
+HTTP_Request readSocket(NetStream socket, Buffer rBuf) {
     Buffer seperatorBuf(toUtf8("\r\n\r\n"));
     HTTP_Request request;
     request.imediate_response = HTTP_StatusCode:NO_ERROR;
 
-  while(true) {
+  while(socket.input.more) {
     if(rBuf.free() == 0 ) {
     
           //TODO decide maximum size of rbuf         
@@ -99,172 +99,132 @@ HTTP_Request readSocket(NetStream socket, Buffer rBuf, Moment lastActivity) {
           }*/
     }
 
-    print("BEFORE READ IN readSocket");
-    Moment current_time;
-
+    Nat oldFilled = rBuf.filled;
     socket.input.timeout= 5 s;
-    print(socket.input.more().toS());
-
-    socket.input.read(rBuf);            //Can read 0 bytes if we output data on the write stream(WHY?)
-    print(socket.input.more().toS());
-    
-    print("READ IN readSocket");
-
-//    if(current_time + 5 s < Moment) {         //Not needed when timeouts work correctly.
-//      print("rBuf timed out!");
-//
-//      return request;
-//    }  
-
-if(rBuf.filled < 3)
-{
-  print(rBuf.filled().toS() + " bytes, no more to read");  //reqest.imediate_response = HTTP_StatusCode:Request_Timeout;
-  request.imediate_response = HTTP_StatusCode:Request_Timeout;
-  return request;
-}
-          print(rBuf.filled.toS());
+    rBuf = socket.input.read(rBuf);            //Can read 0 bytes if we output data on the write stream(WHY?)
+    if (rBuf.filled == oldFilled) {
+      request.imediate_response = HTTP_StatusCode:Request_Timeout;
+      return request;
+    }
     
     for(Nat i = 0; i < rBuf.filled()-3; i++) {      //Changed from -3 to i+3 so we avoid underflow FIXA DETTA, KAN BLI ARRAY OUT OF RANGE
       if(rBuf[i] == seperatorBuf[0])
         if(isCRLF(cut(rBuf, i, i+4), seperatorBuf)) { // is fromUtf8 expensive? Should we use nested for-loops instead
             request = seperateHeader(rBuf, i+4);
-            print(request.path.toS());
-            //request.data = cut(rbuf, sep_loc+4, rbuf.filled());
-            print(request.method.toS());
-
             return request;//break;
         }
-       // print(i.toS());
     }
-    //cannot read data
-    //print("Done iteration");
   }
+
   return request;
 }
 
 void connectionThread(NetStream? socket)
 {
-    
-    if(socket) {
+  unless(socket) {
+    return;
+  }
 
-
-      HTTP_Request request;
-      NetIStream is = socket.input();
-      NetOStream os = socket.output();
-      Buffer rBuf = buffer(4096);
-      Moment lastActivity;
-      print("NEW THREAD");
+  HTTP_Request request;
+  NetIStream is = socket.input();
+  NetOStream os = socket.output();
+  Buffer rBuf = buffer(4096);
+  print("NEW THREAD");
       
-      while(true) {                                        //TODO: Should countdown timeout/max when we implement keep-alive later
-        print("START");
-        rBuf.filled(0);
-        request = readSocket(socket, rBuf, lastActivity);
-        print("HAVE READ");
+  while(true) {                                        //TODO: Should countdown timeout/max when we implement keep-alive later
+    rBuf.filled(0);
+    request = readSocket(socket, rBuf);
 
-        if(rBuf.filled < 3)
-        {
-          socket.close();
-          return;
-        }
-
-        if(request.imediate_response == HTTP_StatusCode:Request_Timeout ) {
-          print("TIMEOUT");
-          socket.close();
-          return;
-        }
-
-      HTTP_Response res;
-
-      res.version = HTTP_Version:HTTP_1_1;
-
-      res.status_code = HTTP_StatusCode:OK;
-
-      res.headers.put("content-type", "text/html; charset=utf-8");
-      //TODO, check if this impelemntation works:
-      res.headers.put("connection", "keep-alive");
-      res.headers.put("Keep-Alive", "timeout=5, max=100");
-      Url root_dir = cwdUrl() / "site";   
-      print(root_dir.toS());              
-      Url index_page = root_dir / "index.html";
-      //print("\nSending response...");
-
-      Str data = index_page.readAllText.toS();
-      //print(data);
-      res.data = toUtf8(data);
-      
-      HTTP_Parser parser;
-      Buffer response = parser.parse_response(res);
-    // print("HEADER IS:\n");
-    // print(fromUtf8(response));
-    
-          //NetOStream os = socket.output();
-      
-          print("to write stream");
-          Nat test = os.write(response);     //If this is uncommented then timeout does not work instead as some stream seems to close(maybe the write stream?)
-          print("wrote: " + test.toS());
-        //os.flush(); //No need as os is unbuffered
-        
-      print("sent");
-          
-
-  /*
-          if(request.headers.has("content-length")) {
-            if(!request.headers.get("content-length").isNat()) {
-                    request.imediate_response = HTTP_StatusCode:Bad_Request; 
-                    //return request;               //Replace to so thread returns correct value
-                    //return false;
-                    // generateResponseBasedOnRequest
-              }
-            }
-          else {
-              print(request.version.toS());
-              //return request;               //Replace to so thread returns correct value //continue recieving header...
-              return false;
-          }
-            content_length = request.headers.get("content-length").toLong();
-            print("\n\nContent-Length IS: ${content_length.toS()}\n\n");
-            if(content_length >= 0x100000.long){
-              //Content-Length over 1MiB
-              request.imediate_response = HTTP_StatusCode:Request_Entity_Too_Large; 
-              //return request;               //Replace to so thread returns correct value
-              return false; //For now, replace with generateResponseBasedOnRequest when done
-            }
-            print("Recieving body...\n");
-            Nat old_filled = request.data.filled();
-            while(request.data.filled().long < content_length){
-              if(request.data.free() == 0 ){
-                //TODO decide maximum size of body
-                // Nginx uses 1MiB
-                request.data = grow(request.data, request.data.count() + 4096);
-                body_buffer_growth++;                                            
-                if(body_buffer_growth > 250){
-                  request.imediate_response = HTTP_StatusCode:Request_Entity_Too_Large; 
-                  //return request;               //Replace to so thread returns correct value
-                  return false; //replace with generateResponseBasedOnRequest when done
-                }
-                old_filled = request.data.filled();
-                request.data = is.read(request.data);
-              }
-              if(request.data.filled() == old_filled){
-                //TODO allow?
-                break; //recieved 0 bytes
-              }
-            }
-                    */
-              // BODY COMPLETE
-          // request.data = body;            //Dafuq does this do?
-
-            //TODO Check if we have a complete message (data = content-length)
-            //Check if HTTP_Request require immediate response (?)
-            //return request;               //Replace to so thread returns correct value
-            //break;//replace with generateResponseBasedOnRequest when done
-            // while(true)
-            //break; //GOTO check valid message       
-      } 
-      
-          //socket.close();
-
-      
+    if(!is.more) {
+      print("CLIENT CLOSED THE SOCKET");
+      socket.close();
       return;
     }
+    else if(request.imediate_response == HTTP_StatusCode:Request_Timeout) {
+      print("TIMEOUT");
+      socket.close();
+      return;
+    }
+
+  HTTP_Response res;
+
+  res.version = HTTP_Version:HTTP_1_1;
+  res.status_code = HTTP_StatusCode:OK;
+  res.headers.put("content-type", "text/html; charset=utf-8");
+  //TODO, check if this impelemntation works:
+  res.headers.put("connection", "keep-alive");
+  res.headers.put("Keep-Alive", "timeout=5, max=100");
+  Url root_dir = cwdUrl() / "site";   
+  print(root_dir.toS());              
+  Url index_page = root_dir / "index.html";
+  //print("\nSending response...");
+  Str data = index_page.readAllText.toS();
+  res.data = toUtf8(data);
+
+  HTTP_Parser parser;
+  Buffer response = parser.parse_response(res);
+  // print("HEADER IS:\n");
+  // print(fromUtf8(response));
+  Nat test = os.write(response);     //If this is uncommented then timeout does not work instead as some stream seems to close(maybe the write stream?)
+      
+
+/*
+      if(request.headers.has("content-length")) {
+        if(!request.headers.get("content-length").isNat()) {
+                request.imediate_response = HTTP_StatusCode:Bad_Request; 
+                //return request;               //Replace to so thread returns correct value
+                //return false;
+                // generateResponseBasedOnRequest
+          }
+        }
+      else {
+          print(request.version.toS());
+          //return request;               //Replace to so thread returns correct value //continue recieving header...
+          return false;
+      }
+        content_length = request.headers.get("content-length").toLong();
+        print("\n\nContent-Length IS: ${content_length.toS()}\n\n");
+        if(content_length >= 0x100000.long){
+          //Content-Length over 1MiB
+          request.imediate_response = HTTP_StatusCode:Request_Entity_Too_Large; 
+          //return request;               //Replace to so thread returns correct value
+          return false; //For now, replace with generateResponseBasedOnRequest when done
+        }
+        print("Recieving body...\n");
+        Nat old_filled = request.data.filled();
+        while(request.data.filled().long < content_length){
+          if(request.data.free() == 0 ){
+            //TODO decide maximum size of body
+            // Nginx uses 1MiB
+            request.data = grow(request.data, request.data.count() + 4096);
+            body_buffer_growth++;                                            
+            if(body_buffer_growth > 250){
+              request.imediate_response = HTTP_StatusCode:Request_Entity_Too_Large; 
+              //return request;               //Replace to so thread returns correct value
+              return false; //replace with generateResponseBasedOnRequest when done
+            }
+            old_filled = request.data.filled();
+            request.data = is.read(request.data);
+          }
+          if(request.data.filled() == old_filled){
+            //TODO allow?
+            break; //recieved 0 bytes
+          }
+        }
+                */
+          // BODY COMPLETE
+      // request.data = body;            //Dafuq does this do?
+
+        //TODO Check if we have a complete message (data = content-length)
+        //Check if HTTP_Request require immediate response (?)
+        //return request;               //Replace to so thread returns correct value
+        //break;//replace with generateResponseBasedOnRequest when done
+        // while(true)
+        //break; //GOTO check valid message       
+  
+      //socket.close();
+
+  }
+
+  return; 
 }
