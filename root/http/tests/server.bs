@@ -5,7 +5,7 @@ use core:io;
  * Körs mha `Storm -T http`
  */
 
-suite Webserver {
+test Webserver {
   print("Creating Server");
   // HTTP_Server server;
   print("Creating Parser");

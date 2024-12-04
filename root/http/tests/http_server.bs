@@ -32,6 +32,94 @@ void main(){
   //}
   Url root_dir = cwdUrl() / "site";
   HTTP_Server server(1234);
+  //HttpRoutingTable routes;
+
+  server.addCallback(
+    (HTTP_Request req) =>{
+    HTTP_Response res;
+    res.version = HTTP_Version:HTTP_1_1;
+
+    res.status_code = HTTP_StatusCode:OK;
+
+    res.headers.put("content-type", "text/html; charset=utf-8");
+    res.headers.put("connection", "close");
+    Url index_page = root_dir / "index.html";
+    print("\nSending response...");
+    Str data = index_page.readAllText.toS();
+    res.data = toUtf8(data);
+    return res;
+    }
+  );
+  Url tmpurl;
+  server.addCallback(Url(["chat", "*", "hello"]),
+    (HTTP_Request req) =>{
+    HTTP_Response res;
+    res.version = HTTP_Version:HTTP_1_1;
+
+    res.status_code = HTTP_StatusCode:OK;
+
+    res.headers.put("content-type", "text/html; charset=utf-8");
+    res.headers.put("connection", "close");
+    Url index_page = root_dir / "chat" / "index.html";
+    print("\nSending response...");
+    Str data = index_page.readAllText.toS();
+    res.data = toUtf8(data);
+    return res;
+    }
+  );
+
+   server.addCallback(parsePath("/"),
+    (HTTP_Request req) =>{
+    HTTP_Response res;
+    res.version = HTTP_Version:HTTP_1_1;
+
+    res.status_code = HTTP_StatusCode:OK;
+
+    res.headers.put("content-type", "text/html; charset=utf-8");
+    res.headers.put("connection", "close");
+    Url index_page = root_dir / "pictures" / "index.html";
+    print("\nSending response...");
+    Str data = index_page.readAllText.toS();
+    res.data = toUtf8(data);
+    return res;
+    }
+  );
+
+
+
+  server.addCallback(Url(["pictures"]),
+    (HTTP_Request req) =>{
+    HTTP_Response res;
+    res.version = HTTP_Version:HTTP_1_1;
+
+    res.status_code = HTTP_StatusCode:OK;
+
+    res.headers.put("content-type", "text/html; charset=utf-8");
+    res.headers.put("connection", "close");
+    Url index_page = root_dir / "pictures" / "index.html";
+    print("\nSending response...");
+    Str data = index_page.readAllText.toS();
+    res.data = toUtf8(data);
+    return res;
+    }
+  );
+
+  server.addCallback(Url(["pictures", "2"]),
+    (HTTP_Request req) =>{
+    HTTP_Response res;
+    res.version = HTTP_Version:HTTP_1_1;
+
+    res.status_code = HTTP_StatusCode:OK;
+
+    res.headers.put("content-type", "text/html; charset=utf-8");
+    res.headers.put("connection", "close");
+    Url index_page = root_dir / "pictures" / "index.html";
+    print("\nSending response...");
+    Str data = index_page.readAllText.toS();
+    res.data = toUtf8(data);
+    return res;
+    }
+  );
 
   while(true)
     server.recieve();
@@ -80,6 +168,7 @@ void main(){
       print("Base path is ${req.path.toS()}");
       cmp = cmp / req.path.name();
     }
+    /*
     if(!valid_url(root_dir, cmp)){
       print("PATH NOT VALID!\n");
       print(cmp.toS());
@@ -92,27 +181,10 @@ void main(){
       server.send(res);
       continue;
     }
-
+    */
     //TODO skapa header tests Fille o/c.
-
-    res.version = HTTP_Version:HTTP_1_1;
-
-    res.status_code = HTTP_StatusCode:OK;
-
-    res.headers.put("content-type", "text/html; charset=utf-8");
-    //TODO, check if this impelemntation works:
-    res.headers.put("connection", "close");
-    Url index_page = cwdUrl;                       
-    index_page = root_dir / "index.html";
-    print("\nSending response...");
-
-    Str data = index_page.readAllText.toS();
-    print(data);
-    res.data = toUtf8(data);
-    server.send(res);
     
-  }
-  */
+    server.send(server.getRouteResponse(req));
   /*
   server.behaviour(server socket, function what_to_send_back)
   while(true)

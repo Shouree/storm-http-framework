@@ -3,9 +3,19 @@ use core:net;
 use core:lang;
 use http;
 
+class route_callback_pair {
+public:
+    init(Url route, fn(HTTP_Request)->HTTP_Response callback)
+    {
+        init {route = route; callback = callback;}
+    }
+    Url route;
+    fn(HTTP_Request)->HTTP_Response callback;
+}
 
 class HttpRoutingTable{
-  Url->fn(HTTP_Request)->HTTP_Response rTable;
+  //Map<Url, fn(HTTP_Request)->HTTP_Response> rTable;
+  Array<route_callback_pair> rTable;
   fn(HTTP_Request)->HTTP_Response? defautCallback; //Maybe type default callback 
 
   void addDefaultCallback(fn(HTTP_Request)->HTTP_Response func){
@@ -13,24 +23,37 @@ class HttpRoutingTable{
   }
 
   void addCallbackUrl(Url url, fn(HTTP_Request)->HTTP_Response func){
-    rTable.put(url, func);
+    rTable.push(route_callback_pair(url, func));
   }
 
-  HTTP_Response getRouteResponse(HTTP_Request request){
+  // TODO: Nested hashtables for lookup
+  HTTP_Response getRouteResponse(HTTP_Request request) {
+    // TODO: on POST, parse body? as urlencoded
+    // TODO: Add headers
     HTTP_Response response;
-    if(rTable.has(request.path)){
-      response = rTable.at(request.path).call(request);
-    }else{
-      if(defautCallback){
-        response = defautCallback.call(request);
-      }else{
-        print("ERROR! No default callback!");
-        //TODO Hur hantera?
+    Url? routeCallback = null;
+
+    for(value in rTable) {
+      Url route = value.route;
+      fn(HTTP_Request)->HTTP_Response callback = value.callback;
+
+      Bool valid = true;
+      if(route.count() != request.path.count()) continue;
+      for(Nat i = 0; i < route.count(); ++i) { 
+        if(route[i] == "*") {
+          continue;
+        }
+        if(request.path[i] != route[i]) {
+          valid = false;
+          break;
+        }
+      }
+      if(valid) {
+        return callback.call(request);//rTable.get(route).call(request);
       }
     }
-    return response;
+    if(defautCallback) return defautCallback.call(request);
+        
+    throw DivisionByZero;
   }
-
-
-
 }
