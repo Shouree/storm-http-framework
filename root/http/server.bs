@@ -3,47 +3,122 @@ use core:net;
 use core:lang;
 use http;
 
-private Byte to_lower(Byte b){
-  if(b >90){
-      return b;
-    }
-  if(b<65){
-    return b;
-  }
-  return b+32;
-}
-private
-class HTTP_Connection{
-  Nat port; //id
-  // TODO(Martin): Ändra till Listener?
-  Array<Listener> socket;                   //Init connection sockets
-  // TODO(Martin): Ändra till NetStream?
-  Array<NetStream> ns;
-  init(Nat init_port){
-      init{
-        port = init_port;
-      }
-    }
-}
-
+// Initialize a server-CLASS on a given port
 class HTTP_Server{
-  //HTTP_Connection connection;
-  
   HttpRoutingTable routes;
-  
+
   Listener? serverListener;
-  init(Nat port){
+  Duration timeout;
+
+  init(Nat port) {
     init{
       serverListener = listen(port, true);
-      //connection = HTTP_Connection(port);
+      timeout = 60 s; // Default timeout value
     }
   }
 
+  void setTimeout(Duration t) {
+    timeout = t;
+  }
+
+  void addCallback(fn(HTTP_Request)->HTTP_Response func) {
+	 routes.addDefaultCallback(func);
+  }
+  void addCallback(Url route, fn(HTTP_Request)->HTTP_Response func) {
+	routes.addCallbackUrl(route, func);
+  }
+  
+  HTTP_Response getRouteResponse(HTTP_Request req) {
+	return routes.getRouteResponse(req);
+  }
+
+  //replaces FromUTF8
+  Bool isCRLF (Buffer tmpBuf, Buffer sepBuff)
+  {
+    for (Nat i = 0; i < tmpBuf.count(); i++)
+      if(tmpBuf[i] != sepBuff[i])
+        return false;       
+    return true;
+  }
+
+  HTTP_Request seperateHeader(Buffer buf, Nat index) {
+    HTTP_Parser parser;
+    return parser.parseRequest(cut(buf, 0, index));
+  }
+
+  HTTP_Request readSocket(NetStream socket, Buffer rBuf) {
+      Buffer seperatorBuf(toUtf8("\r\n\r\n"));
+      HTTP_Request request;
+      request.imediate_response = HTTP_StatusCode:NO_ERROR;
+
+      while(socket.input.more) {
+        if(rBuf.free() == 0 ) {        
+          rBuf = grow(rBuf, rBuf.count() + 4096);       
+        }
+
+        Nat oldFilled = rBuf.filled;
+        socket.input.timeout = timeout;
+        rBuf = socket.input.read(rBuf);           
+        if (rBuf.filled == oldFilled) {
+          request.imediate_response = HTTP_StatusCode:Request_Timeout;
+          return request;
+        }
+      
+        for(Nat i = 0; i < rBuf.filled()-3; i++) {      //Changed from -3 to i+3 so we avoid underflow FIXA DETTA, KAN BLI ARRAY OUT OF RANGE
+          if(rBuf[i] == seperatorBuf[0])
+            if(isCRLF(cut(rBuf, i, i+4), seperatorBuf)) { // is fromUtf8 expensive? Should we use nested for-loops instead
+                request = seperateHeader(rBuf, i+4);
+                return request;
+            }
+        }
+      }
+
+    return request;
+  }
+
+  void connectionThread(NetStream? socket)
+  {
+    unless(socket) {
+      return;
+    }
+
+    HTTP_Request request;
+    NetIStream is = socket.input();
+    NetOStream os = socket.output();
+    Buffer rBuf = buffer(4096);
+    //print("NEW THREAD");
+        
+    while(true) {                                        //TODO: Should countdown timeout/max when we implement keep-alive later
+      rBuf.filled(0);
+      request = readSocket(socket, rBuf);
+
+      //Checks if the client socket is closed
+      if(!is.more) {
+        //print("CLIENT CLOSED THE SOCKET");
+        socket.close();
+        return;
+      }
+      //checks if the server has requested a timeout
+      else if(request.imediate_response == HTTP_StatusCode:Request_Timeout) {
+        //print("TIMEOUT");
+        socket.close();
+        return;
+      }
+
+    HTTP_Response res;
+    res = getRouteResponse(request);
+    HTTP_Parser parser;
+    Buffer response = parser.parse_response(res);
+    print(request.path.toS());
+    Nat test = os.write(response);     //If this is uncommented then timeout does not work instead as some stream seems to close(maybe the write stream?)
+    }
+
+    return; 
+  }
 
   void recieve() {        //Recieves HTTP reqeust and creates a internal class and returns it for use
     HTTP_Request request; // REMOVE THESE, SHOULD NOT BE NECCESSARY!
     request.imediate_response = HTTP_StatusCode:NO_ERROR;
-    print("SERVER TEST");
 
     unless(serverListener) { // Move this to a seperate function which check if it is valid or not
         return;
@@ -52,48 +127,6 @@ class HTTP_Server{
     spawn connectionThread(socket);
     //serverListener.close(); // MIGHT BE NEEDED TO WORK ON WINDOWS
   }
-  
-  Bool send(HTTP_Response msg) {                     //Send HTTP response, returns bool for success and closes connection(TODO: expand behaviour for keep alive)
-
-    //Create a array for active connections?
-    //One thread for active and one for the ones that are supposed to be killed.
-
-    HTTP_Parser parser;
-    Buffer response = parser.parse_response(msg);
-    print("HEADER IS:\n");
-    print(fromUtf8(response));
-    NetOStream os = connection.ns[0].output();
-    os.write(response);
-    os.flush();
-
-    //remove netstream close socket 
-    connection.socket[0].close();                           //CLOSE CONNECTION if not keep-alive or expired/max
-    connection.ns.pop();
-    connection.socket.pop();
-    return true;
-
-  }
-  Bool send(Buffer msg){
-    
-    //return
-  }
-
-
-  void addCallback(fn(HTTP_Request)->HTTP_Response func)
-  {
-	 routes.addDefaultCallback(func);
-  }
-  void addCallback(Url route, fn(HTTP_Request)->HTTP_Response func)
-  {
-	routes.addCallbackUrl(route, func);
-  }
-  
-  HTTP_Response getRouteResponse(HTTP_Request req)
-  {
-	return routes.getRouteResponse(req);
-  }
-  
-
 }
 
 

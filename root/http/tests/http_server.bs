@@ -32,6 +32,7 @@ void main(){
   //}
   Url root_dir = cwdUrl() / "site";
   HTTP_Server server(1234);
+  server.setTimeout(5 s);
   //HttpRoutingTable routes;
 
   server.addCallback(
@@ -42,7 +43,7 @@ void main(){
     res.status_code = HTTP_StatusCode:OK;
 
     res.headers.put("content-type", "text/html; charset=utf-8");
-    res.headers.put("connection", "close");
+    //res.headers.put("connection", "close");
     Url index_page = root_dir / "index.html";
     print("\nSending response...");
     Str data = index_page.readAllText.toS();
@@ -59,7 +60,7 @@ void main(){
     res.status_code = HTTP_StatusCode:OK;
 
     res.headers.put("content-type", "text/html; charset=utf-8");
-    res.headers.put("connection", "close");
+    //res.headers.put("connection", "close");
     Url index_page = root_dir / "chat" / "index.html";
     print("\nSending response...");
     Str data = index_page.readAllText.toS();
@@ -76,7 +77,7 @@ void main(){
     res.status_code = HTTP_StatusCode:OK;
 
     res.headers.put("content-type", "text/html; charset=utf-8");
-    res.headers.put("connection", "close");
+    //res.headers.put("connection", "close");
     Url index_page = root_dir / "pictures" / "index.html";
     print("\nSending response...");
     Str data = index_page.readAllText.toS();
@@ -84,8 +85,6 @@ void main(){
     return res;
     }
   );
-
-
 
   server.addCallback(Url(["pictures"]),
     (HTTP_Request req) =>{
@@ -95,7 +94,7 @@ void main(){
     res.status_code = HTTP_StatusCode:OK;
 
     res.headers.put("content-type", "text/html; charset=utf-8");
-    res.headers.put("connection", "close");
+    //res.headers.put("connection", "close");
     Url index_page = root_dir / "pictures" / "index.html";
     print("\nSending response...");
     Str data = index_page.readAllText.toS();
@@ -112,7 +111,7 @@ void main(){
     res.status_code = HTTP_StatusCode:OK;
 
     res.headers.put("content-type", "text/html; charset=utf-8");
-    res.headers.put("connection", "close");
+    //res.headers.put("connection", "close");
     Url index_page = root_dir / "pictures" / "index.html";
     print("\nSending response...");
     Str data = index_page.readAllText.toS();
@@ -184,7 +183,7 @@ void main(){
     */
     //TODO skapa header tests Fille o/c.
     
-    server.send(server.getRouteResponse(req));
+    //server.send(server.getRouteResponse(req));
   /*
   server.behaviour(server socket, function what_to_send_back)
   while(true)
