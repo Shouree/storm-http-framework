@@ -24,7 +24,7 @@ void initMonth() on Compiler
     if(monthFormatIMF.empty()) 
     {
         monthFormatIMF.put("Jan", 31);
-        monthFormatIMF.put("Feb", 29); // Or 29 for leap years
+        monthFormatIMF.put("Feb", 29);
         monthFormatIMF.put("Mar", 31);
         monthFormatIMF.put("Apr", 30);
         monthFormatIMF.put("May", 31);

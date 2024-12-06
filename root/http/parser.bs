@@ -60,22 +60,17 @@ Bool responseCookieParser(Cookie cookie) on Compiler
   initMonth();      //Call in server
   initDays();       //Call in server
   Str:Iter iter;
-  if(cookie.name != "") //Use .empty() istead
+  if(cookie.name != "")
     {
-
-      //parse here
       cookie.name = cookie.name;
     }
   else{
-    //Print what wrong
     return false;
   }
   if(cookie.value != "")
     {
-      //Better CTL support for parsing will be added later with Martins implementation
       //parse here if string in ascii US
       iter = cookie.value.find(' ', cookie.value.begin());
-      //print(iter.toS() + "\n");
       if(iter != cookie.value.end())
         return false;
       iter = cookie.value.find(',' , cookie.value.begin());
@@ -84,19 +79,16 @@ Bool responseCookieParser(Cookie cookie) on Compiler
       iter = cookie.value.find(';' , cookie.value.begin());
         if(iter != cookie.value.end())
           return false;
-      //cookie.value = trimWhitespace(cookie.value);
     }
   else{
       return false;
     }
   if(cookie.path != "")
     {
-      //CTL character support add later
       iter = cookie.path.find(';', cookie.path.begin());
       if(iter != cookie.path.end())
         return false;
       //parse here
-      //cookie.path = trimWhitespace(cookie.path);
     }
   if(cookie.domain != "")
     {
@@ -106,34 +98,31 @@ Bool responseCookieParser(Cookie cookie) on Compiler
     }
   if(cookie.expires != "")
     {
-      //IMF formating check :)
-
-        StrBuf buf;
-        iter = cookie.expires.find(' ', cookie.expires.begin());
-        buf << cookie.expires.cut(cookie.expires.begin(), iter);
-        Str:Iter iter2;
-        for(Int i = 0; i < 4; i++)
-        {
-          if(iter == cookie.expires.end())
-            return false;
-          iter2 = iter + 1;
-          iter = cookie.expires.find(' ', iter2);
-          buf << cookie.expires.cut(iter2, iter);
-        }
-        Str cookiestr = buf.toS();
-        print("\n\n"+cookiestr+"\n\n");
-        if(cookiestr.count() != 24)
-        {
+      StrBuf buf;
+      iter = cookie.expires.find(' ', cookie.expires.begin());
+      buf << cookie.expires.cut(cookie.expires.begin(), iter);
+      Str:Iter iter2;
+      for(Int i = 0; i < 4; i++)
+      {
+        if(iter == cookie.expires.end())
           return false;
-        }
-        if("," != cookiestr.cut(cookiestr.begin()+3, cookiestr.begin()+4))
-          return false;
+        iter2 = iter + 1;
+        iter = cookie.expires.find(' ', iter2);
+        buf << cookie.expires.cut(iter2, iter);
+      }
+      Str cookiestr = buf.toS();
+      print("\n\n"+cookiestr+"\n\n");
+      if(cookiestr.count() != 24)
+      {
+        return false;
+      }
+      if("," != cookiestr.cut(cookiestr.begin()+3, cookiestr.begin()+4))
+        return false;
       iter = cookiestr.begin()+3;
       if(!dayFormatIMF.has(cookiestr.cut(cookiestr.begin(), iter)))
       {
         return false;
       }
-      //iter +2 till iter+12
 
       Str month = cookiestr.cut(iter+3, iter+6);
       if(!monthFormatIMF.has(month))
@@ -156,9 +145,9 @@ Bool responseCookieParser(Cookie cookie) on Compiler
       }
       
       if(day.toInt() < 1 | day.toInt() > monthFormatIMF.get(month))  //Check if day is correct in month
-        {
-          return false;
-        }
+      {
+        return false;
+      }
 
       try{
         validInt = cookiestr.cut(iter+6, iter+10).toInt();
@@ -170,9 +159,9 @@ Bool responseCookieParser(Cookie cookie) on Compiler
         return false;
       }
       if(cookiestr.cut(iter+6, iter+10).toInt() < 1970)
-        {
-          return false;
-        }
+      {
+        return false;
+      }
 
       try{
         validInt = cookiestr.cut(iter+10, iter+12).toInt();
@@ -226,8 +215,6 @@ Bool responseCookieParser(Cookie cookie) on Compiler
         if(cookie.samSite != "Lax")
           if(cookie.samSite != "Strict")
             return false;
-      // parse here
-      // cookie.samSite = trimWhitespace(cookie.samSite);
     }
 
     return true;

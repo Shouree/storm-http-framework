@@ -11,4 +11,4 @@ As such, documentation of the SQL library is divided into two sections. The firs
 generic database interface, and the second describes the language extension.
 
 
-The HTTP library was originally developed by: 
+The HTTP library was originally developed by: Christoffer Lundell, Erik Bäck Lindström, Filip Wojtulewicz, Fabian Pranke, Joel Gustafsson, Martin Weman
