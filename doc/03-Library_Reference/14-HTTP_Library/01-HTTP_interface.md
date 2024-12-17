@@ -159,7 +159,9 @@ In the default callback, you need to construct a function that generates and ret
 
 #### Routing
 
+Wildcards are supported and use the `*` character. It will match any string between two `/` characters. Note that wildcard matching only works if it is the only character, i.e ``` /users_*.data/``` would only match exactly that string.
 
+When there are several routes that match a url, they will be prioritized by the order they were added.
  
 
 Example
