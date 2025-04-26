@@ -17,6 +17,7 @@ The package [stormname:http] contains a HTTP library. The library consists of 5 
   Contains the routing implementation for callback functions.
 
 The HTTP library was originally developed by: Christoffer Lundell, Erik Bäck Lindström, Filip Wojtulewicz, Fabian Pranke, Joel Gustafsson, Martin Weman
+
 Basic Types
 -------------
 
